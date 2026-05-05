@@ -9,17 +9,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, KeyRound, Trash2, Pencil } from 'lucide-react'
+import { UserPlus, Loader2, KeyRound, Trash2, Pencil, Wrench, AlertTriangle } from 'lucide-react'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import type { Profile, UserRole } from '@/lib/types'
+import { useAuth } from '@/components/providers/auth-provider'
 
 const roles: UserRole[] = ['owner', 'admin', 'cs', 'advertiser', 'akunting']
 
 export default function UsersPage() {
+  const { role, loading: authLoading } = useAuth()
   const [users, setUsers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [repairing, setRepairing] = useState(false)
+  const [showSqlHelp, setShowSqlHelp] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'admin' as UserRole })
   const [resetTarget, setResetTarget] = useState<Profile | null>(null)
   const [newPassword, setNewPassword] = useState('')
@@ -55,13 +59,38 @@ export default function UsersPage() {
         body: JSON.stringify(form),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Gagal membuat user')
+      if (!res.ok) {
+        // Detect the specific trigger crash and offer the auto-fix
+        if (typeof json.error === 'string' && /database error|trigger|new user/i.test(json.error)) {
+          setShowSqlHelp(true)
+        }
+        throw new Error(json.error || 'Gagal membuat user')
+      }
       toast.success('User berhasil dibuat!', { description: `${form.full_name} (${ROLE_LABELS[form.role]})` })
       setOpen(false); setForm({ email: '', password: '', full_name: '', role: 'admin' }); loadUsers()
     } catch (err: any) {
       toast.error('Gagal membuat user', { description: err.message })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleAutoFix = async () => {
+    setRepairing(true)
+    try {
+      const res = await fetch('/api/admin/repair', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        if (json.hint) toast.error(json.error, { description: json.hint, duration: 15000 })
+        else toast.error('Auto-fix gagal', { description: json.error })
+        return
+      }
+      toast.success('Database diperbaiki!', { description: 'Coba tambah user lagi sekarang.' })
+      setShowSqlHelp(false)
+    } catch (err: any) {
+      toast.error('Auto-fix gagal', { description: err.message })
+    } finally {
+      setRepairing(false)
     }
   }
 
@@ -164,6 +193,22 @@ export default function UsersPage() {
     }
   }
 
+  // Strict owner-only gate
+  if (authLoading) {
+    return <div className="text-sm text-muted-foreground">Memeriksa akses...</div>
+  }
+  if (role !== 'owner') {
+    return (
+      <Card className="max-w-md mx-auto mt-8">
+        <CardContent className="pt-6 text-center space-y-2">
+          <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto" />
+          <h2 className="text-lg font-semibold">Akses Dibatasi</h2>
+          <p className="text-sm text-muted-foreground">Hanya Owner yang dapat mengelola users. Hubungi Owner jika kamu butuh akses.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -185,6 +230,34 @@ export default function UsersPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {showSqlHelp && (
+        <Card className="border-yellow-500/40 bg-yellow-500/5">
+          <CardContent className="pt-4 pb-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <Wrench className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <p className="font-semibold text-sm">Database error terdeteksi</p>
+                <p className="text-sm text-muted-foreground">
+                  Supabase project ini punya trigger SQL bawaan yang crash saat user baru dibuat.
+                  Klik <strong>Auto-Fix</strong> di bawah untuk drop trigger-nya. Aman — kita sudah handle pembuatan profile sendiri di API.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <strong>Catatan:</strong> Auto-Fix butuh function <code className="px-1 py-0.5 rounded bg-zinc-800 text-yellow-300 font-mono">repair_user_creation()</code> yang sudah di-install.
+                  Kalau belum, copy SQL dari file <code className="px-1 py-0.5 rounded bg-zinc-800 font-mono">migrations/003_install_repair_function.sql</code> ke Supabase SQL Editor dan Run.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleAutoFix} disabled={repairing} className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                {repairing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wrench className="w-4 h-4 mr-2" />}
+                Auto-Fix Database
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowSqlHelp(false)}>Tutup</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-0">

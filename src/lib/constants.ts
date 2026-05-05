@@ -1,4 +1,4 @@
-import { type UserRole, type OrderStatus } from './types'
+import { type UserRole, type OrderStatus, type ResiStatus } from './types'
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -24,6 +24,28 @@ export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string 
   { value: 'RETUR', label: 'Retur', color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400' },
   { value: 'FAKE', label: 'Fake Order', color: 'bg-red-500/15 text-red-700 dark:text-red-400' },
   { value: 'CANCEL', label: 'Cancel', color: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400' },
+]
+
+export const EKSPEDISI_LIST = [
+  { value: 'SPX', label: 'SPX (Shopee Express)' },
+  { value: 'JNE', label: 'JNE' },
+  { value: 'JNT', label: 'J&T Express' },
+  { value: 'SICEPAT', label: 'SiCepat' },
+  { value: 'ANTERAJA', label: 'AnterAja' },
+  { value: 'LION', label: 'Lion Parcel' },
+  { value: 'NINJA', label: 'Ninja Express' },
+  { value: 'POS', label: 'POS Indonesia' },
+  { value: 'TIKI', label: 'TIKI' },
+  { value: 'GOSEND', label: 'GoSend' },
+  { value: 'GRAB', label: 'GrabExpress' },
+  { value: 'OTHER', label: 'Lainnya' },
+]
+
+export const RESI_STATUSES: { value: ResiStatus; label: string; color: string }[] = [
+  { value: 'AKTIF', label: 'Aktif (Dalam Pengiriman)', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400' },
+  { value: 'DITERIMA', label: 'Diterima', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+  { value: 'PROBLEM', label: 'Problem', color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400' },
+  { value: 'RETUR', label: 'Retur', color: 'bg-red-500/15 text-red-700 dark:text-red-400' },
 ]
 
 export const AD_PLATFORMS = [
@@ -83,6 +105,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'cs', 'akunting', 'advertiser'],
     children: [
       { title: 'Input Order Baru', href: '/orders/new' },
+      { title: 'Upload Massal', href: '/orders/bulk-upload' },
       { title: 'Daftar Order', href: '/orders/list' },
     ],
   },

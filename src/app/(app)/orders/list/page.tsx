@@ -12,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Search, Filter, RefreshCw, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Filter, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
-import { ORDER_STATUSES } from '@/lib/constants'
+import { ORDER_STATUSES, RESI_STATUSES } from '@/lib/constants'
 import type { Order, OrderStatus } from '@/lib/types'
 import Link from 'next/link'
 
@@ -78,7 +78,12 @@ export default function OrdersListPage() {
           <p className="text-muted-foreground mt-1">{totalCount} total order</p>
         </div>
         {(role === 'admin' || role === 'owner') && (
-          <Button render={<Link href="/orders/new" />} className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white">+ Input Order Baru</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" render={<Link href="/orders/bulk-upload" />}>
+              <Upload className="w-4 h-4 mr-1.5" />Upload Massal
+            </Button>
+            <Button render={<Link href="/orders/new" />} className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white">+ Input Order Baru</Button>
+          </div>
         )}
       </div>
 
@@ -132,6 +137,7 @@ export default function OrdersListPage() {
                   <TableHead>Total</TableHead>
                   <TableHead>Bayar</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Resi</TableHead>
                   <TableHead>Campaign</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -156,6 +162,18 @@ export default function OrdersListPage() {
                       <TableCell className="font-semibold text-sm">{formatRupiah(order.total)}</TableCell>
                       <TableCell><Badge variant="outline" className="text-xs">{order.payment_method}</Badge></TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>
+                        {order.resi ? (
+                          <div>
+                            <p className="font-mono text-xs">{order.resi}</p>
+                            <p className="text-xs text-muted-foreground">{order.ekspedisi || ''}</p>
+                            {order.resi_status && (() => {
+                              const rs = RESI_STATUSES.find(s => s.value === order.resi_status)
+                              return <Badge variant="outline" className={`text-xs mt-0.5 ${rs?.color}`}>{rs?.label || order.resi_status}</Badge>
+                            })()}
+                          </div>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{(order as any).campaigns?.campaign_name || '-'}</TableCell>
                       <TableCell><Button variant="ghost" size="icon" render={<Link href={`/orders/${order.id}`} />}><Eye className="w-4 h-4" /></Button></TableCell>
                     </TableRow>

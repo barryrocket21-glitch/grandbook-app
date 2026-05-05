@@ -3,6 +3,8 @@ export type UserRole = 'owner' | 'admin' | 'cs' | 'advertiser' | 'akunting'
 
 export type OrderStatus = 'BARU' | 'DIPROSES' | 'DIKIRIM' | 'SAMPAI' | 'SELESAI' | 'RETUR' | 'FAKE' | 'CANCEL'
 
+export type ResiStatus = 'AKTIF' | 'DITERIMA' | 'PROBLEM' | 'RETUR'
+
 export type PaymentMethod = 'COD' | 'TRANSFER'
 
 export type AdPlatform = 'META' | 'GOOGLE' | 'TIKTOK' | 'SNACK' | 'OTHER'
@@ -59,6 +61,9 @@ export interface Order {
   cs_id: string | null
   admin_id: string | null
   notes: string | null
+  resi: string | null
+  ekspedisi: string | null
+  resi_status: ResiStatus | null
   created_at: string
   updated_at: string
   // Relations

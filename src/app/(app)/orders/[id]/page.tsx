@@ -11,9 +11,11 @@ import { Separator } from '@/components/ui/separator'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { ArrowLeft, User, Package, MapPin, FileText, Save } from 'lucide-react'
+import { ArrowLeft, User, Package, MapPin, FileText, Save, Truck } from 'lucide-react'
 import { formatRupiah, formatDate, formatDateTime } from '@/lib/format'
-import { ORDER_STATUSES } from '@/lib/constants'
+import { ORDER_STATUSES, RESI_STATUSES, EKSPEDISI_LIST } from '@/lib/constants'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 
 export default function OrderDetailPage() {
@@ -24,12 +26,18 @@ export default function OrderDetailPage() {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('')
+  const [resi, setResi] = useState('')
+  const [ekspedisi, setEkspedisi] = useState('')
+  const [resiStatus, setResiStatus] = useState('')
+  const [savingResi, setSavingResi] = useState(false)
 
   useEffect(() => {
     const fetch = async () => {
       const { data: o } = await supabase.from('orders').select('*, campaigns(campaign_name, platform), advertiser:profiles!advertiser_id(full_name), cs:profiles!cs_id(full_name), admin:profiles!admin_id(full_name)').eq('id', id).single()
       const { data: i } = await supabase.from('order_items').select('*, products(name, sku)').eq('order_id', id)
-      setOrder(o); setItems(i || []); setStatus(o?.status || ''); setLoading(false)
+      setOrder(o); setItems(i || []); setStatus(o?.status || '')
+      setResi(o?.resi ?? ''); setEkspedisi(o?.ekspedisi ?? ''); setResiStatus(o?.resi_status ?? '')
+      setLoading(false)
     }
     fetch()
   }, [id])
@@ -39,6 +47,21 @@ export default function OrderDetailPage() {
     if (error) { toast.error(error.message); return }
     toast.success('Status diupdate')
     setOrder({ ...order, status })
+  }
+
+  const updateResi = async () => {
+    setSavingResi(true)
+    const payload: Record<string, string | null> = {
+      resi: resi || null,
+      ekspedisi: ekspedisi || null,
+      resi_status: resiStatus || null,
+    }
+    if (resi && !resiStatus) payload.resi_status = 'AKTIF'
+    const { error } = await supabase.from('orders').update(payload).eq('id', id)
+    setSavingResi(false)
+    if (error) { toast.error(error.message); return }
+    toast.success('Info resi disimpan')
+    setOrder({ ...order, ...payload })
   }
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-64 w-full" /></div>
@@ -61,9 +84,61 @@ export default function OrderDetailPage() {
       {/* Status Update */}
       {(role === 'cs' || role === 'owner') && (
         <Card className="border-violet-500/20">
-          <CardContent className="pt-4 pb-4 flex items-center gap-3">
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 flex-wrap">
             <Select value={status} onValueChange={v => v && setStatus(v)}><SelectTrigger className="w-48"><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
             <Button onClick={updateStatus} disabled={status === order.status} className="bg-violet-600 text-white"><Save className="w-4 h-4 mr-2" />Update Status</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resi / Pengiriman */}
+      {(role === 'cs' || role === 'owner' || role === 'admin') && (
+        <Card className="border-violet-500/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Truck className="w-4 h-4 text-violet-500" />
+              Info Pengiriman & Resi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">No Resi</Label>
+                <Input
+                  value={resi}
+                  onChange={e => setResi(e.target.value)}
+                  placeholder="Masukkan no. resi..."
+                  className="font-mono text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Ekspedisi</Label>
+                <Select value={ekspedisi} onValueChange={v => setEkspedisi(!v || v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="Pilih ekspedisi..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Pilih —</SelectItem>
+                    {EKSPEDISI_LIST.map(e => (
+                      <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Status Resi</Label>
+                <Select value={resiStatus} onValueChange={v => setResiStatus(!v || v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="Pilih status..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Pilih —</SelectItem>
+                    {RESI_STATUSES.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button onClick={updateResi} disabled={savingResi} size="sm" className="bg-violet-600 text-white">
+              {savingResi ? 'Menyimpan...' : <><Save className="w-3.5 h-3.5 mr-1.5" />Simpan Info Resi</>}
+            </Button>
           </CardContent>
         </Card>
       )}

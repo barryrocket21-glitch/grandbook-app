@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, KeyRound, Trash2 } from 'lucide-react'
+import { UserPlus, Loader2, KeyRound, Trash2, Pencil } from 'lucide-react'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import type { Profile, UserRole } from '@/lib/types'
 
@@ -24,6 +24,9 @@ export default function UsersPage() {
   const [resetTarget, setResetTarget] = useState<Profile | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [resetting, setResetting] = useState(false)
+  const [editTarget, setEditTarget] = useState<Profile | null>(null)
+  const [editForm, setEditForm] = useState({ full_name: '', email: '', role: 'admin' as UserRole })
+  const [editing, setEditing] = useState(false)
 
   const loadUsers = async () => {
     setLoading(true)
@@ -109,6 +112,36 @@ export default function UsersPage() {
     }
   }
 
+  const openEdit = (u: Profile) => {
+    setEditTarget(u)
+    setEditForm({ full_name: u.full_name, email: u.email || '', role: u.role })
+  }
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editTarget) return
+    if (!editForm.full_name.trim()) return toast.error('Nama wajib diisi')
+    if (!editForm.email.trim()) return toast.error('Email wajib diisi')
+    setEditing(true)
+    try {
+      const payload: Record<string, unknown> = { full_name: editForm.full_name, role: editForm.role }
+      if (editForm.email !== editTarget.email) payload.email = editForm.email
+      const res = await fetch(`/api/admin/users/${editTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Gagal update')
+      toast.success('User diupdate')
+      setEditTarget(null); loadUsers()
+    } catch (err: any) {
+      toast.error('Gagal update', { description: err.message })
+    } finally {
+      setEditing(false)
+    }
+  }
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!resetTarget) return
@@ -177,18 +210,14 @@ export default function UsersPage() {
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.full_name}</TableCell>
                   <TableCell className="font-mono text-xs">{u.email || '-'}</TableCell>
-                  <TableCell>
-                    <Select value={u.role} onValueChange={v => v && changeRole(u, v as UserRole)}>
-                      <SelectTrigger className="h-7 px-2"><Badge variant="outline" className={ROLE_COLORS[u.role]}>{ROLE_LABELS[u.role]}</Badge></SelectTrigger>
-                      <SelectContent className="w-[180px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </TableCell>
+                  <TableCell><Badge variant="outline" className={ROLE_COLORS[u.role]}>{ROLE_LABELS[u.role]}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className={u.active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}>{u.active ? 'Active' : 'Inactive'}</Badge></TableCell>
                   <TableCell className="text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString('id-ID')}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => toggleActive(u)}>{u.active ? 'Nonaktifkan' : 'Aktifkan'}</Button>
+                      <Button variant="ghost" size="icon" title="Edit user" onClick={() => openEdit(u)}><Pencil className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="icon" title="Reset password" onClick={() => { setResetTarget(u); setNewPassword('') }}><KeyRound className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => toggleActive(u)}>{u.active ? 'Nonaktifkan' : 'Aktifkan'}</Button>
                       <Button variant="ghost" size="icon" title="Hapus user" className="text-red-500" onClick={() => handleDelete(u)}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </TableCell>
@@ -198,6 +227,18 @@ export default function UsersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!editTarget} onOpenChange={v => { if (!v) setEditTarget(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit User</DialogTitle></DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2"><Label>Nama Lengkap *</Label><Input value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} required /></div>
+            <div className="space-y-2"><Label>Email *</Label><Input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} required /><p className="text-xs text-muted-foreground">Mengubah email akan mengirim email konfirmasi ke alamat baru.</p></div>
+            <div className="space-y-2"><Label>Role</Label><Select value={editForm.role} onValueChange={v => v && setEditForm({ ...editForm, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
+            <Button type="submit" className="w-full" disabled={editing}>{editing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan Perubahan</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!resetTarget} onOpenChange={v => { if (!v) { setResetTarget(null); setNewPassword('') } }}>
         <DialogContent>

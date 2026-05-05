@@ -52,10 +52,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const admin = getAdmin()
   if (!admin) return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum di-set' }, { status: 500 })
 
-  // Allowed updates: password, full_name, role, active
+  // Allowed updates: password, email, full_name, role, active
+  const authUpdate: Record<string, unknown> = {}
   if (body.password) {
     if (body.password.length < 8) return NextResponse.json({ error: 'Password minimal 8 karakter' }, { status: 400 })
-    const { error } = await admin.auth.admin.updateUserById(id, { password: body.password })
+    authUpdate.password = body.password
+  }
+  if (body.email) authUpdate.email = body.email
+  if (Object.keys(authUpdate).length > 0) {
+    const { error } = await admin.auth.admin.updateUserById(id, authUpdate)
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   }
 

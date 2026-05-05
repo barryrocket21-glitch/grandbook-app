@@ -51,22 +51,29 @@ export async function POST(request: Request) {
   const admin = getAdmin()
   if (!admin) return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum di-set di env Vercel' }, { status: 500 })
 
+  // Don't send user_metadata — many Supabase projects have a handle_new_user
+  // trigger that reads metadata and crashes the insert if cast fails.
+  // We upsert the profile ourselves below.
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: body.email,
     password: body.password,
     email_confirm: true,
-    user_metadata: { full_name: body.full_name, role: body.role },
   })
   if (createErr || !created.user) {
-    return NextResponse.json({ error: createErr?.message || 'Gagal membuat user' }, { status: 400 })
+    console.error('createUser failed:', createErr)
+    return NextResponse.json({
+      error: createErr?.message || 'Gagal membuat user',
+      hint: 'Jika pesan "Database error creating new user", cek trigger handle_new_user di Supabase SQL editor — biasanya ada baris yang assume role enum atau full_name NOT NULL.',
+    }, { status: 400 })
   }
 
+  // Upsert (handles both: trigger already inserted a row, or no trigger)
   const { error: profileErr } = await admin.from('profiles').upsert({
     id: created.user.id,
     full_name: body.full_name,
     role: body.role,
     active: true,
-  })
+  }, { onConflict: 'id' })
   if (profileErr) {
     await admin.auth.admin.deleteUser(created.user.id)
     return NextResponse.json({ error: `Gagal simpan profile: ${profileErr.message}` }, { status: 400 })

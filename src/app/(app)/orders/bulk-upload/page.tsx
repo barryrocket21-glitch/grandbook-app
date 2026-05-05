@@ -247,7 +247,11 @@ function ImportOrderTab() {
               <div className="space-y-1.5">
                 <Label>Campaign (override)</Label>
                 <Select value={campaignId} onValueChange={v => setCampaignId(!v || v === 'none' ? '' : v)}>
-                  <SelectTrigger><SelectValue placeholder="Auto dari UTM / pilih..." /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Auto dari UTM / pilih...">
+                      {(value: string) => campaigns.find(c => String(c.id) === value)?.campaign_name ?? '— Auto dari UTM —'}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent className="w-[300px]">
                     <SelectItem value="none">— Auto dari UTM —</SelectItem>
                     {campaigns.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.campaign_name}</SelectItem>)}
@@ -257,7 +261,11 @@ function ImportOrderTab() {
               <div className="space-y-1.5">
                 <Label>Advertiser</Label>
                 <Select value={advertiserId} onValueChange={v => setAdvertiserId(!v || v === 'none' ? '' : v)}>
-                  <SelectTrigger><SelectValue placeholder="Pilih advertiser..." /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih advertiser...">
+                      {(value: string) => advUsers.find(u => u.id === value)?.full_name ?? '— Tanpa Advertiser —'}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent className="w-[260px]">
                     <SelectItem value="none">— Tanpa Advertiser —</SelectItem>
                     {advUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
@@ -267,7 +275,11 @@ function ImportOrderTab() {
               <div className="space-y-1.5">
                 <Label>CS</Label>
                 <Select value={csId} onValueChange={v => setCsId(!v || v === 'none' ? '' : v)}>
-                  <SelectTrigger><SelectValue placeholder="Pilih CS..." /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih CS...">
+                      {(value: string) => csUsers.find(u => u.id === value)?.full_name ?? '— Tanpa CS —'}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent className="w-[260px]">
                     <SelectItem value="none">— Tanpa CS —</SelectItem>
                     {csUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}

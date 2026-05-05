@@ -161,7 +161,11 @@ export default function NewOrderPage() {
                   <div className="col-span-12 sm:col-span-5 space-y-1">
                     <Label className="text-xs">Produk</Label>
                     <Select value={item.product_id ? String(item.product_id) : ''} onValueChange={v => updateItem(idx, 'product_id', v)}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Pilih produk" /></SelectTrigger>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih produk">
+                          {(value: string) => products.find(p => String(p.id) === value)?.name ?? 'Pilih produk'}
+                        </SelectValue>
+                      </SelectTrigger>
                       <SelectContent className="w-[400px]">
                         {products.length === 0
                           ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada produk aktif</div>
@@ -235,7 +239,14 @@ export default function NewOrderPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Campaign</Label>
                   <Select value={campaignId} onValueChange={v => v && setCampaignId(v)}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder="Pilih campaign" /></SelectTrigger>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih campaign">
+                        {(value: string) => {
+                          const c = campaigns.find(c => String(c.id) === value)
+                          return c ? <span className="truncate"><span className="text-xs text-violet-400 mr-1">[{c.platform}]</span>{c.campaign_name}</span> : 'Pilih campaign'
+                        }}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent className="w-[320px]">
                       {campaigns.length === 0
                         ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada campaign aktif</div>
@@ -252,7 +263,11 @@ export default function NewOrderPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Advertiser</Label>
                   <Select value={advertiserId} onValueChange={v => v && setAdvertiserId(v)}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder="Pilih advertiser" /></SelectTrigger>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih advertiser">
+                        {(value: string) => advUsers.find(u => u.id === value)?.full_name ?? 'Pilih advertiser'}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent className="w-[280px]">
                       {advUsers.length === 0
                         ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada advertiser</div>
@@ -264,7 +279,11 @@ export default function NewOrderPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">CS Handler</Label>
                   <Select value={csId} onValueChange={v => v && setCsId(v)}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder="Pilih CS" /></SelectTrigger>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih CS">
+                        {(value: string) => csUsers.find(u => u.id === value)?.full_name ?? 'Pilih CS'}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent className="w-[280px]">
                       {csUsers.length === 0
                         ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada CS</div>

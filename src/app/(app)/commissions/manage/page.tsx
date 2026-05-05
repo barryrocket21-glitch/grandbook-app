@@ -14,9 +14,10 @@ import { formatRupiah } from '@/lib/format'
 import { COMMISSION_STATUS_COLORS, ROLE_LABELS } from '@/lib/constants'
 import type { Commission, Profile } from '@/lib/types'
 
+const supabase = createClient()
+
 export default function ManageCommissionsPage() {
   const { role } = useAuth()
-  const supabase = createClient()
   const [commissions, setCommissions] = useState<(Commission & { user?: Profile })[]>([])
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
 

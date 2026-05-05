@@ -14,9 +14,10 @@ import { Plus, Loader2, TrendingUp, DollarSign, Target, MousePointerClick } from
 import { formatRupiah, formatNumber, calculateCTR, calculateCPC, calculateCPM } from '@/lib/format'
 import type { Campaign, AdSpend } from '@/lib/types'
 
+const supabase = createClient()
+
 export default function AdSpendPage() {
   const { profile } = useAuth()
-  const supabase = createClient()
   const [spends, setSpends] = useState<(AdSpend & { campaigns: any })[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)

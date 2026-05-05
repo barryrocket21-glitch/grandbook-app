@@ -10,8 +10,9 @@ import { Download, FileText, TrendingUp, TrendingDown, DollarSign, Receipt, Coin
 import { formatRupiah } from '@/lib/format'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
+const supabase = createClient()
+
 export default function FinancialReportsPage() {
-  const supabase = createClient()
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)

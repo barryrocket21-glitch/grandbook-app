@@ -14,8 +14,9 @@ import { UserPlus, Loader2 } from 'lucide-react'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import type { Profile, UserRole } from '@/lib/types'
 
+const supabase = createClient()
+
 export default function UsersPage() {
-  const supabase = createClient()
   const [users, setUsers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)

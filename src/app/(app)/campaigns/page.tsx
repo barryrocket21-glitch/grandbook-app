@@ -14,8 +14,9 @@ import { Plus, Pencil, Loader2 } from 'lucide-react'
 import { AD_PLATFORMS } from '@/lib/constants'
 import type { Campaign, Profile } from '@/lib/types'
 
+const supabase = createClient()
+
 export default function CampaignsPage() {
-  const supabase = createClient()
   const [campaigns, setCampaigns] = useState<(Campaign & { advertiser?: Profile })[]>([])
   const [advertisers, setAdvertisers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)

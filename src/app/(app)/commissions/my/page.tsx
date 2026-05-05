@@ -9,9 +9,10 @@ import { Coins, TrendingUp } from 'lucide-react'
 import { formatRupiah } from '@/lib/format'
 import { COMMISSION_STATUS_COLORS } from '@/lib/constants'
 
+const supabase = createClient()
+
 export default function MyCommissionsPage() {
   const { user } = useAuth()
-  const supabase = createClient()
   const [commissions, setCommissions] = useState<any[]>([])
 
   useEffect(() => {

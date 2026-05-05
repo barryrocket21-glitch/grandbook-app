@@ -9,8 +9,9 @@ import { Target, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react'
 import { formatRupiah, formatNumber, calculateROAS, calculateCPA } from '@/lib/format'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
+const supabase = createClient()
+
 export default function AdsReportPage() {
-  const supabase = createClient()
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
   const [campaigns, setCampaigns] = useState<any[]>([])
 

@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
 
+const supabase = createClient()
+
 export default function ExportPage() {
-  const supabase = createClient()
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
   const [exporting, setExporting] = useState('')
 

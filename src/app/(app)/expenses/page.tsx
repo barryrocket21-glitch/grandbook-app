@@ -13,9 +13,10 @@ import { Plus, Pencil, Loader2, Receipt } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
 import type { Expense } from '@/lib/types'
 
+const supabase = createClient()
+
 export default function ExpensesPage() {
   const { profile } = useAuth()
-  const supabase = createClient()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)

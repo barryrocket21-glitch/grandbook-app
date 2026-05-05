@@ -18,10 +18,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 
+const supabase = createClient()
+
 export default function OrderDetailPage() {
   const { id } = useParams()
   const { role } = useAuth()
-  const supabase = createClient()
   const [order, setOrder] = useState<any>(null)
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

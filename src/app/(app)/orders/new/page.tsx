@@ -16,9 +16,10 @@ import { formatRupiah } from '@/lib/format'
 import { PAYMENT_METHODS } from '@/lib/constants'
 import type { Product, Campaign, Profile } from '@/lib/types'
 
+const supabase = createClient()
+
 export default function NewOrderPage() {
   const { profile } = useAuth()
-  const supabase = createClient()
   const [products, setProducts] = useState<Product[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [csUsers, setCsUsers] = useState<Profile[]>([])
@@ -56,7 +57,7 @@ export default function NewOrderPage() {
     fetch()
   }, [])
 
-  // Auto-save draft
+  // Auto-save draft every 10s
   useEffect(() => {
     const t = setInterval(() => {
       localStorage.setItem('order_draft', JSON.stringify({
@@ -66,7 +67,10 @@ export default function NewOrderPage() {
       }))
     }, 10000)
     return () => clearInterval(t)
-  })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderDate, customerName, customerPhone, customerCity, customerProvince,
+      customerAddress, paymentMethod, campaignId, advertiserId, csId,
+      shippingCost, discount, notes, items])
 
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0)
   const total = subtotal + shippingCost - discount

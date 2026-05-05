@@ -15,8 +15,9 @@ import { formatRupiah } from '@/lib/format'
 import { ROLE_LABELS } from '@/lib/constants'
 import type { CommissionRule, UserRole } from '@/lib/types'
 
+const supabase = createClient()
+
 export default function CommissionRulesPage() {
-  const supabase = createClient()
   const [rules, setRules] = useState<CommissionRule[]>([])
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)

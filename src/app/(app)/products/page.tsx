@@ -13,8 +13,9 @@ import { Plus, Pencil, Package, Loader2 } from 'lucide-react'
 import { formatRupiah } from '@/lib/format'
 import type { Product } from '@/lib/types'
 
+const supabase = createClient()
+
 export default function ProductsPage() {
-  const supabase = createClient()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)

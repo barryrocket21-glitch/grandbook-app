@@ -27,12 +27,13 @@ import {
 import { RESI_STATUSES, EKSPEDISI_LIST } from '@/lib/constants'
 import type { Campaign, Profile, Product } from '@/lib/types'
 
+const supabase = createClient()
+
 // ─────────────────────────────────────────────────────────────────
 // TAB 1: IMPORT ORDER BARU
 // ─────────────────────────────────────────────────────────────────
 function ImportOrderTab() {
   const { profile } = useAuth()
-  const supabase = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [templateId, setTemplateId] = useState('orderonline')
@@ -360,7 +361,6 @@ function ImportOrderTab() {
 // TAB 2: GENERATE TEMPLATE KIRIM (GrandBook → SPX / mengantar)
 // ─────────────────────────────────────────────────────────────────
 function GenerateShippingTab() {
-  const supabase = createClient()
   const [ekspedisi, setEkspedisi] = useState<'spx' | 'mengantar'>('spx')
   const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().split('T')[0])
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0])
@@ -549,7 +549,6 @@ function GenerateShippingTab() {
 // TAB 3: UPDATE STATUS RESI
 // ─────────────────────────────────────────────────────────────────
 function UpdateResiTab() {
-  const supabase = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<'spx-export' | 'manual'>('spx-export')
   const [fileName, setFileName] = useState('')

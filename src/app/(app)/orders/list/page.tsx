@@ -18,11 +18,12 @@ import { ORDER_STATUSES, RESI_STATUSES } from '@/lib/constants'
 import type { Order, OrderStatus } from '@/lib/types'
 import Link from 'next/link'
 
+const supabase = createClient()
+
 const PAGE_SIZE = 50
 
 export default function OrdersListPage() {
   const { role } = useAuth()
-  const supabase = createClient()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)

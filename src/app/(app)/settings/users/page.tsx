@@ -9,10 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, KeyRound, Trash2, Pencil, Wrench, AlertTriangle } from 'lucide-react'
+import { UserPlus, Loader2, KeyRound, Trash2, Pencil, Wrench, AlertTriangle, Users } from 'lucide-react'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import type { Profile, UserRole } from '@/lib/types'
 import { useAuth } from '@/components/providers/auth-provider'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const roles: UserRole[] = ['owner', 'admin', 'cs', 'advertiser', 'akunting']
 
@@ -211,13 +213,13 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Users & Roles</h1>
-          <p className="text-muted-foreground mt-1">{users.length} user terdaftar</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white" />}><UserPlus className="w-4 h-4 mr-2" />Tambah User</DialogTrigger>
+      <PageHeader
+        icon={Users}
+        title="Users & Roles"
+        description={`${users.length} user terdaftar`}
+        actions={
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}><UserPlus className="w-4 h-4 mr-2" />Tambah User</DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Tambah User Baru</DialogTitle></DialogHeader>
             <form onSubmit={handleInvite} className="space-y-4">
@@ -229,7 +231,8 @@ export default function UsersPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
 
       {showSqlHelp && (
         <Card className="border-yellow-500/40 bg-yellow-500/5">
@@ -278,7 +281,7 @@ export default function UsersPage() {
                   <TableRow key={i}><TableCell colSpan={6} className="py-3"><div className="h-4 bg-muted animate-pulse rounded w-full" /></TableCell></TableRow>
                 ))
               ) : users.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Belum ada user</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="p-0"><EmptyState icon={Users} title="Belum ada user lain" description="Klik 'Tambah User' untuk mengundang teammate." /></TableCell></TableRow>
               ) : users.map(u => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.full_name}</TableCell>

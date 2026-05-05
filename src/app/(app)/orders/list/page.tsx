@@ -11,11 +11,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
-import { Search, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
+import { Search, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload, ShoppingCart, Inbox } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
 import { ORDER_STATUSES, RESI_STATUSES } from '@/lib/constants'
 import type { Order } from '@/lib/types'
 import Link from 'next/link'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const supabase = createClient()
 
@@ -77,20 +79,19 @@ export default function OrdersListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Daftar Order</h1>
-          <p className="text-muted-foreground mt-1">{totalCount} total order</p>
-        </div>
-        {(role === 'admin' || role === 'owner') && (
-          <div className="flex gap-2">
+      <PageHeader
+        icon={ShoppingCart}
+        title="Daftar Order"
+        description={`${totalCount.toLocaleString('id-ID')} total order`}
+        actions={(role === 'admin' || role === 'owner') ? (
+          <>
             <Button variant="outline" render={<Link href="/orders/bulk-upload" />}>
               <Upload className="w-4 h-4 mr-1.5" />Upload Massal
             </Button>
-            <Button render={<Link href="/orders/new" />} className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white">+ Input Order Baru</Button>
-          </div>
-        )}
-      </div>
+            <Button render={<Link href="/orders/new" />} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20">+ Input Order Baru</Button>
+          </>
+        ) : null}
+      />
 
       {/* Filters */}
       <Card>
@@ -153,7 +154,15 @@ export default function OrdersListPage() {
                     <TableRow key={i}><TableCell colSpan={9} className="text-center py-4"><div className="h-4 bg-muted animate-pulse rounded w-full" /></TableCell></TableRow>
                   ))
                 ) : orders.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground">Tidak ada order ditemukan</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={10} className="p-0">
+                      <EmptyState
+                        icon={Inbox}
+                        title="Belum ada order"
+                        description="Order baru yang masuk akan muncul di sini. Coba ubah filter atau buat order baru."
+                      />
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   orders.map(order => (
                     <TableRow key={order.id} className="group hover:bg-muted/50">

@@ -47,14 +47,14 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
-              <div className="bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-lg flex aspect-square size-8 items-center justify-center shadow-lg shadow-violet-500/25">
-                <BookOpen className="size-4" />
+              <div className="bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-600 text-white rounded-xl flex aspect-square size-9 items-center justify-center shadow-lg shadow-violet-500/30 ring-1 ring-white/10">
+                <BookOpen className="size-4.5" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                <span className="truncate font-bold text-base bg-gradient-to-r from-violet-300 to-indigo-300 bg-clip-text text-transparent">
                   GrandBook
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="truncate text-[11px] text-muted-foreground tracking-wide">
                   Pembukuan Bisnis
                 </span>
               </div>

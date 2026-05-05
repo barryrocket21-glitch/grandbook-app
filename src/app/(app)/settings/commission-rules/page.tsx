@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Plus, Pencil, Loader2, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Loader2, Trash2, Coins } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 import { formatRupiah } from '@/lib/format'
 import { ROLE_LABELS } from '@/lib/constants'
 import type { CommissionRule, UserRole } from '@/lib/types'
@@ -58,24 +60,25 @@ export default function CommissionRulesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Aturan Komisi</h1>
-          <p className="text-muted-foreground mt-1">Konfigurasi perhitungan komisi per role</p>
-        </div>
-        <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
-          <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white" />}><Plus className="w-4 h-4 mr-2" />Tambah Rule</DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{editId ? 'Edit' : 'Tambah'} Aturan Komisi</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2"><Label>Role</Label><Select value={form.role} onValueChange={v => setForm({ ...form, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><Label>Tipe</Label><Select value={form.rule_type} onValueChange={v => setForm({ ...form, rule_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[240px]"><SelectItem value="PERCENT_REVENUE">% dari Revenue</SelectItem><SelectItem value="FLAT_PER_ORDER">Flat per Order (Rp)</SelectItem></SelectContent></Select></div>
-              <div className="space-y-2"><Label>{form.rule_type === 'PERCENT_REVENUE' ? 'Persentase (%)' : 'Nominal (Rp)'}</Label><Input type="number" step="0.01" value={form.value} onChange={e => setForm({ ...form, value: Number(e.target.value) })} /></div>
-              <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <PageHeader
+        icon={Coins}
+        title="Aturan Komisi"
+        description="Konfigurasi perhitungan komisi per role"
+        actions={
+          <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
+            <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}><Plus className="w-4 h-4 mr-2" />Tambah Rule</DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{editId ? 'Edit' : 'Tambah'} Aturan Komisi</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2"><Label>Role</Label><Select value={form.role} onValueChange={v => setForm({ ...form, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>Tipe</Label><Select value={form.rule_type} onValueChange={v => setForm({ ...form, rule_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[240px]"><SelectItem value="PERCENT_REVENUE">% dari Revenue</SelectItem><SelectItem value="FLAT_PER_ORDER">Flat per Order (Rp)</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>{form.rule_type === 'PERCENT_REVENUE' ? 'Persentase (%)' : 'Nominal (Rp)'}</Label><Input type="number" step="0.01" value={form.value} onChange={e => setForm({ ...form, value: Number(e.target.value) })} /></div>
+                <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -93,7 +96,7 @@ export default function CommissionRulesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {rules.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Belum ada aturan komisi</TableCell></TableRow>}
+              {rules.length === 0 && <TableRow><TableCell colSpan={5} className="p-0"><EmptyState icon={Coins} title="Belum ada aturan komisi" description="Tambah rule untuk menentukan komisi advertiser, CS, dan admin per order yang masuk." /></TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

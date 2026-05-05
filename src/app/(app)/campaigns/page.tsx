@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Plus, Pencil, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Loader2, Megaphone } from 'lucide-react'
 import { AD_PLATFORMS } from '@/lib/constants'
 import type { Campaign, Profile } from '@/lib/types'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const supabase = createClient()
 
@@ -71,24 +73,25 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Campaigns</h1>
-          <p className="text-muted-foreground mt-1">{campaigns.length} campaign terdaftar</p>
-        </div>
-        <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
-          <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white" />}><Plus className="w-4 h-4 mr-2" />Tambah Campaign</DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{editId ? 'Edit' : 'Tambah'} Campaign</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2"><Label>Nama Campaign *</Label><Input value={form.campaign_name} onChange={e => setForm({ ...form, campaign_name: e.target.value })} required /></div>
-              <div className="space-y-2"><Label>Platform</Label><Select value={form.platform} onValueChange={v => setForm({ ...form, platform: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[240px]">{AD_PLATFORMS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><Label>Advertiser</Label><Select value={form.advertiser_id} onValueChange={v => setForm({ ...form, advertiser_id: v })}><SelectTrigger><SelectValue placeholder="Pilih advertiser" /></SelectTrigger><SelectContent className="w-[260px]">{advertisers.length === 0 ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada advertiser</div> : advertisers.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}</SelectContent></Select></div>
-              <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <PageHeader
+        icon={Megaphone}
+        title="Campaigns"
+        description={`${campaigns.length} campaign terdaftar`}
+        actions={
+          <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
+            <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}><Plus className="w-4 h-4 mr-2" />Tambah Campaign</DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{editId ? 'Edit' : 'Tambah'} Campaign</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2"><Label>Nama Campaign *</Label><Input value={form.campaign_name} onChange={e => setForm({ ...form, campaign_name: e.target.value })} required /></div>
+                <div className="space-y-2"><Label>Platform</Label><Select value={form.platform} onValueChange={v => setForm({ ...form, platform: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[240px]">{AD_PLATFORMS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>Advertiser</Label><Select value={form.advertiser_id} onValueChange={v => setForm({ ...form, advertiser_id: v })}><SelectTrigger><SelectValue placeholder="Pilih advertiser" /></SelectTrigger><SelectContent className="w-[260px]">{advertisers.length === 0 ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada advertiser</div> : advertisers.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}</SelectContent></Select></div>
+                <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -103,7 +106,13 @@ export default function CampaignsPage() {
                   <TableCell><Button variant="ghost" size="icon" onClick={() => handleEdit(c)}><Pencil className="w-4 h-4" /></Button></TableCell>
                 </TableRow>
               ))}
-              {campaigns.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Belum ada campaign</TableCell></TableRow>}
+              {!loading && campaigns.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="p-0">
+                    <EmptyState icon={Megaphone} title="Belum ada campaign" description="Tambah campaign untuk mulai tracking ads spend dan order yang masuk dari setiap channel." />
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

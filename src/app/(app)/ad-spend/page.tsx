@@ -13,6 +13,8 @@ import { toast } from 'sonner'
 import { Plus, Loader2, TrendingUp, DollarSign, Target, MousePointerClick } from 'lucide-react'
 import { formatRupiah, formatNumber, calculateCTR, calculateCPC, calculateCPM } from '@/lib/format'
 import type { Campaign, AdSpend } from '@/lib/types'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const supabase = createClient()
 
@@ -64,23 +66,48 @@ export default function AdSpendPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Ad Spend Tracking</h1>
-          <p className="text-muted-foreground mt-1">Input dan tracking pengeluaran iklan</p>
-        </div>
-        <div className="flex gap-2">
-          <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-40" />
-          <Button onClick={() => setShowForm(!showForm)} className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white"><Plus className="w-4 h-4 mr-2" />Input Spend</Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={TrendingUp}
+        title="Ad Spend"
+        description="Tracking pengeluaran iklan per campaign"
+        actions={
+          <>
+            <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-40" />
+            <Button onClick={() => setShowForm(!showForm)} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20"><Plus className="w-4 h-4 mr-2" />Input Spend</Button>
+          </>
+        }
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card><CardContent className="pt-4 pb-4 flex items-center gap-3"><div className="p-2 bg-red-500/15 rounded-lg"><DollarSign className="w-5 h-5 text-red-500" /></div><div><p className="text-xs text-muted-foreground">Total Spend</p><p className="text-lg font-bold">{formatRupiah(totalSpend)}</p></div></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-4 flex items-center gap-3"><div className="p-2 bg-blue-500/15 rounded-lg"><MousePointerClick className="w-5 h-5 text-blue-500" /></div><div><p className="text-xs text-muted-foreground">Total Clicks</p><p className="text-lg font-bold">{formatNumber(totalClicks)}</p></div></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-4 flex items-center gap-3"><div className="p-2 bg-violet-500/15 rounded-lg"><TrendingUp className="w-5 h-5 text-violet-500" /></div><div><p className="text-xs text-muted-foreground">Avg CPC</p><p className="text-lg font-bold">{formatRupiah(calculateCPC(totalSpend, totalClicks))}</p></div></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-4 flex items-center gap-3"><div className="p-2 bg-emerald-500/15 rounded-lg"><Target className="w-5 h-5 text-emerald-500" /></div><div><p className="text-xs text-muted-foreground">CTR</p><p className="text-lg font-bold">{calculateCTR(totalClicks, totalImpressions).toFixed(2)}%</p></div></CardContent></Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="overflow-hidden relative group hover:shadow-lg transition-shadow">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-red-500/15 rounded-xl ring-1 ring-red-500/20"><DollarSign className="w-5 h-5 text-red-500" /></div>
+            <div className="min-w-0"><p className="text-xs text-muted-foreground uppercase tracking-wider">Total Spend</p><p className="text-lg font-bold truncate">{formatRupiah(totalSpend)}</p></div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden relative group hover:shadow-lg transition-shadow">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-blue-500/15 rounded-xl ring-1 ring-blue-500/20"><MousePointerClick className="w-5 h-5 text-blue-500" /></div>
+            <div className="min-w-0"><p className="text-xs text-muted-foreground uppercase tracking-wider">Total Clicks</p><p className="text-lg font-bold">{formatNumber(totalClicks)}</p></div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden relative group hover:shadow-lg transition-shadow">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-violet-500/15 rounded-xl ring-1 ring-violet-500/20"><TrendingUp className="w-5 h-5 text-violet-500" /></div>
+            <div className="min-w-0"><p className="text-xs text-muted-foreground uppercase tracking-wider">Avg CPC</p><p className="text-lg font-bold">{formatRupiah(calculateCPC(totalSpend, totalClicks))}</p></div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden relative group hover:shadow-lg transition-shadow">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-emerald-500/15 rounded-xl ring-1 ring-emerald-500/20"><Target className="w-5 h-5 text-emerald-500" /></div>
+            <div className="min-w-0"><p className="text-xs text-muted-foreground uppercase tracking-wider">CTR</p><p className="text-lg font-bold">{calculateCTR(totalClicks, totalImpressions).toFixed(2)}%</p></div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Input Form */}
@@ -119,7 +146,7 @@ export default function AdSpendPage() {
                   <TableCell>{s.impressions ? formatRupiah(calculateCPM(s.spend, s.impressions)) : '-'}</TableCell>
                 </TableRow>
               ))}
-              {spends.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground">Belum ada data</TableCell></TableRow>}
+              {spends.length === 0 && <TableRow><TableCell colSpan={9} className="p-0"><EmptyState icon={TrendingUp} title="Belum ada ad spend" description={`Klik "Input Spend" untuk mulai tracking pengeluaran iklan di bulan ${month}.`} /></TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

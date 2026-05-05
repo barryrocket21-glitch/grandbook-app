@@ -12,6 +12,8 @@ import { toast } from 'sonner'
 import { Plus, Pencil, Package, Loader2 } from 'lucide-react'
 import { formatRupiah } from '@/lib/format'
 import type { Product } from '@/lib/types'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const supabase = createClient()
 
@@ -60,13 +62,13 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Master Produk</h1>
-          <p className="text-muted-foreground mt-1">{products.length} produk terdaftar</p>
-        </div>
-        <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
-          <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white" />}><Plus className="w-4 h-4 mr-2" />Tambah Produk</DialogTrigger>
+      <PageHeader
+        icon={Package}
+        title="Master Produk"
+        description={`${products.length} produk terdaftar`}
+        actions={
+          <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
+            <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}><Plus className="w-4 h-4 mr-2" />Tambah Produk</DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editId ? 'Edit' : 'Tambah'} Produk</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -81,7 +83,8 @@ export default function ProductsPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -92,7 +95,7 @@ export default function ProductsPage() {
                   <TableRow key={i}><TableCell colSpan={7} className="py-3"><div className="h-4 bg-muted animate-pulse rounded w-full" /></TableCell></TableRow>
                 ))
               ) : products.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Belum ada produk</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="p-0"><EmptyState icon={Package} title="Belum ada produk" description="Tambah produk untuk mulai bisa dipilih saat input order." /></TableCell></TableRow>
               ) : products.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.name}</TableCell>

@@ -23,27 +23,30 @@ export default function UsersPage() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'admin' as UserRole })
 
-  const fetch = async () => {
+  const loadUsers = async () => {
     setLoading(true)
     const { data } = await supabase.from('profiles').select('*').order('created_at')
     setUsers(data || [])
     setLoading(false)
   }
-  useEffect(() => { fetch() }, [])
+  useEffect(() => { loadUsers() }, [])
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.email || !form.full_name || !form.password) return toast.error('Semua field wajib diisi')
+    if (form.password.length < 8) return toast.error('Password minimal 8 karakter')
     setSaving(true)
     try {
-      const { error } = await supabase.auth.signUp({
-        email: form.email, password: form.password,
-        options: { data: { full_name: form.full_name, role: form.role } },
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
       })
-      if (error) throw error
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Gagal membuat user')
       toast.success('User berhasil dibuat!', { description: `${form.full_name} (${ROLE_LABELS[form.role]})` })
-      setOpen(false); setForm({ email: '', password: '', full_name: '', role: 'admin' }); fetch()
-    } catch (err: any) { toast.error(err.message) }
+      setOpen(false); setForm({ email: '', password: '', full_name: '', role: 'admin' }); loadUsers()
+    } catch (err: any) { toast.error('Gagal membuat user', { description: err.message }) }
     finally { setSaving(false) }
   }
 
@@ -52,7 +55,7 @@ export default function UsersPage() {
     const { error } = await supabase.from('profiles').update({ active: !user.active }).eq('id', user.id)
     if (error) { toast.error(error.message); return }
     toast.success(user.active ? 'User dinonaktifkan' : 'User diaktifkan')
-    fetch()
+    loadUsers()
   }
 
   const roles: UserRole[] = ['owner', 'admin', 'cs', 'advertiser', 'akunting']

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { type Profile, type UserRole } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
@@ -21,43 +21,23 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 })
 
+const supabase = createClient()
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
-    const getUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
-
-        if (user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single()
-          setProfile(profileData)
-        }
-      } catch (error) {
-        console.error('Error getting user:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    getUser()
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+        if (currentUser) {
           const { data: profileData } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', currentUser.id)
             .single()
           setProfile(profileData)
         } else {
@@ -66,29 +46,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       }
     )
-
-    return () => {
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
     window.location.href = '/login'
-  }
+  }, [])
+
+  const value = useMemo(() => ({
+    user,
+    profile,
+    role: profile?.role ?? null,
+    loading,
+    signOut,
+  }), [user, profile, loading, signOut])
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        role: profile?.role ?? null,
-        loading,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -10,12 +10,11 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Search, Filter, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
+import { Search, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
 import { ORDER_STATUSES, RESI_STATUSES } from '@/lib/constants'
-import type { Order, OrderStatus } from '@/lib/types'
+import type { Order } from '@/lib/types'
 import Link from 'next/link'
 
 const supabase = createClient()
@@ -29,13 +28,14 @@ export default function OrdersListPage() {
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
   const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selected, setSelected] = useState<number[]>([])
   const [bulkStatus, setBulkStatus] = useState<string>('')
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true)
     let query = supabase.from('orders').select('*, campaigns(campaign_name, platform)', { count: 'exact' })
     if (statusFilter !== 'ALL') query = query.eq('status', statusFilter)
@@ -48,11 +48,15 @@ export default function OrdersListPage() {
     setOrders(data || [])
     setTotalCount(count || 0)
     setLoading(false)
+  }, [page, statusFilter, dateFrom, dateTo, search])
+
+  useEffect(() => { fetchOrders() }, [fetchOrders])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSearch(searchInput)
+    setPage(0)
   }
-
-  useEffect(() => { fetchOrders() }, [page, statusFilter, dateFrom, dateTo])
-
-  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); setPage(0); fetchOrders() }
 
   const toggleSelect = (id: number) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   const toggleAll = () => setSelected(selected.length === orders.length ? [] : orders.map(o => o.id))
@@ -93,7 +97,7 @@ export default function OrdersListPage() {
         <CardContent className="pt-4 pb-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-              <Input placeholder="Cari nama / no. order..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-sm" />
+              <Input placeholder="Cari nama / no. order..." value={searchInput} onChange={e => setSearchInput(e.target.value)} className="max-w-sm" />
               <Button type="submit" variant="outline" size="icon"><Search className="w-4 h-4" /></Button>
             </form>
             <Select value={statusFilter} onValueChange={v => { if (v) { setStatusFilter(v); setPage(0) } }}>
@@ -105,7 +109,7 @@ export default function OrdersListPage() {
             </Select>
             <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(0) }} className="w-40" />
             <Input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(0) }} className="w-40" />
-            <Button variant="outline" size="icon" onClick={fetchOrders}><RefreshCw className="w-4 h-4" /></Button>
+            <Button variant="outline" size="icon" onClick={() => fetchOrders()}><RefreshCw className="w-4 h-4" /></Button>
           </div>
         </CardContent>
       </Card>

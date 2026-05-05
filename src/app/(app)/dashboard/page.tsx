@@ -50,6 +50,9 @@ import { formatRupiah, formatNumber, formatPercent, getToday, getStartOfWeek, ge
 // Chart colors
 const CHART_COLORS = ['#8b5cf6', '#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
 
+// Supabase client dibuat sekali di module level agar tidak trigger re-render loop
+const supabase = createClient()
+
 interface DashboardData {
   omzetHariIni: number
   omzetMingguIni: number
@@ -94,7 +97,6 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const supabase = createClient()
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -244,7 +246,7 @@ export default function DashboardPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     fetchDashboardData()

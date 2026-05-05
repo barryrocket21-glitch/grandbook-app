@@ -87,18 +87,23 @@ export default function ProductsPage() {
           <Table>
             <TableHeader><TableRow><TableHead>Produk</TableHead><TableHead>SKU</TableHead><TableHead>Harga Jual</TableHead><TableHead>HPP</TableHead><TableHead>Margin</TableHead><TableHead>Kategori</TableHead><TableHead></TableHead></TableRow></TableHeader>
             <TableBody>
-              {products.map(p => (
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}><TableCell colSpan={7} className="py-3"><div className="h-4 bg-muted animate-pulse rounded w-full" /></TableCell></TableRow>
+                ))
+              ) : products.length === 0 ? (
+                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Belum ada produk</TableCell></TableRow>
+              ) : products.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell className="font-mono text-xs">{p.sku || '-'}</TableCell>
                   <TableCell>{formatRupiah(p.price_default)}</TableCell>
                   <TableCell>{formatRupiah(p.hpp)}</TableCell>
-                  <TableCell><Badge variant="outline" className="bg-emerald-500/10 text-emerald-600">{((p.price_default - p.hpp) / p.price_default * 100).toFixed(0)}%</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className="bg-emerald-500/10 text-emerald-600">{p.price_default > 0 ? ((p.price_default - p.hpp) / p.price_default * 100).toFixed(0) : 0}%</Badge></TableCell>
                   <TableCell>{p.category || '-'}</TableCell>
                   <TableCell><Button variant="ghost" size="icon" onClick={() => handleEdit(p)}><Pencil className="w-4 h-4" /></Button></TableCell>
                 </TableRow>
               ))}
-              {products.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Belum ada produk</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

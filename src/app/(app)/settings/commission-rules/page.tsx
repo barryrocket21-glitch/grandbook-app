@@ -37,20 +37,20 @@ export default function CommissionRulesPage() {
     setSaving(true)
     try {
       const payload = { role: form.role, rule_type: form.rule_type, value: form.value, active: true }
-      if (editId) {
-        await supabase.from('commission_rules').update(payload).eq('id', editId)
-        toast.success('Rule diupdate')
-      } else {
-        await supabase.from('commission_rules').insert(payload)
-        toast.success('Rule ditambahkan')
-      }
+      const { error } = editId
+        ? await supabase.from('commission_rules').update(payload).eq('id', editId)
+        : await supabase.from('commission_rules').insert(payload)
+      if (error) throw error
+      toast.success(editId ? 'Rule diupdate' : 'Rule ditambahkan')
       setOpen(false); reset(); fetch()
-    } catch (err: any) { toast.error(err.message) }
+    } catch (err: any) { toast.error('Gagal simpan', { description: err.message }) }
     finally { setSaving(false) }
   }
 
   const handleDelete = async (id: number) => {
-    await supabase.from('commission_rules').update({ active: false }).eq('id', id)
+    if (!confirm('Hapus aturan komisi ini? Tidak akan berlaku lagi untuk komisi yang dihitung setelah ini.')) return
+    const { error } = await supabase.from('commission_rules').update({ active: false }).eq('id', id)
+    if (error) { toast.error('Gagal hapus', { description: error.message }); return }
     toast.success('Rule dihapus'); fetch()
   }
 
@@ -68,8 +68,8 @@ export default function CommissionRulesPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>{editId ? 'Edit' : 'Tambah'} Aturan Komisi</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2"><Label>Role</Label><Select value={form.role} onValueChange={v => setForm({ ...form, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><Label>Tipe</Label><Select value={form.rule_type} onValueChange={v => setForm({ ...form, rule_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PERCENT_REVENUE">% dari Revenue</SelectItem><SelectItem value="FLAT_PER_ORDER">Flat per Order (Rp)</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>Role</Label><Select value={form.role} onValueChange={v => setForm({ ...form, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><Label>Tipe</Label><Select value={form.rule_type} onValueChange={v => setForm({ ...form, rule_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[240px]"><SelectItem value="PERCENT_REVENUE">% dari Revenue</SelectItem><SelectItem value="FLAT_PER_ORDER">Flat per Order (Rp)</SelectItem></SelectContent></Select></div>
               <div className="space-y-2"><Label>{form.rule_type === 'PERCENT_REVENUE' ? 'Persentase (%)' : 'Nominal (Rp)'}</Label><Input type="number" step="0.01" value={form.value} onChange={e => setForm({ ...form, value: Number(e.target.value) })} /></div>
               <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
             </form>

@@ -11,11 +11,12 @@ import { BookOpen, Loader2, Mail, Lock, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
+const supabase = createClient()
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -36,8 +37,8 @@ export default function LoginPage() {
       toast.success('Login berhasil!')
       router.push('/dashboard')
       router.refresh()
-    } catch (err) {
-      toast.error('Terjadi kesalahan')
+    } catch (err: any) {
+      toast.error('Terjadi kesalahan', { description: err?.message })
     } finally {
       setLoading(false)
     }
@@ -67,8 +68,8 @@ export default function LoginPage() {
       toast.success('Magic link terkirim!', {
         description: 'Cek email kamu untuk login.',
       })
-    } catch (err) {
-      toast.error('Terjadi kesalahan')
+    } catch (err: any) {
+      toast.error('Terjadi kesalahan', { description: err?.message })
     } finally {
       setLoading(false)
     }

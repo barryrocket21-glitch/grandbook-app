@@ -86,7 +86,7 @@ export default function OrderDetailPage() {
       {(role === 'cs' || role === 'owner') && (
         <Card className="border-violet-500/20">
           <CardContent className="pt-4 pb-4 flex items-center gap-3 flex-wrap">
-            <Select value={status} onValueChange={v => v && setStatus(v)}><SelectTrigger className="w-48"><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
+            <Select value={status} onValueChange={v => v && setStatus(v)}><SelectTrigger className="w-48"><SelectValue /></SelectTrigger><SelectContent className="w-[220px]">{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
             <Button onClick={updateStatus} disabled={status === order.status} className="bg-violet-600 text-white"><Save className="w-4 h-4 mr-2" />Update Status</Button>
           </CardContent>
         </Card>
@@ -116,7 +116,7 @@ export default function OrderDetailPage() {
                 <Label className="text-xs">Ekspedisi</Label>
                 <Select value={ekspedisi} onValueChange={v => setEkspedisi(!v || v === 'none' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Pilih ekspedisi..." /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[260px]">
                     <SelectItem value="none">— Pilih —</SelectItem>
                     {EKSPEDISI_LIST.map(e => (
                       <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
@@ -128,7 +128,7 @@ export default function OrderDetailPage() {
                 <Label className="text-xs">Status Resi</Label>
                 <Select value={resiStatus} onValueChange={v => setResiStatus(!v || v === 'none' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Pilih status..." /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[220px]">
                     <SelectItem value="none">— Pilih —</SelectItem>
                     {RESI_STATUSES.map(s => (
                       <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>

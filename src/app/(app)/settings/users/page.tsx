@@ -48,6 +48,7 @@ export default function UsersPage() {
   }
 
   const toggleActive = async (user: Profile) => {
+    if (user.active && !confirm(`Nonaktifkan ${user.full_name}? User tidak bisa login lagi.`)) return
     const { error } = await supabase.from('profiles').update({ active: !user.active }).eq('id', user.id)
     if (error) { toast.error(error.message); return }
     toast.success(user.active ? 'User dinonaktifkan' : 'User diaktifkan')
@@ -71,7 +72,7 @@ export default function UsersPage() {
               <div className="space-y-2"><Label>Nama Lengkap *</Label><Input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></div>
               <div className="space-y-2"><Label>Email *</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></div>
               <div className="space-y-2"><Label>Password *</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} minLength={8} required /></div>
-              <div className="space-y-2"><Label>Role</Label><Select value={form.role} onValueChange={v => setForm({ ...form, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><Label>Role</Label><Select value={form.role} onValueChange={v => setForm({ ...form, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
               <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Buat User</Button>
             </form>
           </DialogContent>

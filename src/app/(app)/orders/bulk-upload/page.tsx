@@ -170,7 +170,7 @@ function ImportOrderTab() {
           })
         }
         success++
-      } catch { failed++ }
+      } catch (e) { console.error('Import row failed:', e); failed++ }
     }
 
     setImporting(false)
@@ -248,7 +248,7 @@ function ImportOrderTab() {
                 <Label>Campaign (override)</Label>
                 <Select value={campaignId} onValueChange={v => setCampaignId(!v || v === 'none' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Auto dari UTM / pilih..." /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[300px]">
                     <SelectItem value="none">— Auto dari UTM —</SelectItem>
                     {campaigns.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.campaign_name}</SelectItem>)}
                   </SelectContent>
@@ -258,7 +258,7 @@ function ImportOrderTab() {
                 <Label>Advertiser</Label>
                 <Select value={advertiserId} onValueChange={v => setAdvertiserId(!v || v === 'none' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Pilih advertiser..." /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[260px]">
                     <SelectItem value="none">— Tanpa Advertiser —</SelectItem>
                     {advUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
                   </SelectContent>
@@ -268,7 +268,7 @@ function ImportOrderTab() {
                 <Label>CS</Label>
                 <Select value={csId} onValueChange={v => setCsId(!v || v === 'none' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Pilih CS..." /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[260px]">
                     <SelectItem value="none">— Tanpa CS —</SelectItem>
                     {csUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
                   </SelectContent>
@@ -455,7 +455,7 @@ function GenerateShippingTab() {
               <Label>Status</Label>
               <Select value={statusFilter} onValueChange={v => v && setStatusFilter(v)}>
                 <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="w-[160px]">
                   <SelectItem value="BARU">Baru</SelectItem>
                   <SelectItem value="DIPROSES">Diproses</SelectItem>
                   <SelectItem value="DIKIRIM">Dikirim</SelectItem>

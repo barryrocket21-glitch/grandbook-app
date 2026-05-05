@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -97,31 +97,34 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const fetchingRef = useRef(false)
 
   const fetchDashboardData = useCallback(async () => {
+    if (fetchingRef.current) return // prevent overlapping fetches
+    fetchingRef.current = true
     try {
       const today = getToday()
       const startOfWeek = getStartOfWeek()
       const startOfMonth = getStartOfMonth()
 
-      // Fetch orders for different periods
+      // Single query for orders (replaces 4 redundant queries)
+      // Then derive today/week/month from in-memory data
       const [
-        { data: ordersToday },
-        { data: ordersWeek },
-        { data: ordersMonth },
-        { data: allOrdersMonth },
+        { data: ordersAllMonth },
         { data: adSpendMonth },
         { data: orderItems },
         { data: expenses },
       ] = await Promise.all([
-        supabase.from('orders').select('total, status').eq('order_date', today),
-        supabase.from('orders').select('total, status').gte('order_date', startOfWeek),
-        supabase.from('orders').select('total, status').gte('order_date', startOfMonth),
-        supabase.from('orders').select('*').gte('order_date', startOfMonth),
-        supabase.from('ad_spend').select('spend, campaign_id, spend_date, campaigns(platform, campaign_name)').gte('spend_date', startOfMonth),
-        supabase.from('order_items').select('qty, price, hpp_snapshot, product_id, products(name), order_id, orders!inner(order_date, status)').gte('orders.order_date', startOfMonth),
+        supabase.from('orders').select('total, status, order_date').gte('order_date', startOfMonth),
+        supabase.from('ad_spend').select('spend, spend_date').gte('spend_date', startOfMonth),
+        supabase.from('order_items').select('qty, price, hpp_snapshot, products(name), orders!inner(order_date, status)').gte('orders.order_date', startOfMonth),
         supabase.from('expenses').select('amount').gte('expense_date', startOfMonth),
       ])
+
+      const ordersMonth = ordersAllMonth || []
+      const ordersWeek = ordersMonth.filter((o: any) => o.order_date >= startOfWeek)
+      const ordersToday = ordersMonth.filter((o: any) => o.order_date === today)
+      const allOrdersMonth = ordersMonth
 
       const safeOrders = (arr: any[] | null) => arr || []
 
@@ -245,15 +248,12 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
       setRefreshing(false)
+      fetchingRef.current = false
     }
   }, [])
 
   useEffect(() => {
     fetchDashboardData()
-
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(fetchDashboardData, 60000)
-    return () => clearInterval(interval)
   }, [fetchDashboardData])
 
   const handleRefresh = () => {

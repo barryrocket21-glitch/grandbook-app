@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { type Profile, type UserRole } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
@@ -27,32 +27,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const lastUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        const currentUser = session?.user ?? null
-        setUser(currentUser)
-        if (currentUser) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single()
-          setProfile(profileData)
-        } else {
-          setProfile(null)
-        }
-        setLoading(false)
+    let mounted = true
+
+    const fetchProfile = async (userId: string) => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      if (mounted) setProfile(data)
+    }
+
+    // Get initial session synchronously then fetch profile async
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
+      const u = session?.user ?? null
+      setUser(u)
+      lastUserIdRef.current = u?.id ?? null
+      if (u) fetchProfile(u.id).finally(() => mounted && setLoading(false))
+      else setLoading(false)
+    })
+
+    // CRITICAL: callback must NOT be async (Supabase deadlock warning)
+    // Defer async work via setTimeout to avoid blocking auth state machine
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const u = session?.user ?? null
+      const newId = u?.id ?? null
+
+      // Skip if same user (prevents re-fetch on TOKEN_REFRESHED)
+      if (newId === lastUserIdRef.current && event !== 'SIGNED_OUT') return
+
+      lastUserIdRef.current = newId
+      setUser(u)
+
+      if (u) {
+        setTimeout(() => { if (mounted) fetchProfile(u.id) }, 0)
+      } else {
+        setProfile(null)
       }
-    )
-    return () => subscription.unsubscribe()
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
     window.location.href = '/login'
   }, [])
 

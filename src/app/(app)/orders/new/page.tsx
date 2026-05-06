@@ -82,12 +82,46 @@ export default function NewOrderPage() {
     setItems([emptyItem()])
   }
 
+  // Cek phone deduplication — return order_id asal kalau ada match di 7 hari terakhir
+  const findDuplicate = async (phone: string): Promise<{ id: number; order_number: string; cs_id: string | null } | null> => {
+    if (!phone || phone.length < 6) return null
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const cutoff = sevenDaysAgo.toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('orders')
+      .select('id, order_number, cs_id')
+      .eq('customer_phone', phone)
+      .gte('order_date', cutoff)
+      .is('duplicate_of', null)
+      .order('order_date', { ascending: false })
+      .limit(1)
+    return data && data.length > 0 ? data[0] : null
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!customerName.trim()) return toast.error('Nama customer wajib diisi')
     if (items.some(i => !i.product_id)) return toast.error('Pilih produk untuk semua item')
     setSaving(true)
     try {
+      // Phone dedup check
+      let duplicateOf: number | null = null
+      if (customerPhone) {
+        const dup = await findDuplicate(customerPhone)
+        if (dup) {
+          const sameCs = dup.cs_id === (csId || null)
+          const msg = sameCs
+            ? `Customer ${customerPhone} sudah pernah order di 7 hari terakhir (${dup.order_number}). Lanjut create order ini sebagai duplicate (tidak dihitung untuk komisi/CR)?`
+            : `Customer ${customerPhone} sudah pernah dihandle CS lain di 7 hari terakhir (${dup.order_number}). Lanjut?`
+          if (!confirm(msg)) {
+            setSaving(false)
+            return
+          }
+          duplicateOf = dup.id
+        }
+      }
+
       const { data: orderNum } = await supabase.rpc('generate_order_number')
       const orderNumber = orderNum || `ORD-${orderDate.replace(/-/g, '')}-${Date.now().toString().slice(-4)}`
       const { data: order, error } = await supabase.from('orders').insert({
@@ -97,13 +131,18 @@ export default function NewOrderPage() {
         payment_method: paymentMethod, status: 'BARU',
         campaign_id: campaignId ? Number(campaignId) : null,
         advertiser_id: advertiserId || null, cs_id: csId || null, admin_id: profile?.id, notes,
+        duplicate_of: duplicateOf,
       }).select().single()
       if (error) throw error
       const { error: itemErr } = await supabase.from('order_items').insert(items.map(i => ({
         order_id: order.id, product_id: i.product_id, qty: i.qty, price: i.price, hpp_snapshot: i.hpp,
       })))
       if (itemErr) throw itemErr
-      toast.success('Order berhasil!', { description: orderNumber })
+      if (duplicateOf) {
+        toast.warning('Order tersimpan sebagai duplicate', { description: `Tidak dihitung untuk komisi/CR. Original: ${orderNumber}` })
+      } else {
+        toast.success('Order berhasil!', { description: orderNumber })
+      }
       resetForm()
     } catch (err: any) {
       toast.error('Gagal simpan order', { description: err.message })

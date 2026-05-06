@@ -18,6 +18,7 @@ import type { Order } from '@/lib/types'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
+import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
 const supabase = createClient()
 
@@ -33,8 +34,12 @@ export default function OrdersListPage() {
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [range, setRange] = useState<DateRange>(() => {
+    const d = new Date(); d.setDate(d.getDate() - 29)
+    return { from: d.toISOString().split('T')[0], to: new Date().toISOString().split('T')[0], label: '30 hari terakhir' }
+  })
+  const dateFrom = range.from
+  const dateTo = range.to
   const [selected, setSelected] = useState<number[]>([])
   const [bulkStatus, setBulkStatus] = useState<string>('')
 
@@ -151,8 +156,7 @@ export default function OrdersListPage() {
                 {ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(0) }} className="w-40" />
-            <Input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(0) }} className="w-40" />
+            <DateRangePicker value={range} onChange={v => { setRange(v); setPage(0) }} />
             <Button variant="outline" size="icon" onClick={() => fetchOrders()}><RefreshCw className="w-4 h-4" /></Button>
           </div>
         </CardContent>

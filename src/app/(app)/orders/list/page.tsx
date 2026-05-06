@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
-import { Search, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload, ShoppingCart, Inbox, Trash2, MessageCircle, Download } from 'lucide-react'
+import { Search, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload, ShoppingCart, Inbox, Trash2, MessageCircle, Download, AlertTriangle } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
 import { ORDER_STATUSES, RESI_STATUSES } from '@/lib/constants'
 import type { Order } from '@/lib/types'
@@ -132,6 +132,34 @@ export default function OrdersListPage() {
     return `https://wa.me/${cleaned}`
   }
 
+  // FAKE auto-tag for stale BARU orders
+  const [staleCount, setStaleCount] = useState(0)
+  useEffect(() => {
+    const checkStale = async () => {
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7)
+      const { count } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'BARU')
+        .lt('order_date', cutoff.toISOString().split('T')[0])
+      setStaleCount(count || 0)
+    }
+    checkStale()
+  }, [orders])
+
+  const handleAutoTagFake = async () => {
+    if (!confirm(`Tag ${staleCount} order BARU yang sudah > 7 hari sebagai FAKE?\n\nKomisi auto-cancel, tidak masuk analytics. Bisa di-undo per order kalau ternyata real.`)) return
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7)
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'FAKE' })
+      .eq('status', 'BARU')
+      .lt('order_date', cutoff.toISOString().split('T')[0])
+    if (error) { toast.error('Gagal', { description: error.message }); return }
+    toast.success(`${staleCount} order ditag FAKE`)
+    setStaleCount(0); fetchOrders(); fetchStatusCounts()
+  }
+
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
   const getStatusBadge = (status: string) => {
     const s = ORDER_STATUSES.find(st => st.value === status)
@@ -156,6 +184,19 @@ export default function OrdersListPage() {
           </>
         ) : null}
       />
+
+      {/* Stale BARU warning */}
+      {role === 'owner' && staleCount > 0 && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardContent className="pt-3 pb-3 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+            <div className="flex-1 text-sm">
+              <strong>{staleCount} order BARU sudah lebih dari 7 hari</strong> — kemungkinan customer ghosting atau iseng. Tag sebagai FAKE biar tidak ngotorin analytics?
+            </div>
+            <Button size="sm" variant="outline" onClick={handleAutoTagFake} className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10">Auto-tag FAKE</Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Status overview cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">

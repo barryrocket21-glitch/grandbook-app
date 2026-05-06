@@ -104,27 +104,9 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner'],
   },
   {
-    title: 'Dashboard CS',
-    href: '/cs-dashboard',
-    icon: LayoutDashboard,
-    roles: ['cs'],
-  },
-  {
     title: 'Analytics',
     href: '/analytics',
     icon: LineChart,
-    roles: ['owner'],
-  },
-  {
-    title: 'Duplicate Inbox',
-    href: '/duplicates',
-    icon: Copy,
-    roles: ['owner'],
-  },
-  {
-    title: 'Selisih Ongkir',
-    href: '/shipping-diff',
-    icon: Truck,
     roles: ['owner'],
   },
   {
@@ -139,22 +121,27 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    title: 'Laporan Harian',
-    href: '/cs-report',
-    icon: ClipboardCheck,
-    roles: ['owner', 'admin', 'cs'],
-  },
-  {
-    title: 'Campaigns',
-    href: '/campaigns',
+    title: 'ADV',
+    href: '/adv-dashboard',
     icon: Megaphone,
     roles: ['owner', 'advertiser'],
+    children: [
+      { title: 'Dashboard ADV', href: '/adv-dashboard' },
+      { title: 'Campaigns', href: '/campaigns' },
+      { title: 'Ad Spend', href: '/ad-spend' },
+      { title: 'Daftar Advertiser', href: '/team/advertisers' },
+    ],
   },
   {
-    title: 'Ad Spend',
-    href: '/ad-spend',
-    icon: TrendingUp,
-    roles: ['owner', 'advertiser'],
+    title: 'CS',
+    href: '/cs-dashboard',
+    icon: Users,
+    roles: ['owner', 'admin', 'cs'],
+    children: [
+      { title: 'Dashboard CS', href: '/cs-dashboard' },
+      { title: 'Laporan Harian', href: '/cs-report' },
+      { title: 'Daftar CS', href: '/team/cs' },
+    ],
   },
   {
     title: 'Produk',
@@ -169,21 +156,22 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'akunting'],
   },
   {
+    title: 'Selisih Ongkir',
+    href: '/shipping-diff',
+    icon: Truck,
+    roles: ['owner'],
+  },
+  {
+    title: 'Duplicate Inbox',
+    href: '/duplicates',
+    icon: Copy,
+    roles: ['owner'],
+  },
+  {
     title: 'Reconciliation',
     href: '/reconciliation',
     icon: Scale,
     roles: ['owner'],
-  },
-  {
-    title: 'Laporan',
-    href: '/reports',
-    icon: BarChart3,
-    roles: ['owner', 'akunting'],
-    children: [
-      { title: 'Laporan Keuangan', href: '/reports/financial' },
-      { title: 'Laporan Iklan', href: '/reports/ads' },
-      { title: 'Export', href: '/reports/export' },
-    ],
   },
   {
     title: 'Komisi',

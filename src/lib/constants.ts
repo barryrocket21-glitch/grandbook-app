@@ -196,6 +196,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Users & Roles', href: '/settings/users' },
       { title: 'Aturan Komisi', href: '/settings/commission-rules' },
+      { title: 'Reset Data', href: '/settings/reset-data' },
     ],
   },
 ]

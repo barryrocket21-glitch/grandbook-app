@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, Clock, XCircle, Package, ClipboardCheck, Eye, AlertTriangle, TrendingUp } from 'lucide-react'
+import { CheckCircle2, Clock, XCircle, Package, ClipboardCheck, Eye, AlertTriangle, TrendingUp, Truck } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatRupiah, formatDate } from '@/lib/format'
@@ -27,7 +27,7 @@ export default function CsDashboardPage() {
   const [commission, setCommission] = useState<CommissionStats>({ today: 0, week: 0, month: 0, earned: 0, estimated: 0 })
   const [pipeline, setPipeline] = useState<PipelineRow[]>([])
   const [recentOrders, setRecentOrders] = useState<any[]>([])
-  const [stats, setStats] = useState({ ordersToday: 0, ordersMonth: 0, returnedMonth: 0 })
+  const [stats, setStats] = useState({ ordersToday: 0, ordersMonth: 0, returnedMonth: 0, shippingDiff: 0, shippingDiffCount: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function CsDashboardPage() {
           .limit(10),
         supabase
           .from('orders')
-          .select('id, order_date, status, resi_status')
+          .select('id, order_date, status, resi_status, shipping_cost, shipping_cost_actual')
           .eq('cs_id', user.id)
           .gte('order_date', m)
           .is('duplicate_of', null),
@@ -111,7 +111,18 @@ export default function CsDashboardPage() {
       const todayOrders = (monthOrders || []).filter((o: any) => o.order_date === t).length
       const monthOrdersCount = (monthOrders || []).length
       const returned = (monthOrders || []).filter((o: any) => o.resi_status === 'RETUR' || o.status === 'RETUR').length
-      setStats({ ordersToday: todayOrders, ordersMonth: monthOrdersCount, returnedMonth: returned })
+      let shippingDiff = 0
+      let shippingDiffCount = 0
+      ;(monthOrders || []).forEach((o: any) => {
+        if (o.shipping_cost_actual !== null && o.shipping_cost_actual !== undefined) {
+          const d = Number(o.shipping_cost) - Number(o.shipping_cost_actual)
+          if (d !== 0) {
+            shippingDiff += d
+            shippingDiffCount += 1
+          }
+        }
+      })
+      setStats({ ordersToday: todayOrders, ordersMonth: monthOrdersCount, returnedMonth: returned, shippingDiff, shippingDiffCount })
 
       setLoading(false)
     }
@@ -195,7 +206,7 @@ export default function CsDashboardPage() {
       </div>
 
       {/* Order stats this month */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardContent className="pt-4 pb-4 flex items-center gap-3">
             <div className="p-2.5 bg-violet-500/15 rounded-xl ring-1 ring-violet-500/20"><Package className="w-5 h-5 text-violet-500" /></div>
@@ -222,6 +233,20 @@ export default function CsDashboardPage() {
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Retur Rate Bulan Ini</p>
               <p className="text-xl font-bold">{monthReturRate.toFixed(1)}%</p>
               <p className="text-[10px] text-muted-foreground">{stats.returnedMonth} retur dari {stats.ordersMonth}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-4 flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl ring-1 ${stats.shippingDiff > 0 ? 'bg-emerald-500/15 ring-emerald-500/20' : stats.shippingDiff < 0 ? 'bg-red-500/15 ring-red-500/20' : 'bg-zinc-500/15 ring-zinc-500/20'}`}>
+              <Truck className={`w-5 h-5 ${stats.shippingDiff > 0 ? 'text-emerald-500' : stats.shippingDiff < 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Selisih Ongkir</p>
+              <p className={`text-xl font-bold ${stats.shippingDiff > 0 ? 'text-emerald-500' : stats.shippingDiff < 0 ? 'text-red-500' : ''}`}>
+                {stats.shippingDiff > 0 ? '+' : ''}{formatRupiah(stats.shippingDiff)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">{stats.shippingDiffCount} order tercatat</p>
             </div>
           </CardContent>
         </Card>

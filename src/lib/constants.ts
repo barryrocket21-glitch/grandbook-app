@@ -17,6 +17,7 @@ import {
   LineChart,
   Scale,
   Copy,
+  Truck,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -118,6 +119,12 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Duplicate Inbox',
     href: '/duplicates',
     icon: Copy,
+    roles: ['owner'],
+  },
+  {
+    title: 'Selisih Ongkir',
+    href: '/shipping-diff',
+    icon: Truck,
     roles: ['owner'],
   },
   {

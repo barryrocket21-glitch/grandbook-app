@@ -35,7 +35,7 @@ export default function OrderDetailPage() {
   const [resiStatus, setResiStatus] = useState('')
   const [savingResi, setSavingResi] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [editForm, setEditForm] = useState({ customer_name: '', customer_phone: '', customer_city: '', customer_province: '', customer_address: '', notes: '', shipping_cost: 0, discount: 0 })
+  const [editForm, setEditForm] = useState({ customer_name: '', customer_phone: '', customer_city: '', customer_province: '', customer_address: '', notes: '', shipping_cost: 0, shipping_cost_actual: 0, discount: 0 })
   const [savingEdit, setSavingEdit] = useState(false)
 
   useEffect(() => {
@@ -66,6 +66,7 @@ export default function OrderDetailPage() {
       customer_address: order.customer_address || '',
       notes: order.notes || '',
       shipping_cost: Number(order.shipping_cost) || 0,
+      shipping_cost_actual: order.shipping_cost_actual !== null && order.shipping_cost_actual !== undefined ? Number(order.shipping_cost_actual) : 0,
       discount: Number(order.discount) || 0,
     })
     setEditOpen(true)
@@ -85,6 +86,7 @@ export default function OrderDetailPage() {
         customer_address: editForm.customer_address || null,
         notes: editForm.notes || null,
         shipping_cost: editForm.shipping_cost,
+        shipping_cost_actual: editForm.shipping_cost_actual || null,
         discount: editForm.discount,
         total,
       }).eq('id', id)
@@ -259,7 +261,22 @@ export default function OrderDetailPage() {
       <Card>
         <CardContent className="pt-4 space-y-2">
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatRupiah(order.subtotal)}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Ongkir</span><span>{formatRupiah(order.shipping_cost)}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Ongkir charged</span><span>{formatRupiah(order.shipping_cost)}</span></div>
+          {order.shipping_cost_actual !== null && order.shipping_cost_actual !== undefined && (
+            <>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Ongkir actual (ke ekspedisi)</span><span>{formatRupiah(Number(order.shipping_cost_actual))}</span></div>
+              {(() => {
+                const diff = Number(order.shipping_cost) - Number(order.shipping_cost_actual)
+                if (diff === 0) return null
+                return (
+                  <div className={`flex justify-between text-sm ${diff > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <span className="text-muted-foreground">Selisih ongkir</span>
+                    <span className="font-semibold">{diff > 0 ? '+' : ''}{formatRupiah(diff)}</span>
+                  </div>
+                )
+              })()}
+            </>
+          )}
           {order.discount > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Diskon</span><span className="text-red-500">-{formatRupiah(order.discount)}</span></div>}
           <Separator />
           <div className="flex justify-between text-lg font-bold"><span>Total</span><span className="text-emerald-500">{formatRupiah(order.total)}</span></div>
@@ -282,8 +299,18 @@ export default function OrderDetailPage() {
             <div className="space-y-1.5"><Label className="text-xs">Alamat Lengkap</Label><Textarea value={editForm.customer_address} onChange={e => setEditForm({ ...editForm, customer_address: e.target.value })} rows={2} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Catatan Internal</Label><Textarea value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} rows={2} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label className="text-xs">Ongkir</Label><Input type="number" value={editForm.shipping_cost} onChange={e => setEditForm({ ...editForm, shipping_cost: Number(e.target.value) })} /></div>
+              <div className="space-y-1.5"><Label className="text-xs">Ongkir Charged (ke customer)</Label><Input type="number" value={editForm.shipping_cost} onChange={e => setEditForm({ ...editForm, shipping_cost: Number(e.target.value) })} /></div>
               <div className="space-y-1.5"><Label className="text-xs">Diskon</Label><Input type="number" value={editForm.discount} onChange={e => setEditForm({ ...editForm, discount: Number(e.target.value) })} /></div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Ongkir Actual (yang kita bayar ke ekspedisi)</Label>
+              <Input type="number" value={editForm.shipping_cost_actual} onChange={e => setEditForm({ ...editForm, shipping_cost_actual: Number(e.target.value) })} placeholder="kosongkan kalau sama dengan charged" />
+              {editForm.shipping_cost_actual > 0 && (() => {
+                const diff = editForm.shipping_cost - editForm.shipping_cost_actual
+                return <p className={`text-[11px] ${diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                  Selisih: {diff > 0 ? '+' : ''}{formatRupiah(diff)} {diff > 0 ? '(profit ekspedisi)' : diff < 0 ? '(rugi — CS kasih diskon)' : '(impas)'}
+                </p>
+              })()}
             </div>
             <div className="rounded-lg border bg-muted/30 p-3 text-sm flex justify-between">
               <span className="text-muted-foreground">Total baru</span>

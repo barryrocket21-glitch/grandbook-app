@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
-import { Search, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload, ShoppingCart, Inbox } from 'lucide-react'
+import { Search, RefreshCw, Eye, ChevronLeft, ChevronRight, Upload, ShoppingCart, Inbox, Trash2, MessageCircle, Download } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
 import { ORDER_STATUSES, RESI_STATUSES } from '@/lib/constants'
 import type { Order } from '@/lib/types'
@@ -87,6 +87,51 @@ export default function OrdersListPage() {
     setSelected([]); setBulkStatus(''); fetchOrders()
   }
 
+  const handleDeleteOne = async (order: Order) => {
+    if (!confirm(`Hapus permanen order ${order.order_number} (${order.customer_name})?\n\nSemua item, komisi, dan data analitik terkait akan IKUT TERHAPUS. Tidak bisa di-undo.`)) return
+    const { error } = await supabase.from('orders').delete().eq('id', order.id)
+    if (error) { toast.error('Gagal hapus', { description: error.message }); return }
+    toast.success('Order dihapus')
+    fetchOrders(); fetchStatusCounts()
+  }
+
+  const handleBulkDelete = async () => {
+    if (selected.length === 0) return
+    if (!confirm(`Hapus permanen ${selected.length} order beserta semua item, komisi, dan data analitiknya?\n\nTidak bisa di-undo.`)) return
+    const { error } = await supabase.from('orders').delete().in('id', selected)
+    if (error) { toast.error('Gagal hapus', { description: error.message }); return }
+    toast.success(`${selected.length} order dihapus`)
+    setSelected([]); fetchOrders(); fetchStatusCounts()
+  }
+
+  const exportCsv = () => {
+    const rows = selected.length > 0 ? orders.filter(o => selected.includes(o.id)) : orders
+    if (rows.length === 0) { toast.error('Tidak ada data untuk export'); return }
+    const headers = ['order_number', 'order_date', 'customer_name', 'customer_phone', 'customer_city', 'customer_province', 'total', 'payment_method', 'status', 'resi', 'ekspedisi', 'resi_status']
+    const csv = [
+      headers.join(','),
+      ...rows.map(o => headers.map(h => {
+        const v = (o as any)[h]
+        if (v === null || v === undefined) return ''
+        const s = String(v).replace(/"/g, '""')
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s
+      }).join(',')),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `orders-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.success(`${rows.length} order ter-export ke CSV`)
+  }
+
+  const waLink = (phone: string) => {
+    const cleaned = phone.replace(/[^0-9]/g, '').replace(/^0/, '62')
+    return `https://wa.me/${cleaned}`
+  }
+
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
   const getStatusBadge = (status: string) => {
     const s = ORDER_STATUSES.find(st => st.value === status)
@@ -101,6 +146,9 @@ export default function OrdersListPage() {
         description={`${totalCount.toLocaleString('id-ID')} total order`}
         actions={(role === 'admin' || role === 'owner') ? (
           <>
+            <Button variant="outline" onClick={exportCsv} title="Export CSV (selected jika ada, atau semua di halaman ini)">
+              <Download className="w-4 h-4 mr-1.5" />Export
+            </Button>
             <Button variant="outline" render={<Link href="/orders/bulk-upload" />}>
               <Upload className="w-4 h-4 mr-1.5" />Upload Massal
             </Button>
@@ -162,13 +210,20 @@ export default function OrdersListPage() {
       {/* Bulk Actions */}
       {(role === 'cs' || role === 'owner') && selected.length > 0 && (
         <Card className="border-violet-500/30 bg-violet-500/5">
-          <CardContent className="pt-4 pb-4 flex items-center gap-3">
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 flex-wrap">
             <span className="text-sm font-medium">{selected.length} order dipilih</span>
             <Select value={bulkStatus} onValueChange={v => v && setBulkStatus(v)}>
               <SelectTrigger className="w-40"><SelectValue placeholder="Update ke..." /></SelectTrigger>
               <SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
             </Select>
-            <Button size="sm" onClick={handleBulkUpdate} className="bg-violet-600 text-white">Update Status</Button>
+            <Button size="sm" onClick={handleBulkUpdate} disabled={!bulkStatus} className="bg-violet-600 hover:bg-violet-700 text-white">Update Status</Button>
+            <Button size="sm" variant="outline" onClick={exportCsv}><Download className="w-3.5 h-3.5 mr-1.5" />Export Selected</Button>
+            {role === 'owner' && (
+              <Button size="sm" variant="outline" onClick={handleBulkDelete} className="text-red-500 border-red-500/30 hover:bg-red-500/10">
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" />Hapus {selected.length}
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setSelected([])} className="ml-auto">Batal</Button>
           </CardContent>
         </Card>
       )}
@@ -215,7 +270,11 @@ export default function OrdersListPage() {
                       <TableCell className="text-sm">{formatDate(order.order_date)}</TableCell>
                       <TableCell>
                         <p className="font-medium text-sm">{order.customer_name}</p>
-                        {order.customer_phone && <p className="text-xs text-muted-foreground">{order.customer_phone}</p>}
+                        {order.customer_phone && (
+                          <a href={waLink(order.customer_phone)} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} className="text-xs text-emerald-500 hover:underline inline-flex items-center gap-1 font-mono" title="Buka WhatsApp">
+                            <MessageCircle className="w-3 h-3" />{order.customer_phone}
+                          </a>
+                        )}
                       </TableCell>
                       <TableCell className="font-semibold text-sm">{formatRupiah(order.total)}</TableCell>
                       <TableCell><Badge variant="outline" className="text-xs">{order.payment_method}</Badge></TableCell>
@@ -233,7 +292,14 @@ export default function OrdersListPage() {
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{(order as any).campaigns?.campaign_name || '-'}</TableCell>
-                      <TableCell><Button variant="ghost" size="icon" render={<Link href={`/orders/${order.id}`} />}><Eye className="w-4 h-4" /></Button></TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-0.5">
+                          <Button variant="ghost" size="icon" render={<Link href={`/orders/${order.id}`} />} title="Lihat detail"><Eye className="w-4 h-4" /></Button>
+                          {role === 'owner' && (
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteOne(order)} title="Hapus order" className="text-red-500"><Trash2 className="w-4 h-4" /></Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

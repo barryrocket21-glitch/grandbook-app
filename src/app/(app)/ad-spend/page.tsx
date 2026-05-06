@@ -329,7 +329,7 @@ export default function AdSpendPage() {
                 {form.impressions > 0 && form.clicks > 0 && <div className="flex justify-between"><span className="text-muted-foreground">CTR</span><span className="font-semibold">{calculateCTR(form.clicks, form.impressions).toFixed(2)}%</span></div>}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
+            <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
           </form>
         </DialogContent>
       </Dialog>

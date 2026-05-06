@@ -199,7 +199,7 @@ export default function ProductsPage() {
                   </div>
                 )}
                 <div className="space-y-2"><Label>Kategori</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="opsional, untuk grouping & filter" list="prod-categories" /><datalist id="prod-categories">{categories.map(c => <option key={c} value={c} />)}</datalist></div>
-                <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
+                <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>
               </form>
             </DialogContent>
           </Dialog>

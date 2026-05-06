@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { PageHeader } from '@/components/ui/page-header'
-import { LineChart, AlertTriangle, TrendingDown, TrendingUp, RefreshCw } from 'lucide-react'
-import { formatRupiah } from '@/lib/format'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { LineChart, AlertTriangle, TrendingDown, TrendingUp, RefreshCw, ExternalLink } from 'lucide-react'
+import { formatRupiah, formatDate } from '@/lib/format'
 import { DateRangePicker, defaultRange, type DateRange } from '@/components/ui/date-range-picker'
+import Link from 'next/link'
 
 const supabase = createClient()
 
@@ -51,6 +53,9 @@ export default function AnalyticsPage() {
   const [matrix, setMatrix] = useState<Record<string, CellData>>({})
   const [profit, setProfit] = useState<ProfitData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [drillTarget, setDrillTarget] = useState<{ csId: string; csName: string; productId: number; productName: string } | null>(null)
+  const [drillOrders, setDrillOrders] = useState<any[]>([])
+  const [drillLoading, setDrillLoading] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -186,6 +191,27 @@ export default function AnalyticsPage() {
   }
 
   useEffect(() => { load() }, [from, to])
+
+  // Drill-down: load orders for clicked cell
+  useEffect(() => {
+    if (!drillTarget) { setDrillOrders([]); return }
+    const load = async () => {
+      setDrillLoading(true)
+      const { data } = await supabase
+        .from('orders')
+        .select('id, order_number, customer_name, total, order_date, status, resi_status, order_items!inner(product_id, qty, price)')
+        .eq('cs_id', drillTarget.csId)
+        .eq('order_items.product_id', drillTarget.productId)
+        .gte('order_date', from)
+        .lte('order_date', to)
+        .is('duplicate_of', null)
+        .order('order_date', { ascending: false })
+        .limit(50)
+      setDrillOrders(data || [])
+      setDrillLoading(false)
+    }
+    load()
+  }, [drillTarget, from, to])
 
   const profitBestCase = useMemo(() => {
     if (!profit) return 0
@@ -349,13 +375,20 @@ export default function AnalyticsPage() {
 
                         return (
                           <TableCell key={c.id} className="text-center text-xs space-y-0.5">
-                            <div className="font-semibold">{cell.closing}/{cell.leads}</div>
-                            <div className={crColor}>CR {cr.toFixed(0)}%</div>
-                            <div className="text-muted-foreground text-[10px]">{formatRupiah(cell.revenue)}</div>
-                            <Badge variant="outline" className={`${marginColor} text-[10px] px-1.5`}>
-                              {marginCell >= 0 ? <TrendingUp className="w-3 h-3 inline mr-0.5" /> : <TrendingDown className="w-3 h-3 inline mr-0.5" />}
-                              {marginCell.toFixed(0)}%
-                            </Badge>
+                            <button
+                              type="button"
+                              onClick={() => setDrillTarget({ csId: c.id, csName: c.full_name, productId: p.id, productName: p.name })}
+                              className="w-full hover:bg-muted/40 rounded p-1 transition-colors space-y-0.5 cursor-pointer"
+                              title="Klik untuk lihat detail order"
+                            >
+                              <div className="font-semibold">{cell.closing}/{cell.leads}</div>
+                              <div className={crColor}>CR {cr.toFixed(0)}%</div>
+                              <div className="text-muted-foreground text-[10px]">{formatRupiah(cell.revenue)}</div>
+                              <Badge variant="outline" className={`${marginColor} text-[10px] px-1.5`}>
+                                {marginCell >= 0 ? <TrendingUp className="w-3 h-3 inline mr-0.5" /> : <TrendingDown className="w-3 h-3 inline mr-0.5" />}
+                                {marginCell.toFixed(0)}%
+                              </Badge>
+                            </button>
                           </TableCell>
                         )
                       })}
@@ -387,6 +420,72 @@ export default function AnalyticsPage() {
           </ul>
         </CardContent>
       </Card>
+
+      {/* Drill-down dialog */}
+      <Dialog open={!!drillTarget} onOpenChange={v => { if (!v) setDrillTarget(null) }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              Detail: <span className="text-violet-400">{drillTarget?.productName}</span> × <span className="text-violet-400">{drillTarget?.csName}</span>
+            </DialogTitle>
+          </DialogHeader>
+          {(() => {
+            if (!drillTarget) return null
+            const cell = cellFor(drillTarget.csId, drillTarget.productId)
+            const cr = cell && cell.leads > 0 ? (cell.closing / cell.leads) * 100 : 0
+            const profitCell = cell ? cell.revenue - cell.hpp - cell.commission : 0
+            const margin = cell && cell.revenue > 0 ? (profitCell / cell.revenue) * 100 : 0
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <div><p className="text-xs text-muted-foreground uppercase">Lead</p><p className="font-semibold">{cell?.leads || 0}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Closing</p><p className="font-semibold text-emerald-500">{cell?.closing || 0}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">CR</p><p className="font-semibold">{cr.toFixed(1)}%</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Margin</p><p className="font-semibold">{margin.toFixed(1)}%</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Revenue</p><p className="font-semibold text-emerald-500">{formatRupiah(cell?.revenue || 0)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">HPP</p><p className="font-semibold">{formatRupiah(cell?.hpp || 0)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Komisi CS</p><p className="font-semibold">{formatRupiah(cell?.commission || 0)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Profit</p><p className={`font-semibold ${profitCell >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{formatRupiah(profitCell)}</p></div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold mb-2">Order detail (max 50)</p>
+                  <div className="max-h-[400px] overflow-y-auto border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>Order</TableHead>
+                          <TableHead>Customer</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {drillLoading ? (
+                          <TableRow><TableCell colSpan={6} className="py-3"><div className="h-4 bg-muted animate-pulse rounded w-full" /></TableCell></TableRow>
+                        ) : drillOrders.length === 0 ? (
+                          <TableRow><TableCell colSpan={6} className="text-center py-6 text-sm text-muted-foreground">Tidak ada order untuk kombinasi ini di periode terpilih</TableCell></TableRow>
+                        ) : drillOrders.map((o: any) => (
+                          <TableRow key={o.id}>
+                            <TableCell className="text-xs">{formatDate(o.order_date)}</TableCell>
+                            <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
+                            <TableCell className="text-sm">{o.customer_name}</TableCell>
+                            <TableCell className="text-right text-sm font-medium">{formatRupiah(o.total)}</TableCell>
+                            <TableCell><Badge variant="outline" className="text-xs">{o.status}</Badge></TableCell>
+                            <TableCell><Button variant="ghost" size="icon" render={<Link href={`/orders/${o.id}`} />}><ExternalLink className="w-3.5 h-3.5" /></Button></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

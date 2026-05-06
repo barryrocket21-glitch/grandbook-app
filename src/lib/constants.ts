@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   LineChart,
   Scale,
+  Copy,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -102,9 +103,21 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner'],
   },
   {
+    title: 'Dashboard CS',
+    href: '/cs-dashboard',
+    icon: LayoutDashboard,
+    roles: ['cs'],
+  },
+  {
     title: 'Analytics',
     href: '/analytics',
     icon: LineChart,
+    roles: ['owner'],
+  },
+  {
+    title: 'Duplicate Inbox',
+    href: '/duplicates',
+    icon: Copy,
     roles: ['owner'],
   },
   {

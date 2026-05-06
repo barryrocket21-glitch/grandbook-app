@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Loader2, Save, ClipboardCheck, AlertTriangle } from 'lucide-react'
+import { Loader2, Save, ClipboardCheck, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import type { Product } from '@/lib/types'
 
@@ -164,9 +164,18 @@ export default function CsReportPage() {
         title="Laporan Harian"
         description="Input lead masuk per produk di hari yang dilaporkan"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" onClick={() => {
+              const d = new Date(reportDate); d.setDate(d.getDate() - 1); setReportDate(d.toISOString().split('T')[0])
+            }} title="Hari sebelumnya"><ChevronLeft className="w-4 h-4" /></Button>
             <Input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} className="w-40" max={new Date().toISOString().split('T')[0]} />
-            <Button onClick={handleSubmit} disabled={saving} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20">
+            <Button variant="outline" size="icon" onClick={() => {
+              const d = new Date(reportDate); d.setDate(d.getDate() + 1)
+              const todayStr = new Date().toISOString().split('T')[0]
+              const next = d.toISOString().split('T')[0]
+              if (next <= todayStr) setReportDate(next)
+            }} title="Hari berikutnya" disabled={reportDate >= new Date().toISOString().split('T')[0]}><ChevronRight className="w-4 h-4" /></Button>
+            <Button onClick={handleSubmit} disabled={saving} className="ml-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Submit
             </Button>

@@ -10,6 +10,7 @@ import { Coins, CheckCircle2, Clock, XCircle, AlertTriangle } from 'lucide-react
 import { formatRupiah, formatDate } from '@/lib/format'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
+import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
 const supabase = createClient()
 
@@ -19,9 +20,12 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: 'bg-red-500/10 text-red-600 border-red-500/30',
 }
 
+const startOfThisMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0] }
+const today = () => new Date().toISOString().split('T')[0]
+
 export default function ManageCommissionsPage() {
   const { role } = useAuth()
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [range, setRange] = useState<DateRange>({ from: startOfThisMonth(), to: today(), label: 'Bulan ini' })
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -29,19 +33,17 @@ export default function ManageCommissionsPage() {
     if (role !== 'owner' && role !== 'admin') return
     const load = async () => {
       setLoading(true)
-      const start = `${month}-01`
-      const end = `${month}-31`
       const { data } = await supabase
         .from('commissions')
         .select('id, role, amount, status, earned_at, cancelled_at, cancelled_reason, created_at, user:profiles!user_id(id, full_name, role), orders!inner(order_number, order_date, customer_name, total)')
-        .gte('orders.order_date', start)
-        .lte('orders.order_date', end)
+        .gte('orders.order_date', range.from)
+        .lte('orders.order_date', range.to)
         .order('created_at', { ascending: false })
       setRows(data || [])
       setLoading(false)
     }
     load()
-  }, [month, role])
+  }, [range, role])
 
   const totals = useMemo(() => {
     const t = { estimated: 0, earned: 0, cancelled: 0, byUser: new Map<string, { user: any, est: number, earned: number, cancelled: number }>() }
@@ -81,8 +83,8 @@ export default function ManageCommissionsPage() {
       <PageHeader
         icon={Coins}
         title="Kelola Komisi"
-        description={`Monitor komisi semua user untuk periode ${month}`}
-        actions={<Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-40" />}
+        description="Monitor komisi semua user"
+        actions={<DateRangePicker value={range} onChange={setRange} />}
       />
 
       {/* Summary cards */}

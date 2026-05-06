@@ -28,16 +28,27 @@ export default function AdSpendPage() {
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
   const [form, setForm] = useState({ spend_date: new Date().toISOString().split('T')[0], campaign_id: '' as string | null, spend: 0, impressions: 0, clicks: 0, lead_platform: 0 })
 
+  const [closingsByKey, setClosingsByKey] = useState<Map<string, number>>(new Map())
+
   const fetch = async () => {
     setLoading(true)
     const startDate = `${month}-01`
     const endDate = `${month}-31`
-    const [{ data: s }, { data: c }] = await Promise.all([
+    const [{ data: s }, { data: c }, { data: ords }] = await Promise.all([
       supabase.from('ad_spend').select('*, campaigns(campaign_name, platform)').gte('spend_date', startDate).lte('spend_date', endDate).order('spend_date', { ascending: false }),
       supabase.from('campaigns').select('*').eq('active', true),
+      supabase.from('orders').select('campaign_id, order_date').gte('order_date', startDate).lte('order_date', endDate).is('duplicate_of', null).not('status', 'in', '(CANCEL,FAKE)'),
     ])
     setSpends(s || [])
     setCampaigns(c || [])
+    // Build closings map: "campaign_id|date" → count
+    const map = new Map<string, number>()
+    ;(ords || []).forEach((o: any) => {
+      if (!o.campaign_id) return
+      const key = `${o.campaign_id}|${o.order_date}`
+      map.set(key, (map.get(key) || 0) + 1)
+    })
+    setClosingsByKey(map)
     setLoading(false)
   }
   useEffect(() => { fetch() }, [month])
@@ -133,21 +144,38 @@ export default function AdSpendPage() {
       <Card>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Campaign</TableHead><TableHead>Platform</TableHead><TableHead>Spend</TableHead><TableHead>Impressions</TableHead><TableHead>Clicks</TableHead><TableHead>CTR</TableHead><TableHead>CPC</TableHead><TableHead>CPM</TableHead></TableRow></TableHeader>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tanggal</TableHead>
+                <TableHead>Campaign</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead className="text-right">Spend</TableHead>
+                <TableHead className="text-center">Lead Platform</TableHead>
+                <TableHead className="text-right">CPP</TableHead>
+                <TableHead className="text-center">Closing Real</TableHead>
+                <TableHead className="text-right">CPA Real</TableHead>
+                <TableHead className="text-center">CTR</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
-              {spends.map(s => (
-                <TableRow key={s.id}>
-                  <TableCell className="text-sm">{s.spend_date}</TableCell>
-                  <TableCell className="font-medium text-sm">{s.campaigns?.campaign_name || '-'}</TableCell>
-                  <TableCell><Badge variant="outline" className="text-xs">{s.campaigns?.platform}</Badge></TableCell>
-                  <TableCell className="font-semibold">{formatRupiah(s.spend)}</TableCell>
-                  <TableCell>{s.impressions ? formatNumber(s.impressions) : '-'}</TableCell>
-                  <TableCell>{s.clicks ? formatNumber(s.clicks) : '-'}</TableCell>
-                  <TableCell>{s.clicks && s.impressions ? `${calculateCTR(s.clicks, s.impressions).toFixed(2)}%` : '-'}</TableCell>
-                  <TableCell>{s.clicks ? formatRupiah(calculateCPC(s.spend, s.clicks)) : '-'}</TableCell>
-                  <TableCell>{s.impressions ? formatRupiah(calculateCPM(s.spend, s.impressions)) : '-'}</TableCell>
-                </TableRow>
-              ))}
+              {spends.map((s: any) => {
+                const cpp = s.lead_platform > 0 ? s.spend / s.lead_platform : null
+                const closingReal = closingsByKey.get(`${s.campaign_id}|${s.spend_date}`) || 0
+                const cpaReal = closingReal > 0 ? s.spend / closingReal : null
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell className="text-sm font-medium">{s.spend_date}</TableCell>
+                    <TableCell className="text-sm">{s.campaigns?.campaign_name || '-'}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs">{s.campaigns?.platform}</Badge></TableCell>
+                    <TableCell className="font-semibold text-right">{formatRupiah(s.spend)}</TableCell>
+                    <TableCell className="text-center">{s.lead_platform || <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="text-right">{cpp !== null ? <span className="text-amber-500">{formatRupiah(cpp)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="text-center font-semibold text-emerald-500">{closingReal || <span className="text-muted-foreground font-normal">—</span>}</TableCell>
+                    <TableCell className="text-right">{cpaReal !== null ? <span className="text-emerald-500 font-semibold">{formatRupiah(cpaReal)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground">{s.clicks && s.impressions ? `${calculateCTR(s.clicks, s.impressions).toFixed(1)}%` : '—'}</TableCell>
+                  </TableRow>
+                )
+              })}
               {spends.length === 0 && <TableRow><TableCell colSpan={9} className="p-0"><EmptyState icon={TrendingUp} title="Belum ada ad spend" description={`Klik "Input Spend" untuk mulai tracking pengeluaran iklan di bulan ${month}.`} /></TableCell></TableRow>}
             </TableBody>
           </Table>

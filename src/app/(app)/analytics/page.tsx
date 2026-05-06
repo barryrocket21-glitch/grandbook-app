@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PageHeader } from '@/components/ui/page-header'
 import { LineChart, AlertTriangle, TrendingDown, TrendingUp, RefreshCw } from 'lucide-react'
 import { formatRupiah } from '@/lib/format'
+import { DateRangePicker, defaultRange, type DateRange } from '@/components/ui/date-range-picker'
 
 const supabase = createClient()
 
@@ -42,8 +43,9 @@ const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n
 
 export default function AnalyticsPage() {
   const { role, loading: authLoading } = useAuth()
-  const [from, setFrom] = useState(daysAgo(6))
-  const [to, setTo] = useState(today())
+  const [range, setRange] = useState<DateRange>(defaultRange())
+  const from = range.from
+  const to = range.to
   const [products, setProducts] = useState<Product[]>([])
   const [csList, setCsList] = useState<Profile[]>([])
   const [matrix, setMatrix] = useState<Record<string, CellData>>({})
@@ -220,9 +222,7 @@ export default function AnalyticsPage() {
         description={`Matrix Produk × CS dan estimasi profit • ${from} s/d ${to}`}
         actions={
           <div className="flex items-center gap-2">
-            <Input type="date" value={from} onChange={e => setFrom(e.target.value)} className="w-36" />
-            <span className="text-muted-foreground text-xs">s/d</span>
-            <Input type="date" value={to} onChange={e => setTo(e.target.value)} className="w-36" />
+            <DateRangePicker value={range} onChange={setRange} />
             <Button variant="outline" size="icon" onClick={load} disabled={loading}>
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>

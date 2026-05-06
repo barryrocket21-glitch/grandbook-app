@@ -29,6 +29,7 @@ export default function OrdersListPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
@@ -52,7 +53,20 @@ export default function OrdersListPage() {
     setLoading(false)
   }, [page, statusFilter, dateFrom, dateTo, search])
 
+  // Status counts (separate, so they don't paginate)
+  const fetchStatusCounts = useCallback(async () => {
+    let baseQuery = supabase.from('orders').select('status', { count: 'exact', head: false })
+    if (dateFrom) baseQuery = baseQuery.gte('order_date', dateFrom)
+    if (dateTo) baseQuery = baseQuery.lte('order_date', dateTo)
+    if (search) baseQuery = baseQuery.or(`customer_name.ilike.%${search}%,order_number.ilike.%${search}%`)
+    const { data } = await baseQuery
+    const counts: Record<string, number> = {}
+    ;(data || []).forEach((o: any) => { counts[o.status] = (counts[o.status] || 0) + 1 })
+    setStatusCounts(counts)
+  }, [dateFrom, dateTo, search])
+
   useEffect(() => { fetchOrders() }, [fetchOrders])
+  useEffect(() => { fetchStatusCounts() }, [fetchStatusCounts])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,6 +106,35 @@ export default function OrdersListPage() {
           </>
         ) : null}
       />
+
+      {/* Status overview cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        {ORDER_STATUSES.map(s => {
+          const count = statusCounts[s.value] || 0
+          const isActive = statusFilter === s.value
+          return (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => { setStatusFilter(isActive ? 'ALL' : s.value); setPage(0) }}
+              className={`text-left rounded-lg border bg-card p-3 transition-all hover:shadow-md ${isActive ? 'ring-2 ring-violet-500 border-violet-500/50' : 'hover:border-violet-500/30'}`}
+            >
+              <p className={`text-[10px] uppercase tracking-wider font-semibold ${s.color.replace('bg-', 'text-').replace('/15', '').replace('/10', '')}`}>{s.label}</p>
+              <p className="text-2xl font-bold mt-1">{count}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">order</p>
+            </button>
+          )
+        })}
+        <button
+          type="button"
+          onClick={() => { setStatusFilter('ALL'); setPage(0) }}
+          className={`text-left rounded-lg border bg-gradient-to-br from-violet-500/10 to-indigo-500/10 p-3 transition-all hover:shadow-md ${statusFilter === 'ALL' ? 'ring-2 ring-violet-500 border-violet-500/50' : 'hover:border-violet-500/30'}`}
+        >
+          <p className="text-[10px] uppercase tracking-wider font-semibold text-violet-400">Semua</p>
+          <p className="text-2xl font-bold mt-1">{Object.values(statusCounts).reduce((s, c) => s + c, 0)}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">total</p>
+        </button>
+      </div>
 
       {/* Filters */}
       <Card>

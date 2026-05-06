@@ -9,11 +9,11 @@ import { Coins, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Input } from '@/components/ui/input'
+import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
 const supabase = createClient()
 
-const monthAgo = () => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0] }
+const monthAgo = () => { const d = new Date(); d.setDate(d.getDate() - 29); return d.toISOString().split('T')[0] }
 const today = () => new Date().toISOString().split('T')[0]
 
 const STATUS_COLOR: Record<string, string> = {
@@ -24,8 +24,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function MyCommissionsPage() {
   const { user, role } = useAuth()
-  const [from, setFrom] = useState(monthAgo())
-  const [to, setTo] = useState(today())
+  const [range, setRange] = useState<DateRange>({ from: monthAgo(), to: today(), label: '30 hari terakhir' })
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -37,14 +36,14 @@ export default function MyCommissionsPage() {
         .from('commissions')
         .select('id, role, amount, status, earned_at, cancelled_at, cancelled_reason, created_at, orders!inner(order_number, order_date, customer_name, total, resi_status)')
         .eq('user_id', user.id)
-        .gte('orders.order_date', from)
-        .lte('orders.order_date', to)
+        .gte('orders.order_date', range.from)
+        .lte('orders.order_date', range.to)
         .order('created_at', { ascending: false })
       setRows(data || [])
       setLoading(false)
     }
     load()
-  }, [user, from, to])
+  }, [user, range])
 
   const totals = useMemo(() => {
     const t = { estimated: 0, earned: 0, cancelled: 0 }
@@ -62,13 +61,7 @@ export default function MyCommissionsPage() {
         icon={Coins}
         title="Komisi Saya"
         description="Komisi dari order kamu — estimasi (pending kirim), earned (sudah diterima customer), cancelled (retur/fake)"
-        actions={
-          <div className="flex items-center gap-2">
-            <Input type="date" value={from} onChange={e => setFrom(e.target.value)} className="w-36" />
-            <span className="text-xs text-muted-foreground">s/d</span>
-            <Input type="date" value={to} onChange={e => setTo(e.target.value)} className="w-36" />
-          </div>
-        }
+        actions={<DateRangePicker value={range} onChange={setRange} />}
       />
 
       {/* Summary cards */}

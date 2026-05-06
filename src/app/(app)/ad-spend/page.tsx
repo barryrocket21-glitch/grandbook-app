@@ -26,7 +26,7 @@ export default function AdSpendPage() {
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
-  const [form, setForm] = useState({ spend_date: new Date().toISOString().split('T')[0], campaign_id: '' as string | null, spend: 0, impressions: 0, clicks: 0 })
+  const [form, setForm] = useState({ spend_date: new Date().toISOString().split('T')[0], campaign_id: '' as string | null, spend: 0, impressions: 0, clicks: 0, lead_platform: 0 })
 
   const fetch = async () => {
     setLoading(true)
@@ -50,11 +50,12 @@ export default function AdSpendPage() {
       const { error } = await supabase.from('ad_spend').insert({
         spend_date: form.spend_date, campaign_id: Number(form.campaign_id),
         spend: form.spend, impressions: form.impressions || null, clicks: form.clicks || null,
+        lead_platform: form.lead_platform || null,
         created_by: profile?.id,
       })
       if (error) throw error
       toast.success('Ad spend ditambahkan')
-      setForm({ ...form, spend: 0, impressions: 0, clicks: 0 })
+      setForm({ ...form, spend: 0, impressions: 0, clicks: 0, lead_platform: 0 })
       setShowForm(false); fetch()
     } catch (err: any) { toast.error(err.message) }
     finally { setSaving(false) }
@@ -118,7 +119,8 @@ export default function AdSpendPage() {
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 items-end">
               <div className="space-y-1 flex-1"><Label className="text-xs">Tanggal</Label><Input type="date" value={form.spend_date} onChange={e => setForm({ ...form, spend_date: e.target.value })} /></div>
               <div className="space-y-1 flex-1"><Label className="text-xs">Campaign</Label><Select value={form.campaign_id} onValueChange={v => setForm({ ...form, campaign_id: v })}><SelectTrigger><SelectValue placeholder="Pilih campaign">{(value: string) => { const c = campaigns.find(c => String(c.id) === value); return c ? <span><span className="text-xs text-violet-400 mr-1">[{c.platform}]</span>{c.campaign_name}</span> : 'Pilih campaign' }}</SelectValue></SelectTrigger><SelectContent className="w-[320px]">{campaigns.length === 0 ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada campaign aktif</div> : campaigns.map(c => <SelectItem key={c.id} value={String(c.id)}><span className="text-xs text-violet-400 mr-1">[{c.platform}]</span>{c.campaign_name}</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-1 w-32"><Label className="text-xs">Spend (Rp)</Label><Input type="number" value={form.spend} onChange={e => setForm({ ...form, spend: Number(e.target.value) })} /></div>
+              <div className="space-y-1 w-32"><Label className="text-xs">Spend (Rp)</Label><Input type="number" value={form.spend} onChange={e => setForm({ ...form, spend: Number(e.target.value) })} required /></div>
+              <div className="space-y-1 w-28"><Label className="text-xs">Lead Platform</Label><Input type="number" value={form.lead_platform} onChange={e => setForm({ ...form, lead_platform: Number(e.target.value) })} placeholder="dari Meta" /></div>
               <div className="space-y-1 w-28"><Label className="text-xs">Impressions</Label><Input type="number" value={form.impressions} onChange={e => setForm({ ...form, impressions: Number(e.target.value) })} /></div>
               <div className="space-y-1 w-24"><Label className="text-xs">Clicks</Label><Input type="number" value={form.clicks} onChange={e => setForm({ ...form, clicks: Number(e.target.value) })} /></div>
               <Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button>

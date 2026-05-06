@@ -13,6 +13,7 @@ import {
   Settings,
   Coins,
   TrendingUp,
+  ClipboardCheck,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -108,6 +109,12 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Upload Massal', href: '/orders/bulk-upload' },
       { title: 'Daftar Order', href: '/orders/list' },
     ],
+  },
+  {
+    title: 'Laporan Harian',
+    href: '/cs-report',
+    icon: ClipboardCheck,
+    roles: ['owner', 'admin', 'cs'],
   },
   {
     title: 'Campaigns',

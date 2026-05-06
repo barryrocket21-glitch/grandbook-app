@@ -15,6 +15,7 @@ import {
   TrendingUp,
   ClipboardCheck,
   LineChart,
+  Scale,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -146,6 +147,12 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/expenses',
     icon: Receipt,
     roles: ['owner', 'akunting'],
+  },
+  {
+    title: 'Reconciliation',
+    href: '/reconciliation',
+    icon: Scale,
+    roles: ['owner'],
   },
   {
     title: 'Laporan',

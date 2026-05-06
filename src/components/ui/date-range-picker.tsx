@@ -163,9 +163,27 @@ export function DateRangePicker({ value, onChange, className }: Props) {
   )
 }
 
-// Helper: get default range (7 days)
+// Helper: get default range (today)
 export const defaultRange = (): DateRange => ({
+  from: fmtDate(today()),
+  to: fmtDate(today()),
+  label: 'Hari ini',
+})
+
+export const last7Days = (): DateRange => ({
   from: fmtDate(daysAgo(6)),
   to: fmtDate(today()),
   label: '7 hari terakhir',
+})
+
+export const last30Days = (): DateRange => ({
+  from: fmtDate(daysAgo(29)),
+  to: fmtDate(today()),
+  label: '30 hari terakhir',
+})
+
+export const thisMonth = (): DateRange => ({
+  from: fmtDate(startOfMonth(today())),
+  to: fmtDate(today()),
+  label: 'Bulan ini',
 })

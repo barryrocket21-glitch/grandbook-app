@@ -18,7 +18,7 @@ import type { Order } from '@/lib/types'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
-import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
+import { DateRangePicker, defaultRange, type DateRange } from '@/components/ui/date-range-picker'
 
 const supabase = createClient()
 
@@ -34,10 +34,7 @@ export default function OrdersListPage() {
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
-  const [range, setRange] = useState<DateRange>(() => {
-    const d = new Date(); d.setDate(d.getDate() - 29)
-    return { from: d.toISOString().split('T')[0], to: new Date().toISOString().split('T')[0], label: '30 hari terakhir' }
-  })
+  const [range, setRange] = useState<DateRange>(defaultRange())
   const dateFrom = range.from
   const dateTo = range.to
   const [selected, setSelected] = useState<number[]>([])

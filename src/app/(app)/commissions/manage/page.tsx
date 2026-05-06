@@ -10,7 +10,7 @@ import { Coins, CheckCircle2, Clock, XCircle, AlertTriangle } from 'lucide-react
 import { formatRupiah, formatDate } from '@/lib/format'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
-import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
+import { DateRangePicker, defaultRange, type DateRange } from '@/components/ui/date-range-picker'
 
 const supabase = createClient()
 
@@ -20,12 +20,9 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: 'bg-red-500/10 text-red-600 border-red-500/30',
 }
 
-const startOfThisMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0] }
-const today = () => new Date().toISOString().split('T')[0]
-
 export default function ManageCommissionsPage() {
   const { role } = useAuth()
-  const [range, setRange] = useState<DateRange>({ from: startOfThisMonth(), to: today(), label: 'Bulan ini' })
+  const [range, setRange] = useState<DateRange>(defaultRange())
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 

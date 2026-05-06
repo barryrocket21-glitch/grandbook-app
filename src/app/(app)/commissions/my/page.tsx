@@ -9,12 +9,9 @@ import { Coins, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
-import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
+import { DateRangePicker, defaultRange, type DateRange } from '@/components/ui/date-range-picker'
 
 const supabase = createClient()
-
-const monthAgo = () => { const d = new Date(); d.setDate(d.getDate() - 29); return d.toISOString().split('T')[0] }
-const today = () => new Date().toISOString().split('T')[0]
 
 const STATUS_COLOR: Record<string, string> = {
   ESTIMATED: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
@@ -24,7 +21,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function MyCommissionsPage() {
   const { user, role } = useAuth()
-  const [range, setRange] = useState<DateRange>({ from: monthAgo(), to: today(), label: '30 hari terakhir' })
+  const [range, setRange] = useState<DateRange>(defaultRange())
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 

@@ -1,6 +1,11 @@
 -- Phase 1 migration: schema untuk analytics engine
 -- Run di Supabase SQL Editor sekali.
 -- Aman re-run (pakai IF NOT EXISTS / ON CONFLICT).
+--
+-- CATATAN: Kalau project punya tabel `commissions` lama (period-based),
+-- rename dulu sebelum run migration ini:
+--   ALTER TABLE public.commissions RENAME TO commissions_legacy;
+-- Migration ini bikin tabel `commissions` baru (per-order-based).
 
 -- =============================================================
 -- 1. ad_spend: tambah kolom lead platform + revenue realized

@@ -263,63 +263,118 @@ function ImportOrderTab() {
       </Card>
 
       {/* Step 3: Assign */}
-      {validRows.length > 0 && !importResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">3. Assign Campaign & Tim (Opsional)</CardTitle>
-            <CardDescription>
-              Diterapkan ke semua {validRows.length} order.
-              {rows.some(r => r.utm_campaign) && ' UTM campaign akan di-match otomatis ke campaign yang ada.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label>Campaign (override)</Label>
-                <Select value={campaignId} onValueChange={v => setCampaignId(!v || v === 'none' ? '' : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Auto dari UTM / pilih...">
-                      {(value: string) => campaigns.find(c => String(c.id) === value)?.campaign_name ?? '— Auto dari UTM —'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="w-[300px]">
-                    <SelectItem value="none">— Auto dari UTM —</SelectItem>
-                    {campaigns.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.campaign_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+      {validRows.length > 0 && !importResult && (() => {
+        // UTM match preview
+        const utmGroups = new Map<string, number>()
+        rows.forEach(r => {
+          const u = (r.utm_campaign || '').trim()
+          if (u) utmGroups.set(u, (utmGroups.get(u) || 0) + 1)
+        })
+        const utmMatches = Array.from(utmGroups.entries()).map(([utm, count]) => {
+          const lower = utm.toLowerCase()
+          const match = campaigns.find(c => c.campaign_name.toLowerCase().includes(lower))
+          return { utm, count, match }
+        })
+        const matchedCount = utmMatches.filter(u => u.match).length
+        const totalUtm = utmMatches.length
+
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">3. Assign Campaign & Tim (Opsional)</CardTitle>
+              <CardDescription>
+                Diterapkan ke semua {validRows.length} order. Kamu bisa override ke campaign/CS spesifik atau biarkan auto.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* UTM match preview */}
+              {totalUtm > 0 && (
+                <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">UTM Match Preview</p>
+                    <Badge variant="outline" className={matchedCount === totalUtm ? 'bg-emerald-500/10 text-emerald-600' : matchedCount > 0 ? 'bg-amber-500/10 text-amber-600' : 'bg-red-500/10 text-red-600'}>
+                      {matchedCount}/{totalUtm} match
+                    </Badge>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    {utmMatches.map(u => (
+                      <div key={u.utm} className="flex items-center gap-2">
+                        <span className="font-mono text-muted-foreground">"{u.utm}"</span>
+                        <span className="text-muted-foreground">×{u.count}</span>
+                        <span className="ml-auto">
+                          {u.match ? (
+                            <span className="text-emerald-500">→ {u.match.campaign_name} <Badge variant="outline" className="text-[10px] ml-1">{u.match.platform}</Badge></span>
+                          ) : (
+                            <span className="text-red-500">✗ tidak match — akan tanpa campaign</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">UTM di-cocokan ke nama campaign secara case-insensitive partial match. Kalau gak match, override manual di bawah.</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5">
+                    Campaign (override) <Badge variant="outline" className="text-[10px]">{campaigns.length} aktif</Badge>
+                  </Label>
+                  <Select value={campaignId} onValueChange={v => setCampaignId(!v || v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Auto dari UTM / pilih...">
+                        {(value: string | null) => !value || value === 'none' ? '— Auto dari UTM —' : (campaigns.find(c => String(c.id) === value)?.campaign_name ?? '— Auto dari UTM —')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="w-[300px]">
+                      <SelectItem value="none">— Auto dari UTM —</SelectItem>
+                      {campaigns.length === 0
+                        ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada campaign aktif. Buat dulu di menu Campaigns.</div>
+                        : campaigns.map(c => <SelectItem key={c.id} value={String(c.id)}><span className="text-xs text-violet-400 mr-1">[{c.platform}]</span>{c.campaign_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5">
+                    Advertiser <Badge variant="outline" className="text-[10px]">{advUsers.length} user</Badge>
+                  </Label>
+                  <Select value={advertiserId} onValueChange={v => setAdvertiserId(!v || v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih advertiser...">
+                        {(value: string | null) => !value || value === 'none' ? '— Tanpa Advertiser —' : (advUsers.find(u => u.id === value)?.full_name ?? '— Tanpa Advertiser —')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="w-[260px]">
+                      <SelectItem value="none">— Tanpa Advertiser —</SelectItem>
+                      {advUsers.length === 0
+                        ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada advertiser aktif</div>
+                        : advUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5">
+                    CS <Badge variant="outline" className="text-[10px]">{csUsers.length} user</Badge>
+                  </Label>
+                  <Select value={csId} onValueChange={v => setCsId(!v || v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih CS...">
+                        {(value: string | null) => !value || value === 'none' ? '— Tanpa CS —' : (csUsers.find(u => u.id === value)?.full_name ?? '— Tanpa CS —')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="w-[260px]">
+                      <SelectItem value="none">— Tanpa CS —</SelectItem>
+                      {csUsers.length === 0
+                        ? <div className="px-2 py-1.5 text-xs text-muted-foreground">Belum ada CS aktif</div>
+                        : csUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Advertiser</Label>
-                <Select value={advertiserId} onValueChange={v => setAdvertiserId(!v || v === 'none' ? '' : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih advertiser...">
-                      {(value: string) => advUsers.find(u => u.id === value)?.full_name ?? '— Tanpa Advertiser —'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="w-[260px]">
-                    <SelectItem value="none">— Tanpa Advertiser —</SelectItem>
-                    {advUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>CS</Label>
-                <Select value={csId} onValueChange={v => setCsId(!v || v === 'none' ? '' : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih CS...">
-                      {(value: string) => csUsers.find(u => u.id === value)?.full_name ?? '— Tanpa CS —'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="w-[260px]">
-                    <SelectItem value="none">— Tanpa CS —</SelectItem>
-                    {csUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Preview */}
       {rows.length > 0 && !importResult && (

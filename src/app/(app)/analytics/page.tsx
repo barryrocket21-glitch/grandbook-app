@@ -10,10 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { PageHeader } from '@/components/ui/page-header'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { LineChart, AlertTriangle, TrendingDown, TrendingUp, RefreshCw, ExternalLink } from 'lucide-react'
+import { LineChart as LineChartIcon, AlertTriangle, TrendingDown, TrendingUp, RefreshCw, ExternalLink, Activity } from 'lucide-react'
 import { formatRupiah, formatDate } from '@/lib/format'
 import { DateRangePicker, defaultRange, type DateRange } from '@/components/ui/date-range-picker'
 import Link from 'next/link'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts'
 
 const supabase = createClient()
 
@@ -56,6 +57,9 @@ export default function AnalyticsPage() {
   const [drillTarget, setDrillTarget] = useState<{ csId: string; csName: string; productId: number; productName: string } | null>(null)
   const [drillOrders, setDrillOrders] = useState<any[]>([])
   const [drillLoading, setDrillLoading] = useState(false)
+  const [trendData, setTrendData] = useState<Array<{ date: string; revenue: number; spend: number; profit: number; closing: number }>>([])
+  const [csCompare, setCsCompare] = useState<Array<{ name: string; closing: number; revenue: number; cr: number }>>([])
+  const [health, setHealth] = useState<Array<{ severity: 'high' | 'medium' | 'low'; title: string; description: string; href?: string; cta?: string }>>([])
 
   const load = async () => {
     setLoading(true)
@@ -175,9 +179,102 @@ export default function AnalyticsPage() {
     const totalReturned = (returOrders || []).filter((o: any) => o.resi_status === 'RETUR' || o.status === 'RETUR').length
     const returRate = totalShipped > 0 ? (totalReturned / totalShipped) * 100 : 0
 
+    // Build daily trend data
+    const dailyMap = new Map<string, { revenue: number; spend: number; closing: number }>()
+    const fromDate = new Date(from)
+    const toDate = new Date(to)
+    for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+      dailyMap.set(d.toISOString().split('T')[0], { revenue: 0, spend: 0, closing: 0 })
+    }
+    ;(orders || []).forEach((o: any) => {
+      const day = dailyMap.get(o.order_date)
+      if (!day) return
+      day.closing += 1
+      ;(o.order_items || []).forEach((it: any) => {
+        day.revenue += Number(it.price) * it.qty
+      })
+    })
+    ;(spends || []).forEach((s: any) => {
+      const day = dailyMap.get(s.spend_date)
+      if (day) day.spend += Number(s.spend)
+    })
+    const trend = Array.from(dailyMap.entries()).map(([date, v]) => {
+      const d = new Date(date)
+      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']
+      return {
+        date: `${d.getDate()} ${months[d.getMonth()]}`,
+        revenue: v.revenue,
+        spend: v.spend,
+        profit: v.revenue - v.spend,
+        closing: v.closing,
+      }
+    })
+
+    // Build CS compare data
+    const csCompareData = csListData.map((c: Profile) => {
+      let totalLeads = 0, totalClosing = 0, totalRevenue2 = 0
+      productList.forEach((p: Product) => {
+        const cell = cellMap[`${c.id}|${p.id}`]
+        if (cell) {
+          totalLeads += cell.leads
+          totalClosing += cell.closing
+          totalRevenue2 += cell.revenue
+        }
+      })
+      return {
+        name: c.full_name,
+        closing: totalClosing,
+        revenue: totalRevenue2,
+        cr: totalLeads > 0 ? (totalClosing / totalLeads) * 100 : 0,
+      }
+    }).filter(c => c.closing > 0 || c.revenue > 0).sort((a, b) => b.revenue - a.revenue)
+
+    // Build health checks
+    const checks: typeof health = []
+
+    // Stale BARU
+    const cutoff = daysAgo(3)
+    const { count: staleCount } = await supabase
+      .from('orders').select('id', { count: 'exact', head: true })
+      .eq('status', 'BARU').lt('order_date', cutoff)
+    if (staleCount && staleCount > 0) {
+      checks.push({ severity: 'medium', title: `${staleCount} order BARU > 3 hari`, description: 'Kemungkinan customer ghosting. Tag FAKE atau follow up.', href: '/orders/list', cta: 'Lihat orders' })
+    }
+
+    // High retur rate
+    if (returRate > 15) {
+      checks.push({ severity: 'high', title: `Retur rate tinggi: ${returRate.toFixed(1)}% (rolling 30 hari)`, description: 'Investigasi: kualitas produk, ekspedisi, atau closing rate buruk.', href: '/orders/list?status=RETUR', cta: 'Lihat retur' })
+    }
+
+    // Negative profit
+    const profitBest = totalRevenue - totalHpp - totalAdSpend - totalCommissionEst - totalCommissionEarned - totalExpenses
+    if (profitBest < 0) {
+      checks.push({ severity: 'high', title: `Profit estimasi negatif: ${formatRupiah(profitBest)}`, description: 'Cost (HPP + ads + komisi + ops) lebih besar dari revenue. Audit campaign yang ROAS rendah.', href: '/ad-spend', cta: 'Cek ad spend' })
+    }
+
+    // Pipeline aging — order BARU > 30 hari
+    const cutoff30 = daysAgo(30)
+    const { count: agingCount } = await supabase
+      .from('orders').select('id', { count: 'exact', head: true })
+      .in('status', ['BARU','DIPROSES']).lt('order_date', cutoff30)
+    if (agingCount && agingCount > 0) {
+      checks.push({ severity: 'low', title: `${agingCount} order pending > 30 hari`, description: 'Pipeline lama yang gak gerak. Pertimbangkan tag FAKE atau hubungi customer.', href: '/orders/list', cta: 'Bersihkan' })
+    }
+
+    // Orders missing shipping_cost_actual (delivered tapi belum di-rekon)
+    const { count: missingActual } = await supabase
+      .from('orders').select('id', { count: 'exact', head: true })
+      .eq('resi_status', 'DITERIMA').is('shipping_cost_actual', null)
+    if (missingActual && missingActual > 0) {
+      checks.push({ severity: 'low', title: `${missingActual} order DITERIMA belum input ongkir actual`, description: 'Selisih ongkir gak ke-track. Input dari invoice ekspedisi.', href: '/shipping-diff', cta: 'Selisih ongkir' })
+    }
+
+    setHealth(checks)
     setProducts(productList)
     setCsList(csListData)
     setMatrix(cellMap)
+    setTrendData(trend)
+    setCsCompare(csCompareData)
     setProfit({
       revenue: totalRevenue,
       hpp: totalHpp,
@@ -243,7 +340,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        icon={LineChart}
+        icon={LineChartIcon}
         title="Owner Analytics"
         description={`Matrix Produk × CS dan estimasi profit • ${from} s/d ${to}`}
         actions={
@@ -255,6 +352,38 @@ export default function AnalyticsPage() {
           </div>
         }
       />
+
+      {/* Health Check / Action Center */}
+      {health.length > 0 && (
+        <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              Action Center
+              <Badge variant="outline" className="ml-1 text-xs bg-amber-500/10 text-amber-600">{health.length} item</Badge>
+            </CardTitle>
+            <CardDescription>Hal yang butuh perhatian kamu</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {health.map((h, i) => {
+              const sevColor = h.severity === 'high' ? 'border-red-500/40 bg-red-500/5' : h.severity === 'medium' ? 'border-amber-500/40 bg-amber-500/5' : 'border-blue-500/40 bg-blue-500/5'
+              const sevIcon = h.severity === 'high' ? '🔴' : h.severity === 'medium' ? '🟡' : '🔵'
+              return (
+                <div key={i} className={`rounded-lg border ${sevColor} p-3 flex items-start gap-3`}>
+                  <span className="text-base shrink-0 mt-0.5">{sevIcon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">{h.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{h.description}</p>
+                  </div>
+                  {h.href && (
+                    <Button variant="outline" size="sm" render={<Link href={h.href} />}>{h.cta || 'Lihat'}</Button>
+                  )}
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Profit Dashboard */}
       {profit && (
@@ -317,6 +446,80 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Trend chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Activity className="w-4 h-4 text-violet-500" />Trend Harian</CardTitle>
+            <CardDescription>Revenue vs Ad Spend vs Profit (estimasi)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              {trendData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Tidak ada data di periode ini</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData}>
+                    <defs>
+                      <linearGradient id="gRev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gSpend" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gProfit" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.3)" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.3)" tickFormatter={v => `${(v / 1000000).toFixed(1)}jt`} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: 'rgba(24,24,27,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
+                      formatter={(value: any) => formatRupiah(Number(value))}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Area type="monotone" dataKey="revenue" stroke="#10b981" fill="url(#gRev)" strokeWidth={2} name="Revenue" />
+                    <Area type="monotone" dataKey="spend" stroke="#ef4444" fill="url(#gSpend)" strokeWidth={2} name="Ad Spend" />
+                    <Area type="monotone" dataKey="profit" stroke="#8b5cf6" fill="url(#gProfit)" strokeWidth={2} name="Profit" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Activity className="w-4 h-4 text-violet-500" />CS Compare</CardTitle>
+            <CardDescription>Revenue per CS</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              {csCompare.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Belum ada data</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={csCompare} layout="vertical" margin={{ left: 0, right: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis type="number" tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.3)" tickFormatter={v => `${(v / 1000000).toFixed(1)}jt`} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.3)" width={70} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: 'rgba(24,24,27,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
+                      formatter={(value: any) => formatRupiah(Number(value))}
+                    />
+                    <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Matrix Produk × CS */}
       <Card>

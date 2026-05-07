@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Papa from 'papaparse'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -74,12 +75,41 @@ function ImportOrderTab() {
     downloadCSV(`template_${template.id}.csv`, csv)
   }
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setFileName(file.name)
     setRows([])
     setImportResult(null)
+
+    const ext = file.name.split('.').pop()?.toLowerCase()
+
+    if (ext === 'xlsx' || ext === 'xls') {
+      // XLSX parsing
+      try {
+        const buf = await file.arrayBuffer()
+        const wb = XLSX.read(buf, { type: 'array', cellDates: false, raw: false })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const json = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '', raw: false })
+        // Normalize all values to strings (parseCSV expects string values)
+        const stringRows = json.map(r => {
+          const out: Record<string, string> = {}
+          for (const [k, v] of Object.entries(r)) {
+            out[k] = v === null || v === undefined ? '' : String(v)
+          }
+          return out
+        })
+        const parsed = parseCSV(template, stringRows)
+        setRows(parsed)
+        if (parsed.length === 0) toast.error('Tidak ada data yang berhasil dibaca.', { description: 'Pastikan template yang dipilih cocok dengan struktur file.' })
+        else toast.success(`${parsed.length} baris dibaca dari ${file.name}`)
+      } catch (err: any) {
+        toast.error(`Gagal membaca XLSX: ${err.message}`)
+      }
+      return
+    }
+
+    // CSV parsing
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
@@ -214,7 +244,7 @@ function ImportOrderTab() {
           <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:border-violet-500/50 hover:bg-violet-500/5 transition-all">
             <Upload className="w-8 h-8 text-muted-foreground mb-2" />
             <span className="text-sm text-muted-foreground">{fileName || 'Klik atau drag file CSV di sini'}</span>
-            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
+            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFile} />
           </label>
           {rows.length > 0 && (
             <div className="flex items-center gap-3 flex-wrap">
@@ -587,11 +617,58 @@ function UpdateResiTab() {
     setDownloading(false)
   }
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setFileName(file.name)
     setRows([]); setManualRows([]); setUpdateResult(null)
+
+    const ext = file.name.split('.').pop()?.toLowerCase()
+
+    // Helper: process parsed rows in either spx-export or manual mode
+    const processRows = (data: any[]) => {
+      if (mode === 'spx-export') {
+        if (data[0] && !data[0]['Tracking No.']) data = data.slice(1)
+        const parsed = parseSPXExport(data)
+        setRows(parsed)
+        toast.success(`${parsed.length} baris dibaca dari export SPX`)
+      } else {
+        const VALID_STATUS = ['AKTIF', 'DITERIMA', 'PROBLEM', 'RETUR']
+        const parsed = data.map((row: any, idx) => {
+          const orderNumber = (row[RESI_UPDATE_HEADERS[0]] || '').trim()
+          const resiStatus = (row[RESI_UPDATE_HEADERS[4]] || '').trim().toUpperCase()
+          const error = !orderNumber ? 'No Order kosong'
+            : resiStatus && !VALID_STATUS.includes(resiStatus) ? `Status tidak valid: ${resiStatus}`
+            : undefined
+          return {
+            order_number: orderNumber, customer_name: (row[RESI_UPDATE_HEADERS[1]] || '').trim(),
+            resi: (row[RESI_UPDATE_HEADERS[2]] || '').trim(), ekspedisi: (row[RESI_UPDATE_HEADERS[3]] || '').trim().toUpperCase(),
+            resi_status: resiStatus, catatan: (row[RESI_UPDATE_HEADERS[5]] || '').trim(),
+            _row: idx + 2, _valid: !error, _error: error,
+          }
+        }).filter((r: any) => r.order_number)
+        setManualRows(parsed)
+        toast.success(`${parsed.length} baris dibaca`)
+      }
+    }
+
+    if (ext === 'xlsx' || ext === 'xls') {
+      try {
+        const buf = await file.arrayBuffer()
+        const wb = XLSX.read(buf, { type: 'array', cellDates: false, raw: false })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const json = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '', raw: false })
+        const stringRows = json.map(r => {
+          const out: Record<string, string> = {}
+          for (const [k, v] of Object.entries(r)) out[k] = v === null || v === undefined ? '' : String(v)
+          return out
+        })
+        processRows(stringRows)
+      } catch (err: any) {
+        toast.error(`Gagal membaca XLSX: ${err.message}`)
+      }
+      return
+    }
 
     Papa.parse<Record<string, string>>(file, {
       header: true,
@@ -720,7 +797,7 @@ function UpdateResiTab() {
           <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:border-violet-500/50 hover:bg-violet-500/5 transition-all">
             <Upload className="w-6 h-6 text-muted-foreground mb-1" />
             <span className="text-sm text-muted-foreground">{fileName || 'Klik atau drag file CSV di sini'}</span>
-            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
+            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFile} />
           </label>
           {(rows.length > 0 || manualRows.length > 0) && (
             <div className="flex items-center gap-3 flex-wrap">

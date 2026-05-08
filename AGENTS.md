@@ -11,11 +11,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase | Status | Tanggal |
 |---|---|---|
 | Phase 1 — Foundation & Database Schema | ✅ DONE | 2026-05-09 |
-| Phase 2 — Settings UI | ⏳ NOT STARTED — menunggu brief dari user | — |
+| Phase 2A — Settings UI (Master Data) | ✅ DONE | 2026-05-09 |
+| Phase 2B — Converter Profiles + Inbox UI | ⏳ NOT STARTED — menunggu brief dari user | — |
 | Phase 3 — Converter Engine + Status Sync + Commission Engine v2 | ⏳ NOT STARTED | — |
 | Phase 4 — Form Input Order + Detail | ⏳ NOT STARTED | — |
 
-**Phase 2 belum dikerjakan.** Brief Phase 2 (Settings UI untuk CRUD couriers, channels, rates, status mapping, converter profiles, dan field/value mappings) akan disusun terpisah oleh user. Jangan mulai coding fitur Phase 2 tanpa brief eksplisit.
+**Phase 2A done. Phase 2B belum dikerjakan.** Brief Phase 2B (Converter Profiles UI + Field Mapping editor + Inbox handler) akan disusun terpisah oleh user. Jangan mulai coding fitur Phase 2B tanpa brief eksplisit.
 
 ---
 
@@ -121,7 +122,63 @@ Banner component: `src/components/ui/refactor-banner.tsx` — renders constructi
 
 ---
 
-## Flag untuk diskusi sebelum Phase 2
+## Phase 2A — Settings UI Master Data (COMPLETED)
+
+5 halaman setting baru untuk CRUD master data:
+
+| Path | Fungsi | Permission write |
+|---|---|---|
+| `/settings/couriers` | CRUD courier (induk dari channels) | owner, admin |
+| `/settings/courier-channels` | CRUD channel per courier; aggregator support; deep-link `?courier=X` | owner, admin |
+| `/settings/courier-rates` | CRUD rate dengan effective period; auto-replace rate aktif saat tambah baru | owner, admin |
+| `/settings/status-mapping` | Mapping raw status → 8 internal status enum; bulk copy antar channel | owner, admin |
+| `/settings/wilayah` | **Read-only** viewer 82k baris dengan cascade filter (Province → City → Subdistrict) + search by village/zip | semua role |
+
+### Pattern yang dipakai
+
+- **Client-side React** dengan `createClient()` Supabase, sesuai pola existing `/settings/*`. Brief saran Server Actions ditolak di favor pattern existing per instruksi brief sendiri.
+- **RLS handle permission**: tabel master read-all-auth, write-admin-only (sudah ada di migration 010). UI gating tambahan via `<PermissionGuard>` untuk hide tombol Tambah/Edit/Hapus.
+- **Soft delete via `active` flag** untuk couriers + channels. Rates pakai effective period (set `effective_to`). Status mapping hard delete OK.
+- **Cascade disable di app layer**: disable courier → channel-channelnya ikut di-disable (single transaction via 2 update sequential).
+- **Replace rate logic**: saat tambah rate baru untuk pasangan (channel, key) yang sudah ada aktif, prompt confirm + auto-set `effective_to` rate lama ke `(new_from - 1 day)`.
+
+### Files baru
+
+- 4 helper:
+  - `src/lib/auth/permissions.ts` — `canManageSettings(role)` returns true untuk owner/admin
+  - `src/lib/schemas/settings.ts` — Zod schemas + UI helpers (RATE_KEY_PRESETS, STATUS_BADGE_COLOR, formatRateValue)
+- 1 shared component:
+  - `src/components/settings/permission-guard.tsx` — wrapper render-or-fallback by role
+- 5 pages: `couriers`, `courier-channels`, `courier-rates`, `status-mapping`, `wilayah`
+- Sidebar nav: group "Master Data" baru (visible untuk semua role karena read-only mode untuk non-admin)
+- `/settings` redirect updated dari `/settings/users` → `/settings/couriers`
+- `docs/phase2a-test.md` — manual smoke test checklist
+
+### Build status
+
+- `tsc --noEmit` pass
+- `npm run build` pass (5 halaman baru ke-list di output: settings/couriers, courier-channels, courier-rates, status-mapping, wilayah)
+
+### Deviasi dari brief
+
+1. **Tidak pakai TanStack Table** — pakai existing `<Table>` dari shadcn/ui. Existing pages konsisten pakai ini, lebih ringan, sorting/pagination minimal cukup.
+2. **Tidak pakai Server Actions** — direct Supabase mutation client-side. Brief eksplisit minta "prefer existing pattern" kalau conflict; existing pattern client-side.
+3. **Tidak buat `data-table.tsx`, `form-dialog.tsx`, `delete-confirm-dialog.tsx` shared component** — pages langsung pakai Dialog + Table inline (matches existing pattern). Bisa di-refactor jadi shared kalau Phase 2B butuh.
+4. **Tidak buat `src/lib/supabase/queries/settings.ts`** — query inline di useEffect setiap page. Reusable abstraction belum perlu untuk 5 page sederhana.
+
+### Hal yang perlu di-flag untuk Phase 2B
+
+- **Phase 2B = Converter Profiles + Inbox UI**. Tabel-tabelnya sudah ada di Phase 1: `converter_profiles`, `converter_field_mappings`, `converter_value_mappings`, `inbox_unmatched_resi`, `inbox_unmapped_statuses`.
+- Belum ada UI untuk edit converter profiles. Saat ini 3 profile pre-seeded (orderonline_inbound, spx_financial_rekonsil, mengantar_outbound) di seed_phase1.sql. Owner butuh UI untuk:
+  - CRUD converter profile (basic fields)
+  - Field mapping editor (drag-drop reorder, transform picker, target_table picker)
+  - Value mapping editor
+  - Test parser dengan sample file (preview output)
+- Inbox Review UI untuk handle `inbox_unmatched_resi` & `inbox_unmapped_statuses` saat converter engine (Phase 3) populate-nya.
+
+---
+
+## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
 

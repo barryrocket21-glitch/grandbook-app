@@ -184,6 +184,19 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    title: 'Master Data',
+    href: '/settings/couriers',
+    icon: Truck,
+    roles: ['owner', 'admin', 'cs', 'advertiser', 'akunting'],
+    children: [
+      { title: 'Couriers', href: '/settings/couriers' },
+      { title: 'Channels', href: '/settings/courier-channels' },
+      { title: 'Rates', href: '/settings/courier-rates' },
+      { title: 'Status Mapping', href: '/settings/status-mapping' },
+      { title: 'Master Wilayah', href: '/settings/wilayah' },
+    ],
+  },
+  {
     title: 'Settings',
     href: '/settings',
     icon: Settings,

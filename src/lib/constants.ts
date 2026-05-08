@@ -22,10 +22,10 @@ import {
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
   { value: 'BARU', label: 'Baru', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400' },
-  { value: 'DIPROSES', label: 'Diproses', color: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400' },
+  { value: 'SIAP_KIRIM', label: 'Siap Kirim', color: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400' },
   { value: 'DIKIRIM', label: 'Dikirim', color: 'bg-purple-500/15 text-purple-700 dark:text-purple-400' },
-  { value: 'SAMPAI', label: 'Sampai', color: 'bg-teal-500/15 text-teal-700 dark:text-teal-400' },
-  { value: 'SELESAI', label: 'Selesai', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+  { value: 'DITERIMA', label: 'Diterima', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+  { value: 'PROBLEM', label: 'Problem', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
   { value: 'RETUR', label: 'Retur', color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400' },
   { value: 'FAKE', label: 'Fake Order', color: 'bg-red-500/15 text-red-700 dark:text-red-400' },
   { value: 'CANCEL', label: 'Cancel', color: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400' },

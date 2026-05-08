@@ -1,0 +1,6 @@
+# Master data files (large, not committed to git)
+*.xlsx
+*.xls
+*.csv
+!.gitignore
+!README.md

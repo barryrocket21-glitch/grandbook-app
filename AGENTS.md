@@ -12,11 +12,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 |---|---|---|
 | Phase 1 — Foundation & Database Schema | ✅ DONE | 2026-05-09 |
 | Phase 2A — Settings UI (Master Data) | ✅ DONE | 2026-05-09 |
-| Phase 2B — Converter Profiles + Inbox UI | ⏳ NOT STARTED — menunggu brief dari user | — |
+| Phase 2B — Converter Profiles + Inbox UI | ✅ DONE | 2026-05-09 |
 | Phase 3 — Converter Engine + Status Sync + Commission Engine v2 | ⏳ NOT STARTED | — |
 | Phase 4 — Form Input Order + Detail | ⏳ NOT STARTED | — |
 
-**Phase 2A done. Phase 2B belum dikerjakan.** Brief Phase 2B (Converter Profiles UI + Field Mapping editor + Inbox handler) akan disusun terpisah oleh user. Jangan mulai coding fitur Phase 2B tanpa brief eksplisit.
+**Phase 2A & 2B done.** Phase 2B menambah CRUD Converter Profiles (list + detail editor 3 tabs) dan Inbox Review (Unmatched Resi + Unmapped Statuses). Phase 3 (Converter Engine eksekusi) akan trigger inbox insert otomatis.
 
 ---
 
@@ -175,6 +175,96 @@ Banner component: `src/components/ui/refactor-banner.tsx` — renders constructi
   - Value mapping editor
   - Test parser dengan sample file (preview output)
 - Inbox Review UI untuk handle `inbox_unmatched_resi` & `inbox_unmapped_statuses` saat converter engine (Phase 3) populate-nya.
+
+---
+
+## Phase 2B — Converter & Inbox UI (COMPLETED)
+
+5 halaman baru:
+
+| Path | Fungsi | Permission |
+|---|---|---|
+| `/settings/converter-profiles` | List + create/edit basic profile (CRUD via dialog) | owner, admin write; semua role read |
+| `/settings/converter-profiles/[id]` | Detail editor — 3 tabs: Field Mappings / Value Mappings / Test Parser | owner, admin write; semua role read |
+| `/inbox/unmatched-resi` | Resi belum cocok ke order. Resolve dengan link / create / ignore | owner, admin |
+| `/inbox/unmapped-statuses` | Raw status belum dimapping. Map → insert ke courier_channel_statuses + clear inbox | owner, admin |
+
+(Tidak ada halaman value-mapping standalone — embedded di tab `[id]/page.tsx`.)
+
+### Highlights pattern
+
+- **Client-side React + Supabase direct + RLS** — same as Phase 2A.
+- **Tabs** pakai shadcn `<Tabs>` (Base UI under the hood).
+- **Reorder field mappings** pakai up/down arrow (bukan drag-drop) — simpler, swap `display_order` via 2 sequential UPDATE.
+- **Bulk copy field mappings** dari profile lain pakai `upsert` dengan `onConflict: 'profile_id,source_field', ignoreDuplicates: true`.
+- **Test Parser preview** = pure function di `src/lib/converter/preview.ts` (light-weight, max 3 rows, supports CSV via papaparse + XLSX via xlsx + regex via named groups).
+
+### Files baru
+
+**Pages:**
+- `src/app/(app)/settings/converter-profiles/page.tsx`
+- `src/app/(app)/settings/converter-profiles/[id]/page.tsx`
+- `src/app/(app)/inbox/unmatched-resi/page.tsx`
+- `src/app/(app)/inbox/unmapped-statuses/page.tsx`
+
+**Helpers:**
+- `src/lib/schemas/settings.ts` — appended: `converterProfileSchema`, `fieldMappingSchema`, `valueMappingSchema`, `inboxResolveSchema`, `DIRECTION_BADGE_COLOR`, `TARGET_TABLE_BADGE_COLOR`, etc.
+- `src/lib/converter/transforms.ts` — TRANSFORMS catalog (11 entries) + `applyTransform()` for preview runtime
+- `src/lib/converter/preview.ts` — `previewParse(profile, fieldMappings, valueMappings, fileOrText)` returning `{ rows, totalRowsDetected, warnings, errors }`
+
+**Sidebar:**
+- `src/lib/constants.ts` — added "Converter Profiles" sub-item under Master Data, new top-level "Inbox" group (owner/admin only)
+
+**Docs:**
+- `docs/phase2b-test.md` — manual smoke test checklist
+
+### Implementasi: full vs stub
+
+| Feature | Status |
+|---|---|
+| CRUD profile basic | ✅ Full |
+| Field mapping CRUD + reorder + bulk copy | ✅ Full |
+| Value mapping CRUD | ✅ Full |
+| Test Parser CSV (orderonline-style) | ✅ Full |
+| Test Parser XLSX (header_row_index ≥ 2) | ✅ Full |
+| Test Parser WA_PASTE (regex named groups) | ✅ Full |
+| Test Parser OUTBOUND_TO_COURIER | ⏸️ Placeholder (Phase 3) |
+| Inbox unmatched resi — Link ke order | ✅ Full (cari order via order_number / external_id / customer_name) |
+| Inbox unmatched resi — Buat order baru | ⏸️ **Stub** — clear inbox dengan resolution=created_new, tidak benar-benar create order. Phase 4. |
+| Inbox unmatched resi — Abaikan | ✅ Full |
+| Inbox unmapped statuses — Map | ✅ Full (insert ke courier_channel_statuses + resolve inbox; idempotent kalau mapping sudah ada) |
+| Inbox unmapped statuses — Abaikan | ✅ Full |
+
+### Transforms (preview runtime)
+
+Implemented (9): `normalize_phone_id`, `phone_to_628`, `parse_date_dd-mm-yyyy`, `parse_datetime_yyyy-mm-dd`, `numeric_or_zero`, `uppercase`, `lowercase`, `trim`, `kg_format`.
+
+Deferred (2): `concat_address`, `sum_qty` — show "Phase 3" warning kalau dipakai di preview.
+
+### Build status
+
+- `npx tsc --noEmit` pass (no errors)
+- `npm run build` pass — 5 routes baru ke-list di output
+- ESLint warnings sama pattern dengan Phase 2A pages (`any` types, `useEffect` setState pattern) — diterima konsisten
+
+### Hal yang perlu di-flag untuk Phase 3
+
+- **Engine harus populate `inbox_unmatched_resi` & `inbox_unmapped_statuses`** saat parsing rekonsil. Phase 2B UI sudah siap konsumsi.
+- **Outbound preview** — Phase 2B placeholder. Phase 3 engine akan generate output sample dari mock orders.
+- **`Buat order baru` di unmatched resi** — Phase 4 nanti benar-benar create order dari raw_data.
+- **Auto-trigger inbox saat upload file** — Phase 3 engine sebagai entrypoint. Phase 2B masih manual SQL insert untuk testing.
+
+### Deviasi dari brief
+
+1. **Drag-drop reorder field mappings** → pakai up/down arrow saja (per saran brief, effort ringan, UX 90% sebagus).
+2. **OUTBOUND preview** → placeholder card "Phase 3" (per brief, skip kalau effort tinggi).
+3. **Bulk action di inbox unmapped statuses** → tidak diimplementasi (per brief, skip kalau effort > 30 min).
+4. **Notes column di inbox_unmatched_resi** → tidak ditambah migration. Ignore reason di dialog ditampilkan sebagai informational note tapi tidak disimpan ke DB. Kalau dibutuhkan persist, tambah kolom `notes` via migration tambahan di Phase 3.
+5. **Sidebar badge unresolved count** → tidak diimplementasi (skip per brief). Badge unresolved count tampil di header page-nya.
+
+### Tidak ada suspicious behavior di pages 2A
+
+Saat dev Phase 2B integrasi dengan Phase 2A (e.g. dropdown channel di profile form mengambil dari `courier_channels`), tidak menemukan glitch yang feel kayak bug 2A. Pattern client-side + Supabase direct match perfectly.
 
 ---
 

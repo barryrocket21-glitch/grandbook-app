@@ -18,6 +18,7 @@ import {
   Scale,
   Copy,
   Truck,
+  Inbox,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -193,7 +194,18 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Channels', href: '/settings/courier-channels' },
       { title: 'Rates', href: '/settings/courier-rates' },
       { title: 'Status Mapping', href: '/settings/status-mapping' },
+      { title: 'Converter Profiles', href: '/settings/converter-profiles' },
       { title: 'Master Wilayah', href: '/settings/wilayah' },
+    ],
+  },
+  {
+    title: 'Inbox',
+    href: '/inbox/unmatched-resi',
+    icon: Inbox,
+    roles: ['owner', 'admin'],
+    children: [
+      { title: 'Unmatched Resi', href: '/inbox/unmatched-resi' },
+      { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses' },
     ],
   },
   {

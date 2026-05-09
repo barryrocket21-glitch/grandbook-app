@@ -1,9 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
- * Cascade dropdown helpers for master_wilayah (82k rows).
- * All queries filter to distinct values to keep the dropdown manageable.
- * RLS allows all authenticated users to SELECT.
+ * Cascade dropdown helpers for master_wilayah (~82k rows).
+ *
+ * Phase 3A fix: previously fetchAll'd rows client-side and dedup'd with Set,
+ * but Supabase REST clamps to db_max_rows=1000 per request — so .range(0, 1999)
+ * returned 1000 rows then exited the loop early. Now we call SQL functions
+ * (migration 013) that DISTINCT server-side. Faster + correct.
  */
 
 export interface WilayahMatch {
@@ -15,43 +18,16 @@ export interface WilayahMatch {
   zip: string
 }
 
-const PAGE_SIZE = 2000
-
-async function fetchAll<T>(
-  supabase: SupabaseClient,
-  build: (from: number, to: number) => any
-): Promise<T[]> {
-  const all: T[] = []
-  let from = 0
-  while (true) {
-    const { data, error } = await build(from, from + PAGE_SIZE - 1)
-    if (error) throw error
-    const chunk = (data || []) as T[]
-    all.push(...chunk)
-    if (chunk.length < PAGE_SIZE) break
-    from += PAGE_SIZE
-    if (from > 100_000) break
-  }
-  return all
-}
-
 export async function loadProvinces(supabase: SupabaseClient): Promise<string[]> {
-  const rows = await fetchAll<{ province: string }>(supabase, (from, to) =>
-    supabase.from('master_wilayah').select('province').order('province').range(from, to)
-  )
-  return Array.from(new Set(rows.map((r) => r.province))).sort()
+  const { data, error } = await supabase.rpc('get_distinct_provinces')
+  if (error) throw error
+  return ((data as Array<{ province: string }>) || []).map((r) => r.province)
 }
 
 export async function loadCities(supabase: SupabaseClient, province: string): Promise<string[]> {
-  const rows = await fetchAll<{ city: string }>(supabase, (from, to) =>
-    supabase
-      .from('master_wilayah')
-      .select('city')
-      .eq('province', province)
-      .order('city')
-      .range(from, to)
-  )
-  return Array.from(new Set(rows.map((r) => r.city))).sort()
+  const { data, error } = await supabase.rpc('get_distinct_cities', { p_province: province })
+  if (error) throw error
+  return ((data as Array<{ city: string }>) || []).map((r) => r.city)
 }
 
 export async function loadSubdistricts(
@@ -59,16 +35,12 @@ export async function loadSubdistricts(
   province: string,
   city: string
 ): Promise<string[]> {
-  const rows = await fetchAll<{ subdistrict: string }>(supabase, (from, to) =>
-    supabase
-      .from('master_wilayah')
-      .select('subdistrict')
-      .eq('province', province)
-      .eq('city', city)
-      .order('subdistrict')
-      .range(from, to)
-  )
-  return Array.from(new Set(rows.map((r) => r.subdistrict))).sort()
+  const { data, error } = await supabase.rpc('get_distinct_subdistricts', {
+    p_province: province,
+    p_city: city,
+  })
+  if (error) throw error
+  return ((data as Array<{ subdistrict: string }>) || []).map((r) => r.subdistrict)
 }
 
 export async function loadVillages(
@@ -77,16 +49,13 @@ export async function loadVillages(
   city: string,
   subdistrict: string
 ): Promise<Array<{ village: string; zip: string; id: number }>> {
-  const { data, error } = await supabase
-    .from('master_wilayah')
-    .select('id, village, zip')
-    .eq('province', province)
-    .eq('city', city)
-    .eq('subdistrict', subdistrict)
-    .order('village')
-    .limit(1000)
+  const { data, error } = await supabase.rpc('get_distinct_villages', {
+    p_province: province,
+    p_city: city,
+    p_subdistrict: subdistrict,
+  })
   if (error) throw error
-  return data || []
+  return (data as Array<{ id: number; village: string; zip: string }>) || []
 }
 
 export async function findWilayahId(

@@ -15,10 +15,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 2B — Converter Profiles + Inbox UI | ✅ DONE | 2026-05-09 |
 | Phase 3A — Inbound Engine + Form Input + Approval | ✅ DONE | 2026-05-09 |
 | Phase 3B — Rekonsil Engine + Upload UI | ✅ DONE | 2026-05-10 |
-| Phase 3C — Outbound Engine + Export | ⏳ NOT STARTED | — |
+| Phase 3C — Outbound Engine + Export | ✅ DONE | 2026-05-10 |
 | Phase 4 — Commission Engine v2 + Analytics | ⏳ NOT STARTED | — |
 
-**Phase 3A done.** GrandBook sekarang bisa receive order dari 3 jalur (manual form, bulk upload, WA paste) → admin approval inbox → order detail dengan status timeline. Phase 3B (rekonsil ekspedisi) akan handle status update + biaya aktual; Phase 3C handle export ke ekspedisi.
+**Phase 3C done.** Loop converter engine sekarang complete: INBOUND_ORDER + WA_PASTE (3A), INBOUND_REKONSIL (3B), OUTBOUND_TO_COURIER (3C). Daily ops Grandbook end-to-end: receive order → approve → export ke ekspedisi → upload rekonsil → status auto-update + biaya aktual masuk.
 
 ---
 
@@ -462,6 +462,96 @@ Engine rekonsil yang match orders by resi/order_number → update status + biaya
 
 ---
 
+## Phase 3C — Outbound Engine + Export (COMPLETED)
+
+Loop converter engine GrandBook sudah lengkap. Untuk daily ops, Barry sekarang bisa:
+1. Filter & pilih order yang sudah SIAP_KIRIM (channel/status/date range/search)
+2. Pilih outbound profile → preview rows
+3. Generate file CSV/XLSX sesuai format ekspedisi/agregator (Mengantar pre-seeded)
+4. Optional: mark orders DIKIRIM dengan catatan batch (note → order_status_history)
+
+### Engine + helpers (4 files)
+
+**`src/lib/converter/engine-outbound.ts`** (NEW):
+- `generateOutbound({ profile, fieldMappings, valueMappings, orderIds, organizationId, performedBy, supabase, onProgress? })`
+  - Returns `{ rowsGenerated, ordersIncluded, ordersSkipped, fileBlob, fileName, headers, rows, warnings, errors }`
+  - Internally calls `buildOutboundRows()` (lower-level shared with preview) → `serializeForProfile()` → `suggestOutboundFilename()`
+- `buildOutboundRows(opts)` — rows-only result (no Blob). Direction harus `OUTBOUND_TO_COURIER`. Bulk-load orders+items+channel chunked 200/req
+- `markOrdersExported(supabase, orderIds, newStatus, sourceProfileId, note)` — wrapper RPC call
+- Re-exports for convenience: `resolveSourceValue`, `serializeCsv/Xlsx/ForProfile`, `downloadBlob`, `suggestOutboundFilename`
+
+**`src/lib/converter/outbound-resolvers.ts`** (NEW — pure functions):
+- `resolveSourceValue(sourceField, order, warnings)` — handles all source_field patterns:
+  - Direct order column (`customer_name`, `order_number`, `notes`, ...)
+  - `order_items.<aggregate>` → `total_qty`, `total_weight`, `total_price`, `product_summary`, `product_names`, `count`, `first_product_name`, `first_product_variation`
+  - `channel_courier_code` / `channel_aggregator` / `channel_name`
+  - `total_if_cod`, `total_if_transfer`, `cod_amount_or_empty` — return `null` (not '') so empty cells stay empty
+  - `concat_address` — single-string full address
+  - `meta.<key>` → orders.meta JSON value
+- `computeTotalWeight(items, order, warnings)` — sums `qty × weight_per_unit`, falls back to `DEFAULT_ITEM_WEIGHT_KG=1` per item if any item has no weight, emits warning
+- `formatProductSummary(items)` — "1x Baju Wanita Hitam M, 2x Kaos Pria Putih L" format (qty di depan, variation appended dengan space)
+- `concatFullAddress(order)` — gabung detail + village + subdistrict + city + province + zip
+
+**`src/lib/converter/serializer.ts`** (NEW):
+- `serializeCsv(rows, headers, delimiter, encoding)` — pakai `Papa.unparse`, prepend `﻿` BOM kalau encoding='utf-8-sig'
+- `serializeXlsx(rows, headers, sheetName)` — pakai `XLSX.write` (array buffer)
+- `serializeForProfile(profile, rows, headers)` — branch by `profile.file_format`, single entry-point untuk engine + UI
+- `downloadBlob(blob, filename)` — trigger browser download via `URL.createObjectURL` + temporary `<a>`
+- `suggestOutboundFilename(profile, at?)` → `${code}_YYYYMMDD_HHMMSS.${ext}` (HHMMSS, includes seconds)
+
+**`src/lib/converter/preview.ts`** — appended `previewOutbound(supabase, orgId, profile, fms, vms, orderIds, maxOrders=5)`:
+- Thin wrapper around `buildOutboundRows(orderIds.slice(0, max))` returning `OutboundPreviewResult` (extends `OutboundRowsResult` dengan `totalOrdersRequested`)
+- Read-only — no DB writes
+
+### Pages
+
+- `/orders/export-resi` — 5-step UI (Filter → Profile → Preview → Generate → Done)
+  - **Step 1 (Filter):** channel filter + status filter (SIAP_KIRIM default, BARU, ELIGIBLE=both, DIKIRIM=re-export) + date range from/to + search by order#/customer/kota. Multi-select dengan select-all-filtered di header
+  - **Step 2 (Profile):** dropdown OUTBOUND profiles aktif. Mixed-channels warning kalau selection campur >1 channel
+  - **Step 3 (Preview):** table 14 kolom + max 5 row sample. Channel-mismatch warning kalau profile.channel_id ≠ semua channel di selection
+  - **Step 4 (Generate):** progress bar + auto-download file
+  - **Step 5 (Done):** filename + 4 stat cards. Pertanyaan card: 2 buttons "Selesai" / "Update Status & Selesai". Optional textarea "Catatan ekspor" → masuk `order_status_history.note` untuk audit (200 char max)
+
+### Migration
+
+**`src/lib/supabase/migrations/015_outbound_helpers.sql`:**
+- Extend `order_status_history.source` CHECK constraint dengan `'outbound_export'` (sebelumnya 6 nilai, sekarang 7)
+- `mark_orders_exported(order_ids[], new_status, source_profile_id, note)` RPC bulk-update orders ke status (DIKIRIM typically) + patch row history terakhir per order dengan source='outbound_export'. Returns count yang actually updated (skip no-ops). Pattern konsisten dengan `update_order_from_rekonsil`.
+- Verified runnable: RPC dengan empty array → return 0; with bogus org context → 'No organization context' (callable + working).
+
+### Sidebar
+
+- Group "Orders" sekarang punya 5 sub-items (sebelumnya 4):
+  - Input Order Baru, Upload Massal, WA Paste, **Export ke Ekspedisi**, Daftar Order
+- Permission check di page (`canApproveOrders`), bukan di sidebar — non-owner/admin lihat empty state.
+
+### Decisions
+
+1. **Engine separate file** — `engine-outbound.ts` ≠ `engine.ts` (3A) ≠ `engine-rekonsil.ts` (3B). Beda concern (read-many-orders → produce-file vs row-then-insert/update). Split tambahan: `outbound-resolvers.ts` (pure resolvers) + `serializer.ts` (file generation) untuk testability.
+2. **Computed source_field syntax** — pakai prefix konvensional (`order_items.total_qty`, `meta.<key>`, `channel_courier_code`, `total_if_cod`). Recognized di `resolveSourceValue()` dengan switch. Alternative (DB column `computed_expression` JSON) di-skip (YAGNI sampai user butuh expression baru di luar list yang sudah ada).
+3. **`previewOutbound`** — thin wrapper, bukan implementasi independent. Share semua logic dengan `buildOutboundRows`. Outbound preview tetap query DB (orders + items + channel) — beda dari preview parser inbound yang pure (file-only). OK karena cost kecil (5 orders).
+4. **Post-action UX (2 buttons setelah download, bukan checkbox sebelum)** — sesuai brief Phase 3C. UX rationale: user perlu lihat file dulu sebelum decide apakah commit ke DIKIRIM. Default `Selesai` = orders tetap SIAP_KIRIM (workflow ideal: rekonsil Phase 3B akan auto-update). `Update Status & Selesai` untuk org yang butuh tanda "handover ke ekspedisi" segera (internal SLA / batch tracking).
+5. **Optional batch note** — textarea kecil di Step 5. Disimpan di `order_status_history.note` untuk audit. Tidak required, kalau kosong fallback ke "Outbound export via {code} ({filename})".
+6. **CSV BOM** — prepend `﻿` ke Blob hanya kalau `profile.file_encoding='utf-8-sig'`. Mengantar pakai utf-8-sig sehingga otomatis BOM-friendly buat Excel.
+7. **File generation client-side** — Papa.unparse + XLSX.write di browser. Tidak butuh server endpoint. Konsisten dengan pattern client-side + Supabase direct.
+8. **Bulk vs loop RPC** — `mark_orders_exported` PASS array dan loop di server (bukan loop dari client) untuk efisiensi. Beda dari 3A/3B yang loop per-row di client karena tiap row punya data berbeda.
+9. **Default weight fallback 1kg** — kalau `weight_per_unit` null/0, fallback `DEFAULT_ITEM_WEIGHT_KG=1` per unit dengan warning. Mengantar minta Berat field, jadi gak boleh kosong. User bisa fix product master nanti dari warning yang ditampilkan.
+10. **Source enum value 'outbound_export'** — bukan 'converter_outbound'. Sesuai brief: action-oriented naming (export = action) konsisten dengan 'admin_review' di enum yang sudah ada.
+11. **Per-field operation order** — resolve → value mapping → transform. Mengikuti existing pattern engine-rekonsil/engine. Brief sebut transform-then-mapping di salah satu paragraf — di-skip karena pattern existing lebih konsisten + mendukung mapping yang depend pada transformed value (e.g. uppercase pre-mapping).
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ `/orders/export-resi` ke-list di output (50 routes total)
+
+### Hal yang perlu di-flag untuk Phase 4 (Commission Engine v2 + Analytics)
+
+- Outbound engine tidak touch commissions table. Phase 4 commission engine bisa-bisa hooking ke status transition (e.g. trigger di order_status_history) atau on-demand recompute.
+- Outbound flow konsisten dengan brief — tidak ada side-effect ke commission yet.
+- Profile `mengantar_outbound` channel JNE_VIA_MENGANTAR → cocok untuk demo Phase 4 perhitungan commission per channel/courier.
+
+---
+
 ## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
@@ -516,7 +606,11 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | 007 | shipping_cost_actual column | Superseded — column ada di schema baru |
 | 008-009 | Commission per-user rules + cleanup | Functions di-drop di 010, akan dibangun ulang Phase 3 |
 | **010** | **Phase 1 foundation** | **✅ Active** |
-| 011+ | TBD next phases | — |
+| **012** | **Phase 3A — order_number generator + status RPC** | **✅ Active** |
+| **013** | **Phase 1.5 — wilayah distinct helpers** | **✅ Active** |
+| **014** | **Phase 3B — rekonsil RPC** | **✅ Active** |
+| **015** | **Phase 3C — outbound source enum + bulk mark RPC** | **✅ Active** |
+| 016+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

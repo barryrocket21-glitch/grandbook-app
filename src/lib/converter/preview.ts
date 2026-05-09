@@ -1,13 +1,14 @@
 // =============================================================
-// Light-weight parser preview (Phase 2B + 3B)
+// Light-weight parser preview (Phase 2B + 3B + 3C)
 // Shares parser.ts core with engine.ts (Phase 3A) and engine-rekonsil.ts (3B).
-// Pure function — no DB writes (rekonsil preview does read-only lookups
-// against orders to enrich the preview, but never mutates).
+// Pure function — no DB writes (rekonsil & outbound previews do read-only
+// lookups against orders to enrich the preview, but never mutate).
 // =============================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { applyTransform } from './transforms'
 import { indexValueMappings, parseSource } from './parser'
 import { inferStatusForProfile } from './status-inference'
+import { buildOutboundRows, type OutboundRowsResult } from './engine-outbound'
 import type {
   ConverterProfile,
   ConverterFieldMapping,
@@ -291,4 +292,34 @@ function toNum(v: unknown): number {
   const cleaned = String(v).replace(/[,\s]/g, '').replace(/[^\d.\-]/g, '')
   const n = Number(cleaned)
   return Number.isFinite(n) ? n : 0
+}
+
+// =============================================================
+// Outbound preview (Phase 3C)
+// Thin wrapper around buildOutboundRows that limits to maxOrders so
+// the UI can render a sample of rows before producing the full file.
+// Read-only — does not mutate orders.
+// =============================================================
+
+export type OutboundPreviewResult = OutboundRowsResult & { totalOrdersRequested: number }
+
+export async function previewOutbound(
+  supabase: SupabaseClient,
+  organizationId: number,
+  profile: ConverterProfile,
+  fieldMappings: ConverterFieldMapping[],
+  valueMappings: ConverterValueMapping[],
+  orderIds: number[],
+  maxOrders = 5
+): Promise<OutboundPreviewResult> {
+  const slice = orderIds.slice(0, maxOrders)
+  const r = await buildOutboundRows({
+    profile,
+    fieldMappings,
+    valueMappings,
+    orderIds: slice,
+    organizationId,
+    supabase,
+  })
+  return { ...r, totalOrdersRequested: orderIds.length }
 }

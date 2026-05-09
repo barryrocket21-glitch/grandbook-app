@@ -1,14 +1,19 @@
 // =============================================================
-// Light-weight parser preview (Phase 2B)
-// Shares parser.ts core with engine.ts (Phase 3A).
-// Pure function — no DB writes.
+// Light-weight parser preview (Phase 2B + 3B)
+// Shares parser.ts core with engine.ts (Phase 3A) and engine-rekonsil.ts (3B).
+// Pure function — no DB writes (rekonsil preview does read-only lookups
+// against orders to enrich the preview, but never mutates).
 // =============================================================
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { applyTransform } from './transforms'
 import { indexValueMappings, parseSource } from './parser'
+import { inferStatusForProfile } from './status-inference'
 import type {
   ConverterProfile,
   ConverterFieldMapping,
   ConverterValueMapping,
+  CourierChannelStatus,
+  OrderStatus,
 } from '@/lib/types'
 
 export interface ParsedRow {
@@ -98,4 +103,192 @@ export async function previewParse(
   })
 
   return { rows, totalRowsDetected, warnings, errors }
+}
+
+// =============================================================
+// Rekonsil-specific preview (Phase 3B)
+// Enriches each parsed row with the matching order lookup so the UI
+// can show "Found order GB-... → status X → Y" before the user commits.
+// =============================================================
+
+export interface RekonsilPreviewRow {
+  rowIndex: number
+  rawResi: string | null
+  match:
+    | { found: true; orderId: number; orderNumber: string; customerName: string; currentStatus: OrderStatus }
+    | { found: false }
+  /** Inferred / mapped new status. null = no change planned. */
+  plannedStatus: OrderStatus | null
+  /** Audit value that will land in order_status_history.raw_status. */
+  rawStatus: string
+  /** Will be true if raw_status not in mapping → would route to inbox unmapped. */
+  needsInboxUnmapped: boolean
+  /** Cost / meta updates planned (for display). */
+  costUpdates: {
+    shipping_cost_actual?: number
+    payout_amount?: number
+    cod_amount?: number
+  }
+  warnings: string[]
+}
+
+export interface RekonsilPreviewResult {
+  rows: RekonsilPreviewRow[]
+  totalRowsDetected: number
+  globalWarnings: string[]
+  errors: string[]
+}
+
+export async function previewRekonsil(
+  supabase: SupabaseClient,
+  organizationId: number,
+  profile: ConverterProfile,
+  fieldMappings: ConverterFieldMapping[],
+  valueMappings: ConverterValueMapping[],
+  statusMappings: CourierChannelStatus[],
+  fileOrText: File | string,
+  maxRows = 5
+): Promise<RekonsilPreviewResult> {
+  if (profile.direction !== 'INBOUND_REKONSIL') {
+    return {
+      rows: [],
+      totalRowsDetected: 0,
+      globalWarnings: [],
+      errors: [`Profile "${profile.code}" bukan untuk rekonsil (direction=${profile.direction}).`],
+    }
+  }
+
+  const globalWarnings: string[] = []
+  let rawRows: Record<string, unknown>[]
+  try {
+    rawRows = await parseSource(profile, fileOrText, globalWarnings)
+  } catch (err) {
+    return {
+      rows: [],
+      totalRowsDetected: 0,
+      globalWarnings,
+      errors: [err instanceof Error ? err.message : String(err)],
+    }
+  }
+
+  const totalRowsDetected = rawRows.length
+  const sliced = rawRows.slice(0, maxRows)
+  const valueMapIndex = indexValueMappings(valueMappings)
+  const statusMapByRaw = new Map<string, OrderStatus>()
+  for (const m of statusMappings) statusMapByRaw.set(m.raw_status, m.internal_status)
+
+  const out: RekonsilPreviewRow[] = []
+  for (let idx = 0; idx < sliced.length; idx++) {
+    const raw = sliced[idx]
+    const rowIndex = idx + 1
+    const warnings: string[] = []
+
+    const ordersFields: Record<string, unknown> = {}
+    const meta: Record<string, unknown> = {}
+
+    for (const fm of fieldMappings) {
+      if (fm.target_table === 'file_column') continue
+      const rv = raw[fm.source_field]
+      let v: unknown = rv
+      const vmList = valueMapIndex.get(fm.source_field)
+      if (vmList && rv != null) {
+        const hit = vmList.get(String(rv))
+        if (hit !== undefined) v = hit
+      }
+      if (fm.transform) {
+        const r = applyTransform(fm.transform, v, { orders: ordersFields })
+        if (r.ok) v = r.value
+        else {
+          warnings.push(`transform "${fm.transform}" gagal di "${fm.source_field}" — ${r.reason}`)
+          continue
+        }
+      }
+      if (fm.target_table === 'orders') ordersFields[fm.target_field] = v
+      else if (fm.target_table === 'meta') meta[fm.target_field] = v
+    }
+
+    // Lookup key
+    const target = profile.primary_key_target
+    let pkValue: string | null = null
+    if (target) {
+      const candidate =
+        (ordersFields[target] as unknown) ??
+        (profile.primary_key_field ? raw[profile.primary_key_field] : undefined)
+      if (candidate != null) {
+        const s = String(candidate).trim()
+        pkValue = s === '' ? null : s
+      }
+    }
+
+    let match: RekonsilPreviewRow['match'] = { found: false }
+    if (pkValue && target) {
+      const { data } = await supabase
+        .from('orders')
+        .select('id, order_number, customer_name, status')
+        .eq('organization_id', organizationId)
+        .eq(target, pkValue)
+        .maybeSingle()
+      if (data) {
+        match = {
+          found: true,
+          orderId: data.id as number,
+          orderNumber: data.order_number as string,
+          customerName: data.customer_name as string,
+          currentStatus: data.status as OrderStatus,
+        }
+      }
+    }
+
+    // Determine planned status
+    const inferred = inferStatusForProfile(profile, raw)
+    let plannedStatus: OrderStatus | null = null
+    let rawStatus = ''
+    let needsInboxUnmapped = false
+    if (inferred) {
+      plannedStatus = (inferred.status as OrderStatus | null) ?? null
+      rawStatus = inferred.rawStatus
+      needsInboxUnmapped = false
+    } else {
+      const rs = (ordersFields.status_raw as unknown) ?? (meta.status_raw as unknown)
+      const rsStr = rs == null ? '' : String(rs).trim()
+      rawStatus = rsStr
+      if (rsStr) {
+        const mapped = statusMapByRaw.get(rsStr)
+        if (mapped) plannedStatus = mapped
+        else needsInboxUnmapped = true
+      }
+    }
+
+    const costUpdates: RekonsilPreviewRow['costUpdates'] = {}
+    if (ordersFields.shipping_cost_actual !== undefined) {
+      costUpdates.shipping_cost_actual = toNum(ordersFields.shipping_cost_actual)
+    }
+    if (ordersFields.payout_amount !== undefined) {
+      costUpdates.payout_amount = toNum(ordersFields.payout_amount)
+    }
+    if (ordersFields.cod_amount !== undefined) {
+      costUpdates.cod_amount = toNum(ordersFields.cod_amount)
+    }
+
+    out.push({
+      rowIndex,
+      rawResi: pkValue,
+      match,
+      plannedStatus,
+      rawStatus,
+      needsInboxUnmapped,
+      costUpdates,
+      warnings,
+    })
+  }
+
+  return { rows: out, totalRowsDetected, globalWarnings, errors: [] }
+}
+
+function toNum(v: unknown): number {
+  if (v == null || v === '') return 0
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
+  const cleaned = String(v).replace(/[,\s]/g, '').replace(/[^\d.\-]/g, '')
+  const n = Number(cleaned)
+  return Number.isFinite(n) ? n : 0
 }

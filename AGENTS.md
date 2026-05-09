@@ -14,7 +14,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 2A — Settings UI (Master Data) | ✅ DONE | 2026-05-09 |
 | Phase 2B — Converter Profiles + Inbox UI | ✅ DONE | 2026-05-09 |
 | Phase 3A — Inbound Engine + Form Input + Approval | ✅ DONE | 2026-05-09 |
-| Phase 3B — Rekonsil Engine | ⏳ NOT STARTED | — |
+| Phase 3B — Rekonsil Engine + Upload UI | ✅ DONE | 2026-05-10 |
 | Phase 3C — Outbound Engine + Export | ⏳ NOT STARTED | — |
 | Phase 4 — Commission Engine v2 + Analytics | ⏳ NOT STARTED | — |
 
@@ -381,6 +381,84 @@ Phase paling impactful sejauh ini — Grandbook sekarang punya 3 jalur masuk ord
 
 - 5 Phase 2A pages + 4 Phase 2B pages tetap intact (Settings → Master Data + Converter Profiles + Inbox Review).
 - Migration 011 nomor di-skip — kalau Phase 3B butuh migration baru, pakai 011 dulu (atau 013 — konsistensi numerik tergantung). Saran: 013 (skip 011 secara permanen, dokumentasi sebagai gap).
+
+---
+
+## Phase 3B — Rekonsil Engine + Upload UI (COMPLETED)
+
+Engine rekonsil yang match orders by resi/order_number → update status + biaya aktual + route mismatches ke inbox tables. Sekarang daily ops jadi semi-otomatis: upload financial_report dari ekspedisi → status orders auto-update + biaya aktual masuk + anomali ke inbox.
+
+### Engine + helpers
+
+**`src/lib/converter/engine-rekonsil.ts`** (NEW):
+- `ingestRekonsil({ profile, fieldMappings, valueMappings, statusMappings, fileOrText, organizationId, performedBy, supabase, onProgress? })`
+- Direction harus `INBOUND_REKONSIL`. Validates upfront.
+- Lookup order by `profile.primary_key_target` (`resi` / `external_order_id` / `order_number`)
+- Status determination:
+  1. Strategy keyed by `profile.code` di `status-inference.ts` (e.g. `spx_financial_rekonsil` → `inferSpxStatus`)
+  2. Fallback: `extractedRow.status_raw` lookup di `courier_channel_statuses` mapping
+  3. Mapping miss → insert ke `inbox_unmapped_statuses` (UNIQUE constraint handle dedup, occurrence_count increment)
+- Cost updates: `shipping_cost_actual`, `payout_amount`, `cod_amount` di-update via RPC (whitelist di engine)
+- Order tidak ketemu → insert ke `inbox_unmatched_resi`. Idempotent: skip kalau row dengan raw_resi+resolved=FALSE udah ada
+- Returns `{ matched, status_updated, cost_updated, inbox_unmatched, inbox_unmapped_status, errors[], warnings[], totalRowsDetected }`
+
+**`src/lib/converter/status-inference.ts`** (NEW):
+- `inferStatusForProfile(profile, rawRow)` — switch by `profile.code`. Returns `null` → caller fallback ke status_raw mapping
+- `inferSpxStatus(rawRow)` — implementasi SPX:
+  - `Return Fee > 0` → `RETUR` (raw_status: `INFERRED_RETUR (return_fee>0)`)
+  - `Escrow > 0` → `DITERIMA` (raw_status: `INFERRED_DITERIMA (escrow>0)`)
+  - else → null (tidak update status, tidak masuk inbox unmapped — sengaja, karena `INFERRED_UNKNOWN` bukan "raw status missing")
+
+**`src/lib/converter/preview.ts`** — appended `previewRekonsil(supabase, orgId, profile, fms, vms, statusMappings, fileOrText, maxRows=5)`:
+- Enriched preview: per row, lookup order existing & display match status (Found/Not Found), planned status badge before→after, cost updates, inbox unmapped warning
+- Read-only — no DB writes
+
+### Pages
+
+- `/reconciliation/upload` — multi-step (Profile → File → Preview → Process → Done) UI dengan stat cards di final step + tombol navigate ke inbox masing-masing kalau ada anomali
+- `/reconciliation` (existing dari sebelum Phase 1) NOT modified — coexist sebagai "Cross-check Platform"
+
+### Migration
+
+**`src/lib/supabase/migrations/014_rekonsil_helpers.sql`:**
+- `update_order_from_rekonsil(order_id, new_status, shipping_cost_actual, payout_amount, cod_amount, meta_merge, status_changed_at, source_profile_id, raw_status, note)` RPC
+- Atomic: UPDATE orders SET ... (COALESCE-based, NULL params no-op) → trigger fires kalau status berubah → patch latest history row dengan source='converter_rekonsil' + raw_status + note
+- Schema mendukung `'converter_rekonsil'` di enum `order_status_history.source` — sudah ada sejak migration 010, no schema change needed
+- `inbox_unmapped_statuses` UNIQUE (organization_id, channel_id, raw_status) — sudah ada sejak migration 010, app pakai SELECT-then-UPDATE/INSERT pattern (tidak pakai ON CONFLICT karena ingin kondisi `resolved=true` tetap increment occurrence tapi tidak counter result.inbox_unmapped_status)
+- Verified runnable: RPC dengan bogus order_id → throws P0002 'Order not found' (callable + working)
+
+### Sidebar
+
+- "Reconciliation" sekarang punya 2 sub-items:
+  - Cross-check Platform → `/reconciliation` (existing)
+  - Upload File Rekonsil → `/reconciliation/upload` (new)
+- Group accessible untuk owner + admin (sebelumnya owner only — admin perlu rekonsil daily)
+
+### Decisions
+
+1. **Engine split** — `engine-rekonsil.ts` separate file dari `engine.ts` (Phase 3A). Beda concern (lookup-update vs insert), beda return shape, beda flow control. Cleaner sebagai 2 file.
+2. **Status inference** — switch-case `profile.code` di `status-inference.ts`, bukan strategy pattern formal atau new column `infer_status_strategy` di DB. YAGNI sampai ada 5+ aggregator. Migration column add di-skip dari brief optional.
+3. **`INFERRED_UNKNOWN` tidak ke inbox** — kalau SPX inference return null (escrow=0 + return_fee=0), engine skip status update tapi NOT route ke inbox unmapped. Karena `INFERRED_UNKNOWN` bukan "raw status missing from mapping" — itu kondisi data yang ambigu (mungkin file rekonsil incomplete). User bisa cek manual via order detail.
+4. **`status_changed_at` source** — kalau profile mapping ada (e.g. SPX `Delivered/Returned Time` → `status_changed_at`), engine pakai value itu. Kalau kosong, fallback `NOW()` saat status berubah (di RPC `COALESCE(p_status_changed_at, NOW())`).
+5. **Trigger overlap** — RPC pakai pattern Phase 3A: UPDATE → trigger insert auto history row ('manual') → patch row terakhir. Konsisten + tidak duplicate insert.
+6. **Idempotency** — re-upload file aman:
+   - Order yang status sudah cocok: trigger nggak fire (no status change), no extra history row
+   - Cost yang sama: COALESCE in RPC, no actual diff
+   - Unmatched inbox: skip kalau ada row dengan raw_resi+resolved=FALSE
+   - Unmapped statuses: increment occurrence_count + last_seen_at via SELECT-then-UPDATE
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ `/reconciliation/upload` ke-list (semua 50 routes)
+
+### Hal yang perlu di-flag untuk Phase 3C (Outbound)
+
+- Engine perlu support direction=`OUTBOUND_TO_COURIER`: query orders status SIAP_KIRIM, apply field mappings di reverse (internal → file_column), generate CSV/XLSX file untuk download
+- Reuse `applyTransform()` (sebagian transforms cocok untuk outbound, e.g. `phone_to_628`, `kg_format`, `concat_address` yang udah implemented Phase 3A)
+- Profile `mengantar_outbound` udah di-seed Phase 1 dengan 14 field mappings target_table='file_column' — Phase 3C engine tinggal konsumsi
+- Setelah download, mark orders status DIKIRIM atau biarkan SIAP_KIRIM sampai ada konfirmasi resi dari ekspedisi (Phase 3B akan update saat upload rekonsil)
+- Tidak overlap dengan Phase 3A/3B engine — separate file `engine-outbound.ts`
 
 ---
 

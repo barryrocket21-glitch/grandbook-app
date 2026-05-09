@@ -173,7 +173,11 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Reconciliation',
     href: '/reconciliation',
     icon: Scale,
-    roles: ['owner'],
+    roles: ['owner', 'admin'],
+    children: [
+      { title: 'Cross-check Platform', href: '/reconciliation' },
+      { title: 'Upload File Rekonsil', href: '/reconciliation/upload' },
+    ],
   },
   {
     title: 'Komisi',

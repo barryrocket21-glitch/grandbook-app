@@ -8,7 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { applyTransform } from './transforms'
 import { indexValueMappings, parseSource } from './parser'
 import { inferStatusForProfile } from './status-inference'
-import { buildOutbound, type OutboundResult } from './engine-outbound'
+import { buildOutboundRows, type OutboundRowsResult } from './engine-outbound'
 import type {
   ConverterProfile,
   ConverterFieldMapping,
@@ -296,11 +296,12 @@ function toNum(v: unknown): number {
 
 // =============================================================
 // Outbound preview (Phase 3C)
-// Thin wrapper around buildOutbound that limits to maxOrders so the
-// UI can render a sample of rows before producing the full file.
+// Thin wrapper around buildOutboundRows that limits to maxOrders so
+// the UI can render a sample of rows before producing the full file.
+// Read-only — does not mutate orders.
 // =============================================================
 
-export type OutboundPreviewResult = OutboundResult & { totalOrdersRequested: number }
+export type OutboundPreviewResult = OutboundRowsResult & { totalOrdersRequested: number }
 
 export async function previewOutbound(
   supabase: SupabaseClient,
@@ -312,7 +313,7 @@ export async function previewOutbound(
   maxOrders = 5
 ): Promise<OutboundPreviewResult> {
   const slice = orderIds.slice(0, maxOrders)
-  const r = await buildOutbound({
+  const r = await buildOutboundRows({
     profile,
     fieldMappings,
     valueMappings,

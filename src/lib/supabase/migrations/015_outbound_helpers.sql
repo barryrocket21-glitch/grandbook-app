@@ -1,12 +1,12 @@
 -- =============================================================
 -- Migration 015 — Phase 3C
 -- 1. Extend order_status_history.source CHECK constraint with
---    'converter_outbound' so the audit trail can attribute status
+--    'outbound_export' so the audit trail can attribute status
 --    changes triggered by the outbound (export to courier) engine.
 -- 2. mark_orders_exported(order_ids[], new_status, source_profile_id, note)
 --    Bulk RPC: update orders to new status (typically DIKIRIM)
 --    in a single round-trip, then patch the auto-inserted history
---    rows with source='converter_outbound' + note + source_profile_id.
+--    rows with source='outbound_export' + note + source_profile_id.
 -- =============================================================
 
 -- ----------------------------------------------------------
@@ -20,7 +20,7 @@ ALTER TABLE public.order_status_history
     'manual',
     'converter_inbound',
     'converter_rekonsil',
-    'converter_outbound',
+    'outbound_export',
     'wa_paste',
     'admin_review',
     'system'
@@ -68,7 +68,7 @@ BEGIN
 
     IF FOUND THEN
       UPDATE public.order_status_history
-        SET source = 'converter_outbound',
+        SET source = 'outbound_export',
             source_profile_id = p_source_profile_id,
             note = p_note
         WHERE id = (

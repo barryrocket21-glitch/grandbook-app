@@ -217,3 +217,62 @@ export const inboxResolveSchema = z.object({
   notes: z.string().nullable().optional(),
 })
 export type InboxResolveFormData = z.infer<typeof inboxResolveSchema>
+
+// =============================================================
+// Phase 3A — Manual Order Input
+// =============================================================
+export const PAYMENT_METHOD_VALUES = ['COD', 'TRANSFER'] as const
+export type PaymentMethodEnum = (typeof PAYMENT_METHOD_VALUES)[number]
+
+export const orderItemSchema = z.object({
+  product_id: z.number().int().positive().nullable().optional(),
+  product_name_raw: z.string().min(1, 'Nama produk wajib diisi'),
+  variation: z.string().nullable().optional(),
+  qty: z.number().int().min(1, 'Qty minimal 1'),
+  price: z.number().min(0, 'Harga harus >= 0'),
+  weight_per_unit: z.number().nullable().optional(),
+  notes: z.string().nullable().optional(),
+})
+export type OrderItemFormData = z.infer<typeof orderItemSchema>
+
+export const orderInputSchema = z.object({
+  customer_name: z.string().min(1, 'Nama customer wajib diisi'),
+  customer_phone: z.string().nullable().optional(),
+  customer_province: z.string().nullable().optional(),
+  customer_city: z.string().nullable().optional(),
+  customer_subdistrict: z.string().nullable().optional(),
+  customer_village: z.string().nullable().optional(),
+  customer_zip: z.string().nullable().optional(),
+  customer_address_detail: z.string().nullable().optional(),
+  wilayah_id: z.number().int().positive().nullable().optional(),
+
+  channel_id: z.number().int().positive('Channel wajib dipilih'),
+
+  subtotal: z.number().min(0).default(0),
+  shipping_cost: z.number().min(0).default(0),
+  discount: z.number().min(0).default(0),
+  total: z.number().min(0).default(0),
+  payment_method: z.enum(PAYMENT_METHOD_VALUES),
+
+  cs_name: z.string().nullable().optional(),
+  cs_id: z.string().nullable().optional(),
+  advertiser_id: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+
+  items: z.array(orderItemSchema).min(1, 'Minimal 1 item'),
+})
+export type OrderInputFormData = z.infer<typeof orderInputSchema>
+
+/**
+ * Phone normalization to 08xxx (ID format).
+ * Used in form input + engine.
+ */
+export function normalizePhoneId(input: string | null | undefined): string {
+  if (!input) return ''
+  const digits = input.replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.startsWith('62')) return '0' + digits.slice(2)
+  if (digits.startsWith('8')) return '0' + digits
+  if (digits.startsWith('0')) return digits
+  return digits
+}

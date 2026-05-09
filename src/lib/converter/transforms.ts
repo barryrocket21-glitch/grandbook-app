@@ -93,16 +93,16 @@ export const TRANSFORMS: readonly TransformDef[] = [
   {
     key: 'concat_address',
     label: 'Concat Full Address',
-    description: 'Gabung kolom alamat (village + subdistrict + city + province) — Phase 3',
-    sample: { input: '(multi-column)', output: '(Phase 3)' },
-    available: false,
+    description: 'Gabung field alamat struktural (detail + village + subdistrict + city + province + zip) jadi 1 string',
+    sample: { input: '(struktural)', output: 'Jl Raya 12, Pagesangan, Mataram, NTB 83115' },
+    available: true,
   },
   {
     key: 'sum_qty',
     label: 'Sum Qty (order_items)',
-    description: 'Sum total qty dari order_items rows — Phase 3',
-    sample: { input: '(items[])', output: '(Phase 3)' },
-    available: false,
+    description: 'Sum total qty dari order_items rows (dipakai context outbound)',
+    sample: { input: '(items[])', output: '5' },
+    available: true,
   },
 ] as const
 
@@ -119,7 +119,20 @@ export type TransformResult =
   | { ok: true; value: unknown }
   | { ok: false; reason: string }
 
-export function applyTransform(key: string | null | undefined, raw: unknown): TransformResult {
+/**
+ * Optional context passed to context-aware transforms (concat_address, sum_qty).
+ * Engine populates this; preview leaves it undefined → those transforms fall back to raw.
+ */
+export interface TransformContext {
+  orders?: Record<string, unknown>
+  order_items?: Array<Record<string, unknown>>
+}
+
+export function applyTransform(
+  key: string | null | undefined,
+  raw: unknown,
+  ctx?: TransformContext
+): TransformResult {
   if (!key || key.trim() === '') return { ok: true, value: raw }
   const def = getTransform(key)
   if (!def) return { ok: false, reason: `Unknown transform "${key}"` }
@@ -178,6 +191,30 @@ export function applyTransform(key: string | null | undefined, raw: unknown): Tr
         const date = new Date(Date.UTC(+y, +mo - 1, +d, +hh, +mm, +ss))
         if (isNaN(date.getTime())) return { ok: false, reason: `Invalid datetime "${s}"` }
         return { ok: true, value: date.toISOString() }
+      }
+      case 'concat_address': {
+        const o = ctx?.orders || {}
+        const parts = [
+          o.customer_address_detail,
+          o.customer_village,
+          o.customer_subdistrict,
+          o.customer_city,
+          o.customer_province,
+        ]
+          .map((p) => (p == null ? '' : String(p).trim()))
+          .filter((p) => p.length > 0)
+        const zip = o.customer_zip != null ? String(o.customer_zip).trim() : ''
+        let result = parts.join(', ')
+        if (zip) result += ` ${zip}`
+        return { ok: true, value: result }
+      }
+      case 'sum_qty': {
+        const items = ctx?.order_items || []
+        const total = items.reduce((acc, it) => {
+          const q = Number(it?.qty ?? 0)
+          return acc + (Number.isFinite(q) ? q : 0)
+        }, 0)
+        return { ok: true, value: total }
       }
       default:
         return { ok: false, reason: `Transform "${key}" belum diimplementasi di preview (Phase 3)` }

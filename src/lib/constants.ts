@@ -118,6 +118,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Input Order Baru', href: '/orders/new' },
       { title: 'Upload Massal', href: '/orders/bulk-upload' },
+      { title: 'WA Paste', href: '/orders/wa-paste' },
       { title: 'Daftar Order', href: '/orders/list' },
     ],
   },
@@ -200,10 +201,11 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     title: 'Inbox',
-    href: '/inbox/unmatched-resi',
+    href: '/inbox/pending-review',
     icon: Inbox,
     roles: ['owner', 'admin'],
     children: [
+      { title: 'Pending Review', href: '/inbox/pending-review' },
       { title: 'Unmatched Resi', href: '/inbox/unmatched-resi' },
       { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses' },
     ],

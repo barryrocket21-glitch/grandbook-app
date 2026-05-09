@@ -13,10 +13,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 1 — Foundation & Database Schema | ✅ DONE | 2026-05-09 |
 | Phase 2A — Settings UI (Master Data) | ✅ DONE | 2026-05-09 |
 | Phase 2B — Converter Profiles + Inbox UI | ✅ DONE | 2026-05-09 |
-| Phase 3 — Converter Engine + Status Sync + Commission Engine v2 | ⏳ NOT STARTED | — |
-| Phase 4 — Form Input Order + Detail | ⏳ NOT STARTED | — |
+| Phase 3A — Inbound Engine + Form Input + Approval | ✅ DONE | 2026-05-09 |
+| Phase 3B — Rekonsil Engine | ⏳ NOT STARTED | — |
+| Phase 3C — Outbound Engine + Export | ⏳ NOT STARTED | — |
+| Phase 4 — Commission Engine v2 + Analytics | ⏳ NOT STARTED | — |
 
-**Phase 2A & 2B done.** Phase 2B menambah CRUD Converter Profiles (list + detail editor 3 tabs) dan Inbox Review (Unmatched Resi + Unmapped Statuses). Phase 3 (Converter Engine eksekusi) akan trigger inbox insert otomatis.
+**Phase 3A done.** GrandBook sekarang bisa receive order dari 3 jalur (manual form, bulk upload, WA paste) → admin approval inbox → order detail dengan status timeline. Phase 3B (rekonsil ekspedisi) akan handle status update + biaya aktual; Phase 3C handle export ke ekspedisi.
 
 ---
 
@@ -265,6 +267,120 @@ Deferred (2): `concat_address`, `sum_qty` — show "Phase 3" warning kalau dipak
 ### Tidak ada suspicious behavior di pages 2A
 
 Saat dev Phase 2B integrasi dengan Phase 2A (e.g. dropdown channel di profile form mengambil dari `courier_channels`), tidak menemukan glitch yang feel kayak bug 2A. Pattern client-side + Supabase direct match perfectly.
+
+---
+
+## Phase 3A — Inbound Engine + Form Input + Approval (COMPLETED)
+
+Phase paling impactful sejauh ini — Grandbook sekarang punya 3 jalur masuk order + admin approval flow + order detail.
+
+### Halaman baru / refactor
+
+| Path | Fungsi | Permission |
+|---|---|---|
+| `/orders/bulk-upload` | 4-step upload (Profile → File → Preview → Execute → Done) untuk INBOUND_ORDER profile | owner, admin, cs (write); admin/owner bisa skip review |
+| `/orders/wa-paste` | Paste teks WA → engine ekstrak via regex profile (named groups) → batch insert | owner, admin, cs |
+| `/orders/new` | Form manual lengkap: cascade wilayah (4 level + zip auto-fill), multi-item, channel picker, payment method, advertiser | owner, admin, cs |
+| `/orders/[id]` | Detail order: Info / Items / Timeline / Audit tabs + Edit Status + Edit Order (admin only) | semua role read; admin/owner edit |
+| `/orders/list` | List all orders dengan filter status (count badges), channel, search by order#/customer/resi | semua role read |
+| `/inbox/pending-review` | Approval inbox — orders BARU. Single + bulk approve/reject FAKE/PROBLEM dengan reason | owner, admin |
+
+### Engine + helpers
+
+**`src/lib/converter/engine.ts`** (NEW — production parser+inserter):
+- `ingestInbound({ profile, fieldMappings, valueMappings, fileOrText, initialStatus, organizationId, createdBy, supabase, onProgress? })`
+- Support direction = INBOUND_ORDER atau WA_PASTE only (REKONSIL/OUTBOUND di phase belakangan)
+- Anti-duplicate by `external_order_id` query check pre-insert (handles both pre-detect dan UNIQUE-constraint fallback 23505)
+- Per-row try/catch — 1 row gagal nggak nge-block batch
+- cs_name → cs_id auto-resolve via lookup `profiles` table (case-insensitive); tidak auto-create user
+- Generate `order_number` via SQL function `generate_order_number(org_id)` (race-safe, format `GB-YYYYMMDD-NNNNNN`)
+- Returns `{ inserted, skipped_duplicates, errors[], warnings[], inserted_order_ids[], totalRowsDetected }`
+
+**`src/lib/converter/parser.ts`** (NEW — extracted shared parsing):
+- `parseSource(profile, fileOrText, warnings)` — handles CSV (papaparse), XLSX (xlsx), regex named groups (WA_PASTE)
+- Used by both `preview.ts` (light, max 3-5 rows) and `engine.ts` (production, unlimited rows)
+- `indexValueMappings()`, `parseCsv()`, `parseXlsx()`, `parseRegex()`, `readFileAsText()`
+
+**`src/lib/converter/transforms.ts`** — implemented 2 deferred transforms:
+- `concat_address` — gabung field alamat struktural jadi 1 string (uses `TransformContext.orders`)
+- `sum_qty` — sum total qty dari order_items (uses `TransformContext.order_items`)
+- `applyTransform()` signature now accepts optional `ctx?: TransformContext`
+
+**`src/lib/orders/order-number.ts`** (NEW):
+- `generateOrderNumber(supabase, orgId)` — wrapper RPC call
+- `updateOrderStatus(supabase, { orderId, newStatus, source, note })` — wrapper RPC call
+
+**`src/lib/wilayah/cascade.ts`** (NEW):
+- `loadProvinces`, `loadCities`, `loadSubdistricts`, `loadVillages`, `findWilayahId` — server-side cascade queries
+- Pagination 2k batch untuk handle 82k rows
+
+**`src/lib/auth/permissions.ts`** — appended:
+- `canApproveOrders(role)` — owner+admin
+- `canCreateOrders(role)` — owner+admin+cs
+
+**`src/lib/schemas/settings.ts`** — appended:
+- `orderInputSchema` (manual form), `orderItemSchema`, `PAYMENT_METHOD_VALUES`
+- `normalizePhoneId()` utility
+
+### Components baru
+
+- `src/components/orders/order-form.tsx` — shared OrderForm dipakai di `/orders/new` + Edit mode di `/orders/[id]`
+- `src/components/ui/combobox.tsx` — search-able dropdown (Popover + Command)
+
+### Migration
+
+**`src/lib/supabase/migrations/012_order_number_generator.sql`:**
+- `generate_order_number(org_id)` — race-safe loop, format GB-YYYYMMDD-NNNNNN
+- Improved `log_order_status_change()` trigger — uses `auth.uid()` for UPDATE case (was always `NEW.created_by`, incorrect for status changes by different user)
+- `update_order_status(order_id, new_status, source, note)` — atomic update + patch latest history row dengan note + custom source
+
+**Run order:** Phase 1 (010) → seed → wilayah import → Phase 3A (012). Migration 011 belum ada (skipped).
+
+### Build status
+
+- `npx tsc --noEmit` pass (no errors)
+- `npm run build` pass — 7 routes baru/refactor ke-list di output
+
+### Implementasi: full vs stub
+
+| Feature | Status |
+|---|---|
+| Engine INBOUND_ORDER | ✅ Full |
+| Engine WA_PASTE | ✅ Full |
+| Engine INBOUND_REKONSIL | ⏸️ Phase 3B |
+| Engine OUTBOUND_TO_COURIER | ⏸️ Phase 3C |
+| Bulk upload (4 step) | ✅ Full |
+| WA paste | ✅ Full |
+| Manual form + cascade wilayah | ✅ Full |
+| Order detail (4 tabs) | ✅ Full |
+| Edit Status + Edit Order | ✅ Full |
+| Pending Review (single + bulk approve/reject) | ✅ Full |
+| Order number generator (race-safe) | ✅ Full |
+| cs_name → cs_id resolve | ✅ Full (lookup, no auto-create) |
+| Concat_address & sum_qty transforms | ✅ Full |
+
+### Decision yang Claude Code ambil
+
+1. **Order number race condition** — pakai SQL function dengan retry loop (Opsi A per brief), aman untuk concurrent inserts.
+2. **Status history note for rejection reason** — pakai `update_order_status()` RPC yang patch row terakhir history dengan note + source. Cleaner daripada double-insert workaround di app layer.
+3. **Edit & Approve di pending-review** — diarahkan ke `/orders/[id]` lalu klik "Edit Order" (consistency). Tidak ada inline edit di list page.
+4. **Auto-create user dari cs_name** — TIDAK diimplementasi (per brief). cs_name disimpan text only kalau full_name tidak match `profiles`.
+5. **OUTBOUND profile preview di /orders/bulk-upload** — di-filter out di list profile (only INBOUND_ORDER). Outbound nanti ada UI sendiri di Phase 3C.
+6. **Combobox** — dibuat custom component (shadcn-style) pakai Popover + Command (keduanya sudah ada). Kalau perform jelek di mobile dengan 8k+ city items, fallback strategy: limit dropdown size, prioritize search.
+7. **Refactor preview.ts** — extract shared parser logic ke `parser.ts` agar engine + preview share core. Tidak duplicate.
+
+### Hal yang perlu di-flag untuk Phase 3B (Rekonsil)
+
+- Engine perlu support direction=INBOUND_REKONSIL: **update existing orders** by resi (dari rekonsil ekspedisi), set status berdasarkan `courier_channel_statuses` mapping, populate `shipping_cost_actual` + `payout_amount`.
+- Untuk resi yang nggak match: insert ke `inbox_unmatched_resi` (UI sudah jadi di Phase 2B).
+- Untuk raw status yang belum ke-mapping: insert ke `inbox_unmapped_statuses` (UI sudah jadi di Phase 2B).
+- Reuse `parser.ts` dan `applyMappings` logic dari engine.ts.
+- Tidak overlap dengan Phase 3A — clean separation by direction.
+
+### Catatan
+
+- 5 Phase 2A pages + 4 Phase 2B pages tetap intact (Settings → Master Data + Converter Profiles + Inbox Review).
+- Migration 011 nomor di-skip — kalau Phase 3B butuh migration baru, pakai 011 dulu (atau 013 — konsistensi numerik tergantung). Saran: 013 (skip 011 secara permanen, dokumentasi sebagai gap).
 
 ---
 

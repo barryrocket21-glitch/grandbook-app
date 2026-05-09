@@ -249,7 +249,7 @@ export interface OrderStatusHistory {
   to_status: OrderStatus
   changed_at: string
   changed_by: string | null
-  source: 'manual' | 'converter_inbound' | 'converter_rekonsil' | 'wa_paste' | 'admin_review' | 'system'
+  source: 'manual' | 'converter_inbound' | 'converter_rekonsil' | 'converter_outbound' | 'wa_paste' | 'admin_review' | 'system'
   source_profile_id: number | null
   raw_status: string | null
   note: string | null

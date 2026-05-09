@@ -119,6 +119,7 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Input Order Baru', href: '/orders/new' },
       { title: 'Upload Massal', href: '/orders/bulk-upload' },
       { title: 'WA Paste', href: '/orders/wa-paste' },
+      { title: 'Export Outbound', href: '/orders/outbound' },
       { title: 'Daftar Order', href: '/orders/list' },
     ],
   },

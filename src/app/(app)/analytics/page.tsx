@@ -1,12 +1,418 @@
-// TODO Phase 4: rebuild analytics matrix dengan rate snapshot per order,
-// breakdown per CS/Advertiser, dan integrasi commission engine.
-import { RefactorBanner } from '@/components/ui/refactor-banner'
+'use client'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/components/providers/auth-provider'
+import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { LineChart as LineChartIcon, RefreshCw, Loader2, TrendingUp, TrendingDown } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, BarChart, Bar, Legend,
+} from 'recharts'
+import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
+import { formatRupiah } from '@/lib/format'
+import {
+  fetchOverview, fetchDailyRevenue, fetchPerCs, fetchPerAdvertiser, fetchPerChannel,
+  type AnalyticsOverview, type DailyRevenuePoint,
+  type PerCsRow, type PerAdvertiserRow, type PerChannelRow,
+} from '@/lib/supabase/queries/analytics'
+
+const supabase = createClient()
+
+const STATUS_COLORS: Record<string, string> = {
+  BARU: '#3b82f6',
+  SIAP_KIRIM: '#eab308',
+  DIKIRIM: '#a855f7',
+  DITERIMA: '#10b981',
+  PROBLEM: '#f59e0b',
+  RETUR: '#f97316',
+  CANCEL: '#71717a',
+  FAKE: '#ef4444',
+}
+
+type SortField = 'orders' | 'revenue' | 'conv' | 'commission'
+
 export default function AnalyticsPage() {
+  const { role, loading: authLoading } = useAuth()
+  const isOwner = role === 'owner'
+
+  const [range, setRange] = useState<DateRange>(thisMonth)
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
+  const [daily, setDaily] = useState<DailyRevenuePoint[]>([])
+  const [perCs, setPerCs] = useState<PerCsRow[]>([])
+  const [perAdv, setPerAdv] = useState<PerAdvertiserRow[]>([])
+  const [perChan, setPerChan] = useState<PerChannelRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Lazy-init range to avoid hydration drift (thisMonth() returns Date-based label
+  // that differs slightly between server & client first render).
+  const [rangeReady, setRangeReady] = useState(false)
+  useEffect(() => {
+    setRange(thisMonth())
+    setRangeReady(true)
+  }, [])
+
+  const load = useCallback(async () => {
+    if (!isOwner || !rangeReady) return
+    setLoading(true)
+    try {
+      const [ov, dr, cs, adv, chan] = await Promise.all([
+        fetchOverview(supabase, range.from, range.to),
+        fetchDailyRevenue(supabase, range.from, range.to),
+        fetchPerCs(supabase, range.from, range.to),
+        fetchPerAdvertiser(supabase, range.from, range.to),
+        fetchPerChannel(supabase, range.from, range.to),
+      ])
+      setOverview(ov)
+      setDaily(dr)
+      setPerCs(cs)
+      setPerAdv(adv)
+      setPerChan(chan)
+    } finally {
+      setLoading(false)
+    }
+  }, [isOwner, range.from, range.to, rangeReady])
+
+  useEffect(() => {
+    if (!authLoading && isOwner && rangeReady) void load()
+  }, [authLoading, isOwner, load, rangeReady])
+
+  if (!authLoading && !isOwner) {
+    return (
+      <div className="space-y-6">
+        <PageHeader icon={LineChartIcon} title="Analytics" />
+        <Card><CardContent className="p-6 text-sm text-muted-foreground">
+          Hanya owner yang bisa lihat full analytics. CS bisa lihat performa sendiri di{' '}
+          <Link href="/cs-dashboard" className="text-violet-500 hover:underline">/cs-dashboard</Link>,
+          advertiser di <Link href="/adv-dashboard" className="text-violet-500 hover:underline">/adv-dashboard</Link>.
+        </CardContent></Card>
+      </div>
+    )
+  }
+
+  const grossProfit = overview ? overview.total_revenue - overview.total_cogs : 0
+  const shippingDiff = overview ? overview.total_shipping_charged - overview.total_shipping_actual : 0
+
+  const statusPieData = useMemo(() => {
+    if (!overview) return []
+    return [
+      { name: 'BARU', value: overview.orders_baru },
+      { name: 'SIAP_KIRIM', value: overview.orders_siap_kirim },
+      { name: 'DIKIRIM', value: overview.orders_dikirim },
+      { name: 'DITERIMA', value: overview.orders_diterima },
+      { name: 'PROBLEM', value: overview.orders_problem },
+      { name: 'RETUR', value: overview.orders_retur },
+      { name: 'CANCEL', value: overview.orders_cancel },
+      { name: 'FAKE', value: overview.orders_fake },
+    ].filter((s) => s.value > 0)
+  }, [overview])
+
+  const isEmpty = !loading && overview && overview.total_orders === 0
+
   return (
-    <RefactorBanner
-      phase="Phase 4 (Commission Engine v2 + Analytics Revamp)"
-      pageTitle="Analytics — Profit Dashboard, Matrix Produk × CS"
-      description="Analytics akan di-rebuild di Phase 4 dengan rate snapshot per order, breakdown per CS/Advertiser, dan integrasi commission engine."
-    />
+    <div className="space-y-6">
+      <PageHeader
+        icon={LineChartIcon}
+        title="Analytics — Profit Dashboard"
+        description="Overview business metrics. Date range default = Bulan Ini. Semua data scoped ke organisasi."
+        actions={
+          <div className="flex items-center gap-2">
+            <DateRangePicker value={range} onChange={setRange} />
+            <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+        }
+      />
+
+      {isEmpty ? (
+        <EmptyState
+          icon={LineChartIcon}
+          title="Belum ada order di periode ini"
+          description="Coba ubah date range, atau cek dashboard utama / orders untuk lihat data lain."
+        />
+      ) : (
+        <Tabs defaultValue="overview">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="cs">Per CS ({perCs.length})</TabsTrigger>
+            <TabsTrigger value="adv">Per Advertiser ({perAdv.length})</TabsTrigger>
+            <TabsTrigger value="channel">Per Channel ({perChan.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard label="Total Orders" value={String(overview?.total_orders ?? 0)} sub="periode ini" color="blue" />
+              <StatCard label="Revenue" value={formatRupiah(overview?.total_revenue ?? 0)} sub="kotor" color="violet" />
+              <StatCard label="COGS" value={formatRupiah(overview?.total_cogs ?? 0)} sub="hpp_snapshot" color="amber" />
+              <StatCard
+                label="Gross Profit (est.)"
+                value={formatRupiah(grossProfit)}
+                sub={overview ? `${((grossProfit / Math.max(1, overview.total_revenue)) * 100).toFixed(1)}% margin` : ''}
+                color={grossProfit >= 0 ? 'emerald' : 'red'}
+              />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard label="Komisi Earned" value={formatRupiah(overview?.total_commissions_earned ?? 0)} sub="pending pencairan" color="amber" />
+              <StatCard label="Komisi Paid" value={formatRupiah(overview?.total_commissions_paid ?? 0)} sub="sudah dicairkan" color="emerald" />
+              <StatCard label="Shipping Diff" value={formatRupiah(shippingDiff)} sub={shippingDiff >= 0 ? 'profit ongkir' : 'rugi ongkir'} color={shippingDiff >= 0 ? 'emerald' : 'red'} />
+              <StatCard label="Total Payout" value={formatRupiah(overview?.total_payout ?? 0)} sub="dari ekspedisi" color="violet" />
+            </div>
+
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold">Daily Revenue & Orders</h3>
+                  <p className="text-[11px] text-muted-foreground">{daily.length} hari ada data</p>
+                </div>
+                {daily.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">Belum ada data.</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <AreaChart data={daily} margin={{ top: 8, right: 8, left: 8, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgb(148 163 184 / 0.2)" />
+                      <XAxis dataKey="day" tick={{ fontSize: 10 }} tickFormatter={(d: string) => d.slice(5)} />
+                      <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                      <RechartsTooltip
+                        contentStyle={{ background: 'rgb(15 23 42 / 0.95)', border: '1px solid rgb(148 163 184 / 0.3)', borderRadius: 6, fontSize: 12 }}
+                        formatter={(value, name) => name === 'revenue' ? [formatRupiah(Number(value)), 'Revenue'] : [String(value), String(name)]}
+                      />
+                      <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold">Order Status Distribution</h3>
+                  <p className="text-[11px] text-muted-foreground">{overview?.total_orders ?? 0} total</p>
+                </div>
+                {statusPieData.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">Belum ada order.</div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie data={statusPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false}>
+                          {statusPieData.map((s) => (
+                            <Cell key={s.name} fill={STATUS_COLORS[s.name] || '#71717a'} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip contentStyle={{ background: 'rgb(15 23 42 / 0.95)', border: '1px solid rgb(148 163 184 / 0.3)', fontSize: 12 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="grid grid-cols-2 gap-2 self-center text-xs">
+                      {statusPieData.map((s) => (
+                        <div key={s.name} className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded" style={{ background: STATUS_COLORS[s.name] }} />
+                          <span className="font-mono text-[10px]">{s.name}</span>
+                          <span className="ml-auto font-semibold">{s.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="cs" className="space-y-4">
+            <PerUserTable rows={perCs.map((r) => ({ id: r.cs_id, name: r.cs_name, ...r }))} loading={loading} kind="cs" />
+            {perCs.length > 0 && (
+              <TopUsersBar rows={perCs.slice(0, 5).map((r) => ({ name: r.cs_name || r.cs_id.slice(0, 6), value: r.total_orders }))} title="Top 5 CS by Orders" />
+            )}
+          </TabsContent>
+
+          <TabsContent value="adv" className="space-y-4">
+            <PerUserTable rows={perAdv.map((r) => ({ id: r.advertiser_id, name: r.advertiser_name, ...r }))} loading={loading} kind="advertiser" />
+            {perAdv.length > 0 && (
+              <TopUsersBar rows={perAdv.slice(0, 5).map((r) => ({ name: r.advertiser_name || r.advertiser_id.slice(0, 6), value: r.total_orders }))} title="Top 5 Advertiser by Orders" />
+            )}
+          </TabsContent>
+
+          <TabsContent value="channel" className="space-y-4">
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Channel</TableHead>
+                      <TableHead className="text-right">Orders</TableHead>
+                      <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead className="text-right">Ship Charged</TableHead>
+                      <TableHead className="text-right">Ship Actual</TableHead>
+                      <TableHead className="text-right">Diff</TableHead>
+                      <TableHead className="text-right">Diterima</TableHead>
+                      <TableHead className="text-right">Retur</TableHead>
+                      <TableHead className="text-right">Payout</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow><TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : perChan.length === 0 ? (
+                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">Belum ada order dengan channel di periode ini.</TableCell></TableRow>
+                    ) : perChan.map((r) => (
+                      <TableRow key={r.channel_id}>
+                        <TableCell>
+                          <div className="font-mono text-xs">{r.channel_code || `#${r.channel_id}`}</div>
+                          <div className="text-[10px] text-muted-foreground">{r.channel_name}</div>
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-semibold">{r.total_orders}</TableCell>
+                        <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
+                        <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_shipping_charged))}</TableCell>
+                        <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_shipping_actual))}</TableCell>
+                        <TableCell className={`text-right text-xs font-semibold ${Number(r.shipping_diff) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {formatRupiah(Number(r.shipping_diff))}
+                        </TableCell>
+                        <TableCell className="text-right text-xs text-emerald-600">{r.diterima_orders}</TableCell>
+                        <TableCell className="text-right text-xs text-orange-600">{r.retur_orders}</TableCell>
+                        <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_payout))}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  )
+}
+
+interface PerUserRow {
+  id: string
+  name: string | null
+  total_orders: number
+  total_revenue: number
+  diterima_orders: number
+  retur_orders: number
+  conversion_rate: number
+  total_commission_earned: number
+  total_commission_paid: number
+}
+
+function PerUserTable({ rows, loading, kind }: { rows: PerUserRow[]; loading: boolean; kind: 'cs' | 'advertiser' }) {
+  const [sortBy, setSortBy] = useState<SortField>('orders')
+  const sorted = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      switch (sortBy) {
+        case 'revenue': return Number(b.total_revenue) - Number(a.total_revenue)
+        case 'conv': return Number(b.conversion_rate) - Number(a.conversion_rate)
+        case 'commission': return Number(b.total_commission_earned) - Number(a.total_commission_earned)
+        default: return Number(b.total_orders) - Number(a.total_orders)
+      }
+    })
+  }, [rows, sortBy])
+  const label = kind === 'cs' ? 'CS' : 'Advertiser'
+
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{label}</TableHead>
+              <SortableHead label="Orders" field="orders" current={sortBy} onClick={setSortBy} />
+              <SortableHead label="Revenue" field="revenue" current={sortBy} onClick={setSortBy} />
+              <TableHead className="text-right">Diterima</TableHead>
+              <TableHead className="text-right">Retur</TableHead>
+              <SortableHead label="Conv %" field="conv" current={sortBy} onClick={setSortBy} />
+              <SortableHead label="Komisi Earned" field="commission" current={sortBy} onClick={setSortBy} />
+              <TableHead className="text-right">Komisi Paid</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow><TableCell colSpan={8} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
+            ) : sorted.length === 0 ? (
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
+                Belum ada order dengan {label.toLowerCase()} di periode ini.
+              </TableCell></TableRow>
+            ) : sorted.map((r) => (
+              <TableRow key={r.id}>
+                <TableCell className="text-sm font-medium">{r.name || r.id.slice(0, 8)}</TableCell>
+                <TableCell className="text-right text-xs font-semibold">{r.total_orders}</TableCell>
+                <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
+                <TableCell className="text-right text-xs text-emerald-600">{r.diterima_orders}</TableCell>
+                <TableCell className="text-right text-xs text-orange-600">{r.retur_orders}</TableCell>
+                <TableCell className="text-right text-xs">
+                  <Badge variant="outline" className={`text-[10px] ${Number(r.conversion_rate) >= 80 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : Number(r.conversion_rate) >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
+                    {Number(r.conversion_rate).toFixed(1)}%
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_commission_earned))}</TableCell>
+                <TableCell className="text-right text-xs text-emerald-600">{formatRupiah(Number(r.total_commission_paid))}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SortableHead({ label, field, current, onClick }: { label: string; field: SortField; current: SortField; onClick: (f: SortField) => void }) {
+  const active = current === field
+  return (
+    <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => onClick(field)}>
+      <span className={`inline-flex items-center gap-1 ${active ? 'text-violet-500 font-semibold' : ''}`}>
+        {label}
+        {active ? <TrendingDown className="w-3 h-3" /> : <span className="w-3 h-3 inline-block" />}
+      </span>
+    </TableHead>
+  )
+}
+
+function TopUsersBar({ rows, title }: { rows: { name: string; value: number }[]; title: string }) {
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-4">
+        <h3 className="text-sm font-semibold mb-2">{title}</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={rows} layout="vertical" margin={{ top: 8, right: 8, left: 80, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgb(148 163 184 / 0.2)" />
+            <XAxis type="number" tick={{ fontSize: 10 }} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+            <RechartsTooltip contentStyle={{ background: 'rgb(15 23 42 / 0.95)', border: '1px solid rgb(148 163 184 / 0.3)', fontSize: 12 }} />
+            <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  )
+}
+
+function StatCard({ label, value, sub, color }: {
+  label: string
+  value: string
+  sub: string
+  color: 'blue' | 'amber' | 'emerald' | 'zinc' | 'violet' | 'red'
+}) {
+  const colorMap: Record<string, string> = {
+    blue: 'bg-blue-500/10 border-blue-500/30 text-blue-600',
+    amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
+    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
+    zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
+    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
+    red: 'bg-red-500/10 border-red-500/30 text-red-600',
+  }
+  return (
+    <div className={`p-3 rounded border ${colorMap[color]}`}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-xl font-bold mt-1">{value}</div>
+      <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>
+    </div>
   )
 }

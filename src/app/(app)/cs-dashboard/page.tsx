@@ -1,8 +1,15 @@
-// TODO Phase 3+: refactor CS personal dashboard.
-// Pipeline aging tetap dari cs_daily_leads (tabel intact). Komisi engine
-// di-rebuild di Phase 3 dengan trigger yang merespect status enum baru
-// (SIAP_KIRIM/DIKIRIM/DITERIMA/PROBLEM/RETUR).
-import { RefactorBanner } from '@/components/ui/refactor-banner'
+'use client'
+import { Users } from 'lucide-react'
+import { PersonalDashboard } from '@/components/analytics/personal-dashboard'
+
 export default function CsDashboardPage() {
-  return <RefactorBanner phase="Phase 3 (Commission Engine v2)" pageTitle="Dashboard CS" />
+  return (
+    <PersonalDashboard
+      role="cs"
+      icon={Users}
+      pageTitle="Performance CS — Saya"
+      pageDescription="Order yang Anda handle sebagai CS + komisi yang sudah/akan diterima. Owner bisa pilih CS lain via dropdown."
+      emptyHintForOwner="Pilih CS dari dropdown atas untuk lihat performance individual"
+    />
+  )
 }

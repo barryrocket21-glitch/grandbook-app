@@ -201,7 +201,12 @@ export default function UnmappedStatusesPage() {
           </Select>
           <Select value={channelFilter} onValueChange={(v) => v && setChannelFilter(v)}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="Channel" />
+              <SelectValue placeholder="Channel">
+                {(value: string | null) => {
+                  if (!value || value === 'ALL') return 'Semua channel'
+                  return channels.find((c) => String(c.id) === value)?.code ?? value
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="w-[260px]">
               <SelectItem value="ALL">Semua channel</SelectItem>

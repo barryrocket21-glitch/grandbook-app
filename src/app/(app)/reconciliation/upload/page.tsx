@@ -201,7 +201,13 @@ export default function ReconciliationUploadPage() {
               <Label className="text-sm">Pilih Profile Rekonsil *</Label>
               <Select value={selectedProfileId} onValueChange={(v) => v && setSelectedProfileId(v)}>
                 <SelectTrigger className="w-full max-w-md">
-                  <SelectValue placeholder={loading ? 'Loading...' : 'Pilih profile rekonsil'} />
+                  <SelectValue placeholder={loading ? 'Loading...' : 'Pilih profile rekonsil'}>
+                    {(value: string | null) => {
+                      if (!value) return loading ? 'Loading...' : 'Pilih profile rekonsil'
+                      const p = profiles.find((x) => String(x.id) === value)
+                      return p ? `${p.name} (${p.code})` : value
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="w-[420px]">
                   {profiles.length === 0 ? (

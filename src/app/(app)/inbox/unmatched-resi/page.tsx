@@ -216,7 +216,12 @@ export default function UnmatchedResiPage() {
           </Select>
           <Select value={profileFilter} onValueChange={(v) => v && setProfileFilter(v)}>
             <SelectTrigger className="w-52">
-              <SelectValue placeholder="Source Profile" />
+              <SelectValue placeholder="Source Profile">
+                {(value: string | null) => {
+                  if (!value || value === 'ALL') return 'Semua source'
+                  return profiles.find((p) => String(p.id) === value)?.code ?? value
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="w-[280px]">
               <SelectItem value="ALL">Semua source</SelectItem>

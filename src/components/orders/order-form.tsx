@@ -456,20 +456,18 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Channel Ekspedisi *</Label>
-              <Select value={channelId} onValueChange={(v) => v && setChannelId(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih channel">
-                    {(value: string | null) =>
-                      !value ? 'Pilih channel' : channels.find((c) => String(c.id) === value)?.name ?? '—'
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="w-[300px]">
-                  {channels.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.code} — {c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                value={channelId}
+                onChange={setChannelId}
+                options={channels.map((c) => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))}
+                placeholder="Pilih channel"
+                searchPlaceholder="Cari channel..."
+                emptyHint={{
+                  message: 'Belum ada channel ekspedisi terdaftar.',
+                  actionLabel: 'Tambah di Pengaturan Channels',
+                  actionHref: '/settings/courier-channels',
+                }}
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Payment Method *</Label>
@@ -520,20 +518,18 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Advertiser</Label>
-              <Select
-                value={advertiserId || 'none'}
-                onValueChange={(v) => setAdvertiserId(!v || v === 'none' ? '' : v)}
-              >
-                <SelectTrigger><SelectValue placeholder="Pilih advertiser">
-                  {(value: string | null) =>
-                    !value || value === 'none' ? '—' : advertisers.find((a) => a.id === value)?.full_name ?? '—'
-                  }
-                </SelectValue></SelectTrigger>
-                <SelectContent className="w-[300px]">
-                  <SelectItem value="none">—</SelectItem>
-                  {advertisers.map((a) => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Combobox
+                value={advertiserId}
+                onChange={setAdvertiserId}
+                options={advertisers.map((a) => ({ value: a.id, label: a.full_name }))}
+                placeholder="Pilih advertiser (opsional)"
+                searchPlaceholder="Cari advertiser..."
+                emptyHint={{
+                  message: 'Belum ada advertiser terdaftar.',
+                  actionLabel: 'Tambah di Pengaturan Users',
+                  actionHref: '/settings/users',
+                }}
+              />
             </div>
           </div>
           <div className="space-y-1.5">

@@ -223,14 +223,24 @@ export default function PendingReviewPage() {
             />
           </div>
           <Select value={filters.channel} onValueChange={(v) => v && setFilters({ ...filters, channel: v })}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Channel" /></SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Channel">
+              {(value: string | null) => {
+                if (!value || value === 'ALL') return 'Semua channel'
+                return channels.find((c) => String(c.id) === value)?.code ?? value
+              }}
+            </SelectValue></SelectTrigger>
             <SelectContent className="w-[260px]">
               <SelectItem value="ALL">Semua channel</SelectItem>
               {channels.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filters.source} onValueChange={(v) => v && setFilters({ ...filters, source: v })}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Source" /></SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Source">
+              {(value: string | null) => {
+                if (!value || value === 'ALL') return 'Semua source'
+                return profiles.find((p) => String(p.id) === value)?.code ?? value
+              }}
+            </SelectValue></SelectTrigger>
             <SelectContent className="w-[280px]">
               <SelectItem value="ALL">Semua source</SelectItem>
               {profiles.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.code}</SelectItem>)}

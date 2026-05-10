@@ -1,7 +1,12 @@
-// TODO Phase 3+: refactor analytics matrix untuk schema baru.
-// Engine harus pakai status enum baru, channel_id (bukan ekspedisi raw),
-// dan rate_snapshot per order untuk hitungan margin yang akurat.
+// TODO Phase 4: rebuild analytics matrix dengan rate snapshot per order,
+// breakdown per CS/Advertiser, dan integrasi commission engine.
 import { RefactorBanner } from '@/components/ui/refactor-banner'
 export default function AnalyticsPage() {
-  return <RefactorBanner phase="Phase 3 (Converter Engine + Status Sync)" pageTitle="Analytics — Profit Dashboard, Matrix Produk × CS" />
+  return (
+    <RefactorBanner
+      phase="Phase 4 (Commission Engine v2 + Analytics Revamp)"
+      pageTitle="Analytics — Profit Dashboard, Matrix Produk × CS"
+      description="Analytics akan di-rebuild di Phase 4 dengan rate snapshot per order, breakdown per CS/Advertiser, dan integrasi commission engine."
+    />
+  )
 }

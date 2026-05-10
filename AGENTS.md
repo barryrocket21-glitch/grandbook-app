@@ -862,7 +862,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **016** | **Phase 4A — commission engine v2 + pencairan RPCs** | **✅ Active** |
 | **017** | **Phase 4B — analytics aggregation RPCs** | **✅ Active** |
 | **018** | **Phase 4C — billing models + cost engine + analytics extension** | **✅ Active** |
-| 019+ | TBD next phases | — |
+| **019** | **Phase 4C bug fix — rate format → percent friendly (codebase convention)** | **✅ Active** |
+| 020+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

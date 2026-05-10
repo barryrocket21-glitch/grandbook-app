@@ -534,15 +534,15 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
                   <tbody>
                     <tr>
                       <td className="py-1 text-muted-foreground">{PHASE4C_RATE_LABEL.shipping_discount_rate}</td>
-                      <td className="py-1 text-right font-semibold">{(bundle.shipping_discount_rate * 100).toFixed(2)}%</td>
+                      <td className="py-1 text-right font-semibold">{Number(bundle.shipping_discount_rate).toFixed(2)}%</td>
                     </tr>
                     <tr>
                       <td className="py-1 text-muted-foreground">{PHASE4C_RATE_LABEL.cod_fee_rate}</td>
-                      <td className="py-1 text-right font-semibold">{(bundle.cod_fee_rate * 100).toFixed(2)}%</td>
+                      <td className="py-1 text-right font-semibold">{Number(bundle.cod_fee_rate).toFixed(2)}%</td>
                     </tr>
                     <tr>
                       <td className="py-1 text-muted-foreground">{PHASE4C_RATE_LABEL.ppn_rate}</td>
-                      <td className="py-1 text-right font-semibold">{(bundle.ppn_rate * 100).toFixed(2)}%</td>
+                      <td className="py-1 text-right font-semibold">{Number(bundle.ppn_rate).toFixed(2)}%</td>
                     </tr>
                   </tbody>
                 </table>
@@ -667,12 +667,12 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
               {/* Breakdown output */}
               <div className="text-xs space-y-1 bg-background rounded p-3 border">
                 <div className="flex justify-between"><span className="text-muted-foreground">Shipping Gross</span><span className="font-mono">{formatRupiah(previewBreakdown.shipping_gross)}</span></div>
-                <div className="flex justify-between text-emerald-600"><span>− {discountLabel} ({(bundle.shipping_discount_rate * 100).toFixed(0)}%)</span><span className="font-mono">−{formatRupiah(previewBreakdown.shipping_discount)}</span></div>
+                <div className="flex justify-between text-emerald-600"><span>− {discountLabel} ({Number(bundle.shipping_discount_rate).toFixed(0)}%)</span><span className="font-mono">−{formatRupiah(previewBreakdown.shipping_discount)}</span></div>
                 <div className="flex justify-between border-t pt-1"><span className="text-muted-foreground">Shipping Net</span><span className="font-mono font-semibold">{formatRupiah(previewBreakdown.shipping_net)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">COD Fee Base</span><span className="font-mono">{formatRupiah(previewBreakdown.cod_fee_base_amount)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">COD Fee Raw ({(bundle.cod_fee_rate * 100).toFixed(2)}% × base)</span><span className="font-mono">{formatRupiah(previewBreakdown.cod_fee_raw)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">COD Fee Raw ({Number(bundle.cod_fee_rate).toFixed(2)}% × base)</span><span className="font-mono">{formatRupiah(previewBreakdown.cod_fee_raw)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">COD Fee ({codFeeRounding})</span><span className="font-mono font-semibold">{formatRupiah(previewBreakdown.cod_fee)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">PPN ({(bundle.ppn_rate * 100).toFixed(0)}%)</span><span className="font-mono font-semibold">{formatRupiah(previewBreakdown.ppn)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">PPN ({Number(bundle.ppn_rate).toFixed(0)}%)</span><span className="font-mono font-semibold">{formatRupiah(previewBreakdown.ppn)}</span></div>
                 <div className="flex justify-between border-t pt-1 text-orange-600"><span className="font-medium">Total Cost ke Ekspedisi</span><span className="font-mono font-bold">{formatRupiah(previewBreakdown.total_cost)}</span></div>
                 <div className="flex justify-between border-t pt-1"><span className="text-muted-foreground">HPP</span><span className="font-mono">{formatRupiah(previewBreakdown.hpp)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Commission</span><span className="font-mono">{formatRupiah(previewBreakdown.commission)}</span></div>

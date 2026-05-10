@@ -748,9 +748,9 @@ function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomput
               <div>Loading rate config…</div>
             ) : bundle ? (
               <div>
-                Rates: {discountLabel} {(bundle.shipping_discount_rate * 100).toFixed(0)}% ·
-                Fee COD {(bundle.cod_fee_rate * 100).toFixed(2)}% ({bundle.cod_fee_rounding}, base={bundle.cod_fee_base}) ·
-                PPN {(bundle.ppn_rate * 100).toFixed(0)}% ({bundle.ppn_applied_to})
+                Rates: {discountLabel} {Number(bundle.shipping_discount_rate).toFixed(0)}% ·
+                Fee COD {Number(bundle.cod_fee_rate).toFixed(2)}% ({bundle.cod_fee_rounding}, base={bundle.cod_fee_base}) ·
+                PPN {Number(bundle.ppn_rate).toFixed(0)}% ({bundle.ppn_applied_to})
               </div>
             ) : null}
           </div>

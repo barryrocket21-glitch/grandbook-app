@@ -24,9 +24,9 @@ export interface CostInput {
 
   // Channel config (would normally fetched from DB)
   billing_model: BillingModel
-  shipping_discount_rate: number  // 0..1 (e.g. 0.40 = 40%)
-  cod_fee_rate: number             // 0..1 (e.g. 0.01 = 1%)
-  ppn_rate: number                 // 0..1 (e.g. 0.12 = 12%)
+  shipping_discount_rate: number  // PERCENT scale 0..100 (e.g. 40 = 40%) — codebase convention
+  cod_fee_rate: number             // PERCENT scale 0..100 (e.g. 1 = 1%)
+  ppn_rate: number                 // PERCENT scale 0..100 (e.g. 12 = 12%)
   cod_fee_base: CodFeeBase
   cod_fee_rounding: CodFeeRounding
   ppn_applied_to: PpnAppliedTo
@@ -54,7 +54,8 @@ export function computeCost(input: CostInput): CostBreakdown {
     ? input.shipping_cost_actual
     : (input.shipping_cost || 0)
 
-  const shipping_discount = round2(shipping_gross * input.shipping_discount_rate)
+  // Rates disimpan PERCENT (40 untuk 40%) — divide by 100 saat hitung.
+  const shipping_discount = round2(shipping_gross * input.shipping_discount_rate / 100)
   const shipping_net = round2(shipping_gross - shipping_discount)
 
   // COD fee base
@@ -71,7 +72,7 @@ export function computeCost(input: CostInput): CostBreakdown {
       break
   }
 
-  const cod_fee_raw = cod_fee_base_amount * input.cod_fee_rate
+  const cod_fee_raw = cod_fee_base_amount * input.cod_fee_rate / 100
   let cod_fee = 0
   switch (input.cod_fee_rounding) {
     case 'FLOOR':
@@ -85,14 +86,14 @@ export function computeCost(input: CostInput): CostBreakdown {
       break
   }
 
-  // PPN
+  // PPN (rate divided by 100)
   let ppn = 0
   switch (input.ppn_applied_to) {
     case 'COD_FEE_ONLY':
-      ppn = cod_fee * input.ppn_rate
+      ppn = cod_fee * input.ppn_rate / 100
       break
     case 'COD_FEE_PLUS_SHIPPING':
-      ppn = (cod_fee + shipping_net) * input.ppn_rate
+      ppn = (cod_fee + shipping_net) * input.ppn_rate / 100
       break
     case 'NONE':
       ppn = 0

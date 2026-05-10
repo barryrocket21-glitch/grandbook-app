@@ -6,13 +6,15 @@ interface Props {
   phase: string
   /** Optional: ringkas apa yang halaman ini lakukan, biar user nginget */
   pageTitle?: string
+  /** Optional: ringkas scope rebuild — apa yang akan berubah di phase target */
+  description?: string
 }
 
 /**
  * Placeholder banner untuk halaman yang sementara di-disable
- * setelah Phase 1 schema migration. Render full-page card.
+ * sambil menunggu refactor di phase berikutnya. Render full-page card.
  */
-export function RefactorBanner({ phase, pageTitle }: Props) {
+export function RefactorBanner({ phase, pageTitle, description }: Props) {
   return (
     <div className="max-w-2xl mx-auto py-12">
       <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/5 to-transparent">
@@ -25,10 +27,13 @@ export function RefactorBanner({ phase, pageTitle }: Props) {
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
             Akan tersedia kembali di <strong className="text-amber-500">{phase}</strong>.
           </p>
-          <p className="text-xs text-muted-foreground">
-            Phase 1 fokus ke fondasi database (Orders schema baru, courier channels, converter profiles, master wilayah).
-            UI ini perlu di-rewrite untuk schema baru.
-          </p>
+          {description ? (
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">{description}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              UI ini perlu di-rewrite untuk schema baru (Orders schema, courier channels, converter profiles, master wilayah).
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

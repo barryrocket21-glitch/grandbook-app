@@ -198,7 +198,13 @@ export default function WaPastePage() {
                 <Label className="text-sm">Profile WA Paste *</Label>
                 <Select value={selectedProfileId} onValueChange={(v) => v && setSelectedProfileId(v)}>
                   <SelectTrigger className="w-full max-w-md">
-                    <SelectValue placeholder="Pilih profile WA Paste" />
+                    <SelectValue placeholder="Pilih profile WA Paste">
+                      {(value: string | null) => {
+                        if (!value) return 'Pilih profile WA Paste'
+                        const p = profiles.find((x) => String(x.id) === value)
+                        return p ? `${p.name} (${p.code})` : value
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="w-[420px]">
                     {profiles.length === 0 ? (

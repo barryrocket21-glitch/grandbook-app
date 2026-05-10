@@ -218,7 +218,12 @@ function ChannelsContent() {
             <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari code/nama..." className="pl-9" />
           </div>
           <Select value={courierFilter} onValueChange={v => v && setCourierFilter(v)}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Courier" /></SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Courier">
+              {(value: string | null) => {
+                if (!value || value === 'ALL') return 'Semua courier'
+                return couriers.find(c => String(c.id) === value)?.code ?? value
+              }}
+            </SelectValue></SelectTrigger>
             <SelectContent className="w-[220px]">
               <SelectItem value="ALL">Semua courier</SelectItem>
               {couriers.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>)}

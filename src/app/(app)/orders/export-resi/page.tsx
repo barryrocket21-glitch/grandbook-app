@@ -375,7 +375,12 @@ export default function OrdersExportResiPage() {
                 <div className="space-y-1">
                   <Label className="text-xs">Channel</Label>
                   <Select value={channelFilter} onValueChange={(v) => v && setChannelFilter(v)}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Semua channel">
+                      {(value: string | null) => {
+                        if (!value || value === 'ALL') return 'Semua channel'
+                        return channels.find((c) => String(c.id) === value)?.code ?? value
+                      }}
+                    </SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">Semua channel</SelectItem>
                       {channels.map((c) => (
@@ -501,7 +506,13 @@ export default function OrdersExportResiPage() {
                 onValueChange={(v) => v && v !== 'none' && setSelectedProfileId(v)}
               >
                 <SelectTrigger className="w-full max-w-md">
-                  <SelectValue placeholder={profilesLoading ? 'Loading...' : 'Pilih profile outbound'} />
+                  <SelectValue placeholder={profilesLoading ? 'Loading...' : 'Pilih profile outbound'}>
+                    {(value: string | null) => {
+                      if (!value || value === 'none') return profilesLoading ? 'Loading...' : 'Pilih profile outbound'
+                      const p = profiles.find((x) => String(x.id) === value)
+                      return p ? `${p.name} (${p.code})` : value
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="w-[420px]">
                   {profiles.length === 0 ? (

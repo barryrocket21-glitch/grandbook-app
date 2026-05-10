@@ -194,7 +194,13 @@ export default function BulkUploadPage() {
               <Label className="text-sm">Pilih Profile *</Label>
               <Select value={selectedProfileId} onValueChange={(v) => v && setSelectedProfileId(v)}>
                 <SelectTrigger className="w-full max-w-md">
-                  <SelectValue placeholder={loading ? 'Loading...' : 'Pilih converter profile'} />
+                  <SelectValue placeholder={loading ? 'Loading...' : 'Pilih converter profile'}>
+                    {(value: string | null) => {
+                      if (!value) return loading ? 'Loading...' : 'Pilih converter profile'
+                      const p = profiles.find((x) => String(x.id) === value)
+                      return p ? `${p.name} (${p.code})` : value
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="w-[420px]">
                   {profiles.length === 0 ? (

@@ -236,7 +236,12 @@ export default function StatusMappingPage() {
             <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari raw status..." className="pl-9" />
           </div>
           <Select value={channelFilter} onValueChange={v => v && setChannelFilter(v)}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Channel" /></SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Channel">
+              {(value: string | null) => {
+                if (!value || value === 'ALL') return 'Semua channel'
+                return channels.find(c => String(c.id) === value)?.code ?? value
+              }}
+            </SelectValue></SelectTrigger>
             <SelectContent className="w-[260px]">
               <SelectItem value="ALL">Semua channel</SelectItem>
               {channels.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>)}

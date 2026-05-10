@@ -470,7 +470,13 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
                     <div className="space-y-1.5">
                       <Label className="text-xs">Source Profile</Label>
                       <Select value={bulkSource} onValueChange={(v) => v && setBulkSource(v)}>
-                        <SelectTrigger><SelectValue placeholder="Pilih profile asal" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Pilih profile asal">
+                          {(value: string | null) => {
+                            if (!value) return 'Pilih profile asal'
+                            const p = otherProfiles.find((x) => String(x.id) === value)
+                            return p ? `${p.code} — ${p.name}` : value
+                          }}
+                        </SelectValue></SelectTrigger>
                         <SelectContent className="w-[320px]">
                           {otherProfiles.map((p) => (
                             <SelectItem key={p.id} value={String(p.id)}>{p.code} — {p.name}</SelectItem>

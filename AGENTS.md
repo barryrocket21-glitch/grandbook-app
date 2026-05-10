@@ -16,9 +16,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 3A — Inbound Engine + Form Input + Approval | ✅ DONE | 2026-05-09 |
 | Phase 3B — Rekonsil Engine + Upload UI | ✅ DONE | 2026-05-10 |
 | Phase 3C — Outbound Engine + Export | ✅ DONE | 2026-05-10 |
+| Phase 3.5 — Polish (UX & Bug Fixes) | ✅ DONE | 2026-05-10 |
 | Phase 4 — Commission Engine v2 + Analytics | ⏳ NOT STARTED | — |
 
-**Phase 3C done.** Loop converter engine sekarang complete: INBOUND_ORDER + WA_PASTE (3A), INBOUND_REKONSIL (3B), OUTBOUND_TO_COURIER (3C). Daily ops Grandbook end-to-end: receive order → approve → export ke ekspedisi → upload rekonsil → status auto-update + biaya aktual masuk.
+**Phase 3.5 done.** 4 bug UX di-fix: keyboard cascade Wilayah jadi mulus (auto-open + auto-search), dropdown rendering konsisten cross-OS (scrollbar visible), label dropdown tampil nama bukan ID, empty-state hint dengan CTA link untuk dropdown kosong. Bug #1 (analytics) di-defer ke Phase 4 — banner placeholder updated dengan Phase 4 ETA.
 
 ---
 
@@ -549,6 +550,64 @@ Loop converter engine GrandBook sudah lengkap. Untuk daily ops, Barry sekarang b
 - Outbound engine tidak touch commissions table. Phase 4 commission engine bisa-bisa hooking ke status transition (e.g. trigger di order_status_history) atau on-demand recompute.
 - Outbound flow konsisten dengan brief — tidak ada side-effect ke commission yet.
 - Profile `mengantar_outbound` channel JNE_VIA_MENGANTAR → cocok untuk demo Phase 4 perhitungan commission per channel/courier.
+
+---
+
+## Phase 3.5 — Polish (UX & Bug Fixes) (COMPLETED)
+
+4 bug yang muncul setelah daily ops dimulai. Goal: bikin sistem lebih cepat dipakai keyboard, dropdown konsisten cross-OS, label benar, dan empty-state guidance.
+
+### Files yang berubah
+
+**Component:**
+- `src/components/ui/combobox.tsx` — refactor:
+  - `autoOpenOnFocus` (default true) — popover auto-open saat trigger Tab/click. `skipNextAutoOpenRef` guard mencegah re-open setelah selection/Esc/outside-click.
+  - `emptyHint?: { message, actionLabel?, actionHref? }` — render CTA card saat `options.length === 0`. Berbeda dari `emptyText` (yang muncul saat search yield 0).
+  - `CommandList` override class jadi `max-h-72 overflow-y-auto overflow-x-hidden` — scrollbar visible (sebelumnya `no-scrollbar` dari command.tsx default — bermasalah di Mac Safari).
+  - `PopoverContent` width: `w-[var(--anchor-width)] min-w-[260px]` — match trigger width.
+  - Trigger button accepts `onFocus` → `setOpen(true)`.
+- `src/components/ui/refactor-banner.tsx` — tambah optional `description` prop dengan fallback ke teks default.
+
+**Pages dengan SelectValue render-fn injected (Bug #4):**
+- `src/app/(app)/orders/bulk-upload/page.tsx` — profile picker
+- `src/app/(app)/orders/wa-paste/page.tsx` — profile picker
+- `src/app/(app)/orders/export-resi/page.tsx` — profile picker + Step 1 channel filter
+- `src/app/(app)/reconciliation/upload/page.tsx` — profile picker
+- `src/app/(app)/orders/list/page.tsx` — channel filter
+- `src/app/(app)/inbox/pending-review/page.tsx` — channel + source filter
+- `src/app/(app)/inbox/unmatched-resi/page.tsx` — source profile filter
+- `src/app/(app)/inbox/unmapped-statuses/page.tsx` — channel filter
+- `src/app/(app)/settings/courier-channels/page.tsx` — courier filter
+- `src/app/(app)/settings/courier-rates/page.tsx` — channel filter
+- `src/app/(app)/settings/status-mapping/page.tsx` — channel filter
+- `src/app/(app)/settings/converter-profiles/page.tsx` — direction + channel filter
+- `src/app/(app)/settings/converter-profiles/[id]/page.tsx` — bulk-copy source profile
+
+**Pages converted Select → Combobox (with emptyHint):**
+- `src/components/orders/order-form.tsx` — Channel dropdown (was Select with render-fn) + Advertiser dropdown (was Select). Both now Combobox with emptyHint linking ke `/settings/courier-channels` resp `/settings/users`.
+
+**Analytics:**
+- `src/app/(app)/analytics/page.tsx` — banner update dengan `phase="Phase 4 (Commission Engine v2 + Analytics Revamp)"` + description.
+
+### Decisions
+
+1. **In-place SelectValue patch vs convert ke Combobox** — chosen in-place patch untuk filter dropdowns (channel/source) supaya minimize change, lebih konservatif. Hanya ubah ke Combobox di `/orders/new` (Channel + Advertiser) karena di sana flow keyboard cascade Wilayah lebih penting + user benefit dari empty-state hint.
+2. **`autoOpenOnFocus` default true** — sesuai brief. Bisa di-opt-out per call site kalau ada page yang butuh behavior beda (belum ada use-case sekarang).
+3. **`skipNextAutoOpenRef` ref-based guard** — alternative pakai state akan trigger re-render yang nggak perlu. Ref read/write lebih cocok untuk transient flag yang nggak mempengaruhi UI.
+4. **Empty hint render replaces CommandInput** — saat data benar-benar kosong, search input tidak ditampilkan (nothing to search). CommandInput muncul lagi saat `options.length > 0`.
+5. **`no-scrollbar` removal** — dilakukan di Combobox, bukan di `command.tsx` global. Reasoning: command.tsx default mungkin dipakai di context lain (e.g. command palette / dialog) di mana hidden scrollbar diinginkan. Combobox ditunjuk explicit.
+6. **Bug #1 Analytics deferred** — sesuai brief, hanya update banner. Analytics rebuild masuk Phase 4 bersama Commission Engine v2.
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ 50 routes intact (no new routes, no removed routes)
+
+### Hal yang perlu di-flag
+
+- **Audit Mac Safari rendering** — Phase 3.5 fix berdasarkan reasonable hypothesis (hidden scrollbar via `no-scrollbar` Tailwind utility). User wajib verify di Safari Mac yang real — kalau masih ada issue, identify root cause spesifik (animation glitch? z-index? portal positioning?) baru fix lanjutan.
+- **Pages yang masih pakai Select dengan numeric ID di luar audit Phase 3.5** — sudah comprehensive scan, tapi kalau ada page baru ditambah next phase, ingat pattern: pass render-function child ke `<SelectValue>` untuk lookup label.
+- **Combobox emptyHint** — bisa dipakai di lebih banyak dropdown kalau ada empty-state UX. Phase 3.5 hanya wire ke advertiser + channel di `/orders/new` untuk demo.
 
 ---
 

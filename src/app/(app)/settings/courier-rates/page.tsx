@@ -225,7 +225,12 @@ export default function CourierRatesPage() {
       <Card>
         <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row gap-3 flex-wrap">
           <Select value={channelFilter} onValueChange={v => v && setChannelFilter(v)}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Channel" /></SelectTrigger>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Channel">
+              {(value: string | null) => {
+                if (!value || value === 'ALL') return 'Semua channel'
+                return channels.find(c => String(c.id) === value)?.code ?? value
+              }}
+            </SelectValue></SelectTrigger>
             <SelectContent className="w-[260px]">
               <SelectItem value="ALL">Semua channel</SelectItem>
               {channels.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>)}

@@ -15,6 +15,11 @@ export interface AnalyticsOverview {
   total_commissions_estimated: number
   total_commissions_earned: number
   total_commissions_paid: number
+  // Phase 4C
+  estimated_total_cost: number
+  estimated_cash_in: number
+  estimated_profit: number
+  profit_margin_pct: number
   orders_baru: number
   orders_siap_kirim: number
   orders_dikirim: number
@@ -61,6 +66,7 @@ export interface PerChannelRow {
   channel_id: number
   channel_code: string | null
   channel_name: string | null
+  billing_model: string | null
   total_orders: number
   total_revenue: number
   total_shipping_charged: number
@@ -69,6 +75,11 @@ export interface PerChannelRow {
   diterima_orders: number
   retur_orders: number
   total_payout: number
+  // Phase 4C
+  estimated_total_cost: number
+  estimated_cash_in: number
+  estimated_profit: number
+  profit_margin_pct: number
 }
 
 const EMPTY_OVERVIEW: AnalyticsOverview = {
@@ -81,6 +92,10 @@ const EMPTY_OVERVIEW: AnalyticsOverview = {
   total_commissions_estimated: 0,
   total_commissions_earned: 0,
   total_commissions_paid: 0,
+  estimated_total_cost: 0,
+  estimated_cash_in: 0,
+  estimated_profit: 0,
+  profit_margin_pct: 0,
   orders_baru: 0,
   orders_siap_kirim: 0,
   orders_dikirim: 0,

@@ -71,6 +71,16 @@ export interface Courier {
   created_at: string
 }
 
+export type BillingModel =
+  | 'MONTHLY_INVOICE'
+  | 'NETT_OFF_PER_ORDER'
+  | 'DIRECT_TRANSFER'
+  | 'NO_RECONCILIATION'
+
+export type CodFeeBase = 'NOMINAL_COD' | 'BARANG_PLUS_ONGKIR_GROSS' | 'BARANG_PLUS_ONGKIR_NET'
+export type CodFeeRounding = 'FLOOR' | 'ROUND' | 'CEIL'
+export type PpnAppliedTo = 'COD_FEE_ONLY' | 'COD_FEE_PLUS_SHIPPING' | 'NONE'
+
 export interface CourierChannel {
   id: number
   courier_id: number
@@ -80,7 +90,22 @@ export interface CourierChannel {
   active: boolean
   notes: string | null
   created_at: string
+  // Phase 4C
+  billing_model?: BillingModel
+  shipping_discount_label?: string
   courier?: Courier
+}
+
+export interface ChannelBillingConfig {
+  id: number
+  channel_id: number
+  cod_fee_base: CodFeeBase
+  cod_fee_rounding: CodFeeRounding
+  ppn_applied_to: PpnAppliedTo
+  effective_from: string
+  effective_to: string | null
+  notes: string | null
+  created_at: string
 }
 
 export interface CourierChannelRate {
@@ -216,6 +241,15 @@ export interface Order {
   notes: string | null
   meta: Record<string, unknown> | null
   raw_data: Record<string, unknown> | null
+
+  // Phase 4C: estimated cost fields (computed via trigger)
+  estimated_shipping_net?: number | null
+  estimated_cod_fee?: number | null
+  estimated_ppn?: number | null
+  estimated_total_cost?: number | null
+  estimated_cash_in?: number | null
+  estimated_profit?: number | null
+  cost_computed_at?: string | null
 
   order_date: string
   created_at: string

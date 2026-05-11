@@ -18,10 +18,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 3C — Outbound Engine + Export | ✅ DONE | 2026-05-10 |
 | Phase 3.5 — Polish (UX & Bug Fixes) | ✅ DONE | 2026-05-10 |
 | Phase 4A — Commission Engine v2 + Pencairan UI | ✅ DONE | 2026-05-10 |
-| Phase 4B — Analytics Revamp | ⏳ NOT STARTED | — |
+| Phase 4B — Analytics Revamp + Per-Role Dashboards | ✅ DONE | 2026-05-10 |
 | Phase 4C — Pencairan COD Reconciliation | ⏳ NOT STARTED | — |
 
-**Phase 4A done.** Commission engine yang lama (drop di Phase 1) di-rebuild: trigger compute_commissions auto-fire saat order INSERT atau status UPDATE, status enum baru (DITERIMA→EARNED, RETUR/CANCEL/FAKE→CANCELLED). PAID workflow + immutable audit trail. UI `/commissions/my` (semua role lihat sendiri) + `/commissions/manage` (owner only, tabs + bulk mark paid + dialog). Migration 016 cleanup 133 orphan commissions + add FK to orders.
+**Phase 4B done.** Analytics + per-role dashboard direbuild: `/analytics` 4 tabs (Overview/Per CS/Per Advertiser/Per Channel) + recharts (area/pie/bar) konsumsi 5 server-side aggregation RPCs. `/cs-dashboard` & `/adv-dashboard` refactor jadi thin wrapper di shared `PersonalDashboard` component dengan owner-mode dropdown filter. Existing `/dashboard` tetap functional (sudah pakai schema baru sejak Phase 0).
 
 ---
 
@@ -680,6 +680,64 @@ Re-aktifkan commission engine yang lama (drop di Phase 1) dengan adjust ke statu
 
 ---
 
+## Phase 4B — Analytics Revamp + Per-Role Dashboards (COMPLETED)
+
+Visibility layer komplit. Owner punya overview business lengkap; CS/advertiser punya dashboard personal mereka.
+
+### Files yang dibuat/berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/017_analytics_aggregations.sql` — 5 RPCs server-side aggregation:
+  1. `analytics_overview(from, to)` — single-row aggregate (orders, revenue, COGS via hpp_snapshot, shipping, commissions per status, status counts)
+  2. `analytics_daily_revenue(from, to)` — line chart series
+  3. `analytics_per_cs(from, to)` — breakdown per CS dengan conversion rate + commissions earned/paid
+  4. `analytics_per_advertiser(from, to)` — mirror per CS
+  5. `analytics_per_channel(from, to)` — per channel dengan shipping_diff (charged - actual)
+- Semua function `STABLE SECURITY DEFINER` + scoped ke `current_org_id()`. Conversion rate hanya count order final (DITERIMA + RETUR), bukan total.
+
+**Helper queries:**
+- `src/lib/supabase/queries/analytics.ts` (NEW): RPC wrappers + `fetchPersonalDashboard({ role, userId, from, to })` untuk personal-stats query (orders + commissions filter by user_id, daily series compute client-side karena dataset kecil per user).
+
+**Pages:**
+- `src/app/(app)/analytics/page.tsx` — refactor dari banner. 4 tabs (Overview/Per CS/Per Advertiser/Per Channel). Overview: 8 stat cards + AreaChart daily revenue + PieChart status distribution. Per CS / Per Advertiser: sortable table (orders/revenue/conv/commission) + horizontal Top-5 BarChart. Per Channel: table dengan shipping_diff color-coded.
+- `src/app/(app)/cs-dashboard/page.tsx` — refactor dari banner ke thin wrapper PersonalDashboard role='cs'.
+- `src/app/(app)/adv-dashboard/page.tsx` — refactor dari banner ke thin wrapper PersonalDashboard role='advertiser'.
+
+**Components:**
+- `src/components/analytics/personal-dashboard.tsx` (NEW): shared component untuk /cs-dashboard + /adv-dashboard. Stat cards (Total/Revenue/Diterima/Retur/Commission Earned/Paid) + AreaChart daily orders + 10 order terbaru table. Owner-mode tampil dropdown filter user (Combobox dengan emptyHint Phase 3.5).
+
+**Sidebar:**
+- `src/lib/constants.ts` — `/analytics` already owner-only. `/cs-dashboard` keep admin di sidebar group (untuk akses sub-pages /cs-report, /team/cs) — page-level gate di PersonalDashboard deny non-(cs|owner). `/adv-dashboard` already cs-clear (owner+advertiser).
+
+### Decisions
+
+1. **Server-side aggregation RPCs** — bukan fetch-then-reduce di client. Untuk /analytics page (owner overview), RPC pattern lebih efisien untuk volume orders besar. Conversion rate computed di SQL dengan ROUND(...,2).
+2. **Personal dashboard pakai direct query, bukan RPC** — karena scope lebih sempit (1 user) + butuh row-level detail (10 order terbaru). Overhead minimal, dan reuse `fetchPersonalDashboard` cleaner.
+3. **Reuse DateRangePicker existing** — sudah ada dari Phase 0 dengan presets lengkap (Hari ini, Minggu ini, Bulan ini, Bulan lalu, 30 hari terakhir, custom). Tidak perlu rebuild.
+4. **Recharts** — sudah ada di package.json (`^3.8.0`). Tidak install ulang.
+5. **Pie label custom callback di-skip** — Recharts v3 strict TS typing bikin custom label sulit. Pakai default tooltip + legend di samping.
+6. **PersonalDashboard component reuse** — `/cs-dashboard` & `/adv-dashboard` cuma diff `role` prop. DRY, single source of truth untuk personal-stats UI.
+7. **Owner override dropdown** — di PersonalDashboard, owner lihat Combobox filter user. Non-owner langsung self. emptyHint Phase 3.5 wired ke `/settings/users`.
+8. **Hydration drift fix** — `range` state di-init dengan stale `thisMonth` import (constant), lalu `useEffect` overwrite ke `thisMonth()` (current). `rangeReady` flag mencegah fetch sebelum client value resolved.
+9. **Existing /dashboard tidak diubah** — sudah pakai schema baru (CANCEL/FAKE filter), no `duplicate_of`/`SAMPAI`/`SELESAI` reference.
+10. **Per-CS query CTE pattern** — `cs_orders` CTE di-reference 2x (untuk agg + commission lookup) supaya tidak double-scan orders. Performance-friendly.
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ 50 routes intact. `/analytics`, `/cs-dashboard`, `/adv-dashboard` semua organic (bukan banner).
+
+### Hal yang perlu di-flag untuk Phase 4C (Pencairan COD Reconciliation)
+
+- **Realtime refresh masih manual** — Phase 4B punya RefreshCw button, tapi tidak listen Supabase realtime channel. Phase 4C bisa add subscription supaya commission/order changes auto-reflect tanpa user interaction.
+- **Export PDF/Excel report** — explicit out-of-scope Phase 4B. Owner perlu screenshot atau copy table manual. Phase 4C bisa wire library jspdf atau exceljs.
+- **Drill-down belum ada** — klik row Per CS di /analytics tidak deeplink ke /commissions/manage filter user X. UX improvement nice-to-have.
+- **Mobile table overflow** — table lebar (8+ kolom) overflow horizontal di mobile. ResponsiveContainer chart OK, tabel butuh wrapper scroll.
+- **Product-level analytics** — top seller per produk tidak di-cover. Phase 5 candidate.
+- **Cache strategy** — semua tab di /analytics fetch sekaligus. Tab switching tidak refetch. Date range change → refetch all 5 RPCs paralel. Untuk dataset besar, butuh per-tab lazy fetch atau React Query.
+
+---
+
 ## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
@@ -739,7 +797,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **014** | **Phase 3B — rekonsil RPC** | **✅ Active** |
 | **015** | **Phase 3C — outbound source enum + bulk mark RPC** | **✅ Active** |
 | **016** | **Phase 4A — commission engine v2 + pencairan RPCs** | **✅ Active** |
-| 017+ | TBD next phases | — |
+| **017** | **Phase 4B — analytics aggregation RPCs** | **✅ Active** |
+| 018+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

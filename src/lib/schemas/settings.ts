@@ -8,6 +8,9 @@ import type {
   PpnAppliedTo,
   OperationalExpenseCategory,
   RecurrencePeriod,
+  CampaignStatus,
+  AdSpendSource,
+  AdPlatform,
 } from '@/lib/types'
 
 // =============================================================
@@ -495,3 +498,96 @@ export function slugifyCategory(name: string): string {
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9\-]/g, '')
 }
+
+// =============================================================
+// Phase 5B — Campaigns + Ad Spend + Allocation
+// =============================================================
+export const CAMPAIGN_PLATFORMS = ['META', 'GOOGLE', 'TIKTOK', 'SNACK', 'OTHER'] as const satisfies readonly AdPlatform[]
+
+export const CAMPAIGN_PLATFORM_LABEL: Record<AdPlatform, string> = {
+  META: 'Meta (FB/IG)',
+  GOOGLE: 'Google Ads',
+  TIKTOK: 'TikTok Ads',
+  SNACK: 'Snack Video',
+  OTHER: 'Lainnya',
+}
+
+export const CAMPAIGN_PLATFORM_COLOR: Record<AdPlatform, string> = {
+  META: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  GOOGLE: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  TIKTOK: 'bg-pink-500/10 text-pink-600 border-pink-500/30',
+  SNACK: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+  OTHER: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+}
+
+export const CAMPAIGN_STATUSES = ['ACTIVE', 'PAUSED', 'ENDED'] as const satisfies readonly CampaignStatus[]
+
+export const CAMPAIGN_STATUS_LABEL: Record<CampaignStatus, string> = {
+  ACTIVE: 'Active',
+  PAUSED: 'Paused',
+  ENDED: 'Ended',
+}
+
+export const CAMPAIGN_STATUS_COLOR: Record<CampaignStatus, string> = {
+  ACTIVE: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+  PAUSED: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  ENDED: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+}
+
+export const CAMPAIGN_OBJECTIVES = ['SALES', 'TRAFFIC', 'AWARENESS', 'LEADS', 'ENGAGEMENT', 'OTHER'] as const
+export type CampaignObjective = (typeof CAMPAIGN_OBJECTIVES)[number]
+
+export const CAMPAIGN_OBJECTIVE_LABEL: Record<CampaignObjective, string> = {
+  SALES: 'Sales / Purchases',
+  TRAFFIC: 'Traffic',
+  AWARENESS: 'Brand Awareness',
+  LEADS: 'Lead Generation',
+  ENGAGEMENT: 'Engagement',
+  OTHER: 'Lainnya',
+}
+
+export const campaignSchema = z.object({
+  campaign_name: z.string().min(1, 'Nama wajib diisi').max(200),
+  campaign_code: z.string().max(120).nullable().optional(),
+  platform: z.enum(CAMPAIGN_PLATFORMS),
+  advertiser_id: z.string().uuid().nullable().optional(),
+  status: z.enum(CAMPAIGN_STATUSES).default('ACTIVE'),
+  start_date: z.string().nullable().optional(),
+  end_date: z.string().nullable().optional(),
+  daily_budget: z.number().min(0).nullable().optional(),
+  objective: z.string().max(60).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  active: z.boolean().default(true),
+})
+export type CampaignFormData = z.infer<typeof campaignSchema>
+
+export const campaignProductSchema = z.object({
+  campaign_id: z.number().int().positive(),
+  product_id: z.number().int().positive('Pilih produk'),
+  allocation_pct: z.number()
+    .gt(0, 'Allocation harus > 0')
+    .max(100, 'Allocation maks 100%'),
+  notes: z.string().nullable().optional(),
+})
+export type CampaignProductFormData = z.infer<typeof campaignProductSchema>
+
+export const AD_SPEND_SOURCES = ['MANUAL', 'CSV_IMPORT', 'API'] as const satisfies readonly AdSpendSource[]
+
+export const AD_SPEND_SOURCE_LABEL: Record<AdSpendSource, string> = {
+  MANUAL: 'Manual',
+  CSV_IMPORT: 'CSV Import',
+  API: 'API',
+}
+
+export const adSpendSchema = z.object({
+  spend_date: z.string().min(1, 'Tanggal wajib'),
+  campaign_id: z.number().int().positive('Pilih campaign'),
+  spend: z.number().min(0, 'Spend harus >= 0'),
+  impressions: z.number().int().min(0).nullable().optional(),
+  reach: z.number().int().min(0).nullable().optional(),
+  clicks: z.number().int().min(0).nullable().optional(),
+  conversions: z.number().int().min(0).nullable().optional(),
+  revenue_reported: z.number().min(0).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+})
+export type AdSpendFormDataV2 = z.infer<typeof adSpendSchema>

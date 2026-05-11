@@ -20,9 +20,12 @@ export interface AnalyticsOverview {
   estimated_cash_in: number
   estimated_profit: number
   profit_margin_pct: number
-  // Phase 5A (analytics_overview_v2)
+  // Phase 5A
   total_operational_expenses: number
-  net_profit: number
+  // Phase 5B (analytics_overview_v3)
+  total_ad_spend: number
+  net_profit_before_ads: number
+  net_profit_after_ads: number
   net_margin_pct: number
   orders_baru: number
   orders_siap_kirim: number
@@ -101,7 +104,9 @@ const EMPTY_OVERVIEW: AnalyticsOverview = {
   estimated_profit: 0,
   profit_margin_pct: 0,
   total_operational_expenses: 0,
-  net_profit: 0,
+  total_ad_spend: 0,
+  net_profit_before_ads: 0,
+  net_profit_after_ads: 0,
   net_margin_pct: 0,
   orders_baru: 0,
   orders_siap_kirim: 0,
@@ -114,25 +119,25 @@ const EMPTY_OVERVIEW: AnalyticsOverview = {
 }
 
 /**
- * Phase 5A: fetchOverview now calls analytics_overview_v2 (Phase 5A RPC)
- * which includes total_operational_expenses + net_profit. v1 still callable
- * via Supabase RPC directly tapi default helper sudah switch ke v2.
+ * Phase 5B: fetchOverview now calls analytics_overview_v3 which includes
+ * total_ad_spend + net_profit_before_ads + net_profit_after_ads + net_margin_pct.
+ * v1/v2 still callable directly via Supabase RPC.
  */
 export async function fetchOverview(
   supabase: SupabaseClient,
   from: string,
   to: string
 ): Promise<AnalyticsOverview> {
-  const { data, error } = await supabase.rpc('analytics_overview_v2', {
+  const { data, error } = await supabase.rpc('analytics_overview_v3', {
     p_from: from,
     p_to: to,
   })
-  if (error) throw new Error(`analytics_overview_v2 gagal: ${error.message}`)
+  if (error) throw new Error(`analytics_overview_v3 gagal: ${error.message}`)
   if (!data || data.length === 0) return EMPTY_OVERVIEW
   return data[0] as AnalyticsOverview
 }
 
-// Phase 5A — Per Produk
+// Phase 5A — Per Produk (extended Phase 5B dengan ad spend allocation)
 export interface PerProductRow {
   product_id: number
   product_name: string | null
@@ -144,22 +149,67 @@ export interface PerProductRow {
   total_hpp: number
   gross_profit: number
   margin_pct: number
+  // Phase 5B
+  allocated_ad_spend: number
+  net_profit_after_ads: number
+  net_margin_pct: number
   diterima_orders: number
   final_orders: number
   conversion_rate: number
+  roas: number
 }
 
+/**
+ * Phase 5B: switched ke analytics_profit_per_product_v2 yang include
+ * allocated_ad_spend + net_profit_after_ads + roas. Sort default by
+ * net_profit_after_ads DESC.
+ */
 export async function fetchPerProduct(
   supabase: SupabaseClient,
   from: string,
   to: string
 ): Promise<PerProductRow[]> {
-  const { data, error } = await supabase.rpc('analytics_profit_per_product', {
+  const { data, error } = await supabase.rpc('analytics_profit_per_product_v2', {
     p_from: from,
     p_to: to,
   })
-  if (error) throw new Error(`analytics_profit_per_product gagal: ${error.message}`)
+  if (error) throw new Error(`analytics_profit_per_product_v2 gagal: ${error.message}`)
   return (data || []) as PerProductRow[]
+}
+
+// Phase 5B — ROAS per Campaign
+export interface RoasPerCampaignRow {
+  campaign_id: number
+  campaign_name: string
+  platform: string
+  advertiser_id: string | null
+  advertiser_name: string | null
+  campaign_status: string
+  total_spend: number
+  total_conversions: number
+  total_impressions: number
+  total_clicks: number
+  linked_products: string
+  linked_orders_count: number
+  linked_revenue: number
+  linked_revenue_diterima: number
+  roas_gross: number
+  roas_diterima: number
+  cost_per_conversion: number
+  cost_per_order: number
+}
+
+export async function fetchRoasPerCampaign(
+  supabase: SupabaseClient,
+  from: string,
+  to: string
+): Promise<RoasPerCampaignRow[]> {
+  const { data, error } = await supabase.rpc('analytics_roas_per_campaign', {
+    p_from: from,
+    p_to: to,
+  })
+  if (error) throw new Error(`analytics_roas_per_campaign gagal: ${error.message}`)
+  return (data || []) as RoasPerCampaignRow[]
 }
 
 export async function fetchDailyRevenue(

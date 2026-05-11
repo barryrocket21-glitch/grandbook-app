@@ -22,7 +22,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 4C — Estimated Cost Engine + Multi-Model Billing | ✅ DONE | 2026-05-11 |
 | Phase 4D — Actual Reconciliation File Upload | ⏳ NOT STARTED | — |
 | Phase 5A — Products Extended + Operational Expenses | ✅ DONE | 2026-05-11 |
-| Phase 5B — Ad Spend + Campaigns Integration | ⏳ NOT STARTED | — |
+| Phase 5B — Ad Spend + Campaigns + ROAS | ✅ DONE | 2026-05-11 |
+
+**Phase 5B done.** Campaigns + ad_spend tables extended dengan organization_id + RLS + Phase 5B fields (campaign_code untuk CSV match, status enum, start/end date, daily_budget, conversions, reach, revenue_reported, source, import_batch_id). New `campaign_products` link table (1:N allocation dengan trigger guard sum ≤ 100%). Meta Ads CSV parser dengan flexible column detection (multiple name variants per field) + idempotent bulk upsert. 4 RPCs baru: `analytics_ad_spend_summary`, `analytics_roas_per_campaign`, `analytics_profit_per_product_v2` (extends v1 dengan allocated_ad_spend + ROAS), `analytics_overview_v3` (extends v2 dengan total_ad_spend + net_profit_before/after_ads). /campaigns refactor: 2-level dialog (campaign + linked products with allocation %). /ad-spend refactor: 4 stat cards, by-platform chips, manual entry + 5-step CSV upload Meta format. /analytics: Row 4 expanded ke 5 cards (Op Expenses/Ad Spend/Net Before/Net After/Net Margin), tab ke-6 "ROAS" per campaign, Per Produk tab extended dengan ad spend allocation + Net After Ads sort default.
 
 **Phase 5A done.** Master produk dengan kategori FK + variation/notes, operational_expenses table dengan 9 preset kategori + recurring helper + "Copy from Last Month", analytics extend dengan row 4 stat cards (Op Expenses / Net Profit / Net Margin) + tab "Per Produk" (revenue/HPP/profit/margin/conv breakdown). RPCs baru: `analytics_overview_v2`, `analytics_profit_per_product`, `analytics_expenses_summary`. Archive `/shipping-diff` + `/duplicates` jadi banner archived dengan deeplinks. Multi-tenant: tambah `organization_id` ke products + RLS. Backfill: 2 kategori dari existing products.category text, 0 operational_expenses (legacy expenses table kosong saat dev).
 
@@ -872,6 +874,77 @@ Master produk dapat upgrade: kategori FK, variation, notes, multi-tenant via `or
 
 ---
 
+## Phase 5B — Ad Spend + Campaigns + ROAS (COMPLETED)
+
+Ad spend tracking lengkap. Audit (2026-05-11): campaigns 2 rows, ad_spend 5 rows, 0 orders dengan campaign_id → Skenario B (reuse + extend dengan backfill org=1). Legacy `ad_spend.lead_platform` column dari Phase 0 preserved untuk backward compat.
+
+### Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/021_ad_spend_campaigns.sql`:
+  1. Extend `campaigns` + add `organization_id` (backfill ke 1) + 8 fields baru (`campaign_code`, `start_date`, `end_date`, `status`, `daily_budget`, `objective`, `notes`, timestamps)
+  2. CHECK constraint `status IN ('ACTIVE','PAUSED','ENDED')`, unique `(organization_id, platform, campaign_name)`, partial unique `(organization_id, platform, campaign_code) WHERE campaign_code IS NOT NULL`
+  3. New table `campaign_products` (link table dengan `allocation_pct` 0-100, UNIQUE (campaign_id, product_id), ON DELETE CASCADE)
+  4. Trigger `check_campaign_allocation_total()` — sum allocation_pct per campaign ≤ 100, raise EXCEPTION '22023' kalau exceed
+  5. Extend `ad_spend` + `organization_id` + 6 fields baru (`reach`, `conversions`, `revenue_reported`, `source`, `import_batch_id`, `updated_at`). CHECK source IN MANUAL/CSV_IMPORT/API.
+  6. Drop legacy unique (date+campaign), add org-scoped unique (organization_id, spend_date, campaign_id)
+  7. RLS pattern Phase 1 (`current_org_id()`) untuk campaigns + campaign_products + ad_spend
+  8. RPCs: `analytics_ad_spend_summary` (total spend/campaigns/conv/impr/clicks + by_platform JSONB), `analytics_roas_per_campaign` (per campaign: spend, conv, linked products, orders, revenue, ROAS gross + diterima, cost/conv, cost/order), `analytics_profit_per_product_v2` (extends v1 dengan allocated_ad_spend + net_profit_after_ads + ROAS), `analytics_overview_v3` (extends v2 dengan total_ad_spend + net_profit_before_ads + net_profit_after_ads + net_margin_pct)
+  9. Triggers `set_updated_at` di campaigns + ad_spend
+
+**Helpers (queries/):**
+- `src/lib/supabase/queries/campaigns.ts` (NEW) — listCampaigns dengan embed advertiser+linked_products+product, CRUD wrappers, `getCampaignAllocationTotal()` helper
+- `src/lib/supabase/queries/ad-spend.ts` (NEW) — listAdSpend dengan filter platform/source/campaign, CRUD, `bulkInsertAdSpend()` pakai upsert ignoreDuplicates untuk idempotency
+- `src/lib/csv/meta-ads-parser.ts` (NEW) — `parseMetaAdsCsv()` dengan COLUMN_VARIANTS dict (flexible matching across Meta region/account locale: "Amount spent (IDR)" / "Amount spent" / "Spend" / "Cost" / etc), `parseDateFlexible()` (ISO + DD/MM/YYYY Indonesia + Date fallback), `parseNumber()` (handle European decimal separator), `matchToCampaigns()` (priority campaign_code → campaign_name case-insensitive)
+- `src/lib/supabase/queries/analytics.ts` — extend `AnalyticsOverview` interface (total_ad_spend, net_profit_before_ads, net_profit_after_ads), `fetchOverview` switched ke v3, new `fetchRoasPerCampaign` + `RoasPerCampaignRow`, `fetchPerProduct` switched ke v2 + extended `PerProductRow` (allocated_ad_spend, net_profit_after_ads, roas)
+
+**Types/Schemas/Constants:**
+- `src/lib/types.ts` — `CampaignStatus`, `AdSpendSource` types; `Campaign` interface extended (campaign_code, status, start_date, end_date, daily_budget, objective, notes, timestamps, linked_products); `CampaignProduct` interface NEW; `AdSpend` interface extended (reach, conversions, revenue_reported, source, import_batch_id). Legacy `lead_platform` preserved
+- `src/lib/schemas/settings.ts` — appended CAMPAIGN_PLATFORMS/labels/colors, CAMPAIGN_STATUSES/labels/colors, CAMPAIGN_OBJECTIVES/labels, campaignSchema (Zod), campaignProductSchema, AD_SPEND_SOURCES/labels, adSpendSchema
+
+**Pages:**
+- `src/app/(app)/campaigns/page.tsx` — refactor lengkap. Search + platform + status filter. Table dengan linked products count + total allocation. Edit dialog dengan 9 fields. Manage Linked Products button → dialog dengan tabel allocation per produk + add/edit dialog (Combobox produk exclude yang sudah linked, validation client total ≤ 100% + DB trigger guard).
+- `src/app/(app)/ad-spend/page.tsx` — refactor lengkap. DateRangePicker default Bulan Ini. 4 stat cards (Total Spend/Conversions/Impressions/Clicks + CTR). By-platform breakdown chips. Filter platform/source. Manual entry dialog dengan 9 fields. **5-step CSV upload dialog**: Platform pick → File upload → Preview (detected columns, currency, errors, unmatched campaigns, match status per row) → Import (loader) → Done (4 result cards inserted/skipped/errors).
+- `src/app/(app)/analytics/page.tsx` — Overview Row 4 → 5 stat cards (Op Expenses / Ad Spend / Net Before / Net After / Net Margin). Tab ke-6 **ROAS** per campaign (sortable spend/roas/revenue/orders, badge color-coded ≥2x emerald). Per Produk tab extended dengan Ad Spend + Net After Ads + ROAS columns (sort default ke Net After Ads DESC = paling profitable di atas).
+
+**Sidebar:**
+- ADV group sekarang accessible owner + admin + advertiser (sebelumnya owner + advertiser saja)
+
+**Docs:**
+- `docs/phase5b-test.md` — 9 section smoke test (CRUD campaigns, allocation guard test, ad spend manual, CSV upload format Meta, ROAS analytics tab, Per Produk extension, idempotency re-run migration, end-to-end data linkage)
+
+### Decisions
+
+1. **Skenario B (extend in-place)** — pre-audit memang assume A/B, audit reveal compatible. Backfill organization_id=1 untuk 2 campaigns + 5 ad_spend rows. Legacy `lead_platform` column (Phase 0 BIGINT) preserved tidak di-drop — backward compat untuk historical reads.
+2. **CSV parser flexible column matching** — bukan strict required columns. Meta sering rename "Amount spent" vs "Amount spent (IDR)" vs "Spend". COLUMN_VARIANTS dict mapping multi-name → field semantic + fuzzy `contains` fallback. Trade-off: kalau Meta export format ekstrim aneh, parser bisa miss column → user pakai manual entry.
+3. **Idempotent bulk insert** — pakai Supabase `upsert` dengan `onConflict: 'organization_id,spend_date,campaign_id', ignoreDuplicates: true`. Re-upload sama file → 0 inserted, X skipped. No need pre-check duplicate.
+4. **Match priority CSV → DB** — campaign_code (Meta Campaign ID) dulu, fallback campaign_name case-insensitive. User opt-in lewat /campaigns input campaign_code untuk match yang reliable.
+5. **Allocation guard trigger** — `check_campaign_allocation_total()` di DB level (BEFORE INSERT/UPDATE). Client juga validate untuk UX tapi server jadi source of truth. Trade-off: kalau dua user concurrent insert, satunya bakal fail dengan error '22023' — accepted (rare scenario).
+6. **No campaign auto-create dari CSV** — per brief (opt-in di future). Unmatched campaign names ditampilkan ke user di Step 3 dengan instruksi tambah di /campaigns + retry.
+7. **`analytics_overview_v3` (incremental)** vs replace v2 — pilih incremental version supaya tools/pages lain yang masih reference v2 nggak break. `fetchOverview` helper switched ke v3, tapi v2 + v1 tetap callable via supabase.rpc langsung.
+8. **`PerProductRow` extended di v2 (sort default by net_profit_after_ads DESC)** — paling profitable produk di atas. UX: kalau user buka tab Per Produk, langsung lihat winner.
+9. **Ad spend allocation = snapshot via campaign_products** — kalau user ubah allocation_pct nanti, retroactive change applies (compute via aggregate SUM(spend × allocation_pct/100)). Per brief: "no retroactive allocation snapshot". Trade-off: simpler model, akurat untuk current state, tapi audit historis sulit kalau allocation berubah-ubah.
+10. **`status` enum vs free-text** — pilih CHECK constraint 3 nilai (ACTIVE/PAUSED/ENDED). Simple workflow. Kalau Meta exposes "ARCHIVED" / "DRAFT", futurework extend constraint.
+11. **CSV currency warning, not enforced** — kalau detect non-IDR (e.g. "Amount spent (USD)"), tampilkan warning tapi tetap accept. User responsibility untuk pre-convert. Mengikuti pattern parser kategori Phase 2B (warn + continue).
+12. **Combobox campaign + product di /ad-spend manual dialog** — dengan emptyHint linking ke /campaigns / /products. Konsisten Phase 3.5 polish pattern.
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors (3 type compat fix di middle — type intersection `Omit<T, K> &` instead of `extends`)
+- `npm run build` ✅ 50 routes intact
+
+### Hal yang perlu di-flag untuk phase berikutnya
+
+- **Auto-create campaign dari CSV unmatched** — opt-in user (checkbox di Step 3 preview). Out of scope Phase 5B.
+- **Meta Marketing API integration** — langsung fetch ad spend harian via API instead of manual CSV. Out of scope (brief explicit skip).
+- **TikTok CSV format** — current parser optimized for Meta. TikTok column names mungkin beda — perlu COLUMN_VARIANTS extension atau separate parser. Out of scope Phase 5B, brief support "best-effort".
+- **Currency conversion** — kalau Meta export USD, perlu rate harian. Out of scope, user manual convert.
+- **Allocation retroactive snapshot** — kalau user ubah allocation_pct, historical analytics ikut berubah. Audit-safe akan butuh snapshot per spend_date (out of scope brief).
+- **ROAS alert / notifikasi** — campaign dengan ROAS<1x → notification. Out of scope (brief explicit skip).
+- **A/B testing tracking** — campaign variants comparison. Out of scope.
+
+---
+
 ## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
@@ -935,7 +1008,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **018** | **Phase 4C — billing models + cost engine + analytics extension** | **✅ Active** |
 | **019** | **Phase 4C bug fix — rate format → percent friendly (codebase convention)** | **✅ Active** |
 | **020** | **Phase 5A — Products extended + product_categories + operational_expenses + analytics_overview_v2 + analytics_profit_per_product** | **✅ Active** |
-| 021+ | TBD next phases | — |
+| **021** | **Phase 5B — Campaigns extended + campaign_products + ad_spend extended + analytics_overview_v3 + analytics_roas_per_campaign + analytics_profit_per_product_v2 + analytics_ad_spend_summary** | **✅ Active** |
+| 022+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

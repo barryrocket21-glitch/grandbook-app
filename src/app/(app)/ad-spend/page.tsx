@@ -1,8 +1,821 @@
-// TODO Phase 3: refactor ad-spend dengan join ke schema orders baru.
-// CPA real harus computed dari orders.cs_id + status DITERIMA (bukan
-// SELESAI lama). Settings UI di Phase 2 akan handle CRUD ad_spend yang
-// terhubung ke channel/campaign baru.
-import { RefactorBanner } from '@/components/ui/refactor-banner'
+'use client'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/components/providers/auth-provider'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
+import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
+import {
+  Plus, Pencil, Loader2, DollarSign, Trash2, Upload, FileText,
+  CheckCircle2, AlertTriangle, ArrowRight, ArrowLeft, X, Coins, MousePointer, Eye,
+} from 'lucide-react'
+import { formatRupiah, formatDate, formatNumber } from '@/lib/format'
+import type { AdPlatform, AdSpendSource } from '@/lib/types'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
+import {
+  DateRangePicker, thisMonth, type DateRange,
+} from '@/components/ui/date-range-picker'
+import {
+  listAdSpend, insertAdSpend, updateAdSpend, deleteAdSpend, bulkInsertAdSpend,
+  fetchAdSpendSummary,
+  type AdSpendWithCampaign, type AdSpendSummary,
+} from '@/lib/supabase/queries/ad-spend'
+import { listCampaigns, type CampaignWithRelations } from '@/lib/supabase/queries/campaigns'
+import {
+  CAMPAIGN_PLATFORMS, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_PLATFORM_COLOR,
+  AD_SPEND_SOURCES, AD_SPEND_SOURCE_LABEL,
+} from '@/lib/schemas/settings'
+import { parseMetaAdsCsv, matchToCampaigns, type MetaAdsRow, type ParseResult, type MatchResult } from '@/lib/csv/meta-ads-parser'
+
+const supabase = createClient()
+
+const today = () => new Date().toISOString().split('T')[0]
+
+interface SpendForm {
+  spend_date: string
+  campaign_id: number
+  spend: number
+  impressions: number
+  reach: number
+  clicks: number
+  conversions: number
+  revenue_reported: number
+  notes: string
+}
+
+const emptyForm: SpendForm = {
+  spend_date: today(),
+  campaign_id: 0,
+  spend: 0,
+  impressions: 0,
+  reach: 0,
+  clicks: 0,
+  conversions: 0,
+  revenue_reported: 0,
+  notes: '',
+}
+
 export default function AdSpendPage() {
-  return <RefactorBanner phase="Phase 2/3 (Settings + Analytics Engine)" pageTitle="Ad Spend" />
+  const { profile, role } = useAuth()
+  const isOwner = role === 'owner'
+  const canWrite = role === 'owner' || role === 'admin' || role === 'advertiser'
+
+  const [rows, setRows] = useState<AdSpendWithCampaign[]>([])
+  const [campaigns, setCampaigns] = useState<CampaignWithRelations[]>([])
+  const [summary, setSummary] = useState<AdSpendSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editId, setEditId] = useState<number | null>(null)
+  const [form, setForm] = useState<SpendForm>(emptyForm)
+
+  const [csvOpen, setCsvOpen] = useState(false)
+
+  const [range, setRange] = useState<DateRange>(thisMonth())
+  const [rangeReady, setRangeReady] = useState(false)
+  const [platformFilter, setPlatformFilter] = useState<'ALL' | AdPlatform>('ALL')
+  const [sourceFilter, setSourceFilter] = useState<'ALL' | AdSpendSource>('ALL')
+
+  useEffect(() => {
+    setRange(thisMonth())
+    setRangeReady(true)
+  }, [])
+
+  const load = useCallback(async () => {
+    if (!rangeReady) return
+    setLoading(true)
+    try {
+      const [r, c, s] = await Promise.all([
+        listAdSpend(supabase, {
+          from: range.from, to: range.to,
+          platform: platformFilter !== 'ALL' ? platformFilter : undefined,
+          source: sourceFilter !== 'ALL' ? sourceFilter : undefined,
+        }),
+        listCampaigns(supabase),
+        fetchAdSpendSummary(supabase, range.from, range.to),
+      ])
+      setRows(r)
+      setCampaigns(c)
+      setSummary(s)
+    } catch (err) {
+      toast.error('Gagal load ad_spend', { description: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setLoading(false)
+    }
+  }, [range.from, range.to, rangeReady, platformFilter, sourceFilter])
+
+  useEffect(() => { void load() }, [load])
+
+  const reset = () => { setForm(emptyForm); setEditId(null) }
+
+  const openEdit = (r: AdSpendWithCampaign) => {
+    setForm({
+      spend_date: r.spend_date,
+      campaign_id: r.campaign_id,
+      spend: Number(r.spend),
+      impressions: r.impressions ?? 0,
+      reach: r.reach ?? 0,
+      clicks: r.clicks ?? 0,
+      conversions: r.conversions ?? 0,
+      revenue_reported: r.revenue_reported ?? 0,
+      notes: r.notes ?? '',
+    })
+    setEditId(r.id)
+    setOpen(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.campaign_id) return toast.error('Pilih campaign dulu')
+    if (form.spend <= 0) return toast.error('Spend harus > 0')
+    setSaving(true)
+    try {
+      const payload = {
+        spend_date: form.spend_date,
+        campaign_id: form.campaign_id,
+        spend: form.spend,
+        impressions: form.impressions || null,
+        reach: form.reach || null,
+        clicks: form.clicks || null,
+        conversions: form.conversions || null,
+        revenue_reported: form.revenue_reported || null,
+        notes: form.notes.trim() || null,
+      }
+      if (editId) {
+        await updateAdSpend(supabase, editId, payload)
+        toast.success('Spend diupdate')
+      } else {
+        await insertAdSpend(supabase, {
+          orgId: profile?.organization_id ?? 1,
+          createdBy: profile?.id ?? null,
+          payload: { ...payload, source: 'MANUAL' },
+        })
+        toast.success('Spend ditambahkan')
+      }
+      setOpen(false)
+      reset()
+      void load()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error('Gagal simpan', { description: msg.includes('duplicate') ? 'Sudah ada spend untuk tanggal + campaign ini. Edit row existing.' : msg })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (r: AdSpendWithCampaign) => {
+    if (!confirm(`Hapus spend ${formatRupiah(r.spend)} pada ${formatDate(r.spend_date)}?`)) return
+    try {
+      await deleteAdSpend(supabase, r.id)
+      toast.success('Spend dihapus')
+      void load()
+    } catch (err) {
+      toast.error('Gagal hapus', { description: err instanceof Error ? err.message : String(err) })
+    }
+  }
+
+  const campaignOptions = useMemo(() => {
+    return campaigns
+      .filter(c => c.active)
+      .map(c => ({
+        value: String(c.id),
+        label: c.campaign_name,
+        hint: CAMPAIGN_PLATFORM_LABEL[c.platform] + (c.campaign_code ? ` • ${c.campaign_code}` : ''),
+      }))
+  }, [campaigns])
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        icon={DollarSign}
+        title="Ad Spend"
+        description={`${rows.length} entry • Total ${formatRupiah(summary?.total_spend ?? 0)}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateRangePicker value={range} onChange={setRange} />
+            {canWrite && (
+              <>
+                <Button variant="outline" onClick={() => setCsvOpen(true)}>
+                  <Upload className="w-4 h-4 mr-2" />Upload CSV
+                </Button>
+                <Button
+                  onClick={() => { reset(); setOpen(true) }}
+                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20"
+                >
+                  <Plus className="w-4 h-4 mr-2" />Tambah Manual
+                </Button>
+              </>
+            )}
+          </div>
+        }
+      />
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-violet-500/15 rounded-xl ring-1 ring-violet-500/20">
+              <Coins className="w-5 h-5 text-violet-500" />
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Spend</p>
+              <p className="text-xl font-bold text-violet-500">{formatRupiah(summary?.total_spend ?? 0)}</p>
+              <p className="text-[10px] text-muted-foreground">{summary?.total_campaigns ?? 0} campaign aktif</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-emerald-500/15 rounded-xl ring-1 ring-emerald-500/20">
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Conversions</p>
+              <p className="text-xl font-bold text-emerald-500">{formatNumber(summary?.total_conversions ?? 0)}</p>
+              <p className="text-[10px] text-muted-foreground">dari Meta/TikTok tracking</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-blue-500/15 rounded-xl ring-1 ring-blue-500/20">
+              <Eye className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Impressions</p>
+              <p className="text-xl font-bold">{formatNumber(summary?.total_impressions ?? 0)}</p>
+              <p className="text-[10px] text-muted-foreground">total view</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-amber-500/15 rounded-xl ring-1 ring-amber-500/20">
+              <MousePointer className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Clicks</p>
+              <p className="text-xl font-bold">{formatNumber(summary?.total_clicks ?? 0)}</p>
+              <p className="text-[10px] text-muted-foreground">
+                CTR {summary && summary.total_impressions > 0 ? ((summary.total_clicks / summary.total_impressions) * 100).toFixed(2) : '0.00'}%
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* By-platform breakdown */}
+      {summary && Object.keys(summary.by_platform).length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {Object.entries(summary.by_platform).sort((a, b) => Number(b[1]) - Number(a[1])).map(([plat, amt]) => {
+            const pct = summary.total_spend > 0 ? (Number(amt) / summary.total_spend) * 100 : 0
+            return (
+              <div key={plat} className="rounded-lg border bg-card p-3">
+                <Badge variant="outline" className={`text-[10px] mb-1 ${CAMPAIGN_PLATFORM_COLOR[plat as AdPlatform] || ''}`}>
+                  {CAMPAIGN_PLATFORM_LABEL[plat as AdPlatform] || plat}
+                </Badge>
+                <p className="text-base font-bold">{formatRupiah(Number(amt))}</p>
+                <p className="text-[10px] text-muted-foreground">{pct.toFixed(0)}%</p>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Filter row */}
+      <Card>
+        <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row gap-3">
+          <Select value={platformFilter} onValueChange={v => v && setPlatformFilter(v as 'ALL' | AdPlatform)}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent className="w-[240px]">
+              <SelectItem value="ALL">Semua platform</SelectItem>
+              {CAMPAIGN_PLATFORMS.map(p => (
+                <SelectItem key={p} value={p}>{CAMPAIGN_PLATFORM_LABEL[p]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sourceFilter} onValueChange={v => v && setSourceFilter(v as 'ALL' | AdSpendSource)}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent className="w-[220px]">
+              <SelectItem value="ALL">Semua source</SelectItem>
+              {AD_SPEND_SOURCES.map(s => (
+                <SelectItem key={s} value={s}>{AD_SPEND_SOURCE_LABEL[s]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground self-center ml-auto">
+            {rows.length} entry di periode
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tanggal</TableHead>
+                <TableHead>Campaign</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead className="text-right">Spend</TableHead>
+                <TableHead className="text-right">Impr</TableHead>
+                <TableHead className="text-right">Reach</TableHead>
+                <TableHead className="text-right">Clicks</TableHead>
+                <TableHead className="text-right">Conv</TableHead>
+                <TableHead className="text-right">Revenue (Reported)</TableHead>
+                <TableHead className="text-center">Source</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={11} className="py-3">
+                      <div className="h-4 bg-muted animate-pulse rounded w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="p-0">
+                    <EmptyState
+                      icon={DollarSign}
+                      title="Belum ada ad spend di periode ini"
+                      description="Tambah manual atau upload CSV dari Meta Ads Manager export."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : rows.map(r => (
+                <TableRow key={r.id}>
+                  <TableCell className="text-sm whitespace-nowrap">{formatDate(r.spend_date)}</TableCell>
+                  <TableCell>
+                    <div className="text-sm max-w-[240px] truncate">{r.campaign?.campaign_name || `#${r.campaign_id}`}</div>
+                    {r.campaign?.campaign_code && (
+                      <div className="text-[10px] text-muted-foreground font-mono">{r.campaign.campaign_code}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {r.campaign?.platform && (
+                      <Badge variant="outline" className={`text-[10px] ${CAMPAIGN_PLATFORM_COLOR[r.campaign.platform]}`}>
+                        {CAMPAIGN_PLATFORM_LABEL[r.campaign.platform]}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold whitespace-nowrap">{formatRupiah(r.spend)}</TableCell>
+                  <TableCell className="text-right text-xs">{r.impressions != null ? formatNumber(r.impressions) : '—'}</TableCell>
+                  <TableCell className="text-right text-xs">{r.reach != null ? formatNumber(r.reach) : '—'}</TableCell>
+                  <TableCell className="text-right text-xs">{r.clicks != null ? formatNumber(r.clicks) : '—'}</TableCell>
+                  <TableCell className="text-right text-xs text-emerald-600 font-semibold">{r.conversions != null ? formatNumber(r.conversions) : '—'}</TableCell>
+                  <TableCell className="text-right text-xs">{r.revenue_reported != null ? formatRupiah(r.revenue_reported) : '—'}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className="text-[10px]">{AD_SPEND_SOURCE_LABEL[r.source || 'MANUAL']}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      {canWrite && (
+                        <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(r)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      {isOwner && (
+                        <Button variant="ghost" size="icon" title="Hapus" onClick={() => handleDelete(r)} className="text-red-500">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Manual entry Dialog */}
+      <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editId ? 'Edit' : 'Tambah'} Ad Spend Manual</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tanggal *</Label>
+                <Input
+                  type="date"
+                  value={form.spend_date}
+                  onChange={e => setForm({ ...form, spend_date: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Spend (Rp) *</Label>
+                <Input
+                  type="number"
+                  value={form.spend}
+                  onChange={e => setForm({ ...form, spend: Number(e.target.value) })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Campaign *</Label>
+              <Combobox
+                value={form.campaign_id ? String(form.campaign_id) : ''}
+                onChange={v => setForm({ ...form, campaign_id: v ? Number(v) : 0 })}
+                options={campaignOptions}
+                placeholder="Pilih campaign"
+                searchPlaceholder="Cari campaign..."
+                emptyHint={{
+                  message: 'Belum ada campaign aktif.',
+                  actionLabel: 'Bikin campaign dulu',
+                  actionHref: '/campaigns',
+                }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Impressions</Label>
+                <Input type="number" value={form.impressions} onChange={e => setForm({ ...form, impressions: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Reach</Label>
+                <Input type="number" value={form.reach} onChange={e => setForm({ ...form, reach: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Clicks</Label>
+                <Input type="number" value={form.clicks} onChange={e => setForm({ ...form, clicks: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Conversions (purchases)</Label>
+                <Input type="number" value={form.conversions} onChange={e => setForm({ ...form, conversions: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Revenue Reported (Meta Pixel)</Label>
+              <Input
+                type="number"
+                value={form.revenue_reported}
+                onChange={e => setForm({ ...form, revenue_reported: Number(e.target.value) })}
+                placeholder="opsional — revenue yang dilaporkan platform"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Catatan</Label>
+              <Textarea
+                value={form.notes}
+                onChange={e => setForm({ ...form, notes: e.target.value })}
+                placeholder="opsional"
+                rows={2}
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              disabled={saving}
+            >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Upload Dialog */}
+      <CsvUploadDialog
+        open={csvOpen}
+        onClose={() => setCsvOpen(false)}
+        onComplete={() => { setCsvOpen(false); void load() }}
+        campaigns={campaigns}
+        orgId={profile?.organization_id ?? 1}
+        createdBy={profile?.id ?? null}
+      />
+    </div>
+  )
+}
+
+// =============================================================
+// CSV Upload Dialog (multi-step)
+// =============================================================
+function CsvUploadDialog({
+  open, onClose, onComplete, campaigns, orgId, createdBy,
+}: {
+  open: boolean
+  onClose: () => void
+  onComplete: () => void
+  campaigns: CampaignWithRelations[]
+  orgId: number
+  createdBy: string | null
+}) {
+  type Step = 'platform' | 'upload' | 'preview' | 'importing' | 'done'
+  const [step, setStep] = useState<Step>('platform')
+  const [platform, setPlatform] = useState<AdPlatform>('META')
+  const [file, setFile] = useState<File | null>(null)
+  const [parseResult, setParseResult] = useState<ParseResult | null>(null)
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
+  const [importResult, setImportResult] = useState<{ inserted: number; skipped_duplicate: number; errors: string[] } | null>(null)
+  const [parsing, setParsing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const resetAll = () => {
+    setStep('platform')
+    setPlatform('META')
+    setFile(null)
+    setParseResult(null)
+    setMatchResult(null)
+    setImportResult(null)
+  }
+
+  const handleClose = () => { resetAll(); onClose() }
+
+  const handleFile = async (f: File) => {
+    setFile(f)
+    setParsing(true)
+    try {
+      const result = await parseMetaAdsCsv(f)
+      setParseResult(result)
+      const matches = matchToCampaigns(
+        result.rows,
+        campaigns.map(c => ({ id: c.id, campaign_name: c.campaign_name, campaign_code: c.campaign_code }))
+      )
+      setMatchResult(matches)
+      setStep('preview')
+    } catch (err) {
+      toast.error('Gagal parse CSV', { description: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  const handleExecute = async () => {
+    if (!matchResult || matchResult.matched_rows.length === 0) {
+      toast.error('Tidak ada row untuk di-import')
+      return
+    }
+    setStep('importing')
+    const batchId = `meta_${platform}_${Date.now()}`
+    const payload = matchResult.matched_rows.map(m => ({
+      spend_date: m.row.spend_date,
+      campaign_id: m.campaign_id,
+      spend: m.row.spend,
+      impressions: m.row.impressions,
+      reach: m.row.reach,
+      clicks: m.row.clicks,
+      conversions: m.row.conversions,
+      revenue_reported: m.row.revenue_reported,
+      notes: null,
+    }))
+    try {
+      const result = await bulkInsertAdSpend(supabase, {
+        orgId, createdBy, rows: payload, importBatchId: batchId,
+      })
+      setImportResult({
+        inserted: result.inserted,
+        skipped_duplicate: result.skipped_duplicate,
+        errors: result.errors.map(e => `Row ${e.row}: ${e.error}`),
+      })
+      setStep('done')
+    } catch (err) {
+      toast.error('Gagal import', { description: err instanceof Error ? err.message : String(err) })
+      setStep('preview')
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) handleClose() }}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Upload className="w-5 h-5" />
+            Upload CSV — Step {step === 'platform' ? '1' : step === 'upload' ? '2' : step === 'preview' ? '3' : step === 'importing' ? '4' : '5'} / 5
+          </DialogTitle>
+        </DialogHeader>
+
+        {step === 'platform' && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Pilih platform sumber CSV. Saat ini dukung Meta format (kolom name flexible).</p>
+            <div className="grid grid-cols-2 gap-3">
+              {CAMPAIGN_PLATFORMS.filter(p => p === 'META' || p === 'TIKTOK').map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPlatform(p)}
+                  className={`p-4 rounded-lg border-2 transition-all text-left ${platform === p ? 'border-violet-500 bg-violet-500/5' : 'border-border hover:border-violet-500/30'}`}
+                >
+                  <Badge variant="outline" className={`mb-2 ${CAMPAIGN_PLATFORM_COLOR[p]}`}>{CAMPAIGN_PLATFORM_LABEL[p]}</Badge>
+                  <p className="text-xs text-muted-foreground">
+                    {p === 'META' ? 'Export dari Ads Manager → Reports → Daily breakdown' : 'Format CSV TikTok Ads (best-effort)'}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <Button onClick={() => setStep('upload')} className="w-full">
+              Lanjut <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        )}
+
+        {step === 'upload' && (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full p-8 border-2 border-dashed rounded-lg hover:border-violet-500/50 hover:bg-violet-500/5 transition-all"
+            >
+              <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm font-medium">Klik untuk pilih file CSV</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Atau drop file di sini. Max 5MB.
+              </p>
+              {parsing && <Loader2 className="w-5 h-5 animate-spin mx-auto mt-2" />}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0]
+                if (f) void handleFile(f)
+              }}
+            />
+            <Button variant="outline" onClick={() => setStep('platform')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />Kembali
+            </Button>
+          </div>
+        )}
+
+        {step === 'preview' && parseResult && matchResult && (
+          <div className="space-y-4 max-h-[600px] overflow-y-auto">
+            <div className="grid grid-cols-4 gap-3 text-xs">
+              <div className="rounded border p-2">
+                <p className="text-muted-foreground">Total Rows</p>
+                <p className="text-lg font-bold">{parseResult.totalRowsDetected}</p>
+              </div>
+              <div className="rounded border p-2 bg-emerald-500/5">
+                <p className="text-muted-foreground">Matched</p>
+                <p className="text-lg font-bold text-emerald-600">{matchResult.matched}</p>
+              </div>
+              <div className="rounded border p-2 bg-amber-500/5">
+                <p className="text-muted-foreground">Unmatched</p>
+                <p className="text-lg font-bold text-amber-600">{matchResult.unmatched_rows.length}</p>
+              </div>
+              <div className="rounded border p-2 bg-red-500/5">
+                <p className="text-muted-foreground">Errors</p>
+                <p className="text-lg font-bold text-red-600">{parseResult.errors.length}</p>
+              </div>
+            </div>
+
+            {parseResult.warnings.length > 0 && (
+              <div className="rounded border bg-amber-500/5 p-3 text-xs space-y-1">
+                {parseResult.warnings.map((w, i) => (
+                  <p key={i} className="flex gap-2"><AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />{w}</p>
+                ))}
+              </div>
+            )}
+
+            <div className="rounded border bg-muted/30 p-3 text-xs">
+              <p className="font-medium mb-1">Detected columns:</p>
+              <p className="text-muted-foreground font-mono">{parseResult.detectedColumns.join(' | ')}</p>
+              {parseResult.currencyDetected && (
+                <p className="text-muted-foreground mt-1">Currency: {parseResult.currencyDetected}</p>
+              )}
+            </div>
+
+            {parseResult.errors.length > 0 && (
+              <div className="rounded border bg-red-500/5 p-3 text-xs space-y-1">
+                <p className="font-medium text-red-600">Errors:</p>
+                {parseResult.errors.slice(0, 10).map((e, i) => (
+                  <p key={i} className="text-red-600">Row {e.rowIndex + 1}: {e.message}</p>
+                ))}
+                {parseResult.errors.length > 10 && <p className="text-muted-foreground">+ {parseResult.errors.length - 10} more...</p>}
+              </div>
+            )}
+
+            {matchResult.unmatched_campaign_names.length > 0 && (
+              <div className="rounded border bg-amber-500/5 p-3 text-xs space-y-1">
+                <p className="font-medium text-amber-700">Campaign names tidak match (akan di-skip):</p>
+                {matchResult.unmatched_campaign_names.slice(0, 8).map((n, i) => (
+                  <p key={i} className="text-amber-700">• {n}</p>
+                ))}
+                {matchResult.unmatched_campaign_names.length > 8 && (
+                  <p className="text-muted-foreground">+ {matchResult.unmatched_campaign_names.length - 8} more...</p>
+                )}
+                <p className="text-muted-foreground mt-2">
+                  Buka /campaigns + tambah campaign dengan nama yang match (atau pakai Campaign Code).
+                </p>
+              </div>
+            )}
+
+            <div className="rounded border overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/30">
+                  <tr>
+                    <th className="text-left p-2">Date</th>
+                    <th className="text-left p-2">Campaign</th>
+                    <th className="text-left p-2">Match</th>
+                    <th className="text-right p-2">Spend</th>
+                    <th className="text-right p-2">Conv</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matchResult.matched_rows.slice(0, 10).map((m, i) => (
+                    <tr key={i} className="border-t">
+                      <td className="p-2">{m.row.spend_date}</td>
+                      <td className="p-2 truncate max-w-[200px]">{m.row.campaign_name}</td>
+                      <td className="p-2">
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 text-[10px]">
+                          ✓ by {m.match_by}
+                        </Badge>
+                      </td>
+                      <td className="text-right p-2">{formatRupiah(m.row.spend)}</td>
+                      <td className="text-right p-2">{m.row.conversions ?? '—'}</td>
+                    </tr>
+                  ))}
+                  {matchResult.matched_rows.length > 10 && (
+                    <tr><td colSpan={5} className="p-2 text-center text-muted-foreground">+ {matchResult.matched_rows.length - 10} more matched rows...</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setStep('upload')}>
+                <ArrowLeft className="w-4 h-4 mr-2" />Pilih File Lain
+              </Button>
+              <Button
+                onClick={handleExecute}
+                disabled={matchResult.matched_rows.length === 0}
+                className="ml-auto bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              >
+                Import {matchResult.matched_rows.length} rows
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 'importing' && (
+          <div className="py-12 text-center">
+            <Loader2 className="w-10 h-10 animate-spin mx-auto text-violet-500" />
+            <p className="text-sm mt-4">Importing ad spend...</p>
+          </div>
+        )}
+
+        {step === 'done' && importResult && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-lg border bg-emerald-500/5 p-4">
+                <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground">Inserted</p>
+                <p className="text-2xl font-bold text-emerald-600">{importResult.inserted}</p>
+              </div>
+              <div className="rounded-lg border bg-amber-500/5 p-4">
+                <FileText className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground">Skipped (duplicate)</p>
+                <p className="text-2xl font-bold text-amber-600">{importResult.skipped_duplicate}</p>
+              </div>
+              <div className="rounded-lg border bg-red-500/5 p-4">
+                <X className="w-6 h-6 text-red-500 mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground">Errors</p>
+                <p className="text-2xl font-bold text-red-600">{importResult.errors.length}</p>
+              </div>
+            </div>
+            {importResult.errors.length > 0 && (
+              <div className="rounded border bg-red-500/5 p-3 text-xs space-y-1 max-h-40 overflow-y-auto">
+                {importResult.errors.map((e, i) => <p key={i} className="text-red-600">{e}</p>)}
+              </div>
+            )}
+            <Button onClick={onComplete} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+              Selesai
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
 }

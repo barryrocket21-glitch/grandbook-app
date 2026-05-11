@@ -24,6 +24,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 5A — Products Extended + Operational Expenses | ✅ DONE | 2026-05-11 |
 | Phase 5B — Ad Spend + Campaigns + ROAS | ✅ DONE | 2026-05-11 |
 | Phase 6 — CS Daily Report + ADV-CS Cross-Check Funnel | ✅ DONE | 2026-05-11 |
+| Phase 6 redesign — Analytics Sidebar Nav + Detail Per Produk | ✅ DONE | 2026-05-12 |
+
+**Phase 6 redesign done.** /analytics refactor: tabs (7-buah, termasuk Funnel) → sidebar nav (Notion/Linear style) dengan 4 groups (Bisnis/Produk/Tim/Marketing). Funnel tab standalone DIHAPUS — logic pindah ke detail page `/analytics/produk/[id]` dengan stat cards + funnel visual compact + CS performance table + campaigns linked table + insight box. URL sync via `useSearchParams` (Suspense wrapped per Next.js 16). Migration 023 + 2 RPCs baru (`analytics_cs_performance_per_product`, `analytics_campaigns_per_product`). Removed obsolete `FunnelProductCard` + `FunnelInsightCards` + inline `PerProductTable` (~600 LOC purged).
 
 **Phase 6 done.** Sync layer ADV (Phase 5B) dengan CS (daily lead/closing per produk) + auto-track System Orders. Cross-check 3 layer (Meta vs CS vs System) per produk → identify tracking loss, CS input gap, top performer. New `daily_cs_report` table (per CS × per produk × per tanggal) dengan UNIQUE constraint + CHECK closing≤lead_in + RLS (CS edit sendiri, owner/admin override, owner/admin delete only). New `ad_spend.meta_lead_count` column (Meta-reported leads, top of funnel — beda dari conversions=purchases). 4 RPCs baru: `analytics_funnel_per_product` (4-way JOIN ad_spend×campaign_products + daily_cs_report + orders×order_items), `cs_daily_summary`, `cs_period_summary`, `cs_daily_series`. /cs-report refactor (banner→form): per-row inline input lead+closing+notes, real-time validation, "Copy dari Kemarin" merge helper, owner/admin CS picker untuk override. /cs-dashboard extended dengan stat cards lead/closing + daily trend chart + per-produk performance via new `renderExtraSection` slot di PersonalDashboard. /analytics tab ke-7 "Funnel" dengan 14-col table + Highlights section (organic demand, CS lupa input, top closer). "—" untuk no-data cells distinguish dari "0" eksplisit via `has_meta_data` / `has_cs_data` / `has_system_data` flags.
 
@@ -1020,6 +1023,66 @@ Cross-check 3 layer data per produk per periode: META (ad_spend × campaign_prod
 
 ---
 
+## Phase 6 redesign — Analytics Sidebar Nav + Detail Per Produk (COMPLETED)
+
+User feedback Phase 6 awal: tabs 7-buah + tab Funnel card-based masih kurang scalable. Redesign 2x:
+1. Initial Phase 6 (PR #11 merged): tabs + 14-col Funnel table → user iterate
+2. PR #11 UI polish (merged): Funnel card-based per produk → user iterate lagi
+3. **PR #12 redesign (this)**: sidebar nav (Notion/Linear style) + detail page per produk
+
+### Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/023_per_cs_per_product_rpc.sql`:
+  1. RPC `analytics_cs_performance_per_product(p_product_id, p_from, p_to)` — aggregate `daily_cs_report` per CS untuk 1 produk, JOIN profiles untuk nama
+  2. RPC `analytics_campaigns_per_product(p_product_id, p_from, p_to)` — campaign linked via `campaign_products`, agregat spend/conv/clicks/impressions/meta_lead/ROAS dengan proporsi allocation_pct
+
+**Helpers (queries/):**
+- `src/lib/supabase/queries/analytics.ts` — extend dengan `CsPerformanceRow`, `CampaignsForProductRow` interfaces + `fetchCsPerformancePerProduct` + `fetchCampaignsForProduct` wrappers
+
+**Components (NEW):**
+- `src/components/analytics/analytics-sidebar.tsx` (~135 LOC) — 4 groups (Bisnis: Overview/Per Channel; Produk: Per Produk; Tim: Per CS/Per Advertiser; Marketing: ROAS Campaign). Desktop = fixed-width left aside, mobile = horizontal scroll pill bar. Exports `ANALYTICS_SECTIONS`, `isAnalyticsSection`, `getSectionLabel`, `getSectionGroup`.
+- `src/components/analytics/per-produk-section.tsx` (~110 LOC) — tabel sortable Produk/Revenue/CS Lead/Closing/Close%/ROAS dengan tombol "Detail →" per row navigate ke `/analytics/produk/[id]`. Sumber data dari funnel RPC (sudah include revenue+CS+ROAS).
+- `src/app/(app)/analytics/produk/[id]/page.tsx` (~430 LOC) — detail page per produk dengan 5 sections: stat cards 4-col / funnel compact (4 boxes + arrows) / CS performance table / campaigns linked table / insight box auto-generated
+
+**Files refactor:**
+- `src/app/(app)/analytics/page.tsx` — replace `<Tabs>` (7 tabs) dengan flex layout: `<AnalyticsSidebar>` left + conditional section render right. URL state via `useSearchParams` (Suspense wrapped per Next.js 16 requirement). Funnel tab DIHAPUS — logic pindah ke detail page. Per Produk tab pakai PerProdukSection (table dengan Detail button).
+
+**Files removed:**
+- `src/components/analytics/funnel-product-card.tsx` (367 LOC) — obsolete, replaced by detail page
+- `src/components/analytics/funnel-insight-cards.tsx` (122 LOC) — obsolete, top-3 insight redesigned di detail page (per produk)
+- Function `PerProductTable` di analytics/page.tsx (~111 LOC inline) — replaced by PerProdukSection
+
+### Decisions
+
+1. **Sidebar nav vs tabs** — user prefer Notion/Linear style: hierarchical groups (Bisnis/Produk/Tim/Marketing) lebih scalable saat section bertambah. Tabs 7-buah jadi cramped + user mental model lebih fit ke "navigate ke section" daripada "switch tab".
+2. **URL sync via useSearchParams** — refresh + back/forward + shareable URL works. Next.js 16 require Suspense wrap untuk CSR bailout — page split jadi outer + inner component.
+3. **Per Produk pakai funnel RPC, bukan analytics_profit_per_product_v2** — funnel RPC sudah include `cs_lead_count`, `cs_closing_count`, `system_revenue`, `roas_system`. Tidak perlu 2 RPC. Brief saran option: "atau call analytics_funnel_per_product yang sudah ada" — pilihan itu.
+4. **Funnel visual di detail page, BUKAN di main list** — main list ringkas (1 row per produk dengan tombol Detail). Funnel visual + CS table + Campaign table semua di detail page → 1 produk deep-dive view.
+5. **Migration 023 idempotent + 2 RPCs** — 1 untuk CS performance per produk, 1 untuk campaign per produk. Separate RPCs vs 1 combined: scoped concern lebih jelas + caller pilih fetch yang perlu.
+6. **PostgREST schema cache** — pertama kali call RPC baru return 404 (`PGRST202`). Workaround: `NOTIFY pgrst, 'reload schema'` via exec_sql + retry. Cache settle dalam 1-2 detik.
+7. **Suspense wrap mandatory di Next.js 16** — `useSearchParams()` bail out ke CSR, build fail kalau tidak di-Suspense. Pattern: outer page = `<Suspense fallback={<Loader/>}><InnerComponent /></Suspense>`.
+8. **Sidebar mobile = pill bar horizontal scroll** vs hamburger menu — pill bar lebih simple, no extra state. Trade-off: 6 items × pill width = scrolling required di mobile, acceptable.
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ 51 routes (50 + new `/analytics/produk/[id]` dynamic route)
+
+### Migration 023 verified
+
+- Production verified: 2 RPCs callable (200 OK), service-role returns empty arrays (expected — `current_org_id()` NULL without auth).
+
+### Hal yang perlu di-flag untuk phase berikutnya
+
+- **Section data fetching belum lazy** — current load Promise.all semua (overview+daily+cs+adv+chan+roas+funnel) bahkan kalau section aktif hanya 1. Future: lazy fetch per section saat aktif.
+- **Detail page CS performance + campaigns RPC dipanggil bersamaan dengan funnel** — sudah Promise.all parallel, OK untuk current scale. Future bisa cache per produk.
+- **Sidebar tidak hierarki nested** — kalau section bertambah banyak dalam 1 group, butuh collapse-expand pattern.
+- **Mobile pill bar UX** — pill 6+ items horizontal scroll. Future: kalau jadi 10+, dropdown / hamburger lebih fit.
+- **`/analytics/produk/[id]` tidak ada SSR-friendly fallback** — fully CSR. Future: produk metadata bisa pre-render dari `params`.
+
+---
+
 ## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
@@ -1085,7 +1148,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **020** | **Phase 5A — Products extended + product_categories + operational_expenses + analytics_overview_v2 + analytics_profit_per_product** | **✅ Active** |
 | **021** | **Phase 5B — Campaigns extended + campaign_products + ad_spend extended + analytics_overview_v3 + analytics_roas_per_campaign + analytics_profit_per_product_v2 + analytics_ad_spend_summary** | **✅ Active** |
 | **022** | **Phase 6 — daily_cs_report + ad_spend.meta_lead_count + analytics_funnel_per_product + cs_daily_summary + cs_period_summary + cs_daily_series** | **✅ Active** |
-| 023+ | TBD next phases | — |
+| **023** | **Phase 6 redesign — analytics_cs_performance_per_product + analytics_campaigns_per_product (untuk detail page per produk)** | **✅ Active** |
+| 024+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

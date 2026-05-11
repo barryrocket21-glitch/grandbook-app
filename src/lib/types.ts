@@ -371,28 +371,65 @@ export interface Product {
   category_ref?: ProductCategory | null
 }
 
+export type CampaignStatus = 'ACTIVE' | 'PAUSED' | 'ENDED'
+
+export type AdSpendSource = 'MANUAL' | 'CSV_IMPORT' | 'API'
+
 export interface Campaign {
   id: number
+  organization_id?: number
   platform: AdPlatform
   campaign_name: string
+  campaign_code?: string | null
   advertiser_id: string | null
   active: boolean
-  advertiser?: Profile
+  // Phase 5B
+  status?: CampaignStatus
+  start_date?: string | null
+  end_date?: string | null
+  daily_budget?: number | null
+  objective?: string | null
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
+  advertiser?: Profile | null
+  linked_products?: CampaignProduct[]
+}
+
+export interface CampaignProduct {
+  id: number
+  organization_id: number
+  campaign_id: number
+  product_id: number
+  allocation_pct: number
+  notes: string | null
+  created_at: string
+  product?: Product | null
+  campaign?: Campaign | null
 }
 
 export interface AdSpend {
   id: number
+  organization_id?: number
   spend_date: string
   campaign_id: number
   spend: number
   impressions: number | null
   clicks: number | null
+  // Phase 0 legacy column (BIGINT) — preserved for backward compat
   lead_platform: number | null
+  // Phase 5B additions
+  reach?: number | null
+  conversions?: number | null
+  revenue_reported?: number | null
+  source?: AdSpendSource
+  import_batch_id?: string | null
   notes: string | null
   created_by: string | null
   created_at: string
-  campaign?: Campaign
-  campaigns?: Campaign  // Supabase aliased relation
+  updated_at?: string
+  campaign?: Campaign | null
+  campaigns?: Campaign | null
 }
 
 // Legacy expenses table — kept for backward compat. New writes go to

@@ -120,7 +120,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'ADV',
     href: '/adv-dashboard',
     icon: Megaphone,
-    roles: ['owner', 'advertiser'],
+    roles: ['owner', 'admin', 'advertiser'],
     children: [
       { title: 'Dashboard ADV', href: '/adv-dashboard' },
       { title: 'Campaigns', href: '/campaigns' },

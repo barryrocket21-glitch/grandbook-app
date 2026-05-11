@@ -20,10 +20,13 @@ import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date
 import { formatRupiah } from '@/lib/format'
 import {
   fetchOverview, fetchDailyRevenue, fetchPerCs, fetchPerAdvertiser, fetchPerChannel,
-  fetchPerProduct,
+  fetchPerProduct, fetchRoasPerCampaign,
   type AnalyticsOverview, type DailyRevenuePoint,
   type PerCsRow, type PerAdvertiserRow, type PerChannelRow, type PerProductRow,
+  type RoasPerCampaignRow,
 } from '@/lib/supabase/queries/analytics'
+import { CAMPAIGN_PLATFORM_COLOR, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_STATUS_COLOR, CAMPAIGN_STATUS_LABEL } from '@/lib/schemas/settings'
+import type { AdPlatform, CampaignStatus } from '@/lib/types'
 
 const supabase = createClient()
 
@@ -51,6 +54,7 @@ export default function AnalyticsPage() {
   const [perAdv, setPerAdv] = useState<PerAdvertiserRow[]>([])
   const [perChan, setPerChan] = useState<PerChannelRow[]>([])
   const [perProduct, setPerProduct] = useState<PerProductRow[]>([])
+  const [roasPerCampaign, setRoasPerCampaign] = useState<RoasPerCampaignRow[]>([])
   const [loading, setLoading] = useState(true)
 
   // Lazy-init range to avoid hydration drift (thisMonth() returns Date-based label
@@ -65,13 +69,14 @@ export default function AnalyticsPage() {
     if (!isOwner || !rangeReady) return
     setLoading(true)
     try {
-      const [ov, dr, cs, adv, chan, prod] = await Promise.all([
+      const [ov, dr, cs, adv, chan, prod, roas] = await Promise.all([
         fetchOverview(supabase, range.from, range.to),
         fetchDailyRevenue(supabase, range.from, range.to),
         fetchPerCs(supabase, range.from, range.to),
         fetchPerAdvertiser(supabase, range.from, range.to),
         fetchPerChannel(supabase, range.from, range.to),
         fetchPerProduct(supabase, range.from, range.to),
+        fetchRoasPerCampaign(supabase, range.from, range.to),
       ])
       setOverview(ov)
       setDaily(dr)
@@ -79,6 +84,7 @@ export default function AnalyticsPage() {
       setPerAdv(adv)
       setPerChan(chan)
       setPerProduct(prod)
+      setRoasPerCampaign(roas)
     } finally {
       setLoading(false)
     }
@@ -150,6 +156,7 @@ export default function AnalyticsPage() {
             <TabsTrigger value="adv">Per Advertiser ({perAdv.length})</TabsTrigger>
             <TabsTrigger value="channel">Per Channel ({perChan.length})</TabsTrigger>
             <TabsTrigger value="product">Per Produk ({perProduct.length})</TabsTrigger>
+            <TabsTrigger value="roas">ROAS ({roasPerCampaign.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -199,24 +206,36 @@ export default function AnalyticsPage() {
               />
             </div>
 
-            {/* Phase 5A — Operational Expenses & Net Profit row */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {/* Phase 5A + 5B — Operational Expenses, Ad Spend, Net Profit row */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <StatCard
                 label="Op. Expenses"
                 value={formatRupiah(overview?.total_operational_expenses ?? 0)}
-                sub="gaji, sewa, utility, dll (Phase 5A)"
+                sub="gaji, sewa, utility (Phase 5A)"
                 color="amber"
               />
               <StatCard
-                label="Net Profit"
-                value={formatRupiah(overview?.net_profit ?? 0)}
-                sub="estimated profit − op expenses"
-                color={(overview?.net_profit ?? 0) >= 0 ? 'emerald' : 'red'}
+                label="Total Ad Spend"
+                value={formatRupiah(overview?.total_ad_spend ?? 0)}
+                sub="Meta/Google/TikTok (Phase 5B)"
+                color="orange"
+              />
+              <StatCard
+                label="Net Profit Before Ads"
+                value={formatRupiah(overview?.net_profit_before_ads ?? 0)}
+                sub="est profit − op expenses"
+                color={(overview?.net_profit_before_ads ?? 0) >= 0 ? 'emerald' : 'red'}
+              />
+              <StatCard
+                label="Net Profit After Ads"
+                value={formatRupiah(overview?.net_profit_after_ads ?? 0)}
+                sub="− ad spend (TRUE profit)"
+                color={(overview?.net_profit_after_ads ?? 0) >= 0 ? 'emerald' : 'red'}
               />
               <StatCard
                 label="Net Margin %"
                 value={`${(overview?.net_margin_pct ?? 0).toFixed(2)}%`}
-                sub="net profit / revenue (ad spend belum)"
+                sub="net after ads / revenue"
                 color={(overview?.net_margin_pct ?? 0) >= 10 ? 'emerald' : (overview?.net_margin_pct ?? 0) >= 0 ? 'amber' : 'red'}
               />
             </div>
@@ -368,13 +387,33 @@ export default function AnalyticsPage() {
               <TopUsersBar
                 rows={perProduct.slice(0, 10).map((r) => ({
                   name: r.product_name || `#${r.product_id}`,
-                  value: Number(r.total_revenue),
+                  value: Number(r.net_profit_after_ads),
                 }))}
-                title="Top 10 Produk by Revenue"
+                title="Top 10 Produk by Net Profit After Ads"
               />
             )}
             <p className="text-[11px] text-muted-foreground">
-              Gross Profit per produk = revenue − HPP. Belum include ad spend allocation (Phase 5B). Conversion rate = DITERIMA / (DITERIMA + RETUR).
+              Gross Profit = revenue − HPP. Net Profit After Ads = gross − allocated ad spend (per campaign_products link). Sort default by net profit DESC. ROAS = revenue / allocated_ad_spend.
+            </p>
+          </TabsContent>
+
+          <TabsContent value="roas" className="space-y-4">
+            <RoasPerCampaignTable rows={roasPerCampaign} loading={loading} />
+            {roasPerCampaign.length > 0 && (
+              <TopUsersBar
+                rows={[...roasPerCampaign]
+                  .filter(r => Number(r.total_spend) > 0)
+                  .sort((a, b) => Number(b.roas_diterima) - Number(a.roas_diterima))
+                  .slice(0, 10)
+                  .map((r) => ({
+                    name: r.campaign_name.length > 40 ? r.campaign_name.slice(0, 38) + '…' : r.campaign_name,
+                    value: Number(r.roas_diterima),
+                  }))}
+                title="Top 10 Campaign by ROAS (DITERIMA)"
+              />
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              ROAS Gross = total revenue (semua status) / spend. ROAS DITERIMA = revenue dari order DITERIMA / spend (lebih akurat untuk COD). Cost/Conv = spend / conversions (dari platform tracking). Cost/Order = spend / linked orders count.
             </p>
           </TabsContent>
         </Tabs>
@@ -383,16 +422,15 @@ export default function AnalyticsPage() {
   )
 }
 
-function PerProductTable({ rows, loading }: { rows: PerProductRow[]; loading: boolean }) {
-  const [sortBy, setSortBy] = useState<'revenue' | 'profit' | 'margin' | 'qty' | 'conv'>('revenue')
+function RoasPerCampaignTable({ rows, loading }: { rows: RoasPerCampaignRow[]; loading: boolean }) {
+  const [sortBy, setSortBy] = useState<'spend' | 'roas' | 'revenue' | 'orders'>('spend')
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
       switch (sortBy) {
-        case 'profit': return Number(b.gross_profit) - Number(a.gross_profit)
-        case 'margin': return Number(b.margin_pct) - Number(a.margin_pct)
-        case 'qty': return Number(b.total_qty) - Number(a.total_qty)
-        case 'conv': return Number(b.conversion_rate) - Number(a.conversion_rate)
-        default: return Number(b.total_revenue) - Number(a.total_revenue)
+        case 'roas': return Number(b.roas_diterima) - Number(a.roas_diterima)
+        case 'revenue': return Number(b.linked_revenue) - Number(a.linked_revenue)
+        case 'orders': return Number(b.linked_orders_count) - Number(a.linked_orders_count)
+        default: return Number(b.total_spend) - Number(a.total_spend)
       }
     })
   }, [rows, sortBy])
@@ -403,42 +441,139 @@ function PerProductTable({ rows, loading }: { rows: PerProductRow[]; loading: bo
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Produk</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('qty')}>
-                <span className={`inline-flex items-center gap-1 ${sortBy === 'qty' ? 'text-violet-500 font-semibold' : ''}`}>Qty</span>
+              <TableHead>Campaign</TableHead>
+              <TableHead>Platform</TableHead>
+              <TableHead>Advertiser</TableHead>
+              <TableHead>Linked Products</TableHead>
+              <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy('spend')}>
+                <span className={sortBy === 'spend' ? 'text-violet-500 font-semibold' : ''}>Spend</span>
               </TableHead>
-              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('revenue')}>
-                <span className={`inline-flex items-center gap-1 ${sortBy === 'revenue' ? 'text-violet-500 font-semibold' : ''}`}>Revenue</span>
+              <TableHead className="text-right">Conv</TableHead>
+              <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy('orders')}>
+                <span className={sortBy === 'orders' ? 'text-violet-500 font-semibold' : ''}>Orders</span>
               </TableHead>
-              <TableHead className="text-right">HPP</TableHead>
-              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('profit')}>
-                <span className={`inline-flex items-center gap-1 ${sortBy === 'profit' ? 'text-violet-500 font-semibold' : ''}`}>Gross Profit</span>
+              <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy('revenue')}>
+                <span className={sortBy === 'revenue' ? 'text-violet-500 font-semibold' : ''}>Revenue</span>
               </TableHead>
-              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('margin')}>
-                <span className={`inline-flex items-center gap-1 ${sortBy === 'margin' ? 'text-violet-500 font-semibold' : ''}`}>Margin %</span>
+              <TableHead className="text-right">Rev (DITERIMA)</TableHead>
+              <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy('roas')}>
+                <span className={sortBy === 'roas' ? 'text-violet-500 font-semibold' : ''}>ROAS Diterima</span>
               </TableHead>
-              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('conv')}>
-                <span className={`inline-flex items-center gap-1 ${sortBy === 'conv' ? 'text-violet-500 font-semibold' : ''}`}>Conv %</span>
-              </TableHead>
+              <TableHead className="text-right">Cost/Order</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={11} className="text-center py-8">
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                 </TableCell>
               </TableRow>
             ) : sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
+                <TableCell colSpan={11} className="text-center py-8 text-sm text-muted-foreground">
+                  Belum ada campaign dengan spend atau order di periode ini.
+                </TableCell>
+              </TableRow>
+            ) : sorted.map((r) => {
+              const roas = Number(r.roas_diterima)
+              const roasGross = Number(r.roas_gross)
+              return (
+                <TableRow key={r.campaign_id}>
+                  <TableCell>
+                    <div className="text-sm font-medium max-w-[220px] truncate">{r.campaign_name}</div>
+                    <Badge variant="outline" className={`text-[10px] mt-0.5 ${CAMPAIGN_STATUS_COLOR[r.campaign_status as CampaignStatus] || ''}`}>
+                      {CAMPAIGN_STATUS_LABEL[r.campaign_status as CampaignStatus] || r.campaign_status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] ${CAMPAIGN_PLATFORM_COLOR[r.platform as AdPlatform] || ''}`}>
+                      {CAMPAIGN_PLATFORM_LABEL[r.platform as AdPlatform] || r.platform}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.advertiser_name || '—'}</TableCell>
+                  <TableCell className="text-xs max-w-[200px] truncate">
+                    {r.linked_products || <span className="text-muted-foreground italic">no link</span>}
+                  </TableCell>
+                  <TableCell className="text-right text-xs font-semibold">{formatRupiah(Number(r.total_spend))}</TableCell>
+                  <TableCell className="text-right text-xs">{Number(r.total_conversions) || '—'}</TableCell>
+                  <TableCell className="text-right text-xs">{Number(r.linked_orders_count) || '—'}</TableCell>
+                  <TableCell className="text-right text-xs">{formatRupiah(Number(r.linked_revenue))}</TableCell>
+                  <TableCell className="text-right text-xs text-emerald-600">{formatRupiah(Number(r.linked_revenue_diterima))}</TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant="outline" className={`text-[10px] ${roas >= 2 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : roas >= 1 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
+                      {roas.toFixed(2)}x
+                    </Badge>
+                    <div className="text-[9px] text-muted-foreground mt-0.5">gross: {roasGross.toFixed(2)}x</div>
+                  </TableCell>
+                  <TableCell className="text-right text-xs">{Number(r.cost_per_order) > 0 ? formatRupiah(Number(r.cost_per_order)) : '—'}</TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  )
+}
+
+function PerProductTable({ rows, loading }: { rows: PerProductRow[]; loading: boolean }) {
+  const [sortBy, setSortBy] = useState<'net' | 'revenue' | 'profit' | 'roas' | 'qty' | 'conv'>('net')
+  const sorted = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      switch (sortBy) {
+        case 'revenue': return Number(b.total_revenue) - Number(a.total_revenue)
+        case 'profit': return Number(b.gross_profit) - Number(a.gross_profit)
+        case 'roas': return Number(b.roas) - Number(a.roas)
+        case 'qty': return Number(b.total_qty) - Number(a.total_qty)
+        case 'conv': return Number(b.conversion_rate) - Number(a.conversion_rate)
+        default: return Number(b.net_profit_after_ads) - Number(a.net_profit_after_ads)
+      }
+    })
+  }, [rows, sortBy])
+
+  const SortHead = ({ label, field }: { label: string; field: typeof sortBy }) => (
+    <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy(field)}>
+      <span className={`inline-flex items-center gap-1 ${sortBy === field ? 'text-violet-500 font-semibold' : ''}`}>{label}</span>
+    </TableHead>
+  )
+
+  return (
+    <Card>
+      <CardContent className="p-0 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Produk</TableHead>
+              <TableHead>Kategori</TableHead>
+              <SortHead label="Qty" field="qty" />
+              <SortHead label="Revenue" field="revenue" />
+              <TableHead className="text-right">HPP</TableHead>
+              <SortHead label="Gross Profit" field="profit" />
+              <TableHead className="text-right">Ad Spend</TableHead>
+              <SortHead label="Net After Ads" field="net" />
+              <SortHead label="ROAS" field="roas" />
+              <SortHead label="Conv %" field="conv" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                </TableCell>
+              </TableRow>
+            ) : sorted.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-8 text-sm text-muted-foreground">
                   Belum ada order_items dengan produk di periode ini.
                 </TableCell>
               </TableRow>
             ) : sorted.map((r) => {
               const profit = Number(r.gross_profit)
-              const margin = Number(r.margin_pct)
+              const net = Number(r.net_profit_after_ads)
+              const adSpend = Number(r.allocated_ad_spend)
+              const roas = Number(r.roas)
               const conv = Number(r.conversion_rate)
               return (
                 <TableRow key={r.product_id}>
@@ -461,13 +596,23 @@ function PerProductTable({ rows, loading }: { rows: PerProductRow[]; loading: bo
                   </TableCell>
                   <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
                   <TableCell className="text-right text-xs text-muted-foreground">{formatRupiah(Number(r.total_hpp))}</TableCell>
-                  <TableCell className={`text-right text-xs font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <TableCell className={`text-right text-xs ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     {formatRupiah(profit)}
                   </TableCell>
+                  <TableCell className="text-right text-xs text-orange-600">
+                    {adSpend > 0 ? formatRupiah(adSpend) : '—'}
+                  </TableCell>
+                  <TableCell className={`text-right text-xs font-bold ${net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {formatRupiah(net)}
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Badge variant="outline" className={`text-[10px] ${margin >= 30 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : margin >= 10 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
-                      {margin.toFixed(1)}%
-                    </Badge>
+                    {roas > 0 ? (
+                      <Badge variant="outline" className={`text-[10px] ${roas >= 2 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : roas >= 1 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
+                        {roas.toFixed(2)}x
+                      </Badge>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <Badge variant="outline" className={`text-[10px] ${conv >= 80 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : conv >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>

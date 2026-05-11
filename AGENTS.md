@@ -21,6 +21,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 4B — Analytics Revamp + Per-Role Dashboards | ✅ DONE | 2026-05-10 |
 | Phase 4C — Estimated Cost Engine + Multi-Model Billing | ✅ DONE | 2026-05-11 |
 | Phase 4D — Actual Reconciliation File Upload | ⏳ NOT STARTED | — |
+| Phase 5A — Products Extended + Operational Expenses | ✅ DONE | 2026-05-11 |
+| Phase 5B — Ad Spend + Campaigns Integration | ⏳ NOT STARTED | — |
+
+**Phase 5A done.** Master produk dengan kategori FK + variation/notes, operational_expenses table dengan 9 preset kategori + recurring helper + "Copy from Last Month", analytics extend dengan row 4 stat cards (Op Expenses / Net Profit / Net Margin) + tab "Per Produk" (revenue/HPP/profit/margin/conv breakdown). RPCs baru: `analytics_overview_v2`, `analytics_profit_per_product`, `analytics_expenses_summary`. Archive `/shipping-diff` + `/duplicates` jadi banner archived dengan deeplinks. Multi-tenant: tambah `organization_id` ke products + RLS. Backfill: 2 kategori dari existing products.category text, 0 operational_expenses (legacy expenses table kosong saat dev).
 
 **Phase 4C done.** Engine estimasi biaya & profit per order dengan 4 billing model (MONTHLY_INVOICE/NETT_OFF_PER_ORDER/DIRECT_TRANSFER/NO_RECONCILIATION). Schema fleksibel: numeric rates di key-value table existing + categorical config di table baru `channel_billing_config` (versioning per period). SPX_DIRECT pre-seeded dengan defaults yang verified via real April 2026 invoice (40% cashback, 1% fee COD floor, 12% PPN, NOMINAL_COD base). Estimated cost columns di orders + trigger compute saat status/shipping/channel/total change. UI: BillingConfigPanel di /settings/courier-rates dengan Preview Calculator, tab Cost & Profit di /orders/[id] (owner+admin), row stat cards baru + per-channel profit columns di /analytics.
 
@@ -801,6 +805,73 @@ Money math layer tuntas. Engine compute estimasi biaya & profit per order dengan
 
 ---
 
+## Phase 5A — Products Extended + Operational Expenses (COMPLETED)
+
+Master produk dapat upgrade: kategori FK, variation, notes, multi-tenant via `organization_id` + RLS. Operational expenses table baru dengan 9 preset kategori, recurring helper, vendor tracking. Analytics extend dengan Row 4 stat cards (Op Expenses, Net Profit, Net Margin) + tab "Per Produk".
+
+### Files yang dibuat/berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/020_products_expenses.sql`:
+  1. Add `organization_id` ke products + backfill ke org=1 + index
+  2. New table `product_categories` (slug unique per org, RLS, indexes)
+  3. Add `category_id` FK + `variation`/`notes`/`created_at`/`updated_at` ke products
+  4. Backfill DO-block: products.category (TEXT) → product_categories (slug-ified) + link products.category_id
+  5. RLS migration products: drop legacy Phase 0 policies, install `current_org_id()` policies
+  6. New table `operational_expenses` (9 kategori CHECK, recurring + recurrence_period, vendor_name, payment_method, payment_reference, attachment_url, RLS)
+  7. Backfill DO-block: legacy `expenses` rows → operational_expenses (mapped category via UPPER/LIKE pattern), idempotent (only kalau target kosong)
+  8. Triggers `set_updated_at` di 3 tables
+  9. RPC `analytics_expenses_summary(from, to)` — per kategori (total/count/recurring/onetime)
+  10. RPC `analytics_profit_per_product(from, to)` — per produk (qty/revenue/HPP/profit/margin/conv)
+  11. RPC `analytics_overview_v2(from, to)` — extends Phase 4C overview dengan `total_operational_expenses` + `net_profit` + `net_margin_pct`
+
+**Helpers (queries/):**
+- `src/lib/supabase/queries/products.ts` (NEW) — listProducts/listCategories + CRUD wrappers + count helpers (orders/category usage)
+- `src/lib/supabase/queries/expenses.ts` (NEW) — listExpenses/listRecurringExpenses + CRUD + bulkDelete + copyRecurringFromLastMonth + fetchExpenseSummary
+- `src/lib/supabase/queries/analytics.ts` — extend `AnalyticsOverview` interface dengan field Phase 5A; `fetchOverview` switched ke `analytics_overview_v2`; new `fetchPerProduct` + `PerProductRow` interface
+
+**Types/Schemas/Constants:**
+- `src/lib/types.ts` — `ProductCategory`, `Product` extended (category_id, variation, notes, organization_id, created_at, updated_at), `OperationalExpense`, `OperationalExpenseCategory`, `RecurrencePeriod`. Legacy `Expense` interface kept.
+- `src/lib/schemas/settings.ts` — appended `productCategorySchema`, `productSchema`, `EXPENSE_CATEGORIES` array (9), `EXPENSE_CATEGORY_LABEL`/`EXPENSE_CATEGORY_COLOR`, `EXPENSE_PAYMENT_METHODS`/labels, `RECURRENCE_PERIODS`/labels, `operationalExpenseSchema`, `slugifyCategory()` helper
+
+**Pages:**
+- `src/app/(app)/products/page.tsx` — refactor jadi 2 tabs (Produk + Kategori). Produk tab: 4 stat cards + filter (search/status/category) + sortable table + Add/Edit dialog dengan Combobox kategori (emptyHint linking ke tab Kategori). Kategori tab: tabel dengan product count + Add/Edit dialog dengan auto-slug
+- `src/app/(app)/expenses/page.tsx` — refactor lengkap. DateRangePicker default Bulan Ini. 4 stat cards (Total/Top Kategori/Recurring vs One-time/Biaya Rutin Bulanan all-time). Per-category chips clickable filter. Filter search + category + recurring. Bulk select (owner only) + bulk delete. Tombol "Copy Bulan Lalu" → `copyRecurringFromLastMonth` (skip duplicate by category+vendor+amount). Dialog dengan 9 kategori + recurring checkbox → reveal period dropdown + payment method + vendor + reference.
+- `src/app/(app)/analytics/page.tsx` — tambah Row 4 stat cards (Op Expenses/Net Profit/Net Margin) + tab ke-5 "Per Produk". Tab Per Produk: sortable table dengan badge color-coded margin/conv + Top 10 Produk by Revenue bar chart.
+- `src/app/(app)/shipping-diff/page.tsx` — archived banner dengan CTA "Buka Analytics" (link /analytics Per Channel)
+- `src/app/(app)/duplicates/page.tsx` — archived banner dengan CTA "Buka Inbox" (link /inbox/pending-review)
+
+**Sidebar (constants.ts):**
+- Hilangkan "Selisih Ongkir" + "Duplicate Inbox" dari NAV_ITEMS
+- /products + /expenses sekarang accessible owner+admin+akunting (sebelumnya owner+akunting saja — admin perlu manage produk daily)
+
+**Docs:**
+- `docs/phase5a-test.md` — manual smoke test, 8 section incl. CRUD products + categories, expenses dengan recurring, analytics row 4 + per-product tab, archived pages, multi-role permissions, migration idempotency
+
+### Decisions
+
+1. **Legacy `expenses` table tetap ada, app sekarang baca/tulis ke `operational_expenses`** — backfill dilakukan one-shot di migration kalau target kosong (idempotent). Tidak DROP legacy table untuk preserve historical data sebelum Phase 5A.
+2. **`organization_id` di products** — sebelumnya schema Phase 0 nggak punya field ini. Backfill ke org=1 (default), NOT NULL constraint setelah backfill. RLS pakai pattern Phase 1 (`organization_id = public.current_org_id()`).
+3. **`product_categories.slug` unique per org**, bukan global — multi-tenant prep. Slug auto-generated dari nama via `slugifyCategory()` (lowercase + dash + strip non-alphanumeric), bisa di-override manual di dialog.
+4. **Legacy `products.category` TEXT preserved** — saat backfill, value text di-translate jadi category row + link via category_id. Field TEXT tidak di-drop (untuk audit + safe rollback). UI display: kalau ada category_id, pakai itu; kalau cuma TEXT, render dengan italic "(legacy)".
+5. **`operational_expenses.category` CHECK constraint (9 preset)** — bukan FK ke separate categories table. Cleaner UX (dropdown fixed) + tidak overlap dengan product_categories yang punya scope berbeda (produk, bukan biaya). Kalau user butuh kategori biaya custom, di-route ke `LAIN_LAIN` + description detail.
+6. **`copyRecurringFromLastMonth` di client-side** (di queries/expenses.ts), bukan RPC server — flexible untuk customize duplicate-detection key (category+description+vendor+amount) di TS lebih readable. Trade-off: round-trip 2x (read sources + read targets + bulk insert) acceptable untuk volume kecil (<100 recurring/month).
+7. **`fetchOverview` switched ke v2** (vs maintain v1 + v2 separately) — backward compat dijaga di interface level (v1 fields tetap ada di v2 + tambah field baru). Lebih simple maintenance. Calling page tidak break.
+8. **Tab "Per Produk" di /analytics** (bukan page baru) — konsisten dengan pattern Phase 4B (per CS/Advertiser/Channel). Re-use TopUsersBar untuk Top 10 Produk visualisasi.
+9. **HPP snapshot dari Phase 1 unchanged** — `order_items.hpp_snapshot` tetap sumber truth untuk profit calculation per order. `products.hpp` cuma jadi default value saat input order baru (snapshot taken at order creation). Phase 5A tidak ubah engine ini.
+10. **Phase 5A SCOPE — TIDAK include**: Ad Spend ke produk allocation (Phase 5B), Meta Ads API integration, product variation as separate SKU, inventory tracking, product image upload, CSV import (nice-to-have skipped untuk fit time-box).
+
+### Hal yang perlu di-flag untuk Phase 5B (Ad Spend + Campaigns)
+
+- **Allocate ad spend ke produk** lewat campaign — Phase 5B akan butuh schema baru: `campaign_products` table (campaign_id → product_id, allocation %). Net profit per produk = gross_profit − allocated_ad_spend.
+- **ROAS per campaign** — sudah ada di analytics existing (`/campaigns`) tapi belum integrated dengan profit per produk. Phase 5B integrate.
+- **CSV import ad spend bulk** — campaign id + spend per hari (Meta export format). Phase 5B nice-to-have.
+- **Existing `expenses` legacy table — eventually deprecate**. Phase 5A backfill dilakukan one-shot. Setelah verifikasi all data migrated, table bisa di-DROP di future migration. Sekarang tetap ada untuk safety.
+- **Product image upload** — Supabase Storage bucket + thumbnail generation. Out of scope Phase 5A, useful kalau owner mau katalog visual.
+- **Inventory tracking (stok)** — `products.stock` + decrement on order placed. Out of scope Phase 5A.
+
+---
+
 ## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
@@ -863,7 +934,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **017** | **Phase 4B — analytics aggregation RPCs** | **✅ Active** |
 | **018** | **Phase 4C — billing models + cost engine + analytics extension** | **✅ Active** |
 | **019** | **Phase 4C bug fix — rate format → percent friendly (codebase convention)** | **✅ Active** |
-| 020+ | TBD next phases | — |
+| **020** | **Phase 5A — Products extended + product_categories + operational_expenses + analytics_overview_v2 + analytics_profit_per_product** | **✅ Active** |
+| 021+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

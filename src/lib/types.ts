@@ -340,14 +340,35 @@ export interface Profile {
   organization_id?: number
 }
 
+export interface ProductCategory {
+  id: number
+  organization_id: number
+  name: string
+  slug: string
+  description: string | null
+  display_order: number
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Product {
   id: number
+  organization_id?: number
   sku: string | null
   name: string
   price_default: number
   hpp: number
+  // Legacy text column — preserved for read compat, new writes use category_id
   category: string | null
+  // Phase 5A
+  category_id?: number | null
+  variation?: string | null
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
   active: boolean
+  category_ref?: ProductCategory | null
 }
 
 export interface Campaign {
@@ -374,6 +395,8 @@ export interface AdSpend {
   campaigns?: Campaign  // Supabase aliased relation
 }
 
+// Legacy expenses table — kept for backward compat. New writes go to
+// operational_expenses (Phase 5A).
 export interface Expense {
   id: number
   expense_date: string
@@ -381,6 +404,39 @@ export interface Expense {
   description: string | null
   amount: number
   created_by: string | null
+}
+
+// Phase 5A — Operational Expenses (extended)
+export type OperationalExpenseCategory =
+  | 'GAJI'
+  | 'SEWA'
+  | 'UTILITY'
+  | 'MARKETING'
+  | 'OPERASIONAL'
+  | 'PERLENGKAPAN'
+  | 'PAJAK'
+  | 'JASA'
+  | 'LAIN_LAIN'
+
+export type RecurrencePeriod = 'MONTHLY' | 'WEEKLY' | 'YEARLY'
+
+export interface OperationalExpense {
+  id: number
+  organization_id: number
+  expense_date: string
+  category: OperationalExpenseCategory
+  description: string
+  amount: number
+  payment_method: string | null
+  payment_reference: string | null
+  vendor_name: string | null
+  recurring: boolean
+  recurrence_period: RecurrencePeriod | null
+  notes: string | null
+  attachment_url: string | null
+  created_at: string
+  created_by: string | null
+  updated_at: string
 }
 
 export interface CommissionRule {

@@ -6,6 +6,8 @@ import type {
   CodFeeBase,
   CodFeeRounding,
   PpnAppliedTo,
+  OperationalExpenseCategory,
+  RecurrencePeriod,
 } from '@/lib/types'
 
 // =============================================================
@@ -387,4 +389,109 @@ export const PHASE4C_RATE_LABEL: Record<Phase4cRateKey, string> = {
   shipping_discount_rate: 'Cashback / Diskon Ongkir Rate',
   cod_fee_rate: 'Fee COD Rate',
   ppn_rate: 'PPN Rate',
+}
+
+// =============================================================
+// Phase 5A — Product Categories + Products + Operational Expenses
+// =============================================================
+export const productCategorySchema = z.object({
+  name: z.string().min(1, 'Nama wajib diisi').max(80),
+  slug: z.string().min(1, 'Slug wajib diisi').regex(/^[a-z0-9\-]+$/, 'Slug harus lowercase + dash'),
+  description: z.string().max(500).nullable().optional(),
+  display_order: z.number().int().min(0).default(0),
+  active: z.boolean().default(true),
+})
+export type ProductCategoryFormData = z.infer<typeof productCategorySchema>
+
+export const productSchema = z.object({
+  sku: z.string().max(40).nullable().optional(),
+  name: z.string().min(1, 'Nama wajib diisi').max(200),
+  category_id: z.number().int().positive().nullable().optional(),
+  variation: z.string().max(120).nullable().optional(),
+  price_default: z.number().min(0, 'Harga harus >= 0'),
+  hpp: z.number().min(0, 'HPP harus >= 0'),
+  notes: z.string().max(1000).nullable().optional(),
+  active: z.boolean().default(true),
+})
+export type ProductFormData = z.infer<typeof productSchema>
+
+export const EXPENSE_CATEGORIES = [
+  'GAJI',
+  'SEWA',
+  'UTILITY',
+  'MARKETING',
+  'OPERASIONAL',
+  'PERLENGKAPAN',
+  'PAJAK',
+  'JASA',
+  'LAIN_LAIN',
+] as const satisfies readonly OperationalExpenseCategory[]
+
+export const EXPENSE_CATEGORY_LABEL: Record<OperationalExpenseCategory, string> = {
+  GAJI: 'Gaji Karyawan',
+  SEWA: 'Sewa',
+  UTILITY: 'Utility (Listrik/Air/Internet)',
+  MARKETING: 'Marketing (non-paid ads)',
+  OPERASIONAL: 'Operasional Rutin',
+  PERLENGKAPAN: 'Perlengkapan / Alat',
+  PAJAK: 'Pajak',
+  JASA: 'Jasa Pihak Ketiga',
+  LAIN_LAIN: 'Lain-Lain',
+}
+
+export const EXPENSE_CATEGORY_COLOR: Record<OperationalExpenseCategory, string> = {
+  GAJI: 'bg-violet-500/10 text-violet-600 border-violet-500/30',
+  SEWA: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  UTILITY: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  MARKETING: 'bg-pink-500/10 text-pink-600 border-pink-500/30',
+  OPERASIONAL: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30',
+  PERLENGKAPAN: 'bg-teal-500/10 text-teal-600 border-teal-500/30',
+  PAJAK: 'bg-red-500/10 text-red-600 border-red-500/30',
+  JASA: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+  LAIN_LAIN: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+}
+
+export const EXPENSE_PAYMENT_METHODS = ['TRANSFER', 'CASH', 'DEBIT', 'EWALLET', 'OTHER'] as const
+export type ExpensePaymentMethodEnum = (typeof EXPENSE_PAYMENT_METHODS)[number]
+
+export const EXPENSE_PAYMENT_METHOD_LABEL: Record<ExpensePaymentMethodEnum, string> = {
+  TRANSFER: 'Transfer Bank',
+  CASH: 'Cash',
+  DEBIT: 'Debit / Kartu',
+  EWALLET: 'E-Wallet',
+  OTHER: 'Lainnya',
+}
+
+export const RECURRENCE_PERIODS = ['MONTHLY', 'WEEKLY', 'YEARLY'] as const satisfies readonly RecurrencePeriod[]
+
+export const RECURRENCE_PERIOD_LABEL: Record<RecurrencePeriod, string> = {
+  MONTHLY: 'Bulanan',
+  WEEKLY: 'Mingguan',
+  YEARLY: 'Tahunan',
+}
+
+export const operationalExpenseSchema = z.object({
+  expense_date: z.string().min(1, 'Tanggal wajib diisi'),
+  category: z.enum(EXPENSE_CATEGORIES),
+  description: z.string().min(1, 'Deskripsi wajib diisi').max(500),
+  amount: z.number().positive('Jumlah harus > 0'),
+  payment_method: z.string().nullable().optional(),
+  payment_reference: z.string().max(120).nullable().optional(),
+  vendor_name: z.string().max(200).nullable().optional(),
+  recurring: z.boolean().default(false),
+  recurrence_period: z.enum(RECURRENCE_PERIODS).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+})
+export type OperationalExpenseFormData = z.infer<typeof operationalExpenseSchema>
+
+/**
+ * Generate slug-friendly version of a name for product_categories.
+ * Lowercase, replace whitespace with dash, strip non-alphanumeric.
+ */
+export function slugifyCategory(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-]/g, '')
 }

@@ -17,16 +17,18 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, Legend,
 } from 'recharts'
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
-import { formatRupiah } from '@/lib/format'
+import { formatRupiah, formatNumber } from '@/lib/format'
 import {
   fetchOverview, fetchDailyRevenue, fetchPerCs, fetchPerAdvertiser, fetchPerChannel,
-  fetchPerProduct, fetchRoasPerCampaign,
+  fetchPerProduct, fetchRoasPerCampaign, fetchFunnelPerProduct,
   type AnalyticsOverview, type DailyRevenuePoint,
   type PerCsRow, type PerAdvertiserRow, type PerChannelRow, type PerProductRow,
-  type RoasPerCampaignRow,
+  type RoasPerCampaignRow, type FunnelPerProductRow,
 } from '@/lib/supabase/queries/analytics'
 import { CAMPAIGN_PLATFORM_COLOR, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_STATUS_COLOR, CAMPAIGN_STATUS_LABEL } from '@/lib/schemas/settings'
 import type { AdPlatform, CampaignStatus } from '@/lib/types'
+import { FunnelProductCard } from '@/components/analytics/funnel-product-card'
+import { FunnelInsightCards } from '@/components/analytics/funnel-insight-cards'
 
 const supabase = createClient()
 
@@ -55,6 +57,7 @@ export default function AnalyticsPage() {
   const [perChan, setPerChan] = useState<PerChannelRow[]>([])
   const [perProduct, setPerProduct] = useState<PerProductRow[]>([])
   const [roasPerCampaign, setRoasPerCampaign] = useState<RoasPerCampaignRow[]>([])
+  const [funnelRows, setFunnelRows] = useState<FunnelPerProductRow[]>([])
   const [loading, setLoading] = useState(true)
 
   // Lazy-init range to avoid hydration drift (thisMonth() returns Date-based label
@@ -69,7 +72,7 @@ export default function AnalyticsPage() {
     if (!isOwner || !rangeReady) return
     setLoading(true)
     try {
-      const [ov, dr, cs, adv, chan, prod, roas] = await Promise.all([
+      const [ov, dr, cs, adv, chan, prod, roas, funnel] = await Promise.all([
         fetchOverview(supabase, range.from, range.to),
         fetchDailyRevenue(supabase, range.from, range.to),
         fetchPerCs(supabase, range.from, range.to),
@@ -77,6 +80,7 @@ export default function AnalyticsPage() {
         fetchPerChannel(supabase, range.from, range.to),
         fetchPerProduct(supabase, range.from, range.to),
         fetchRoasPerCampaign(supabase, range.from, range.to),
+        fetchFunnelPerProduct(supabase, range.from, range.to),
       ])
       setOverview(ov)
       setDaily(dr)
@@ -85,6 +89,7 @@ export default function AnalyticsPage() {
       setPerChan(chan)
       setPerProduct(prod)
       setRoasPerCampaign(roas)
+      setFunnelRows(funnel)
     } finally {
       setLoading(false)
     }
@@ -157,6 +162,7 @@ export default function AnalyticsPage() {
             <TabsTrigger value="channel">Per Channel ({perChan.length})</TabsTrigger>
             <TabsTrigger value="product">Per Produk ({perProduct.length})</TabsTrigger>
             <TabsTrigger value="roas">ROAS ({roasPerCampaign.length})</TabsTrigger>
+            <TabsTrigger value="funnel">Funnel ({funnelRows.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -416,11 +422,38 @@ export default function AnalyticsPage() {
               ROAS Gross = total revenue (semua status) / spend. ROAS DITERIMA = revenue dari order DITERIMA / spend (lebih akurat untuk COD). Cost/Conv = spend / conversions (dari platform tracking). Cost/Order = spend / linked orders count.
             </p>
           </TabsContent>
+
+          <TabsContent value="funnel" className="space-y-4">
+            {loading ? (
+              <Card><CardContent className="p-12 text-center">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+              </CardContent></Card>
+            ) : funnelRows.length === 0 ? (
+              <EmptyState
+                icon={LineChartIcon}
+                title="Belum ada data funnel untuk periode ini"
+                description="Pastikan ada ad_spend (Phase 5B), daily_cs_report (Phase 6), atau orders dalam date range."
+              />
+            ) : (
+              <>
+                <FunnelInsightCards rows={funnelRows} />
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {funnelRows.map(r => (
+                    <FunnelProductCard key={r.product_id} row={r} />
+                  ))}
+                </div>
+              </>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Cross-check 3 layer: <strong>Meta Ads</strong> (spend × campaign_products allocation), <strong>CS Report</strong> (daily_cs_report manual input), <strong>System Orders</strong> (orders × order_items). Variance Lead = CS lead − Meta lead (positive = organic). Variance Closing = System orders − CS closing (positive = CS lupa input). &quot;—&quot; berarti tidak ada data di layer tsb (beda dari nilai 0 eksplisit).
+            </p>
+          </TabsContent>
         </Tabs>
       )}
     </div>
   )
 }
+
 
 function RoasPerCampaignTable({ rows, loading }: { rows: RoasPerCampaignRow[]; loading: boolean }) {
   const [sortBy, setSortBy] = useState<'spend' | 'roas' | 'revenue' | 'orders'>('spend')

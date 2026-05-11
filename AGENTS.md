@@ -23,6 +23,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 4D — Actual Reconciliation File Upload | ⏳ NOT STARTED | — |
 | Phase 5A — Products Extended + Operational Expenses | ✅ DONE | 2026-05-11 |
 | Phase 5B — Ad Spend + Campaigns + ROAS | ✅ DONE | 2026-05-11 |
+| Phase 6 — CS Daily Report + ADV-CS Cross-Check Funnel | ✅ DONE | 2026-05-11 |
+
+**Phase 6 done.** Sync layer ADV (Phase 5B) dengan CS (daily lead/closing per produk) + auto-track System Orders. Cross-check 3 layer (Meta vs CS vs System) per produk → identify tracking loss, CS input gap, top performer. New `daily_cs_report` table (per CS × per produk × per tanggal) dengan UNIQUE constraint + CHECK closing≤lead_in + RLS (CS edit sendiri, owner/admin override, owner/admin delete only). New `ad_spend.meta_lead_count` column (Meta-reported leads, top of funnel — beda dari conversions=purchases). 4 RPCs baru: `analytics_funnel_per_product` (4-way JOIN ad_spend×campaign_products + daily_cs_report + orders×order_items), `cs_daily_summary`, `cs_period_summary`, `cs_daily_series`. /cs-report refactor (banner→form): per-row inline input lead+closing+notes, real-time validation, "Copy dari Kemarin" merge helper, owner/admin CS picker untuk override. /cs-dashboard extended dengan stat cards lead/closing + daily trend chart + per-produk performance via new `renderExtraSection` slot di PersonalDashboard. /analytics tab ke-7 "Funnel" dengan 14-col table + Highlights section (organic demand, CS lupa input, top closer). "—" untuk no-data cells distinguish dari "0" eksplisit via `has_meta_data` / `has_cs_data` / `has_system_data` flags.
 
 **Phase 5B done.** Campaigns + ad_spend tables extended dengan organization_id + RLS + Phase 5B fields (campaign_code untuk CSV match, status enum, start/end date, daily_budget, conversions, reach, revenue_reported, source, import_batch_id). New `campaign_products` link table (1:N allocation dengan trigger guard sum ≤ 100%). Meta Ads CSV parser dengan flexible column detection (multiple name variants per field) + idempotent bulk upsert. 4 RPCs baru: `analytics_ad_spend_summary`, `analytics_roas_per_campaign`, `analytics_profit_per_product_v2` (extends v1 dengan allocated_ad_spend + ROAS), `analytics_overview_v3` (extends v2 dengan total_ad_spend + net_profit_before/after_ads). /campaigns refactor: 2-level dialog (campaign + linked products with allocation %). /ad-spend refactor: 4 stat cards, by-platform chips, manual entry + 5-step CSV upload Meta format. /analytics: Row 4 expanded ke 5 cards (Op Expenses/Ad Spend/Net Before/Net After/Net Margin), tab ke-6 "ROAS" per campaign, Per Produk tab extended dengan ad spend allocation + Net After Ads sort default.
 
@@ -945,6 +948,78 @@ Ad spend tracking lengkap. Audit (2026-05-11): campaigns 2 rows, ad_spend 5 rows
 
 ---
 
+## Phase 6 — CS Daily Report + ADV-CS Cross-Check Funnel (COMPLETED)
+
+Cross-check 3 layer data per produk per periode: META (ad_spend × campaign_products allocation, lead Meta klaim + purchases), CS (daily_cs_report manual input), SYSTEM (orders × order_items). Funnel metrics surface tracking loss, input gap, top performer.
+
+### Audit (2026-05-11)
+- `daily_cs_report` → doesn't exist (CREATE fresh)
+- `ad_spend.meta_lead_count` → doesn't exist (ADD COLUMN)
+- legacy `cs_daily_leads` (Phase 0) → EXISTS → preserve, tidak touch
+
+### Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/022_cs_daily_report.sql`:
+  1. ADD COLUMN `ad_spend.meta_lead_count BIGINT` (NULL untuk pre-existing rows)
+  2. New `daily_cs_report` table dengan UNIQUE (org, date, cs, product) + CHECK `closing <= lead_in` (business rule)
+  3. RLS: 4 policies — SELECT semua authenticated dalam org (transparency), INSERT/UPDATE CS untuk diri sendiri ATAU owner/admin override, DELETE owner/admin only (audit trail)
+  4. Trigger updated_at
+  5. RPC `cs_daily_summary` (per CS sehari — untuk footer)
+  6. RPC `cs_period_summary` (per CS range — untuk /cs-dashboard stat cards)
+  7. RPC `cs_daily_series` (per CS time series — untuk chart)
+  8. RPC `analytics_funnel_per_product` — 4-way JOIN (campaign_products × ad_spend, daily_cs_report, orders × order_items, products) dengan 3 presence flags (`has_meta_data`, `has_cs_data`, `has_system_data`) untuk UI distinguish "no data" vs "0 explicit"
+- Fix mid-migration: ambiguous `product_id` reference di CTE `all_products` saat RETURNS TABLE punya output column nama sama → alias jadi `pid` di CTE, qualify `ap.pid AS product_id` di outer SELECT
+
+**Helpers (queries/):**
+- `src/lib/supabase/queries/cs-report.ts` (NEW) — listReportForDay/Range + upsertReportBatch (pakai `onConflict: 'organization_id,report_date,cs_id,product_id'`) + deleteReportRow + 3 RPC wrappers + `yesterdayOf()` date helper
+- `src/lib/supabase/queries/analytics.ts` — extend `FunnelPerProductRow` interface + `fetchFunnelPerProduct` wrapper
+
+**Types/Schemas:**
+- `src/lib/types.ts` — `DailyCsReport` interface; `AdSpend.meta_lead_count` extended
+- `src/lib/schemas/settings.ts` — appended `dailyCsReportSchema` (Zod, dengan `refine(closing<=lead_in)`)
+
+**Components:**
+- `src/components/analytics/personal-dashboard.tsx` — extended dengan `renderExtraSection?: ({userId, from, to}) => ReactNode` slot. Render sebelum stat cards orders (kalau prop given). Non-breaking — /adv-dashboard tetap tidak terpengaruh.
+- `src/components/analytics/cs-lead-section.tsx` (NEW) — 4 stat cards (Lead/Closing/Rate/Avg/Day), daily trend area chart (lead+closing overlay), per-produk mini table (top 10), footer link ke /analytics tab Funnel
+
+**Pages:**
+- `src/app/(app)/cs-report/page.tsx` — refactor lengkap dari banner. Date picker + CS picker (owner/admin dropdown, CS self read-only). 3 stat cards real-time totals. Per-row inline input dengan validation `closing <= lead_in` (red error inline + Save All disabled kalau hasErrors). "Copy dari Kemarin" merge helper (skip produk yang sudah ada hari ini). Combobox tambah produk (exclude yang sudah di-add). Save All upsert pattern. Delete row owner/admin only. Tips card di bawah.
+- `src/app/(app)/cs-dashboard/page.tsx` — wire `renderExtraSection` dari `CsLeadSection`. Existing PersonalDashboard logic (orders/komisi) preserved.
+- `src/app/(app)/analytics/page.tsx` — tab ke-7 "Funnel". Highlights cards (3 conditional: high organic, CS lupa input, top closer min-10-lead). 14-column sortable table dengan presence indicators (●Meta/●CS/●Sys) + variance color-coding (blue=organic, amber=lupa input, red=loss) + "—" untuk no-data cells.
+
+### Decisions
+
+1. **Fresh table `daily_cs_report`** (bukan extend legacy `cs_daily_leads`) — Phase 0 legacy schema beda struktur (granular per `lead_event` row vs daily aggregate per produk). Fresh table cleaner + Phase 6 brief eksplisit minta UNIQUE (org, date, cs, product). Legacy table preserved untuk audit/rollback.
+2. **RLS policy DELETE owner/admin only** — preserve audit trail. CS bisa edit nilai (upsert update existing row) tapi tidak hapus row historis. Owner/admin bisa kalau perlu cleanup.
+3. **SELECT policy permissive (semua user dalam org)** — transparency. Owner cross-check, CS lain bisa lihat performance peer untuk learning. Brief tidak spesifik tapi pattern Phase 4B `/analytics` udah owner-only via UI gate, jadi non-owner role gak punya akses ke tab Funnel anyway.
+4. **Funnel RPC presence flags** — `has_meta_data` / `has_cs_data` / `has_system_data` boolean. UI render "—" kalau false vs "0" kalau explicit zero. Penting untuk distinguish "tidak ada laporan CS" vs "ada laporan tapi closing=0".
+5. **`renderExtraSection` slot di PersonalDashboard** vs duplicate /cs-dashboard implementation — render-prop pattern minimal change (non-breaking untuk /adv-dashboard). Slot render BEFORE stat cards orders supaya CS metrics di top (priority info).
+6. **"Copy dari Kemarin" merge, bukan overwrite** — append produk dari kemarin yang BELUM ada di hari ini. Kalau hari ini sudah ada produk X dengan angka, tidak di-replace. Skip duplikat. UX-safer.
+7. **Upsert pattern per Save All** — bukan auto-save per row (kompleksitas + chatty network). Single batch upsert dengan `onConflict` di unique constraint. Edit existing row aman.
+8. **CS Combobox exclude already-added** — UX prevent double-add. User tetap bisa pilih produk yang sudah di-table untuk update (cuma edit nilai inline).
+9. **General notes fallback** — kalau row-level notes kosong, pakai general notes (1 untuk semua row). Acceptable trade-off untuk simplicity. Future bisa per-row notes wajib.
+10. **Validation `closing <= lead_in` 3 layer**: client (inline error), Zod schema (`refine`), DB CHECK constraint. Triple guard.
+11. **TIDAK auto-create campaign objective detection dari CSV** — per brief explicit skip. Manual edit meta_lead_count via form di future (Phase 7).
+12. **TIDAK auto-create orders dari CS closing** — per brief explicit. CS closing = hint untuk follow-up, bukan source of truth. Orders tetap via /orders/new atau bulk upload.
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ 50 routes intact, /cs-report refactor dari banner
+
+### Hal yang perlu di-flag untuk Phase 7+
+
+- **CSV auto-detection campaign objective** (Lead Gen vs Sales) untuk auto-route "Hasil" column ke `meta_lead_count` vs `conversions`. Per brief Phase 6 explicit skip.
+- **Per-CS funnel breakdown** — current funnel aggregate semua CS per produk. Owner mungkin perlu filter "per CS A vs per CS B" untuk identify which CS handle which product best.
+- **Notification CS belum input laporan** — owner-side reminder (push notif atau email at EOD). Out of scope.
+- **CS lead per campaign** — current model aggregate per produk only. Kalau CS perlu track lead per campaign source (e.g. "ini dari iklan A vs B"), butuh extension column `daily_cs_report.campaign_id` (nullable).
+- **WA Business API integration** — auto-fill lead masuk dari WA chat count. Out of scope brief.
+- **Approve/reject CS report workflow** — admin sign-off. Out of scope brief.
+- **Time-series cohort analysis** — produk lifecycle dari first-lead hari X ke first-closing hari Y. Out of scope.
+
+---
+
 ## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
@@ -1009,7 +1084,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **019** | **Phase 4C bug fix — rate format → percent friendly (codebase convention)** | **✅ Active** |
 | **020** | **Phase 5A — Products extended + product_categories + operational_expenses + analytics_overview_v2 + analytics_profit_per_product** | **✅ Active** |
 | **021** | **Phase 5B — Campaigns extended + campaign_products + ad_spend extended + analytics_overview_v3 + analytics_roas_per_campaign + analytics_profit_per_product_v2 + analytics_ad_spend_summary** | **✅ Active** |
-| 022+ | TBD next phases | — |
+| **022** | **Phase 6 — daily_cs_report + ad_spend.meta_lead_count + analytics_funnel_per_product + cs_daily_summary + cs_period_summary + cs_daily_series** | **✅ Active** |
+| 023+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

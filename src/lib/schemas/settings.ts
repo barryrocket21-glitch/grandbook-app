@@ -587,7 +587,24 @@ export const adSpendSchema = z.object({
   reach: z.number().int().min(0).nullable().optional(),
   clicks: z.number().int().min(0).nullable().optional(),
   conversions: z.number().int().min(0).nullable().optional(),
+  meta_lead_count: z.number().int().min(0).nullable().optional(),
   revenue_reported: z.number().min(0).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
 })
 export type AdSpendFormDataV2 = z.infer<typeof adSpendSchema>
+
+// =============================================================
+// Phase 6 — Daily CS Report
+// =============================================================
+export const dailyCsReportSchema = z.object({
+  report_date: z.string().min(1, 'Tanggal wajib'),
+  cs_id: z.string().uuid('CS harus dipilih'),
+  product_id: z.number().int().positive('Pilih produk'),
+  lead_in: z.number().int().min(0, 'Lead masuk harus >= 0'),
+  closing: z.number().int().min(0, 'Closing harus >= 0'),
+  notes: z.string().max(500).nullable().optional(),
+}).refine(d => d.closing <= d.lead_in, {
+  message: 'Closing tidak boleh > lead masuk',
+  path: ['closing'],
+})
+export type DailyCsReportFormData = z.infer<typeof dailyCsReportSchema>

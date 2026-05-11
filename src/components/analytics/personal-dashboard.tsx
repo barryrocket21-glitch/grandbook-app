@@ -43,9 +43,12 @@ interface Props {
   emptyHintForOwner?: string
   /** Pencairan link target (default /commissions/my) */
   commissionLink?: string
+  /** Phase 6: optional render slot di atas stat cards orders. Dipakai /cs-dashboard
+   *  untuk inject lead/closing summary dari daily_cs_report. Receives userId + date range. */
+  renderExtraSection?: (args: { userId: string; from: string; to: string }) => React.ReactNode
 }
 
-export function PersonalDashboard({ role, pageTitle, pageDescription, icon: Icon, emptyHintForOwner, commissionLink = '/commissions/my' }: Props) {
+export function PersonalDashboard({ role, pageTitle, pageDescription, icon: Icon, emptyHintForOwner, commissionLink = '/commissions/my', renderExtraSection }: Props) {
   const { user, role: viewerRole, loading: authLoading } = useAuth()
   const isOwner = viewerRole === 'owner'
   const isOwnerLooking = isOwner
@@ -178,6 +181,9 @@ export function PersonalDashboard({ role, pageTitle, pageDescription, icon: Icon
       {/* Data loaded */}
       {effectiveUserId && !loading && data && (
         <>
+          {/* Phase 6: optional CS lead/closing summary (only renders if prop given) */}
+          {renderExtraSection && renderExtraSection({ userId: effectiveUserId, from: range.from, to: range.to })}
+
           {data.totals.total_orders === 0 ? (
             <EmptyState
               icon={Icon}

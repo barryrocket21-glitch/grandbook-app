@@ -212,6 +212,52 @@ export async function fetchRoasPerCampaign(
   return (data || []) as RoasPerCampaignRow[]
 }
 
+// Phase 6 — Funnel & Cross-Check per Product
+export interface FunnelPerProductRow {
+  product_id: number
+  product_name: string | null
+  product_sku: string | null
+  category_name: string | null
+  // Layer 1: META
+  total_spend: number
+  meta_lead_count: number
+  meta_purchases: number
+  // Layer 2: CS
+  cs_lead_count: number
+  cs_closing_count: number
+  // Layer 3: System
+  system_orders_count: number
+  system_orders_diterima: number
+  system_revenue: number
+  // Variances
+  variance_lead_meta_cs: number       // cs_lead - meta_lead (positive = banyak organic)
+  variance_closing_cs_system: number  // system_orders - cs_closing (positive = CS lupa input)
+  // Funnel metrics
+  cpl_meta: number
+  cpl_cs_real: number
+  cpo: number
+  close_rate_cs: number
+  close_rate_meta: number
+  roas_system: number
+  // Source presence flags
+  has_meta_data: boolean
+  has_cs_data: boolean
+  has_system_data: boolean
+}
+
+export async function fetchFunnelPerProduct(
+  supabase: SupabaseClient,
+  from: string,
+  to: string
+): Promise<FunnelPerProductRow[]> {
+  const { data, error } = await supabase.rpc('analytics_funnel_per_product', {
+    p_from: from,
+    p_to: to,
+  })
+  if (error) throw new Error(`analytics_funnel_per_product gagal: ${error.message}`)
+  return (data || []) as FunnelPerProductRow[]
+}
+
 export async function fetchDailyRevenue(
   supabase: SupabaseClient,
   from: string,

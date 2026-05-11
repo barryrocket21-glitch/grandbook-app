@@ -27,8 +27,16 @@ export type AdPlatform = 'META' | 'GOOGLE' | 'TIKTOK' | 'SNACK' | 'OTHER'
 
 export type CommissionRuleType = 'PERCENT_REVENUE' | 'FLAT_PER_ORDER'
 
-// Legacy commission status (pre-Phase 4 redesign)
-export type CommissionStatus = 'PENDING' | 'APPROVED' | 'PAID' | 'ESTIMATED' | 'EARNED' | 'CANCELLED'
+// Phase 4A commission status enum (migration 016 — TEXT + CHECK constraint).
+// 'PENDING' / 'APPROVED' adalah legacy values dari pre-Phase 1 — tidak diproduksi
+// engine v2 tapi masih ada di type union supaya halaman lama tidak break kalau
+// referensi data historis.
+export type CommissionStatus = 'ESTIMATED' | 'EARNED' | 'CANCELLED' | 'PAID' | 'PENDING' | 'APPROVED'
+
+export const COMMISSION_V2_STATUSES = ['ESTIMATED', 'EARNED', 'CANCELLED', 'PAID'] as const
+export type CommissionV2Status = (typeof COMMISSION_V2_STATUSES)[number]
+
+export type CommissionPaymentMethod = 'TRANSFER' | 'CASH' | 'OTHER'
 
 // =============================================================
 // Phase 1 — New core entities
@@ -364,6 +372,12 @@ export interface Commission {
   earned_at?: string | null
   cancelled_at?: string | null
   cancelled_reason?: string | null
+  // Phase 4A pencairan tracking
+  paid_at?: string | null
+  paid_by?: string | null
+  payment_method?: string | null
+  payment_reference?: string | null
+  payment_note?: string | null
   // Legacy
   period_start?: string
   period_end?: string

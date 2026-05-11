@@ -17,9 +17,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 3B — Rekonsil Engine + Upload UI | ✅ DONE | 2026-05-10 |
 | Phase 3C — Outbound Engine + Export | ✅ DONE | 2026-05-10 |
 | Phase 3.5 — Polish (UX & Bug Fixes) | ✅ DONE | 2026-05-10 |
-| Phase 4 — Commission Engine v2 + Analytics | ⏳ NOT STARTED | — |
+| Phase 4A — Commission Engine v2 + Pencairan UI | ✅ DONE | 2026-05-10 |
+| Phase 4B — Analytics Revamp | ⏳ NOT STARTED | — |
+| Phase 4C — Pencairan COD Reconciliation | ⏳ NOT STARTED | — |
 
-**Phase 3.5 done.** 4 bug UX di-fix: keyboard cascade Wilayah jadi mulus (auto-open + auto-search), dropdown rendering konsisten cross-OS (scrollbar visible), label dropdown tampil nama bukan ID, empty-state hint dengan CTA link untuk dropdown kosong. Bug #1 (analytics) di-defer ke Phase 4 — banner placeholder updated dengan Phase 4 ETA.
+**Phase 4A done.** Commission engine yang lama (drop di Phase 1) di-rebuild: trigger compute_commissions auto-fire saat order INSERT atau status UPDATE, status enum baru (DITERIMA→EARNED, RETUR/CANCEL/FAKE→CANCELLED). PAID workflow + immutable audit trail. UI `/commissions/my` (semua role lihat sendiri) + `/commissions/manage` (owner only, tabs + bulk mark paid + dialog). Migration 016 cleanup 133 orphan commissions + add FK to orders.
 
 ---
 
@@ -611,6 +613,73 @@ Loop converter engine GrandBook sudah lengkap. Untuk daily ops, Barry sekarang b
 
 ---
 
+## Phase 4A — Commission Engine v2 + Pencairan UI (COMPLETED)
+
+Re-aktifkan commission engine yang lama (drop di Phase 1) dengan adjust ke status enum baru + add PAID workflow + payment audit fields. Setelah Phase 4A: tiap order DITERIMA otomatis trigger commission compute, owner bisa mark komisi PAID.
+
+### Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/016_commission_v2.sql` — comprehensive:
+  1. Cleanup 133 orphan commissions (FK ke orders missing dari pre-Phase 1)
+  2. Convert `commissions.status` dari ENUM type (legacy `commission_status`) → TEXT, drop type, add CHECK constraint dengan 'PAID'
+  3. Add 5 pencairan kolom: `paid_at`, `paid_by` (FK profiles), `payment_method`, `payment_reference`, `payment_note`
+  4. Add 3 indexes (status PAID partial, user+status composite, order_id)
+  5. Re-add FK `commissions_order_id_fkey` (REFERENCES orders ON DELETE CASCADE) — sebelumnya tidak ada
+  6. `compute_commissions(order_id)` function — status enum baru (DITERIMA→EARNED, RETUR/CANCEL/FAKE→CANCELLED, lainnya→ESTIMATED). Lookup priority: (user+product) > (user) > (product) > (role only). PAID immutable via WHERE clause.
+  7. `trigger_compute_commissions()` + `trg_compute_commissions` AFTER INSERT OR UPDATE OF status ON orders
+  8. `mark_commission_paid(id, method, ref?, note?)` — single. Validate org + status='EARNED'. Throws P0002 / 42501 / 22023.
+  9. `bulk_mark_commission_paid(ids[], method, ref?, note?)` — bulk single UPDATE. Returns ROW_COUNT.
+  10. Backfill loop — process all existing orders.
+
+**Helper queries:**
+- `src/lib/supabase/queries/commissions.ts` (NEW):
+  - `listCommissions(supabase, filter)` — embed user, paid_by_user, order (`!inner` join). Client-side search filter karena PostgREST nggak bisa ilike across embedded.
+  - `computeStats(rows)` — sum amount + count by status
+  - `periodToDates(period, customFrom?, customTo?)` — preset 'this_month'/'last_month'/'all'/'custom'
+  - `markCommissionPaid` + `bulkMarkCommissionPaid` — RPC wrappers
+
+**Schema/Types:**
+- `src/lib/types.ts` — `CommissionStatus` union extended (legacy values kept), `COMMISSION_V2_STATUSES`, `CommissionV2Status` type, `CommissionPaymentMethod`. `Commission` interface tambah pencairan fields.
+- `src/lib/schemas/settings.ts` — appended `commissionPaymentSchema` (Zod), `COMMISSION_PAYMENT_METHODS`, `COMMISSION_PAYMENT_METHOD_LABEL`, `COMMISSION_STATUS_LABEL`, `COMMISSION_STATUS_BADGE_COLOR`.
+
+**Pages:**
+- `src/app/(app)/commissions/my/page.tsx` — refactor dari banner. 4 stat cards (Estimated/Earned/Paid/Cancelled) + filter (period preset + custom range, status) + tabel komisi user. RLS + explicit `userId` filter ke `auth.uid()`.
+- `src/app/(app)/commissions/manage/page.tsx` — refactor dari banner. Owner-only (gate). Tabs (EARNED default → Pending Pencairan / Paid / Estimated / Semua). Filter user + period + search. Multi-select checkbox header (only EARNED selectable). Bulk action banner. Mark Paid Dialog dengan total + warning. Reuse single + bulk via `dialogTargetIds`.
+
+**Sidebar:**
+- `src/lib/constants.ts` — Komisi group sudah role-based dari sebelumnya. `getNavItemsForRole` filter non-owner ke "Komisi Saya" only (line 238-240). Owner lihat keduanya. Aturan Komisi (group Settings) tetap owner-only.
+
+**Docs:**
+- `docs/phase4a-test.md` — manual smoke test 13 sections incl. trigger compute, re-compute on status change, both pages happy paths, bulk mark paid, PAID immutability, rules priority, sidebar visibility.
+
+### Decisions
+
+1. **Status ENUM → TEXT conversion** — production sebenarnya pakai `commission_status` ENUM type (Phase 0 schema). Brief assumes TEXT + CHECK. ALTER TYPE ADD VALUE 'PAID' nggak bisa di-jalankan inside transaction (Postgres limitation). Pilih convert ke TEXT supaya migration clean + idempotent. Drop legacy type kalau tidak ada dependency.
+2. **Cleanup orphan commissions sebelum add FK** — 133 baris commissions referensi order yang sudah dihapus di Phase 1. Tanpa cleanup, FK `ON DELETE CASCADE` add akan fail. Brief tidak mention orphan — discovered via probe.
+3. **Brief redundancy CASE-WHEN di compute_commissions di-skip** — `WHERE public.commissions.status <> 'PAID'` sudah cukup untuk PAID immutability. CASE inside SET dead code.
+4. **`!inner` join syntax di SELECT** — order_date filter via embedded relation defaults LEFT JOIN, jadi filter nggak affect parent rows. `order:orders!commissions_order_id_fkey!inner(...)` confirmed working via probe.
+5. **Search filter client-side** — PostgREST nggak support `ilike` chained dengan `in()` filter di embedded. Search across `order_number`/`customer_name` dilakukan setelah fetch (cap 500 rows).
+6. **Tabs default = EARNED** — most-actionable workflow untuk owner (lihat komisi yang perlu dibayar). Brief sebut "EARNED (Pending Pencairan)" sebagai default.
+7. **Bulk checkbox header hanya enabled saat tab EARNED** — selection logic per-row check `r.status === 'EARNED'`. Tab lain → checkbox header disabled, no checkbox per row.
+8. **Backward-compat `CommissionStatus` union** — added `'PAID'` ke union (sebelumnya `'PENDING' | 'APPROVED' | ...`). Halaman legacy yang reference `CommissionStatus` tidak break karena union extend.
+9. **Stats client-side** — `computeStats(rows)` dari fetched rows (max 500). Acceptable untuk current scale. Phase 4B Analytics akan butuh server-side aggregation RPC kalau volume tumbuh.
+10. **Per-user breakdown stat card brief** — di-skip. UX lebih clean dengan filter user di card sendiri. Phase 4B Analytics bisa add full breakdown.
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ 50 routes total. `/commissions/my` + `/commissions/manage` ke-list (sebelumnya banner placeholder).
+
+### Hal yang perlu di-flag untuk Phase 4B (Analytics Revamp)
+
+- **Stats client-side limited 500 rows** — kalau scale lebih dari itu, butuh server-side aggregation RPC (`commission_stats(p_user_id, p_from, p_to)` returning sum + count per status).
+- **No realtime refresh** — owner mark paid sambil CS lihat /commissions/my → CS perlu reload manual. Phase 4B / 4C bisa add Supabase realtime channel subscription.
+- **PAID commission tidak ter-cover audit trail change ke orders** — kalau order dengan PAID commission di-RETUR, status order berubah tapi commission tetap PAID. Ini intentional (preserve audit trail) tapi mungkin perlu warning UI di order detail "Commission untuk order ini sudah dicairkan."
+- **Backfill limit** — DO block backfill loop processes semua orders (current 41 di production). Kalau >10k orders, perlu batch atau async backfill.
+
+---
+
 ## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
@@ -669,7 +738,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **013** | **Phase 1.5 — wilayah distinct helpers** | **✅ Active** |
 | **014** | **Phase 3B — rekonsil RPC** | **✅ Active** |
 | **015** | **Phase 3C — outbound source enum + bulk mark RPC** | **✅ Active** |
-| 016+ | TBD next phases | — |
+| **016** | **Phase 4A — commission engine v2 + pencairan RPCs** | **✅ Active** |
+| 017+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

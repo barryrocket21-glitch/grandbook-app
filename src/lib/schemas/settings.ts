@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { OrderStatus } from '@/lib/types'
+import type { OrderStatus, CommissionV2Status } from '@/lib/types'
 
 // =============================================================
 // Couriers
@@ -275,4 +275,37 @@ export function normalizePhoneId(input: string | null | undefined): string {
   if (digits.startsWith('8')) return '0' + digits
   if (digits.startsWith('0')) return digits
   return digits
+}
+
+// =============================================================
+// Phase 4A — Commission Payment (mark paid dialog)
+// =============================================================
+export const COMMISSION_PAYMENT_METHODS = ['TRANSFER', 'CASH', 'OTHER'] as const
+export type CommissionPaymentMethodEnum = (typeof COMMISSION_PAYMENT_METHODS)[number]
+
+export const COMMISSION_PAYMENT_METHOD_LABEL: Record<CommissionPaymentMethodEnum, string> = {
+  TRANSFER: 'Transfer Bank',
+  CASH: 'Cash',
+  OTHER: 'Lainnya',
+}
+
+export const commissionPaymentSchema = z.object({
+  payment_method: z.enum(COMMISSION_PAYMENT_METHODS),
+  payment_reference: z.string().max(120).nullable().optional(),
+  payment_note: z.string().max(500).nullable().optional(),
+})
+export type CommissionPaymentFormData = z.infer<typeof commissionPaymentSchema>
+
+export const COMMISSION_STATUS_LABEL: Record<CommissionV2Status, string> = {
+  ESTIMATED: 'Estimated',
+  EARNED: 'Earned',
+  CANCELLED: 'Cancelled',
+  PAID: 'Paid',
+}
+
+export const COMMISSION_STATUS_BADGE_COLOR: Record<CommissionV2Status, string> = {
+  ESTIMATED: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  EARNED: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  CANCELLED: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  PAID: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
 }

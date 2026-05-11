@@ -88,30 +88,59 @@ ON CONFLICT (organization_id, report_date, cs_id, product_id) DO UPDATE
 - [ ] Footer: link ke /analytics tab Funnel
 - [ ] Empty state kalau belum ada CS report di periode: "Belum ada laporan CS — klik Input Laporan"
 
-## Test `/analytics` Tab Funnel (owner only)
+## Test `/analytics` Tab Funnel (owner only) — Phase 6 UI polish (card-based)
 
-- [ ] Buka /analytics → Tab Funnel muncul di tab list (ke-7)
-- [ ] Tabel 14 kolom: Produk / Spend / Meta Lead / CS Lead / Var L / CS Close / Sys Orders / Var C / Sys Diterima / Revenue / CPL Meta / CPO / Close% CS / ROAS
-- [ ] Per row: presence indicators ●Meta ●CS ●Sys (color-coded)
-- [ ] Variance Lead (CS - Meta): positive = blue, negative = orange, 0 = muted
-- [ ] Variance Closing (Sys - CS Closing): positive = amber (CS lupa input), negative = red, 0 = muted
-- [ ] Cells dengan no-data tampil "—" bukan "0"
-- [ ] Sortable: Spend / ROAS / Close% CS / Var L (abs) / Var C (abs)
-- [ ] **Highlights section di atas tabel** (3 cards conditional):
-  - 💡 Banyak Organic (CS Lead > Meta Lead) — biru, top 3
-  - ⚠️ CS Lupa Input Order — amber, top 3
-  - ✅ Top Close Rate CS — emerald, top 3 (min 10 lead untuk filter noise)
-- [ ] Empty state kalau no data: "Belum ada data di periode ini"
+**Layout baru: card-based per produk, bukan tabel datar 12-kolom.**
 
-## Test funnel edge cases
+### Top section: 3 quick insight cards (horizontal grid)
+- [ ] **Top Performer** (emerald) — nama produk + close rate (filter min 10 lead untuk noise control). Empty fallback "Belum ada produk dengan ≥10 lead di periode ini."
+- [ ] **Need Attention** (amber) — produk dengan ROAS terendah (filter spend > 0). Color KPI red kalau ROAS < 1. Empty fallback kalau no spend.
+- [ ] **Net Profit Periode** (violet kalau positif, red kalau negatif) — total revenue − total spend. Subtitle "simplified — belum include HPP/komisi/op expenses".
+
+### Per produk card (1 card per produk; desktop xl≥1280 = 2 columns)
+- [ ] Header: nama produk + kategori badge + status badge (Healthy/Warning/Critical) + ●Meta/●CS/●Sys presence dots
+- [ ] KPI right (1 angka besar):
+  - Kalau spend > 0: tampil **ROAS** (color ≥2 emerald, 1-2 amber, <1 red)
+  - Kalau no spend: tampil **Close Rate %** (color ≥30% emerald, 10-30% amber, <10% red)
+- [ ] 3 mini metric cards (gray bg): Spend / Revenue / Close Rate (atau "—" kalau no data)
+- [ ] **Funnel visual** — 4 boxes horizontal:
+  - Meta Lead (bg #F1EFE8 / dark #2C2C2A)
+  - CS Lead (bg #EAF3DE / dark #173404)
+  - CS Close (bg #E1F5EE / dark #04342C)
+  - System Order (bg #FAEEDA / dark #412402)
+  - Opacity 0.5 + "no data" subtitle kalau no data di layer tsb
+  - Mobile: horizontal scrollable (overflow-x-auto)
+- [ ] **Variance arrows antar box**:
+  - Meta → CS Lead: `+X organic` (green) atau `-X Meta over` (red), hide kalau 0
+  - CS Lead → CS Close: close rate `X%` color-coded
+  - CS Close → System Order: `+X` (green) atau `-X backlog` (amber)
+- [ ] **Insight box** (bottom) dengan icon bulb + auto-generated message:
+  - Priority 1: `Backlog CS` kalau variance_closing < -5
+  - Priority 2: `ROAS Loss` kalau roas < 1 dengan spend
+  - Priority 3: `Close Rate Rendah` kalau close_rate < 10 dengan min 5 lead
+  - Priority 4: `Meta Lead Hilang` kalau spend > 0 tapi meta_lead = 0
+  - Priority 5: `Excellent` kalau close_rate ≥ 50 dengan min 10 lead
+  - Default: `Funnel Sehat`
+  - Background tint match status (red/amber/green)
+- [ ] Empty state (no funnel data): "Belum ada data funnel untuk periode ini. Pastikan ada ad_spend, daily_cs_report, atau orders dalam date range."
+
+## Test funnel edge cases (per card)
 
 | Sumber data | Expected behavior |
 |---|---|
-| Meta only (no CS, no orders) | Row muncul, CS+Sys columns "—", variance "—" |
-| CS only (no Meta, no orders) | Row muncul, Meta column "—" |
-| Orders only (no Meta, no CS) | Row muncul, all variance "—" |
-| Meta + CS, no orders | Var Lead computed, Var Close "—" |
-| All 3 sources | Semua kolom + variance terisi |
+| Meta only (no CS, no orders) | Card tampil, CS+System boxes "—", variance arrows hide |
+| CS only (no Meta, no orders) | Meta box "—", funnel arrow Meta→CS hide variance |
+| Orders only (no Meta, no CS) | Hanya System box ada angka, lainnya "—" |
+| Meta + CS, no orders | Var Lead computed, System box "—", insight "Backlog?" kalau ada |
+| All 3 sources, ROAS < 1 | Status CRITICAL, KPI red, insight "ROAS Loss" |
+| All 3 sources, close rate ≥50% + ≥10 lead | Status HEALTHY, insight "Excellent" |
+| variance_closing < -5 | Status WARNING, insight "Backlog CS" priority 1 |
+
+## Test responsive
+
+- [ ] Desktop (≥1280px / xl): card grid 2 columns
+- [ ] Tablet (768-1023): card grid 1 column, funnel boxes horizontal
+- [ ] Mobile (<768): card grid 1 column, **funnel boxes horizontal scrollable** (swipe to reveal 4th box kalau perlu)
 
 ## Test migration idempotency
 

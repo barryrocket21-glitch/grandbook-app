@@ -28,9 +28,9 @@ import {
 import { CAMPAIGN_PLATFORM_COLOR, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_STATUS_COLOR, CAMPAIGN_STATUS_LABEL } from '@/lib/schemas/settings'
 import type { AdPlatform, CampaignStatus } from '@/lib/types'
 import {
-  AnalyticsSidebar, isAnalyticsSection, getSectionLabel, getSectionGroup,
+  AnalyticsNav, isAnalyticsSection, getSectionLabel,
   type AnalyticsSection,
-} from '@/components/analytics/analytics-sidebar'
+} from '@/components/analytics/analytics-nav'
 import { PerProdukSection } from '@/components/analytics/per-produk-section'
 
 const supabase = createClient()
@@ -187,15 +187,12 @@ function AnalyticsPageInner() {
           description="Coba ubah date range, atau cek dashboard utama / orders untuk lihat data lain."
         />
       ) : (
-        <div className="flex flex-col md:flex-row gap-5 items-start">
-          <AnalyticsSidebar section={section} onSelect={handleSelectSection} />
-          <div className="flex-1 min-w-0 space-y-3">
-            {/* Section breadcrumb header */}
-            <div className="space-y-1 pb-2 border-b">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Analytics / {getSectionGroup(section)}
-              </p>
-              <h2 className="text-lg font-semibold">{getSectionLabel(section)}</h2>
+        <div className="space-y-4">
+          <AnalyticsNav section={section} onSelect={handleSelectSection} />
+          <div className="min-w-0 space-y-3">
+            {/* Section subtitle (compact, no breadcrumb karena nav sudah cukup jelas) */}
+            <div className="pb-1">
+              <h2 className="text-sm font-medium text-muted-foreground">{getSectionLabel(section)}</h2>
             </div>
 
             {section === 'overview' && <div className="space-y-4">

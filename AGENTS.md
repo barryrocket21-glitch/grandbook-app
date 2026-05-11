@@ -24,9 +24,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 5A — Products Extended + Operational Expenses | ✅ DONE | 2026-05-11 |
 | Phase 5B — Ad Spend + Campaigns + ROAS | ✅ DONE | 2026-05-11 |
 | Phase 6 — CS Daily Report + ADV-CS Cross-Check Funnel | ✅ DONE | 2026-05-11 |
-| Phase 6 redesign — Analytics Sidebar Nav + Detail Per Produk | ✅ DONE | 2026-05-12 |
+| Phase 6 redesign — Analytics Horizontal Nav + Detail Per Produk | ✅ DONE | 2026-05-12 |
 
-**Phase 6 redesign done.** /analytics refactor: tabs (7-buah, termasuk Funnel) → sidebar nav (Notion/Linear style) dengan 4 groups (Bisnis/Produk/Tim/Marketing). Funnel tab standalone DIHAPUS — logic pindah ke detail page `/analytics/produk/[id]` dengan stat cards + funnel visual compact + CS performance table + campaigns linked table + insight box. URL sync via `useSearchParams` (Suspense wrapped per Next.js 16). Migration 023 + 2 RPCs baru (`analytics_cs_performance_per_product`, `analytics_campaigns_per_product`). Removed obsolete `FunnelProductCard` + `FunnelInsightCards` + inline `PerProductTable` (~600 LOC purged).
+**Phase 6 redesign done.** /analytics refactor: tabs (7-buah, termasuk Funnel) → horizontal pill nav sticky di top content (initial iteration was sidebar nav, user feedback duplikat dengan app shell → swap ke horizontal). 6 items flat: Overview / Per Channel / Per Produk / Per CS / Per Advertiser / ROAS Campaign. Funnel tab standalone DIHAPUS — logic pindah ke detail page `/analytics/produk/[id]` dengan stat cards + funnel visual compact + CS performance table + campaigns linked table + insight box. URL sync via `useSearchParams` (Suspense wrapped per Next.js 16). Migration 023 + 2 RPCs baru (`analytics_cs_performance_per_product`, `analytics_campaigns_per_product`). Removed obsolete `FunnelProductCard` + `FunnelInsightCards` + inline `PerProductTable` (~600 LOC purged).
 
 **Phase 6 done.** Sync layer ADV (Phase 5B) dengan CS (daily lead/closing per produk) + auto-track System Orders. Cross-check 3 layer (Meta vs CS vs System) per produk → identify tracking loss, CS input gap, top performer. New `daily_cs_report` table (per CS × per produk × per tanggal) dengan UNIQUE constraint + CHECK closing≤lead_in + RLS (CS edit sendiri, owner/admin override, owner/admin delete only). New `ad_spend.meta_lead_count` column (Meta-reported leads, top of funnel — beda dari conversions=purchases). 4 RPCs baru: `analytics_funnel_per_product` (4-way JOIN ad_spend×campaign_products + daily_cs_report + orders×order_items), `cs_daily_summary`, `cs_period_summary`, `cs_daily_series`. /cs-report refactor (banner→form): per-row inline input lead+closing+notes, real-time validation, "Copy dari Kemarin" merge helper, owner/admin CS picker untuk override. /cs-dashboard extended dengan stat cards lead/closing + daily trend chart + per-produk performance via new `renderExtraSection` slot di PersonalDashboard. /analytics tab ke-7 "Funnel" dengan 14-col table + Highlights section (organic demand, CS lupa input, top closer). "—" untuk no-data cells distinguish dari "0" eksplisit via `has_meta_data` / `has_cs_data` / `has_system_data` flags.
 
@@ -1023,12 +1023,13 @@ Cross-check 3 layer data per produk per periode: META (ad_spend × campaign_prod
 
 ---
 
-## Phase 6 redesign — Analytics Sidebar Nav + Detail Per Produk (COMPLETED)
+## Phase 6 redesign — Analytics Horizontal Nav + Detail Per Produk (COMPLETED)
 
-User feedback Phase 6 awal: tabs 7-buah + tab Funnel card-based masih kurang scalable. Redesign 2x:
+User feedback Phase 6 iterasi berturut-turut:
 1. Initial Phase 6 (PR #11 merged): tabs + 14-col Funnel table → user iterate
 2. PR #11 UI polish (merged): Funnel card-based per produk → user iterate lagi
-3. **PR #12 redesign (this)**: sidebar nav (Notion/Linear style) + detail page per produk
+3. PR #12 sidebar nav (Notion/Linear style) + detail page per produk → user feedback: sidebar duplikat dengan app shell sidebar (2 sidebar berdampingan tampak crowded)
+4. **PR #12 horizontal nav (final)**: swap vertical sidebar → horizontal pill nav sticky di top content area
 
 ### Files yang dibuat / berubah
 
@@ -1041,12 +1042,12 @@ User feedback Phase 6 awal: tabs 7-buah + tab Funnel card-based masih kurang sca
 - `src/lib/supabase/queries/analytics.ts` — extend dengan `CsPerformanceRow`, `CampaignsForProductRow` interfaces + `fetchCsPerformancePerProduct` + `fetchCampaignsForProduct` wrappers
 
 **Components (NEW):**
-- `src/components/analytics/analytics-sidebar.tsx` (~135 LOC) — 4 groups (Bisnis: Overview/Per Channel; Produk: Per Produk; Tim: Per CS/Per Advertiser; Marketing: ROAS Campaign). Desktop = fixed-width left aside, mobile = horizontal scroll pill bar. Exports `ANALYTICS_SECTIONS`, `isAnalyticsSection`, `getSectionLabel`, `getSectionGroup`.
+- `src/components/analytics/analytics-nav.tsx` (~85 LOC, replaces earlier `analytics-sidebar.tsx`) — horizontal pill nav 6 flat items (Overview / Per Channel / Per Produk / Per CS / Per Advertiser / ROAS Campaign). Sticky `top-0 z-10` dengan backdrop-blur. `overflow-x-auto` untuk responsive scroll di tablet/mobile. Exports `ANALYTICS_SECTIONS`, `isAnalyticsSection`, `getSectionLabel`.
 - `src/components/analytics/per-produk-section.tsx` (~110 LOC) — tabel sortable Produk/Revenue/CS Lead/Closing/Close%/ROAS dengan tombol "Detail →" per row navigate ke `/analytics/produk/[id]`. Sumber data dari funnel RPC (sudah include revenue+CS+ROAS).
 - `src/app/(app)/analytics/produk/[id]/page.tsx` (~430 LOC) — detail page per produk dengan 5 sections: stat cards 4-col / funnel compact (4 boxes + arrows) / CS performance table / campaigns linked table / insight box auto-generated
 
 **Files refactor:**
-- `src/app/(app)/analytics/page.tsx` — replace `<Tabs>` (7 tabs) dengan flex layout: `<AnalyticsSidebar>` left + conditional section render right. URL state via `useSearchParams` (Suspense wrapped per Next.js 16 requirement). Funnel tab DIHAPUS — logic pindah ke detail page. Per Produk tab pakai PerProdukSection (table dengan Detail button).
+- `src/app/(app)/analytics/page.tsx` — replace `<Tabs>` (7 tabs) → sidebar nav (1st iteration) → horizontal pill nav sticky top (final). `<AnalyticsNav>` di atas content + conditional section render. URL state via `useSearchParams` (Suspense wrapped per Next.js 16 requirement). Funnel tab DIHAPUS — logic pindah ke detail page. Per Produk tab pakai PerProdukSection (table dengan Detail button).
 
 **Files removed:**
 - `src/components/analytics/funnel-product-card.tsx` (367 LOC) — obsolete, replaced by detail page

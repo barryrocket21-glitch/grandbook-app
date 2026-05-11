@@ -88,24 +88,40 @@ ON CONFLICT (organization_id, report_date, cs_id, product_id) DO UPDATE
 - [ ] Footer: link ke /analytics tab Funnel
 - [ ] Empty state kalau belum ada CS report di periode: "Belum ada laporan CS — klik Input Laporan"
 
-## Test `/analytics` — Phase 6 redesign (sidebar nav, owner only)
+## Test `/analytics` — Phase 6 redesign (horizontal nav, owner only)
 
-**Layout baru: sidebar nav (Notion/Linear style), bukan tabs. Funnel tab standalone DIHAPUS → pindah ke detail page per produk.**
+**Layout: horizontal pill nav sticky di top content (BUKAN sidebar kiri — user feedback: duplikat dengan app shell sidebar). Funnel tab standalone DIHAPUS → pindah ke detail page per produk.**
 
-### Sidebar nav (desktop ≥768px)
+### Horizontal nav layout (semua viewport)
 - [ ] Buka `/analytics` → default load section **Overview**
-- [ ] Sidebar kiri (width 176-192px) dengan 4 groups: Bisnis, Produk, Tim, Marketing
-- [ ] Item nav: icon + label, active state bg-violet/10 text-violet
-- [ ] Klik item → URL update ke `/analytics?section=<key>`, section state sync
-- [ ] Refresh page dengan `?section=produk` → langsung load Per Produk section
-- [ ] Browser back/forward sync (URL ↔ state via useSearchParams)
+- [ ] Page header `Analytics — Profit Dashboard` di atas
+- [ ] DI BAWAH page header: **horizontal pill nav** dengan 6 items sejajar:
+  - Overview (icon BarChart3)
+  - Per Channel (icon Truck)
+  - Per Produk (icon Package)
+  - Per CS (icon Headphones)
+  - Per Advertiser (icon Megaphone)
+  - ROAS Campaign (icon Target)
+- [ ] Active pill: `bg-violet/10` + `text-violet-700` + `font-medium`
+- [ ] Inactive pill: `text-muted-foreground` + hover `bg-muted/60`
+- [ ] **Sticky behavior**: scroll content panjang (e.g. Overview tab dengan banyak stat cards + charts) → nav tetap melekat di top viewport (sticky top-0 z-10)
+- [ ] Backdrop blur `bg-background/85` + `border-b` saat sticky aktif
+- [ ] **TIDAK ada** sidebar kiri (selain app shell sidebar)
+- [ ] **TIDAK ada** breadcrumb "Analytics / Bisnis" (replaced dengan section label compact: `<h2>` text-muted-foreground)
 
-### Sidebar nav (mobile <768px)
-- [ ] Pill bar horizontal scrollable di top (replace sidebar)
-- [ ] Tap pill → switch section
+### URL state sync
+- [ ] Klik pill → URL update ke `/analytics?section=<key>`
+- [ ] Refresh dengan `?section=produk` → langsung load Per Produk section, pill Produk active
+- [ ] Browser back/forward sync (URL ↔ state via useSearchParams)
+- [ ] Default (no param) → section Overview
+
+### Responsive horizontal nav
+- [ ] Desktop ≥1024px: 6 pill items sejajar tanpa scroll
+- [ ] Tablet 768-1023: 6 items mungkin pas-pasan, kalau overflow scroll horizontal otomatis
+- [ ] Mobile <768px: scroll horizontal smooth (overflow-x-auto), pill terlihat sebagian
 
 ### Section: Overview (`?section=overview`)
-- [ ] Breadcrumb "Analytics / Bisnis" + title "Overview"
+- [ ] Section label "Overview" di atas content
 - [ ] Row 1: Orders / Revenue / COGS / Gross Profit
 - [ ] Row 2: Komisi Earned / Paid / Shipping Diff / Total Payout
 - [ ] Row 3 Phase 4C: Est Cost / Cash In / Profit / Margin %
@@ -158,9 +174,10 @@ ON CONFLICT (organization_id, report_date, cs_id, product_id) DO UPDATE
 
 ## Test responsive
 
-- [ ] Desktop (≥1024px): sidebar visible left, content right flex-1
-- [ ] Tablet (768-1023): sidebar visible (width 176px lg=192px), content flex-1
-- [ ] Mobile (<768): sidebar → pill bar horizontal scroll di top, content full-width
+- [ ] Desktop (≥1024px): horizontal nav 6 pills sejajar tanpa scroll, sticky di top saat scroll content
+- [ ] Tablet (768-1023): horizontal nav, mungkin scroll horizontal kalau viewport sempit
+- [ ] Mobile (<768): horizontal nav scroll horizontal smooth, sticky tetap aktif
+- [ ] Detail page funnel boxes horizontal scrollable kalau viewport sempit
 - [ ] Detail page funnel boxes horizontal scrollable kalau viewport sempit
 
 ## Test migration idempotency

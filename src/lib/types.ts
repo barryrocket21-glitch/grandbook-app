@@ -424,12 +424,29 @@ export interface AdSpend {
   revenue_reported?: number | null
   source?: AdSpendSource
   import_batch_id?: string | null
+  // Phase 6
+  meta_lead_count?: number | null
   notes: string | null
   created_by: string | null
   created_at: string
   updated_at?: string
   campaign?: Campaign | null
   campaigns?: Campaign | null
+}
+
+// Phase 6 — Daily CS Report
+export interface DailyCsReport {
+  id: number
+  organization_id: number
+  report_date: string
+  cs_id: string
+  product_id: number
+  lead_in: number
+  closing: number
+  notes: string | null
+  created_at: string
+  created_by: string | null
+  updated_at: string
 }
 
 // Legacy expenses table — kept for backward compat. New writes go to

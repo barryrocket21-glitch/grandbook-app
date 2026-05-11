@@ -17,13 +17,13 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, Legend,
 } from 'recharts'
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
-import { formatRupiah } from '@/lib/format'
+import { formatRupiah, formatNumber } from '@/lib/format'
 import {
   fetchOverview, fetchDailyRevenue, fetchPerCs, fetchPerAdvertiser, fetchPerChannel,
-  fetchPerProduct, fetchRoasPerCampaign,
+  fetchPerProduct, fetchRoasPerCampaign, fetchFunnelPerProduct,
   type AnalyticsOverview, type DailyRevenuePoint,
   type PerCsRow, type PerAdvertiserRow, type PerChannelRow, type PerProductRow,
-  type RoasPerCampaignRow,
+  type RoasPerCampaignRow, type FunnelPerProductRow,
 } from '@/lib/supabase/queries/analytics'
 import { CAMPAIGN_PLATFORM_COLOR, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_STATUS_COLOR, CAMPAIGN_STATUS_LABEL } from '@/lib/schemas/settings'
 import type { AdPlatform, CampaignStatus } from '@/lib/types'
@@ -55,6 +55,7 @@ export default function AnalyticsPage() {
   const [perChan, setPerChan] = useState<PerChannelRow[]>([])
   const [perProduct, setPerProduct] = useState<PerProductRow[]>([])
   const [roasPerCampaign, setRoasPerCampaign] = useState<RoasPerCampaignRow[]>([])
+  const [funnelRows, setFunnelRows] = useState<FunnelPerProductRow[]>([])
   const [loading, setLoading] = useState(true)
 
   // Lazy-init range to avoid hydration drift (thisMonth() returns Date-based label
@@ -69,7 +70,7 @@ export default function AnalyticsPage() {
     if (!isOwner || !rangeReady) return
     setLoading(true)
     try {
-      const [ov, dr, cs, adv, chan, prod, roas] = await Promise.all([
+      const [ov, dr, cs, adv, chan, prod, roas, funnel] = await Promise.all([
         fetchOverview(supabase, range.from, range.to),
         fetchDailyRevenue(supabase, range.from, range.to),
         fetchPerCs(supabase, range.from, range.to),
@@ -77,6 +78,7 @@ export default function AnalyticsPage() {
         fetchPerChannel(supabase, range.from, range.to),
         fetchPerProduct(supabase, range.from, range.to),
         fetchRoasPerCampaign(supabase, range.from, range.to),
+        fetchFunnelPerProduct(supabase, range.from, range.to),
       ])
       setOverview(ov)
       setDaily(dr)
@@ -85,6 +87,7 @@ export default function AnalyticsPage() {
       setPerChan(chan)
       setPerProduct(prod)
       setRoasPerCampaign(roas)
+      setFunnelRows(funnel)
     } finally {
       setLoading(false)
     }
@@ -157,6 +160,7 @@ export default function AnalyticsPage() {
             <TabsTrigger value="channel">Per Channel ({perChan.length})</TabsTrigger>
             <TabsTrigger value="product">Per Produk ({perProduct.length})</TabsTrigger>
             <TabsTrigger value="roas">ROAS ({roasPerCampaign.length})</TabsTrigger>
+            <TabsTrigger value="funnel">Funnel ({funnelRows.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -416,7 +420,223 @@ export default function AnalyticsPage() {
               ROAS Gross = total revenue (semua status) / spend. ROAS DITERIMA = revenue dari order DITERIMA / spend (lebih akurat untuk COD). Cost/Conv = spend / conversions (dari platform tracking). Cost/Order = spend / linked orders count.
             </p>
           </TabsContent>
+
+          <TabsContent value="funnel" className="space-y-4">
+            <FunnelHighlights rows={funnelRows} />
+            <FunnelPerProductTable rows={funnelRows} loading={loading} />
+            <p className="text-[11px] text-muted-foreground">
+              Cross-check 3 layer: <strong>Meta Ads</strong> (spend × campaign_products allocation), <strong>CS Report</strong> (daily_cs_report manual input), <strong>System Orders</strong> (orders × order_items). Variance Lead = CS lead − Meta lead (positive = organic). Variance Closing = System orders − CS closing (positive = CS lupa input). &quot;—&quot; berarti tidak ada data di layer tsb (beda dari nilai 0 eksplisit).
+            </p>
+          </TabsContent>
         </Tabs>
+      )}
+    </div>
+  )
+}
+
+// =============================================================
+// Funnel Per Product Table (Phase 6)
+// =============================================================
+function FunnelPerProductTable({ rows, loading }: { rows: FunnelPerProductRow[]; loading: boolean }) {
+  const [sortBy, setSortBy] = useState<'spend' | 'roas' | 'closerate' | 'var_lead' | 'var_close'>('spend')
+  const sorted = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      switch (sortBy) {
+        case 'roas': return Number(b.roas_system) - Number(a.roas_system)
+        case 'closerate': return Number(b.close_rate_cs) - Number(a.close_rate_cs)
+        case 'var_lead': return Math.abs(Number(b.variance_lead_meta_cs)) - Math.abs(Number(a.variance_lead_meta_cs))
+        case 'var_close': return Math.abs(Number(b.variance_closing_cs_system)) - Math.abs(Number(a.variance_closing_cs_system))
+        default: return Number(b.total_spend) - Number(a.total_spend)
+      }
+    })
+  }, [rows, sortBy])
+
+  const SortHead = ({ label, field }: { label: string; field: typeof sortBy }) => (
+    <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy(field)}>
+      <span className={sortBy === field ? 'text-violet-500 font-semibold' : ''}>{label}</span>
+    </TableHead>
+  )
+
+  // Display helper: "—" kalau no data di layer, "0" kalau explicit zero
+  const fmtCell = (n: number, hasData: boolean) => (hasData ? formatNumber(n) : '—')
+  const fmtRp = (n: number, hasData: boolean) => (hasData ? formatRupiah(n) : '—')
+
+  return (
+    <Card>
+      <CardContent className="p-0 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Produk</TableHead>
+              <SortHead label="Spend" field="spend" />
+              <TableHead className="text-right">Meta Lead</TableHead>
+              <TableHead className="text-right">CS Lead</TableHead>
+              <SortHead label="Var L" field="var_lead" />
+              <TableHead className="text-right">CS Close</TableHead>
+              <TableHead className="text-right">Sys Orders</TableHead>
+              <SortHead label="Var C" field="var_close" />
+              <TableHead className="text-right">Sys Diterima</TableHead>
+              <TableHead className="text-right">Revenue</TableHead>
+              <TableHead className="text-right">CPL Meta</TableHead>
+              <TableHead className="text-right">CPO</TableHead>
+              <SortHead label="Close% CS" field="closerate" />
+              <SortHead label="ROAS" field="roas" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={14} className="text-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                </TableCell>
+              </TableRow>
+            ) : sorted.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={14} className="text-center py-8 text-sm text-muted-foreground">
+                  Belum ada data di periode ini. Input ad spend (Phase 5B), laporan CS (Phase 6), atau order (semua phase).
+                </TableCell>
+              </TableRow>
+            ) : sorted.map(r => {
+              const varLead = Number(r.variance_lead_meta_cs)
+              const varClose = Number(r.variance_closing_cs_system)
+              const roas = Number(r.roas_system)
+              const closeRateCs = Number(r.close_rate_cs)
+              return (
+                <TableRow key={r.product_id}>
+                  <TableCell>
+                    <div className="text-sm font-medium">{r.product_name || `#${r.product_id}`}</div>
+                    {r.category_name && (
+                      <Badge variant="outline" className="text-[10px] mt-0.5">{r.category_name}</Badge>
+                    )}
+                    <div className="text-[10px] mt-0.5 flex gap-1 flex-wrap">
+                      {r.has_meta_data && <span className="text-orange-600">●Meta</span>}
+                      {r.has_cs_data && <span className="text-blue-600">●CS</span>}
+                      {r.has_system_data && <span className="text-emerald-600">●Sys</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right text-xs text-orange-600 font-semibold">
+                    {fmtRp(Number(r.total_spend), r.has_meta_data)}
+                  </TableCell>
+                  <TableCell className="text-right text-xs">{fmtCell(Number(r.meta_lead_count), r.has_meta_data)}</TableCell>
+                  <TableCell className="text-right text-xs">{fmtCell(Number(r.cs_lead_count), r.has_cs_data)}</TableCell>
+                  <TableCell className="text-right text-xs">
+                    {r.has_meta_data && r.has_cs_data ? (
+                      <span className={varLead > 0 ? 'text-blue-600 font-semibold' : varLead < 0 ? 'text-orange-600' : 'text-muted-foreground'}>
+                        {varLead > 0 ? '+' : ''}{formatNumber(varLead)}
+                      </span>
+                    ) : '—'}
+                  </TableCell>
+                  <TableCell className="text-right text-xs">{fmtCell(Number(r.cs_closing_count), r.has_cs_data)}</TableCell>
+                  <TableCell className="text-right text-xs">{fmtCell(Number(r.system_orders_count), r.has_system_data)}</TableCell>
+                  <TableCell className="text-right text-xs">
+                    {r.has_cs_data && r.has_system_data ? (
+                      <span className={varClose > 0 ? 'text-amber-600 font-semibold' : varClose < 0 ? 'text-red-600' : 'text-muted-foreground'}>
+                        {varClose > 0 ? '+' : ''}{formatNumber(varClose)}
+                      </span>
+                    ) : '—'}
+                  </TableCell>
+                  <TableCell className="text-right text-xs text-emerald-600">{fmtCell(Number(r.system_orders_diterima), r.has_system_data)}</TableCell>
+                  <TableCell className="text-right text-xs">{fmtRp(Number(r.system_revenue), r.has_system_data)}</TableCell>
+                  <TableCell className="text-right text-xs">{Number(r.cpl_meta) > 0 ? formatRupiah(Number(r.cpl_meta)) : '—'}</TableCell>
+                  <TableCell className="text-right text-xs">{Number(r.cpo) > 0 ? formatRupiah(Number(r.cpo)) : '—'}</TableCell>
+                  <TableCell className="text-right">
+                    {r.has_cs_data ? (
+                      <Badge variant="outline" className={`text-[10px] ${closeRateCs >= 25 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : closeRateCs >= 10 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30'}`}>
+                        {closeRateCs.toFixed(1)}%
+                      </Badge>
+                    ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {roas > 0 ? (
+                      <Badge variant="outline" className={`text-[10px] ${roas >= 2 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : roas >= 1 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
+                        {roas.toFixed(2)}x
+                      </Badge>
+                    ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  )
+}
+
+// =============================================================
+// Funnel Highlights — surfaces top variances + best performers
+// =============================================================
+function FunnelHighlights({ rows }: { rows: FunnelPerProductRow[] }) {
+  const highOrganic = rows
+    .filter(r => r.has_meta_data && r.has_cs_data && Number(r.variance_lead_meta_cs) > 0)
+    .sort((a, b) => Number(b.variance_lead_meta_cs) - Number(a.variance_lead_meta_cs))
+    .slice(0, 3)
+
+  const csLupaInput = rows
+    .filter(r => r.has_cs_data && r.has_system_data && Number(r.variance_closing_cs_system) > 0)
+    .sort((a, b) => Number(b.variance_closing_cs_system) - Number(a.variance_closing_cs_system))
+    .slice(0, 3)
+
+  const topCloser = rows
+    .filter(r => r.has_cs_data && Number(r.cs_lead_count) >= 10)
+    .sort((a, b) => Number(b.close_rate_cs) - Number(a.close_rate_cs))
+    .slice(0, 3)
+
+  const noHighlights = highOrganic.length === 0 && csLupaInput.length === 0 && topCloser.length === 0
+  if (noHighlights) return null
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      {highOrganic.length > 0 && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
+          <CardContent className="pt-4 pb-4">
+            <h4 className="text-xs font-semibold text-blue-700 mb-2">💡 Banyak Organic (CS Lead &gt; Meta Lead)</h4>
+            <div className="space-y-1.5">
+              {highOrganic.map(r => (
+                <div key={r.product_id} className="text-xs">
+                  <span className="font-medium">{r.product_name}</span>{' '}
+                  <span className="text-blue-600">+{formatNumber(Number(r.variance_lead_meta_cs))}</span>
+                  <span className="text-muted-foreground"> ({formatNumber(Number(r.cs_lead_count))} CS vs {formatNumber(Number(r.meta_lead_count))} Meta)</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 italic">Action: organic demand kuat — investasi content marketing.</p>
+          </CardContent>
+        </Card>
+      )}
+      {csLupaInput.length > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="pt-4 pb-4">
+            <h4 className="text-xs font-semibold text-amber-700 mb-2">⚠️ CS Lupa Input Order (Sys &gt; CS Closing)</h4>
+            <div className="space-y-1.5">
+              {csLupaInput.map(r => (
+                <div key={r.product_id} className="text-xs">
+                  <span className="font-medium">{r.product_name}</span>{' '}
+                  <span className="text-amber-600">+{formatNumber(Number(r.variance_closing_cs_system))}</span>
+                  <span className="text-muted-foreground"> ({formatNumber(Number(r.system_orders_count))} sys vs {formatNumber(Number(r.cs_closing_count))} CS)</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 italic">Action: minta CS sinkronkan laporan harian.</p>
+          </CardContent>
+        </Card>
+      )}
+      {topCloser.length > 0 && (
+        <Card className="border-emerald-500/30 bg-emerald-500/5">
+          <CardContent className="pt-4 pb-4">
+            <h4 className="text-xs font-semibold text-emerald-700 mb-2">✅ Top Close Rate (CS) — min 10 lead</h4>
+            <div className="space-y-1.5">
+              {topCloser.map(r => (
+                <div key={r.product_id} className="text-xs">
+                  <span className="font-medium">{r.product_name}</span>{' '}
+                  <span className="text-emerald-600 font-semibold">{Number(r.close_rate_cs).toFixed(1)}%</span>
+                  <span className="text-muted-foreground"> ({formatNumber(Number(r.cs_closing_count))}/{formatNumber(Number(r.cs_lead_count))})</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 italic">Action: scale produk ini, train CS lain.</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

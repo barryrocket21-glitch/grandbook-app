@@ -25,6 +25,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 5B — Ad Spend + Campaigns + ROAS | ✅ DONE | 2026-05-11 |
 | Phase 6 — CS Daily Report + ADV-CS Cross-Check Funnel | ✅ DONE | 2026-05-11 |
 | Phase 6 redesign — Analytics Horizontal Nav + Detail Per Produk | ✅ DONE | 2026-05-12 |
+| Phase 6.5 — Shipping Diff Revival | ✅ DONE | 2026-05-12 |
+
+**Phase 6.5 done.** Revive `/shipping-diff` dari archived banner ke full per-order table. 3 angka ongkir (charge customer / gross / net after cashback) + 2 selisih per order (margin sebelum vs setelah cashback) + summary stat cards (loss/breakeven/profit count + avg margin). Migration 024 + 2 RPCs (`shipping_diff_per_order`, `shipping_diff_summary`) dengan filter date/channel/courier/status. Sidebar `/shipping-diff` reinstated di group Reconciliation (owner+admin). Tidak ada schema change — reuse Phase 4C columns (`shipping_cost`, `shipping_cost_actual`, `estimated_shipping_net`). Brief column refs adjusted: `orders.courier_id` tidak exist (JOIN via `courier_channels.courier_id`), `orders.estimated_shipping_discount` tidak exist (derive `GREATEST(gross − net, 0)`).
 
 **Phase 6 redesign done.** /analytics refactor: tabs (7-buah, termasuk Funnel) → horizontal pill nav sticky di top content (initial iteration was sidebar nav, user feedback duplikat dengan app shell → swap ke horizontal). 6 items flat: Overview / Per Channel / Per Produk / Per CS / Per Advertiser / ROAS Campaign. Funnel tab standalone DIHAPUS — logic pindah ke detail page `/analytics/produk/[id]` dengan stat cards + funnel visual compact + CS performance table + campaigns linked table + insight box. URL sync via `useSearchParams` (Suspense wrapped per Next.js 16). Migration 023 + 2 RPCs baru (`analytics_cs_performance_per_product`, `analytics_campaigns_per_product`). Removed obsolete `FunnelProductCard` + `FunnelInsightCards` + inline `PerProductTable` (~600 LOC purged).
 
@@ -1150,7 +1153,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **021** | **Phase 5B — Campaigns extended + campaign_products + ad_spend extended + analytics_overview_v3 + analytics_roas_per_campaign + analytics_profit_per_product_v2 + analytics_ad_spend_summary** | **✅ Active** |
 | **022** | **Phase 6 — daily_cs_report + ad_spend.meta_lead_count + analytics_funnel_per_product + cs_daily_summary + cs_period_summary + cs_daily_series** | **✅ Active** |
 | **023** | **Phase 6 redesign — analytics_cs_performance_per_product + analytics_campaigns_per_product (untuk detail page per produk)** | **✅ Active** |
-| 024+ | TBD next phases | — |
+| **024** | **Phase 6.5 — shipping_diff_per_order + shipping_diff_summary (revival /shipping-diff)** | **✅ Active** |
+| 025+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

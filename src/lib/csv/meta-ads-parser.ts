@@ -1,14 +1,27 @@
 // =============================================================
-// Meta Ads CSV Parser (Phase 5B)
+// Meta Ads CSV Parser (Phase 5B + 5B-fix)
 //
 // Parse Meta Ads Manager export → daily ad_spend rows.
-// Mapping fleksibel: lookup multiple possible column names (Meta sering
-// rename across regions: "Amount spent" / "Amount Spent (IDR)" / etc).
+// Mapping fleksibel: lookup multiple possible column names dengan
+// case-insensitive contains match, handle parentheses (e.g.
+// "Jumlah yang dibelanjakan (IDR)" match ke "Jumlah yang dibelanjakan").
+//
+// 5B-fix:
+//   - Indonesian locale variants (Awal pelaporan, Nama kampanye, etc)
+//   - Add report_start_date + report_end_date di parsed row
+//   - detectExportMode() — SNAPSHOT_SINGLE_DAY / SNAPSHOT_DATE_RANGE_AGGREGATE / DAILY_BREAKDOWN
 // =============================================================
 import Papa from 'papaparse'
 
+export type ExportMode =
+  | 'SNAPSHOT_SINGLE_DAY'
+  | 'SNAPSHOT_DATE_RANGE_AGGREGATE'
+  | 'DAILY_BREAKDOWN'
+
 export interface MetaAdsRow {
-  spend_date: string
+  spend_date: string                  // = report_start_date (untuk insert)
+  report_start_date: string
+  report_end_date: string | null      // null kalau column "Akhir pelaporan" tidak ada
   campaign_name: string
   campaign_code: string | null
   spend: number
@@ -28,71 +41,151 @@ export interface ParseResult {
   totalRowsDetected: number
   detectedColumns: string[]
   currencyDetected: string | null
+  mode: ExportMode | null
+  modeDetails: {
+    /** Distinct (start_date, end_date) pairs di file */
+    distinctDateRanges: Array<{ start: string; end: string | null; rowCount: number }>
+    /** True kalau ada campaign yang muncul >1 dengan start_date beda */
+    hasMultiDayPerCampaign: boolean
+    /** True kalau ada row dengan start != end */
+    hasRangeRows: boolean
+  }
 }
 
 /**
- * Possible column name variations. Lowercase keys.
- * First match wins (priority by order).
+ * Possible column name variations.
+ * Lowercase tokens. Matcher = case-insensitive `contains`, parens stripped.
+ * Order matters: higher priority first.
  */
 const COLUMN_VARIANTS: Record<string, string[]> = {
-  date: [
-    'day',
-    'date',
-    'reporting starts',
+  // Tanggal awal periode (utama untuk spend_date)
+  date_start: [
+    'awal pelaporan',                   // ID
+    'reporting starts',                 // EN
     'reporting start',
+    'day',                              // EN — daily breakdown header
+    'date',
+  ],
+  // Tanggal akhir periode (untuk detect mode)
+  date_end: [
+    'akhir pelaporan',                  // ID
+    'reporting ends',                   // EN
+    'reporting end',
   ],
   campaign_name: [
-    'campaign name',
+    'nama kampanye',                    // ID
+    'campaign name',                    // EN
     'campaign',
   ],
   campaign_code: [
-    'campaign id',
+    'campaign id',                      // EN — TIDAK ada di export ID standard
     'campaign_id',
+    'id kampanye',                      // ID (jarang, optional)
   ],
   spend: [
-    'amount spent (idr)',
-    'amount spent',
+    'jumlah yang dibelanjakan',         // ID — match "Jumlah yang dibelanjakan (IDR)"
+    'amount spent',                     // EN — match "Amount spent (IDR)"
     'amount_spent',
+    'biaya',                            // ID fallback
     'spend',
     'cost',
     'amount',
   ],
   impressions: [
-    'impressions',
+    'impresi',                          // ID
+    'impressions',                      // EN
     'impression',
+    'tayangan',                         // ID (sometimes used standalone)
   ],
   reach: [
-    'reach',
+    'jangkauan',                        // ID
+    'reach',                            // EN
   ],
+  // PRIO: link clicks (ID/EN), fallback: clicks (semua)/clicks (all)
   clicks: [
-    'link clicks',
-    'clicks (all)',
+    'klik tautan',                      // ID prio (= link clicks)
+    'link clicks',                      // EN prio
+    'klik (semua)',                     // ID fallback
+    'clicks (all)',                     // EN fallback
+    'all clicks',
     'clicks',
   ],
   conversions: [
-    'purchases',
+    'hasil',                            // ID — "Hasil" = Results (purchases kalau objective SALES)
+    'purchases',                        // EN
     'website purchases',
-    'results',
+    'results',                          // EN
     'conversions',
+    'pembelian',                        // ID alternative
   ],
   revenue: [
-    'purchases conversion value',
+    'nilai konversi pembelian',         // ID — "Nilai Konversi Pembelian"
+    'purchases conversion value',       // EN
     'website purchases conversion value',
     'purchase conversion value',
+    'nilai konversi',                   // ID generic
     'conversion value',
     'revenue',
   ],
 }
 
-function detectColumn(headers: string[], variants: string[]): string | null {
-  const lower = headers.map(h => h.toLowerCase().trim())
+/**
+ * Strip parentheses, currency symbols, extra whitespace.
+ * Used for matching header against variant token.
+ * "Jumlah yang dibelanjakan (IDR)" → "jumlah yang dibelanjakan"
+ * "CPC (biaya per klik tautan) (IDR)" → "cpc biaya per klik tautan"
+ */
+function normalizeHeader(h: string): string {
+  return h
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')   // strip (...) groups
+    .replace(/[^a-z0-9\s_]/g, ' ') // strip punctuation
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Detect column dengan case-insensitive contains.
+ * Strategy:
+ *   1. Exact match (after normalize)
+ *   2. variant ⊆ normalized header (header contains variant)
+ *   3. normalized header ⊆ variant (variant contains header — rare)
+ * Skip headers yang sudah pernah di-claim untuk field lain (avoid conflicts
+ * like "CPC (semua) (IDR)" matching "klik (semua)").
+ */
+function detectColumn(
+  headers: string[],
+  variants: string[],
+  exclude: Set<string>
+): string | null {
+  const normalized = headers.map(normalizeHeader)
+  const usable = (h: string) => !exclude.has(h)
+
+  // 1. Exact match
   for (const v of variants) {
-    const idx = lower.indexOf(v)
+    const vn = normalizeHeader(v)
+    const idx = normalized.findIndex(
+      (h, i) => h === vn && usable(headers[i])
+    )
     if (idx >= 0) return headers[idx]
   }
-  // Fuzzy fallback: contains match
+  // 2. Variant token contained in header (header has variant as substring)
+  //    Use word boundary feel via space-padding to avoid 'clicks' matching 'cost per click'-type collisions.
   for (const v of variants) {
-    const idx = lower.findIndex(h => h.includes(v))
+    const vn = normalizeHeader(v)
+    const idx = normalized.findIndex(
+      (h, i) => h.startsWith(vn + ' ') || h.endsWith(' ' + vn) || h.includes(' ' + vn + ' ') || h === vn
+        ? usable(headers[i])
+        : false
+    )
+    if (idx >= 0) return headers[idx]
+  }
+  // 3. Fuzzy substring fallback
+  for (const v of variants) {
+    const vn = normalizeHeader(v)
+    const idx = normalized.findIndex(
+      (h, i) => h.includes(vn) && usable(headers[i])
+    )
     if (idx >= 0) return headers[idx]
   }
   return null
@@ -100,24 +193,37 @@ function detectColumn(headers: string[], variants: string[]): string | null {
 
 function detectCurrency(spendHeader: string | null): string | null {
   if (!spendHeader) return null
-  const m = spendHeader.toLowerCase().match(/\(([a-z]{3})\)/i)
+  const m = spendHeader.match(/\(([A-Za-z]{3})\)/)
   return m ? m[1].toUpperCase() : null
 }
 
-function parseDateFlexible(raw: string): string | null {
+/**
+ * Parse date dengan berbagai format:
+ * - ISO YYYY-MM-DD
+ * - YYYY/MM/DD
+ * - DD/MM/YYYY or DD-MM-YYYY (Indonesia)
+ * - MM/DD/YYYY (US fallback via Date)
+ */
+export function parseDateFlexible(raw: string): string | null {
   if (!raw) return null
   const s = raw.trim()
   // ISO YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
-  // DD/MM/YYYY or DD-MM-YYYY (Indonesia format)
-  let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
+  // YYYY/MM/DD
+  let m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/)
+  if (m) {
+    const mo = m[2].padStart(2, '0')
+    const d = m[3].padStart(2, '0')
+    return `${m[1]}-${mo}-${d}`
+  }
+  // DD/MM/YYYY or DD-MM-YYYY (Indonesia format, 4-digit year at end)
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
   if (m) {
     const d = m[1].padStart(2, '0')
     const mo = m[2].padStart(2, '0')
     return `${m[3]}-${mo}-${d}`
   }
-  // MM/DD/YYYY (US, but Meta usually exports in account locale)
-  // Try parse as Date as last resort
+  // MM/DD/YYYY (US, via Date). Only accept kalau Date.parse return finite.
   const d = new Date(s)
   if (!isNaN(d.getTime())) {
     return d.toISOString().slice(0, 10)
@@ -127,15 +233,11 @@ function parseDateFlexible(raw: string): string | null {
 
 function parseNumber(raw: string | undefined): number | null {
   if (!raw) return null
-  // Remove currency symbols, commas (thousands separator), spaces
   const cleaned = raw.replace(/[^0-9.,\-]/g, '').replace(/,(?=\d{3}(\D|$))/g, '')
-  // If dot+comma both present, comma is decimal separator (European)
   let normalized = cleaned
   if (cleaned.includes('.') && cleaned.includes(',')) {
-    // Comma is decimal, dot is thousands
     normalized = cleaned.replace(/\./g, '').replace(',', '.')
   } else if (cleaned.includes(',') && !cleaned.includes('.')) {
-    // If comma followed by 2 digits at end → decimal; else thousands
     if (/,\d{1,2}$/.test(cleaned)) {
       normalized = cleaned.replace(',', '.')
     } else {
@@ -146,6 +248,69 @@ function parseNumber(raw: string | undefined): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+/**
+ * Detect export mode dari parsed rows.
+ * Logic:
+ *  - SNAPSHOT_DATE_RANGE_AGGREGATE: SEMUA row punya start != end (multi-day aggregate)
+ *  - DAILY_BREAKDOWN: ada >=1 campaign yang muncul di >=2 unique start_date
+ *  - SNAPSHOT_SINGLE_DAY: else (1 row per campaign, start == end or end absent)
+ */
+export function detectExportMode(rows: MetaAdsRow[]): {
+  mode: ExportMode
+  distinctDateRanges: Array<{ start: string; end: string | null; rowCount: number }>
+  hasMultiDayPerCampaign: boolean
+  hasRangeRows: boolean
+} {
+  if (rows.length === 0) {
+    return {
+      mode: 'SNAPSHOT_SINGLE_DAY',
+      distinctDateRanges: [],
+      hasMultiDayPerCampaign: false,
+      hasRangeRows: false,
+    }
+  }
+
+  // Group by (start, end) tuple → count rows
+  const rangeMap = new Map<string, { start: string; end: string | null; rowCount: number }>()
+  for (const r of rows) {
+    const key = `${r.report_start_date}|${r.report_end_date ?? ''}`
+    const cur = rangeMap.get(key)
+    if (cur) cur.rowCount++
+    else rangeMap.set(key, { start: r.report_start_date, end: r.report_end_date, rowCount: 1 })
+  }
+  const distinctDateRanges = Array.from(rangeMap.values())
+
+  // Has any row with start != end (and end present)?
+  const hasRangeRows = rows.some(r =>
+    r.report_end_date && r.report_start_date !== r.report_end_date
+  )
+
+  // Has multi-day per campaign? Group by campaign_name → count unique start dates
+  const perCampaign = new Map<string, Set<string>>()
+  for (const r of rows) {
+    const key = r.campaign_name.toLowerCase().trim()
+    if (!perCampaign.has(key)) perCampaign.set(key, new Set())
+    perCampaign.get(key)!.add(r.report_start_date)
+  }
+  const hasMultiDayPerCampaign = Array.from(perCampaign.values()).some(s => s.size > 1)
+
+  // Decide mode
+  let mode: ExportMode
+  // SNAPSHOT_DATE_RANGE_AGGREGATE: SEMUA row start != end
+  const allRange = rows.length > 0 && rows.every(r =>
+    r.report_end_date && r.report_start_date !== r.report_end_date
+  )
+  if (allRange) {
+    mode = 'SNAPSHOT_DATE_RANGE_AGGREGATE'
+  } else if (hasMultiDayPerCampaign) {
+    mode = 'DAILY_BREAKDOWN'
+  } else {
+    mode = 'SNAPSHOT_SINGLE_DAY'
+  }
+
+  return { mode, distinctDateRanges, hasMultiDayPerCampaign, hasRangeRows }
+}
+
 export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult> {
   const result: ParseResult = {
     rows: [],
@@ -154,6 +319,12 @@ export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult>
     totalRowsDetected: 0,
     detectedColumns: [],
     currencyDetected: null,
+    mode: null,
+    modeDetails: {
+      distinctDateRanges: [],
+      hasMultiDayPerCampaign: false,
+      hasRangeRows: false,
+    },
   }
 
   const text = typeof file === 'string' ? file : await file.text()
@@ -173,26 +344,41 @@ export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult>
   const headers = parsed.meta.fields || []
   result.totalRowsDetected = parsed.data.length
 
-  const colDate = detectColumn(headers, COLUMN_VARIANTS.date)
-  const colCampaignName = detectColumn(headers, COLUMN_VARIANTS.campaign_name)
-  const colCampaignCode = detectColumn(headers, COLUMN_VARIANTS.campaign_code)
-  const colSpend = detectColumn(headers, COLUMN_VARIANTS.spend)
-  const colImpr = detectColumn(headers, COLUMN_VARIANTS.impressions)
-  const colReach = detectColumn(headers, COLUMN_VARIANTS.reach)
-  const colClicks = detectColumn(headers, COLUMN_VARIANTS.clicks)
-  const colConv = detectColumn(headers, COLUMN_VARIANTS.conversions)
-  const colRevenue = detectColumn(headers, COLUMN_VARIANTS.revenue)
+  // Detect columns. Exclude set prevents header dipakai 2x untuk field beda.
+  const claimed = new Set<string>()
+  const detect = (variants: string[]) => {
+    const found = detectColumn(headers, variants, claimed)
+    if (found) claimed.add(found)
+    return found
+  }
+
+  const colDateStart = detect(COLUMN_VARIANTS.date_start)
+  const colDateEnd = detect(COLUMN_VARIANTS.date_end)
+  const colCampaignName = detect(COLUMN_VARIANTS.campaign_name)
+  const colCampaignCode = detect(COLUMN_VARIANTS.campaign_code)
+  const colSpend = detect(COLUMN_VARIANTS.spend)
+  const colImpr = detect(COLUMN_VARIANTS.impressions)
+  const colReach = detect(COLUMN_VARIANTS.reach)
+  const colClicks = detect(COLUMN_VARIANTS.clicks)
+  const colConv = detect(COLUMN_VARIANTS.conversions)
+  const colRevenue = detect(COLUMN_VARIANTS.revenue)
 
   result.detectedColumns = [
-    colDate ? `date=${colDate}` : 'date=MISSING',
+    colDateStart ? `start=${colDateStart}` : 'start=MISSING',
+    colDateEnd ? `end=${colDateEnd}` : 'end=(none)',
     colCampaignName ? `campaign=${colCampaignName}` : 'campaign=MISSING',
     colCampaignCode ? `code=${colCampaignCode}` : 'code=(none)',
     colSpend ? `spend=${colSpend}` : 'spend=MISSING',
+    colImpr ? `impr=${colImpr}` : 'impr=(none)',
+    colReach ? `reach=${colReach}` : 'reach=(none)',
+    colClicks ? `clicks=${colClicks}` : 'clicks=(none)',
+    colConv ? `conv=${colConv}` : 'conv=(none)',
+    colRevenue ? `revenue=${colRevenue}` : 'revenue=(none)',
   ]
 
-  if (!colDate) result.errors.push({ rowIndex: -1, message: 'Kolom "Day/Date" tidak ditemukan' })
-  if (!colCampaignName) result.errors.push({ rowIndex: -1, message: 'Kolom "Campaign name" tidak ditemukan' })
-  if (!colSpend) result.errors.push({ rowIndex: -1, message: 'Kolom "Amount spent / Spend" tidak ditemukan' })
+  if (!colDateStart) result.errors.push({ rowIndex: -1, message: 'Kolom tanggal awal ("Awal pelaporan" / "Day" / "Reporting starts") tidak ditemukan' })
+  if (!colCampaignName) result.errors.push({ rowIndex: -1, message: 'Kolom campaign ("Nama kampanye" / "Campaign name") tidak ditemukan' })
+  if (!colSpend) result.errors.push({ rowIndex: -1, message: 'Kolom spend ("Jumlah yang dibelanjakan" / "Amount spent") tidak ditemukan' })
 
   if (result.errors.length > 0) return result
 
@@ -204,12 +390,23 @@ export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult>
 
   parsed.data.forEach((row, idx) => {
     try {
-      const dateRaw = row[colDate!]
-      const date = parseDateFlexible(dateRaw)
-      if (!date) {
-        result.errors.push({ rowIndex: idx, message: `Tanggal "${dateRaw}" tidak dikenali` })
+      const startRaw = row[colDateStart!]
+      const startDate = parseDateFlexible(startRaw)
+      if (!startDate) {
+        result.errors.push({ rowIndex: idx, message: `Tanggal awal "${startRaw}" tidak dikenali` })
         return
       }
+      let endDate: string | null = null
+      if (colDateEnd) {
+        const endRaw = row[colDateEnd]
+        if (endRaw && endRaw.trim()) {
+          endDate = parseDateFlexible(endRaw)
+          if (!endDate) {
+            result.warnings.push(`Row ${idx + 1}: tanggal akhir "${endRaw}" tidak dikenali, treat sebagai snapshot single day`)
+          }
+        }
+      }
+
       const campaign_name = (row[colCampaignName!] || '').trim()
       if (!campaign_name) {
         result.errors.push({ rowIndex: idx, message: 'Campaign name kosong' })
@@ -229,7 +426,9 @@ export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult>
       const revenue_reported = colRevenue ? parseNumber(row[colRevenue]) : null
 
       result.rows.push({
-        spend_date: date,
+        spend_date: startDate,
+        report_start_date: startDate,
+        report_end_date: endDate,
         campaign_name,
         campaign_code,
         spend,
@@ -249,6 +448,17 @@ export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult>
     }
   })
 
+  // Detect export mode dari parsed rows
+  if (result.rows.length > 0) {
+    const det = detectExportMode(result.rows)
+    result.mode = det.mode
+    result.modeDetails = {
+      distinctDateRanges: det.distinctDateRanges,
+      hasMultiDayPerCampaign: det.hasMultiDayPerCampaign,
+      hasRangeRows: det.hasRangeRows,
+    }
+  }
+
   if (result.rows.length === 0 && result.errors.length === 0) {
     result.warnings.push('CSV ke-parse tapi 0 row valid. Cek format kolom + header.')
   }
@@ -258,7 +468,8 @@ export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult>
 
 /**
  * Match parsed Meta CSV rows to existing campaigns DB.
- * Priority: campaign_code (Meta Campaign ID) → campaign_name (case-insensitive).
+ * Priority: campaign_code (kalau ada di CSV + DB) → campaign_name (case-insensitive).
+ * Note: Indonesian export TIDAK ada Campaign ID column, jadi praktis selalu by name.
  */
 export interface MatchResult {
   matched: number

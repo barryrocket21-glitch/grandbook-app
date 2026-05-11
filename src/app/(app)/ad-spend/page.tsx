@@ -22,6 +22,7 @@ import { toast } from 'sonner'
 import {
   Plus, Pencil, Loader2, DollarSign, Trash2, Upload, FileText,
   CheckCircle2, AlertTriangle, ArrowRight, ArrowLeft, X, Coins, MousePointer, Eye,
+  Calendar, CalendarRange, CalendarDays, AlertOctagon,
 } from 'lucide-react'
 import { formatRupiah, formatDate, formatNumber } from '@/lib/format'
 import type { AdPlatform, AdSpendSource } from '@/lib/types'
@@ -40,7 +41,7 @@ import {
   CAMPAIGN_PLATFORMS, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_PLATFORM_COLOR,
   AD_SPEND_SOURCES, AD_SPEND_SOURCE_LABEL,
 } from '@/lib/schemas/settings'
-import { parseMetaAdsCsv, matchToCampaigns, type MetaAdsRow, type ParseResult, type MatchResult } from '@/lib/csv/meta-ads-parser'
+import { parseMetaAdsCsv, matchToCampaigns, type MetaAdsRow, type ParseResult, type MatchResult, type ExportMode } from '@/lib/csv/meta-ads-parser'
 
 const supabase = createClient()
 
@@ -539,6 +540,8 @@ function CsvUploadDialog({
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
   const [importResult, setImportResult] = useState<{ inserted: number; skipped_duplicate: number; errors: string[] } | null>(null)
   const [parsing, setParsing] = useState(false)
+  // 5B-fix: untuk mode SNAPSHOT_DATE_RANGE_AGGREGATE, user opt-in force import (tidak rekomen).
+  const [forceImportAggregate, setForceImportAggregate] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const resetAll = () => {
@@ -548,6 +551,7 @@ function CsvUploadDialog({
     setParseResult(null)
     setMatchResult(null)
     setImportResult(null)
+    setForceImportAggregate(false)
   }
 
   const handleClose = () => { resetAll(); onClose() }
@@ -671,6 +675,15 @@ function CsvUploadDialog({
 
         {step === 'preview' && parseResult && matchResult && (
           <div className="space-y-4 max-h-[600px] overflow-y-auto">
+            {/* Mode detection banner */}
+            <ModeBanner
+              mode={parseResult.mode}
+              distinctRanges={parseResult.modeDetails.distinctDateRanges}
+              rows={parseResult.rows}
+              forceImport={forceImportAggregate}
+              onForceImportChange={setForceImportAggregate}
+            />
+
             <div className="grid grid-cols-4 gap-3 text-xs">
               <div className="rounded border p-2">
                 <p className="text-muted-foreground">Total Rows</p>
@@ -700,7 +713,7 @@ function CsvUploadDialog({
 
             <div className="rounded border bg-muted/30 p-3 text-xs">
               <p className="font-medium mb-1">Detected columns:</p>
-              <p className="text-muted-foreground font-mono">{parseResult.detectedColumns.join(' | ')}</p>
+              <p className="text-muted-foreground font-mono break-all">{parseResult.detectedColumns.join(' | ')}</p>
               {parseResult.currencyDetected && (
                 <p className="text-muted-foreground mt-1">Currency: {parseResult.currencyDetected}</p>
               )}
@@ -726,7 +739,7 @@ function CsvUploadDialog({
                   <p className="text-muted-foreground">+ {matchResult.unmatched_campaign_names.length - 8} more...</p>
                 )}
                 <p className="text-muted-foreground mt-2">
-                  Buka /campaigns + tambah campaign dengan nama yang match (atau pakai Campaign Code).
+                  Buka /campaigns + tambah campaign dengan nama yang match (Indonesia export biasa nggak punya Campaign ID, jadi match by name persis).
                 </p>
               </div>
             )}
@@ -736,6 +749,7 @@ function CsvUploadDialog({
                 <thead className="bg-muted/30">
                   <tr>
                     <th className="text-left p-2">Date</th>
+                    {parseResult.modeDetails.hasRangeRows && <th className="text-left p-2">End</th>}
                     <th className="text-left p-2">Campaign</th>
                     <th className="text-left p-2">Match</th>
                     <th className="text-right p-2">Spend</th>
@@ -745,7 +759,10 @@ function CsvUploadDialog({
                 <tbody>
                   {matchResult.matched_rows.slice(0, 10).map((m, i) => (
                     <tr key={i} className="border-t">
-                      <td className="p-2">{m.row.spend_date}</td>
+                      <td className="p-2">{m.row.report_start_date}</td>
+                      {parseResult.modeDetails.hasRangeRows && (
+                        <td className="p-2 text-muted-foreground">{m.row.report_end_date || '—'}</td>
+                      )}
                       <td className="p-2 truncate max-w-[200px]">{m.row.campaign_name}</td>
                       <td className="p-2">
                         <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 text-[10px]">
@@ -757,7 +774,7 @@ function CsvUploadDialog({
                     </tr>
                   ))}
                   {matchResult.matched_rows.length > 10 && (
-                    <tr><td colSpan={5} className="p-2 text-center text-muted-foreground">+ {matchResult.matched_rows.length - 10} more matched rows...</td></tr>
+                    <tr><td colSpan={6} className="p-2 text-center text-muted-foreground">+ {matchResult.matched_rows.length - 10} more matched rows...</td></tr>
                   )}
                 </tbody>
               </table>
@@ -769,10 +786,15 @@ function CsvUploadDialog({
               </Button>
               <Button
                 onClick={handleExecute}
-                disabled={matchResult.matched_rows.length === 0}
+                disabled={
+                  matchResult.matched_rows.length === 0 ||
+                  (parseResult.mode === 'SNAPSHOT_DATE_RANGE_AGGREGATE' && !forceImportAggregate)
+                }
                 className="ml-auto bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
               >
-                Import {matchResult.matched_rows.length} rows
+                {parseResult.mode === 'SNAPSHOT_DATE_RANGE_AGGREGATE' && forceImportAggregate
+                  ? `Force import ${matchResult.matched_rows.length} rows`
+                  : `Import ${matchResult.matched_rows.length} rows`}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -817,5 +839,98 @@ function CsvUploadDialog({
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+// =============================================================
+// 5B-fix: Mode banner ditampilkan di top Step 3 Preview.
+// =============================================================
+function ModeBanner({
+  mode, distinctRanges, rows, forceImport, onForceImportChange,
+}: {
+  mode: ExportMode | null
+  distinctRanges: Array<{ start: string; end: string | null; rowCount: number }>
+  rows: MetaAdsRow[]
+  forceImport: boolean
+  onForceImportChange: (v: boolean) => void
+}) {
+  if (!mode) return null
+
+  if (mode === 'SNAPSHOT_SINGLE_DAY') {
+    const date = rows[0]?.report_start_date ?? '—'
+    return (
+      <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3 flex items-center gap-3">
+        <Calendar className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="text-xs flex-1">
+          <p className="font-medium text-emerald-700">Mode: Snapshot 1 Hari</p>
+          <p className="text-muted-foreground mt-0.5">
+            {rows.length} rows × <span className="font-mono">{date}</span>. Aman import — semua row pakai tanggal yang sama.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (mode === 'DAILY_BREAKDOWN') {
+    const dateCount = new Set(rows.map(r => r.report_start_date)).size
+    const campaignCount = new Set(rows.map(r => r.campaign_name.toLowerCase().trim())).size
+    const minDate = rows.reduce((m, r) => r.report_start_date < m ? r.report_start_date : m, rows[0].report_start_date)
+    const maxDate = rows.reduce((m, r) => r.report_start_date > m ? r.report_start_date : m, rows[0].report_start_date)
+    return (
+      <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3 flex items-center gap-3">
+        <CalendarDays className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="text-xs flex-1">
+          <p className="font-medium text-emerald-700">Mode: Daily Breakdown</p>
+          <p className="text-muted-foreground mt-0.5">
+            {rows.length} rows = {campaignCount} campaign × {dateCount} hari{' '}
+            (<span className="font-mono">{minDate}</span> → <span className="font-mono">{maxDate}</span>).
+            Aman import — 1 row per (campaign × hari).
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // SNAPSHOT_DATE_RANGE_AGGREGATE — block by default, require opt-in force
+  const rangeRow = distinctRanges[0]
+  const rangeLabel = rangeRow
+    ? `${rangeRow.start} → ${rangeRow.end}`
+    : '—'
+  const dayCount = rangeRow && rangeRow.end
+    ? Math.round((new Date(rangeRow.end).getTime() - new Date(rangeRow.start).getTime()) / (1000 * 60 * 60 * 24)) + 1
+    : 0
+  return (
+    <div className="rounded-lg border-2 border-red-500/50 bg-red-500/5 p-4 space-y-3">
+      <div className="flex items-start gap-3">
+        <AlertOctagon className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+        <div className="flex-1 space-y-2">
+          <div>
+            <p className="font-semibold text-red-700 text-sm">⚠️ Mode: Snapshot Date Range Aggregate</p>
+            <p className="text-xs text-red-700 mt-1">
+              Data ini AGGREGATE {dayCount > 0 ? `${dayCount} hari` : 'multi-day'} (<span className="font-mono">{rangeLabel}</span>).
+              <strong> Tidak bisa di-import sebagai 1 hari </strong>(akan rusak time series).
+            </p>
+          </div>
+          <div className="rounded border bg-red-500/5 p-2 text-xs space-y-1">
+            <p className="font-medium text-red-700">Saran:</p>
+            <ul className="list-disc list-inside text-red-700/80 space-y-0.5">
+              <li>Export ulang dengan <strong>&quot;Breakdown by Day&quot;</strong> di Ads Manager Meta</li>
+              <li>Atau pilih single date di Ads Manager (Awal pelaporan = Akhir pelaporan)</li>
+            </ul>
+          </div>
+          <label className="flex items-start gap-2 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={forceImport}
+              onChange={e => onForceImportChange(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span className="text-red-700">
+              <strong>Force import sebagai tanggal Awal pelaporan</strong> (<span className="font-mono">{rangeRow?.start ?? '—'}</span>) — <em>tidak rekomen, akan distort daily analytics</em>
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -73,31 +73,97 @@ INSERT INTO ad_spend (
 - [ ] Edit spend → ubah angka → ke-update
 - [ ] Delete spend (owner only) → row hilang
 
-## Test `/ad-spend` CSV Upload
+## Test `/ad-spend` CSV Upload — 4 Sample Modes (5B-fix)
 
-Bikin sample CSV (`sample-meta-ads.csv`):
+Parser support 2 locale (Indonesia + English) × 3 export mode (SNAPSHOT_SINGLE_DAY / DAILY_BREAKDOWN / SNAPSHOT_DATE_RANGE_AGGREGATE).
+
+Smoke test parser inline: `npx tsx scripts/test-meta-parser.ts` → 9 PASS.
+
+### Sample A — Indonesia SNAPSHOT_SINGLE_DAY (mirrors user export 25 cols)
+
+`sample-meta-id-single-day.csv`:
+```csv
+Awal pelaporan,Akhir pelaporan,Nama kampanye,Penayangan kampanye,Pengaturan atribusi,Hasil,Indikator Hasil,Jangkauan,Frekuensi,Biaya per Hasil,Anggaran Set Iklan,Jenis Anggaran Set Iklan,Jumlah yang dibelanjakan (IDR),Berakhir,Impresi,CPM (Biaya Per 1.000 Tayangan) (IDR),Klik tautan,shop_clicks,CPC (biaya per klik tautan) (IDR),CTR (rasio klik tayang tautan),Klik (semua),CTR (Semua),CPC (semua) (IDR),Tayangan halaman tujuan,Biaya per Tayangan Halaman Landas (IDR)
+2026-05-11,2026-05-11,1-5 Nature Gemuk Badan ABO-BID Advented+,active,7d_click,18,actions:purchase,7500,1.20,27778,500000,daily,500000,no,9000,55556,150,5,3333,1.67,180,2.00,2778,120,4167
+2026-05-11,2026-05-11,11-4 Kran Robotic ABO Adventeds+ BID,active,7d_click,12,actions:purchase,4800,1.15,33333,400000,daily,400000,no,5500,72727,90,3,4444,1.64,110,2.00,3636,80,5000
+2026-05-11,2026-05-11,Test Campaign Indonesia 3,active,7d_click,5,actions:purchase,2000,1.10,40000,200000,daily,200000,no,2200,90909,30,1,6667,1.36,40,1.82,5000,25,8000
+```
+
+Expected:
+- Mode banner: 🟢 **Mode: Snapshot 1 Hari** "3 rows × 2026-05-11"
+- Detected columns: start=Awal pelaporan, end=Akhir pelaporan, campaign=Nama kampanye, code=(none), spend=Jumlah yang dibelanjakan (IDR), impr=Impresi, reach=Jangkauan, clicks=**Klik tautan** (NOT Klik (semua)), conv=Hasil
+- Currency: IDR
+- 3 rows valid, 0 errors
+
+### Sample B — Indonesia DAILY_BREAKDOWN
+
+`sample-meta-id-daily.csv`:
+```csv
+Awal pelaporan,Akhir pelaporan,Nama kampanye,Jumlah yang dibelanjakan (IDR),Impresi,Jangkauan,Klik tautan,Hasil,Nilai Konversi Pembelian
+2026-05-08,2026-05-08,Camp A Indonesia,150000,3000,2500,50,5,1500000
+2026-05-09,2026-05-09,Camp A Indonesia,200000,4000,3200,75,8,2400000
+2026-05-10,2026-05-10,Camp A Indonesia,180000,3500,2800,65,7,2100000
+2026-05-08,2026-05-08,Camp B Indonesia,120000,2500,2000,40,4,1200000
+2026-05-09,2026-05-09,Camp B Indonesia,140000,2800,2300,45,5,1500000
+2026-05-10,2026-05-10,Camp B Indonesia,160000,3100,2500,55,6,1800000
+```
+
+Expected:
+- Mode banner: 🟢 **Mode: Daily Breakdown** "6 rows = 2 campaign × 3 hari (2026-05-08 → 2026-05-10)"
+- 6 rows valid, revenue=Nilai Konversi Pembelian detected
+
+### Sample C — Indonesia SNAPSHOT_DATE_RANGE_AGGREGATE (DANGEROUS)
+
+`sample-meta-id-aggregate.csv`:
+```csv
+Awal pelaporan,Akhir pelaporan,Nama kampanye,Jumlah yang dibelanjakan (IDR),Impresi,Jangkauan,Klik tautan,Hasil
+2026-05-01,2026-05-11,Camp X Aggregate,1650000,33000,27000,500,50
+2026-05-01,2026-05-11,Camp Y Aggregate,1320000,26000,21000,440,42
+2026-05-01,2026-05-11,Camp Z Aggregate,990000,19000,15500,330,33
+```
+
+Expected:
+- Mode banner: 🔴 **Mode: Snapshot Date Range Aggregate** "Data ini AGGREGATE 11 hari (2026-05-01 → 2026-05-11)"
+- Saran panel: export ulang dengan Breakdown by Day
+- Tabel preview tampil tanggal start + end column
+- Import button **disabled** by default
+- Checkbox "Force import sebagai tanggal Awal pelaporan (2026-05-01) — tidak rekomen"
+- Centang checkbox → button enable, label berubah "Force import 3 rows"
+
+### Sample D — English DAILY_BREAKDOWN (backward compat Phase 5B v1)
+
+`sample-meta-en-daily.csv`:
 ```csv
 Day,Campaign name,Campaign ID,Amount spent (IDR),Impressions,Reach,Link clicks,Purchases,Purchases conversion value
-2026-05-08,1-5 Nature Gemuk Badan ABO-BID Advented+,12345,500000,12000,8500,180,15,4500000
-2026-05-09,1-5 Nature Gemuk Badan ABO-BID Advented+,12345,450000,11000,7800,170,14,4200000
-2026-05-08,Campaign Yang Belum Ada,67890,300000,8000,6500,120,8,2400000
+2026-05-08,Camp ENG One,12345,500000,12000,8500,180,15,4500000
+2026-05-09,Camp ENG One,12345,450000,11000,7800,170,14,4200000
+2026-05-08,Camp ENG Two,67890,300000,8000,6500,120,8,2400000
 ```
+
+Expected:
+- Mode: 🟢 DAILY_BREAKDOWN
+- Detected: start=Day, end=(none), campaign=Campaign name, code=Campaign ID
+- 3 rows valid
+
+### CSV Upload test playbook
 
 - [ ] Klik "Upload CSV" → Step 1 buka
 - [ ] Pilih "META" → Lanjut
 - [ ] Step 2: klik area drop → pilih file
-- [ ] Step 3 Preview: 
+- [ ] Step 3 Preview:
+  - [ ] **Mode banner muncul di top** dengan icon + label sesuai mode (🟢 hijau / 🔴 merah)
   - [ ] Stat: Total Rows / Matched / Unmatched / Errors
-  - [ ] Detected columns ditampilkan (date=Day, campaign=Campaign name, spend=Amount spent (IDR))
+  - [ ] Detected columns ditampilkan (Indonesia: start=Awal pelaporan, campaign=Nama kampanye, spend=Jumlah yang dibelanjakan (IDR))
   - [ ] Currency: IDR (warning kosong)
-  - [ ] Sample preview table 10 row (kalau ada)
-  - [ ] Unmatched campaign names section: "Campaign Yang Belum Ada"
+  - [ ] Sample preview table dengan kolom End (kalau hasRangeRows=true)
+  - [ ] Unmatched campaign names section kalau ada
+- [ ] **Test Sample C aggregate**: Import button disabled, warning panel merah, checkbox "Force import" → centang → button enable
 - [ ] Klik "Import X rows" → Step 4 importing → Step 5 done
   - [ ] Inserted: 2 (yang match)
   - [ ] Skipped duplicate: 0 (first time)
   - [ ] Errors: 0
 - [ ] Re-upload sama file → expect: Inserted 0, Skipped 2 (idempotency)
-- [ ] CSV currency non-IDR test: tambah header `Amount spent (USD)` → warning muncul
+- [ ] CSV currency non-IDR test: header `Amount spent (USD)` → warning muncul
 
 ## Test `/analytics` Row 4 (Net Profit After Ads)
 

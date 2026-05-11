@@ -13,10 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { ArrowLeft, Loader2, Pencil, History, FileText, Package, ShieldCheck, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Loader2, Pencil, History, FileText, Package, ShieldCheck, ChevronRight, Coins, RefreshCw } from 'lucide-react'
 import { canApproveOrders } from '@/lib/auth/permissions'
 import { updateOrderStatus } from '@/lib/orders/order-number'
-import { INTERNAL_STATUSES, STATUS_BADGE_COLOR, STATUS_LABEL } from '@/lib/schemas/settings'
+import { INTERNAL_STATUSES, STATUS_BADGE_COLOR, STATUS_LABEL, BILLING_MODEL_SHORT } from '@/lib/schemas/settings'
+import { fetchChannelCostBundle, recomputeOrderCosts, type ChannelCostBundle } from '@/lib/supabase/queries/billing-config'
+import { formatRupiah, formatDateTime } from '@/lib/format'
 import { OrderForm, type OrderFormDefaults } from '@/components/orders/order-form'
 import { format, parseISO } from 'date-fns'
 import type { OrderInputFormData, PaymentMethodEnum } from '@/lib/schemas/settings'
@@ -61,10 +63,18 @@ interface OrderDetail {
   meta: Record<string, unknown> | null
   raw_data: Record<string, unknown> | null
   rate_snapshot: Record<string, unknown> | null
+  // Phase 4C estimated cost fields
+  estimated_shipping_net: number | null
+  estimated_cod_fee: number | null
+  estimated_ppn: number | null
+  estimated_total_cost: number | null
+  estimated_cash_in: number | null
+  estimated_profit: number | null
+  cost_computed_at: string | null
   order_date: string
   created_at: string
   updated_at: string
-  channel?: { id: number; code: string; name: string }
+  channel?: { id: number; code: string; name: string; billing_model?: string; shipping_discount_label?: string }
   source_profile?: { id: number; code: string; name: string }
   cs?: { id: string; full_name: string }
   advertiser?: { id: string; full_name: string }
@@ -120,7 +130,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         .from('orders')
         .select(`
           *,
-          channel:courier_channels(id, code, name),
+          channel:courier_channels(id, code, name, billing_model, shipping_discount_label),
           source_profile:converter_profiles(id, code, name),
           cs:profiles!orders_cs_id_fkey(id, full_name),
           advertiser:profiles!orders_advertiser_id_fkey(id, full_name),
@@ -325,6 +335,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <TabsTrigger value="items"><Package className="w-3.5 h-3.5 mr-1" />Items ({items.length})</TabsTrigger>
           <TabsTrigger value="timeline"><History className="w-3.5 h-3.5 mr-1" />Timeline ({history.length})</TabsTrigger>
           <TabsTrigger value="audit"><ShieldCheck className="w-3.5 h-3.5 mr-1" />Audit</TabsTrigger>
+          {canApprove && (
+            <TabsTrigger value="cost"><Coins className="w-3.5 h-3.5 mr-1" />Cost &amp; Profit</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
@@ -515,6 +528,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </CardContent>
           </Card>
         </TabsContent>
+
+        {canApprove && (
+          <TabsContent value="cost">
+            <CostProfitTab order={order} onRecomputed={load} />
+          </TabsContent>
+        )}
       </Tabs>
 
       <Dialog open={statusOpen} onOpenChange={(v) => { setStatusOpen(v); if (!v) setStatusNote('') }}>
@@ -570,4 +589,173 @@ function fmt(iso: string): string {
 }
 function fmtFull(iso: string): string {
   try { return format(parseISO(iso), 'dd MMM yyyy HH:mm') } catch { return iso }
+}
+
+// =============================================================
+// Phase 4C — Cost & Profit Tab Component
+// Render breakdown estimasi biaya & profit untuk satu order.
+// Fetch channel cost bundle untuk display rates yang dipakai.
+// Recompute button trigger compute_order_costs RPC.
+// =============================================================
+function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomputed: () => void }) {
+  const [bundle, setBundle] = useState<ChannelCostBundle | null>(null)
+  const [bundleLoading, setBundleLoading] = useState(false)
+  const [recomputing, setRecomputing] = useState(false)
+
+  useEffect(() => {
+    const loadBundle = async () => {
+      if (!order.channel_id) return
+      setBundleLoading(true)
+      try {
+        const b = await fetchChannelCostBundle(supabase, order.channel_id, order.order_date)
+        setBundle(b)
+      } finally {
+        setBundleLoading(false)
+      }
+    }
+    void loadBundle()
+  }, [order.channel_id, order.order_date])
+
+  const recompute = async () => {
+    setRecomputing(true)
+    try {
+      await recomputeOrderCosts(supabase, order.id)
+      toast.success('Cost recomputed')
+      onRecomputed()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error('Gagal recompute', { description: msg })
+    } finally {
+      setRecomputing(false)
+    }
+  }
+
+  // Channel kosong
+  if (!order.channel_id) {
+    return (
+      <Card>
+        <CardContent className="pt-6 pb-6 text-center text-sm text-muted-foreground">
+          <Coins className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+          Pilih channel ekspedisi untuk lihat estimasi biaya. Edit order untuk set channel.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const billingModel = order.channel?.billing_model || 'NO_RECONCILIATION'
+  const discountLabel = order.channel?.shipping_discount_label || 'Cashback Ongkir'
+  const computed = order.cost_computed_at != null
+
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-4 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Coins className="w-4 h-4 text-violet-500" />
+              Estimated Cost &amp; Profit
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Channel: <span className="font-mono">{order.channel?.code}</span> · Billing: <Badge variant="outline" className="text-[10px]">{BILLING_MODEL_SHORT[billingModel as keyof typeof BILLING_MODEL_SHORT] ?? billingModel}</Badge>
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={recompute} disabled={recomputing}>
+            {recomputing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
+            Recompute
+          </Button>
+        </div>
+
+        {billingModel === 'NO_RECONCILIATION' && (
+          <div className="text-xs p-3 rounded bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400">
+            ℹ️ Channel ini billing model = NO_RECONCILIATION. Cash in = order total kalau COD; cost dihitung simbolis tanpa rekonsil.
+          </div>
+        )}
+
+        {(order.status === 'BARU' || order.status === 'SIAP_KIRIM') && (
+          <div className="text-xs p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+            ⏳ Estimasi belum final — order masih pre-kirim. Cost akan refresh saat status update ke DITERIMA dan rekonsil masuk.
+          </div>
+        )}
+
+        {!computed ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            Belum di-compute. Klik <span className="font-mono">Recompute</span> untuk hitung sekarang.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Breakdown */}
+            <div className="text-xs space-y-1 bg-muted/30 rounded p-3 border">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">Cost Breakdown</div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Order Total ({order.payment_method})</span>
+                <span className="font-mono font-semibold">{formatRupiah(Number(order.total))}</span>
+              </div>
+              <div className="border-t my-1" />
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shipping Gross</span>
+                <span className="font-mono">{formatRupiah(Number(order.shipping_cost_actual ?? order.shipping_cost ?? 0))}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shipping Net (after {discountLabel})</span>
+                <span className="font-mono">{formatRupiah(Number(order.estimated_shipping_net ?? 0))}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">COD Fee</span>
+                <span className="font-mono">{formatRupiah(Number(order.estimated_cod_fee ?? 0))}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">PPN</span>
+                <span className="font-mono">{formatRupiah(Number(order.estimated_ppn ?? 0))}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1 text-orange-600">
+                <span className="font-semibold">Total Cost ke Ekspedisi</span>
+                <span className="font-mono font-bold">{formatRupiah(Number(order.estimated_total_cost ?? 0))}</span>
+              </div>
+            </div>
+
+            {/* Cash flow + profit */}
+            <div className="text-xs space-y-1 bg-muted/30 rounded p-3 border">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">Cash Flow &amp; Profit</div>
+              <div className="flex justify-between text-emerald-600">
+                <span className="font-semibold">Estimated Cash In</span>
+                <span className="font-mono font-bold">{formatRupiah(Number(order.estimated_cash_in ?? 0))}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">
+                {billingModel === 'MONTHLY_INVOICE' && 'COD cair full sebelum tagihan bulan depan'}
+                {billingModel === 'NETT_OFF_PER_ORDER' && 'COD cair sudah dipotong cost (per order)'}
+                {billingModel === 'DIRECT_TRANSFER' && 'Customer transfer langsung'}
+                {billingModel === 'NO_RECONCILIATION' && 'Tidak ada rekonsil cost'}
+              </p>
+              <div className={`flex justify-between border-t pt-1 ${Number(order.estimated_profit ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <span className="font-bold">Estimated Profit</span>
+                <span className="font-mono font-bold text-base">{formatRupiah(Number(order.estimated_profit ?? 0))}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                = Cash In − HPP − Komisi
+                {billingModel === 'MONTHLY_INVOICE' ? ' − Total Cost (untuk MONTHLY_INVOICE, cost akan ditagih bulan depan)' : ''}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Footer meta */}
+        {(computed || bundle) && (
+          <div className="text-[10px] text-muted-foreground border-t pt-2 space-y-0.5">
+            {order.cost_computed_at && (
+              <div>ⓘ Computed at: {formatDateTime(order.cost_computed_at)}</div>
+            )}
+            {bundleLoading ? (
+              <div>Loading rate config…</div>
+            ) : bundle ? (
+              <div>
+                Rates: {discountLabel} {Number(bundle.shipping_discount_rate).toFixed(0)}% ·
+                Fee COD {Number(bundle.cod_fee_rate).toFixed(2)}% ({bundle.cod_fee_rounding}, base={bundle.cod_fee_base}) ·
+                PPN {Number(bundle.ppn_rate).toFixed(0)}% ({bundle.ppn_applied_to})
+              </div>
+            ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
 }

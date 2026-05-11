@@ -166,6 +166,34 @@ export default function AnalyticsPage() {
               <StatCard label="Total Payout" value={formatRupiah(overview?.total_payout ?? 0)} sub="dari ekspedisi" color="violet" />
             </div>
 
+            {/* Phase 4C — Estimated Cost & Profit row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard
+                label="Estimated Total Cost"
+                value={formatRupiah(overview?.estimated_total_cost ?? 0)}
+                sub="ke ekspedisi (Phase 4C)"
+                color="orange"
+              />
+              <StatCard
+                label="Estimated Cash In"
+                value={formatRupiah(overview?.estimated_cash_in ?? 0)}
+                sub="dari channel (per billing model)"
+                color="violet"
+              />
+              <StatCard
+                label="Estimated Profit"
+                value={formatRupiah(overview?.estimated_profit ?? 0)}
+                sub="cash_in − HPP − komisi − cost"
+                color={(overview?.estimated_profit ?? 0) >= 0 ? 'emerald' : 'red'}
+              />
+              <StatCard
+                label="Profit Margin %"
+                value={`${(overview?.profit_margin_pct ?? 0).toFixed(2)}%`}
+                sub="profit / revenue"
+                color={(overview?.profit_margin_pct ?? 0) >= 10 ? 'emerald' : (overview?.profit_margin_pct ?? 0) >= 0 ? 'amber' : 'red'}
+              />
+            </div>
+
             <Card>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between mb-2">
@@ -242,48 +270,69 @@ export default function AnalyticsPage() {
 
           <TabsContent value="channel" className="space-y-4">
             <Card>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Channel</TableHead>
                       <TableHead className="text-right">Orders</TableHead>
                       <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Ship Charged</TableHead>
-                      <TableHead className="text-right">Ship Actual</TableHead>
-                      <TableHead className="text-right">Diff</TableHead>
-                      <TableHead className="text-right">Diterima</TableHead>
-                      <TableHead className="text-right">Retur</TableHead>
-                      <TableHead className="text-right">Payout</TableHead>
+                      <TableHead className="text-right">Ship Diff</TableHead>
+                      <TableHead className="text-right">Est. Cost</TableHead>
+                      <TableHead className="text-right">Cash In</TableHead>
+                      <TableHead className="text-right">Profit</TableHead>
+                      <TableHead className="text-right">Margin %</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
                     ) : perChan.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">Belum ada order dengan channel di periode ini.</TableCell></TableRow>
-                    ) : perChan.map((r) => (
-                      <TableRow key={r.channel_id}>
-                        <TableCell>
-                          <div className="font-mono text-xs">{r.channel_code || `#${r.channel_id}`}</div>
-                          <div className="text-[10px] text-muted-foreground">{r.channel_name}</div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs font-semibold">{r.total_orders}</TableCell>
-                        <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
-                        <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_shipping_charged))}</TableCell>
-                        <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_shipping_actual))}</TableCell>
-                        <TableCell className={`text-right text-xs font-semibold ${Number(r.shipping_diff) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {formatRupiah(Number(r.shipping_diff))}
-                        </TableCell>
-                        <TableCell className="text-right text-xs text-emerald-600">{r.diterima_orders}</TableCell>
-                        <TableCell className="text-right text-xs text-orange-600">{r.retur_orders}</TableCell>
-                        <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_payout))}</TableCell>
-                      </TableRow>
-                    ))}
+                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">Belum ada order dengan channel di periode ini.</TableCell></TableRow>
+                    ) : perChan.map((r) => {
+                      const profit = Number(r.estimated_profit)
+                      const margin = Number(r.profit_margin_pct)
+                      return (
+                        <TableRow key={r.channel_id}>
+                          <TableCell>
+                            <div className="font-mono text-xs">{r.channel_code || `#${r.channel_id}`}</div>
+                            <div className="text-[10px] text-muted-foreground">{r.channel_name}</div>
+                            {r.billing_model && (
+                              <div className="text-[10px] text-violet-600 mt-0.5">{r.billing_model}</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-xs font-semibold">
+                            {r.total_orders}
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="text-emerald-600">{r.diterima_orders}D</span>
+                              {' / '}
+                              <span className="text-orange-600">{r.retur_orders}R</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
+                          <TableCell className={`text-right text-xs font-semibold ${Number(r.shipping_diff) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {formatRupiah(Number(r.shipping_diff))}
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-orange-600">{formatRupiah(Number(r.estimated_total_cost))}</TableCell>
+                          <TableCell className="text-right text-xs">{formatRupiah(Number(r.estimated_cash_in))}</TableCell>
+                          <TableCell className={`text-right text-xs font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {formatRupiah(profit)}
+                          </TableCell>
+                          <TableCell className="text-right text-xs">
+                            <Badge variant="outline" className={`text-[10px] ${margin >= 10 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : margin >= 0 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
+                              {margin.toFixed(2)}%
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
+            <p className="text-[11px] text-muted-foreground">
+              Est. Cost / Cash In / Profit dari Phase 4C estimated_* columns. Profit = Cash In − HPP − Komisi (untuk MONTHLY_INVOICE: dikurangi cost juga). Margin % = profit / revenue.
+            </p>
           </TabsContent>
         </Tabs>
       )}
@@ -398,7 +447,7 @@ function StatCard({ label, value, sub, color }: {
   label: string
   value: string
   sub: string
-  color: 'blue' | 'amber' | 'emerald' | 'zinc' | 'violet' | 'red'
+  color: 'blue' | 'amber' | 'emerald' | 'zinc' | 'violet' | 'red' | 'orange'
 }) {
   const colorMap: Record<string, string> = {
     blue: 'bg-blue-500/10 border-blue-500/30 text-blue-600',
@@ -407,6 +456,7 @@ function StatCard({ label, value, sub, color }: {
     zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
     red: 'bg-red-500/10 border-red-500/30 text-red-600',
+    orange: 'bg-orange-500/10 border-orange-500/30 text-orange-600',
   }
   return (
     <div className={`p-3 rounded border ${colorMap[color]}`}>

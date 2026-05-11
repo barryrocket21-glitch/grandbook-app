@@ -19,9 +19,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 3.5 — Polish (UX & Bug Fixes) | ✅ DONE | 2026-05-10 |
 | Phase 4A — Commission Engine v2 + Pencairan UI | ✅ DONE | 2026-05-10 |
 | Phase 4B — Analytics Revamp + Per-Role Dashboards | ✅ DONE | 2026-05-10 |
-| Phase 4C — Pencairan COD Reconciliation | ⏳ NOT STARTED | — |
+| Phase 4C — Estimated Cost Engine + Multi-Model Billing | ✅ DONE | 2026-05-11 |
+| Phase 4D — Actual Reconciliation File Upload | ⏳ NOT STARTED | — |
 
-**Phase 4B done.** Analytics + per-role dashboard direbuild: `/analytics` 4 tabs (Overview/Per CS/Per Advertiser/Per Channel) + recharts (area/pie/bar) konsumsi 5 server-side aggregation RPCs. `/cs-dashboard` & `/adv-dashboard` refactor jadi thin wrapper di shared `PersonalDashboard` component dengan owner-mode dropdown filter. Existing `/dashboard` tetap functional (sudah pakai schema baru sejak Phase 0).
+**Phase 4C done.** Engine estimasi biaya & profit per order dengan 4 billing model (MONTHLY_INVOICE/NETT_OFF_PER_ORDER/DIRECT_TRANSFER/NO_RECONCILIATION). Schema fleksibel: numeric rates di key-value table existing + categorical config di table baru `channel_billing_config` (versioning per period). SPX_DIRECT pre-seeded dengan defaults yang verified via real April 2026 invoice (40% cashback, 1% fee COD floor, 12% PPN, NOMINAL_COD base). Estimated cost columns di orders + trigger compute saat status/shipping/channel/total change. UI: BillingConfigPanel di /settings/courier-rates dengan Preview Calculator, tab Cost & Profit di /orders/[id] (owner+admin), row stat cards baru + per-channel profit columns di /analytics.
 
 ---
 
@@ -738,6 +739,68 @@ Visibility layer komplit. Owner punya overview business lengkap; CS/advertiser p
 
 ---
 
+## Phase 4C — Estimated Cost Engine + Multi-Model Billing (COMPLETED)
+
+Money math layer tuntas. Engine compute estimasi biaya & profit per order dengan support 4 billing model. Schema fleksibel via key-value rates + categorical config dengan period versioning. SPX_DIRECT defaults (40/1/12 + NOMINAL_COD/FLOOR/COD_FEE_ONLY) verified via real April 2026 invoice file (502 COD orders, 100% match floor formula).
+
+### Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/018_billing_models.sql`:
+  1. `courier_channels` tambah `billing_model` (CHECK: MONTHLY_INVOICE/NETT_OFF_PER_ORDER/DIRECT_TRANSFER/NO_RECONCILIATION) + `shipping_discount_label`
+  2. New table `channel_billing_config` (channel_id + cod_fee_base + cod_fee_rounding + ppn_applied_to + effective_from/to). UNIQUE (channel_id, effective_from). RLS owner+admin.
+  3. `orders` tambah 7 estimated_* columns (shipping_net, cod_fee, ppn, total_cost, cash_in, profit, cost_computed_at)
+  4. `get_active_rate(channel, key, date)` — pick rate aktif by date
+  5. `get_active_billing_config(channel, date)` — pick config aktif, fallback default kalau no row
+  6. `compute_order_costs(order_id)` — engine: shipping_net = gross × (1 − discount_rate); cod_fee_base by config (NOMINAL_COD / BARANG_PLUS_ONGKIR_GROSS / NET); rounding FLOOR/ROUND/CEIL; PPN by config; cash_in dispatched per billing_model; profit = cash_in − HPP − komisi (− cost untuk MONTHLY_INVOICE)
+  7. Trigger `trg_compute_order_costs` AFTER INSERT OR UPDATE OF status/shipping_cost_actual/channel_id/total
+  8. Updated `analytics_overview` & `analytics_per_channel` (Phase 4B) tambah field profit/margin
+  9. Seed SPX_DIRECT: billing_model='MONTHLY_INVOICE', label='Cashback Ongkir', 3 rates (0.40/0.01/0.12), config NOMINAL_COD/FLOOR/COD_FEE_ONLY
+  10. Backfill loop compute existing orders (2 orders di production saat dev)
+
+**Helpers:**
+- `src/lib/cost/calculator.ts` (NEW) — TypeScript mirror dari SQL `compute_order_costs` untuk Preview Calculator. Identik formula supaya UI preview matches actual computation.
+- `src/lib/supabase/queries/billing-config.ts` (NEW): `fetchChannelCostBundle` (channel + 3 rates + config aktif), `listChannelBillingConfigs`, `listChannelRates`, `updateChannelBillingMeta`, `upsertBillingConfig` (auto-close prev period), `recomputeOrderCosts`.
+- `src/lib/types.ts` — `BillingModel`, `CodFeeBase`, `CodFeeRounding`, `PpnAppliedTo` types. `CourierChannel` + `Order` interfaces extended dengan field-field baru. New `ChannelBillingConfig` interface.
+- `src/lib/schemas/settings.ts` — appended `channelBillingConfigSchema` (Zod) + 4 enum sets dengan label maps (BILLING_MODEL_LABEL/SHORT, COD_FEE_BASE_LABEL, COD_FEE_ROUNDING_LABEL, PPN_APPLIED_LABEL) + `PHASE4C_RATE_KEYS` constant.
+
+**Pages:**
+- `src/app/(app)/settings/courier-rates/page.tsx` — extend dengan **BillingConfigPanel** (Card di atas existing rates list). Channel picker (Combobox dengan Phase 3.5 emptyHint), 2-column form (channel meta + categorical config), Numeric Rates summary (read-only, link ke existing table di bawah), Preview Cost Calculator dengan 6 input fields + breakdown box berwarna. Existing CRUD list tetap intact.
+- `src/app/(app)/orders/[id]/page.tsx` — tab ke-5 **Cost & Profit** (role-gated `canApprove` = owner+admin). 2-column breakdown (Cost & Cash Flow boxes), Recompute button, warning banner kalau status pre-final / billing_model NO_RECONCILIATION, footer dengan rate config summary.
+- `src/app/(app)/analytics/page.tsx` — Overview tab tambah row 3 stat cards (Estimated Total Cost / Cash In / Profit / Margin %). Per Channel tab tambah kolom Est. Cost / Cash In / Profit / Margin %, billing_model di-display sub-row, color-coded margin badge (≥10% emerald, ≥0% amber, <0% red).
+
+**Sidebar:** No changes (cuma extend existing pages).
+
+### Decisions
+
+1. **Categorical config separate table** vs embed di rate_value (hash) — pilih separate `channel_billing_config` table karena clean + period versioning native. Row-level RLS gampang.
+2. **Numeric rates di existing `courier_channel_rates`** — sudah perfect for versioning. Tambah 3 keys (`shipping_discount_rate`, `cod_fee_rate`, `ppn_rate`) tanpa schema change.
+3. **Estimated columns denormalized di orders** — supaya analytics SUM tanpa JOIN config setiap query. Trade-off: trigger fire saat update, tapi acceptable.
+4. **Trigger ordering** — `trg_compute_order_costs` runs after `trg_compute_commissions` alphabetically, jadi commission row sudah inserted saat compute_order_costs baca commissions. Brief 4C concern resolved via natural alphabetical order.
+5. **TypeScript calculator mirror** — `src/lib/cost/calculator.ts` mirror SQL compute_order_costs identik. Preview Calculator client-side jalan tanpa round-trip server. Coupling: kalau SQL formula berubah, calculator.ts harus follow.
+6. **BillingConfigPanel di atas existing rates list** (bukan refactor jadi tabs) — minimum disruption. User existing flow tetap jalan.
+7. **Cost & Profit tab role-gated `canApprove`** — owner+admin only. CS/advertiser nggak butuh lihat profit margin internal.
+8. **PPN ROUND ke 2 desimal**, COD fee FLOOR/ROUND/CEIL ke integer (rupiah penuh) — consistent dengan invoice SPX behavior.
+9. **`analytics_overview` ambiguous column fix** — output param names conflict dengan table columns saat function body reference column. Fix: alias FROM clause `o` dan qualify column reference.
+10. **Profit formula varies per billing_model** — MONTHLY_INVOICE: kurang cost (cash_in masih full, tagihan bulan depan); NETT_OFF/DIRECT/NO_RECONCILIATION: tidak kurang cost (cash_in sudah net atau no cost). Match brief.
+
+### Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ 50 routes intact
+- Migration 018 ✅ applied via `exec_sql`, 2 orders backfilled, all 4 RPCs callable, SPX seeded
+
+### Hal yang perlu di-flag untuk Phase 4D (Actual Reconciliation File Upload)
+
+- **Upload file SPX/agregator** untuk match per-order actual cost vs estimated. Phase 4C cuma compute estimasi dari config; variance tracking belum.
+- **Mark as Billed / Settled** workflow untuk track tagihan bulanan SPX yang sudah dibayar.
+- **Saldo tracking** — withdraw dari SPX dashboard ke rekening, balance running. Brief 4C explicit skip.
+- **Auto-detect bulan periode** dari file SPX. Phase 4D nanti.
+- **Bulk recompute** kalau rate berubah retroaktif. Phase 4C trigger fire per order; bulk via `SELECT compute_order_costs(id) FROM orders` di SQL Editor (acceptable manual).
+- **PPN config rate update** — kalau Indonesia naik PPN > 12%, pakai rate versioning: tambah rate baru `ppn_rate=0.13` dengan effective_from baru. Existing orders pakai rate lama berdasarkan order_date.
+
+---
+
 ## Flag untuk diskusi sebelum Phase 2B atau Phase 3
 
 Saat brief Phase 2 disusun, mohon dipertimbangkan/diklarifikasi:
@@ -798,7 +861,9 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **015** | **Phase 3C — outbound source enum + bulk mark RPC** | **✅ Active** |
 | **016** | **Phase 4A — commission engine v2 + pencairan RPCs** | **✅ Active** |
 | **017** | **Phase 4B — analytics aggregation RPCs** | **✅ Active** |
-| 018+ | TBD next phases | — |
+| **018** | **Phase 4C — billing models + cost engine + analytics extension** | **✅ Active** |
+| **019** | **Phase 4C bug fix — rate format → percent friendly (codebase convention)** | **✅ Active** |
+| 020+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

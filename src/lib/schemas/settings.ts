@@ -1,5 +1,12 @@
 import { z } from 'zod'
-import type { OrderStatus, CommissionV2Status } from '@/lib/types'
+import type {
+  OrderStatus,
+  CommissionV2Status,
+  BillingModel,
+  CodFeeBase,
+  CodFeeRounding,
+  PpnAppliedTo,
+} from '@/lib/types'
 
 // =============================================================
 // Couriers
@@ -308,4 +315,76 @@ export const COMMISSION_STATUS_BADGE_COLOR: Record<CommissionV2Status, string> =
   EARNED: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
   CANCELLED: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   PAID: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+}
+
+// =============================================================
+// Phase 4C — Billing Models + Channel Billing Config
+// =============================================================
+export const BILLING_MODELS = [
+  'MONTHLY_INVOICE',
+  'NETT_OFF_PER_ORDER',
+  'DIRECT_TRANSFER',
+  'NO_RECONCILIATION',
+] as const satisfies readonly BillingModel[]
+
+export const BILLING_MODEL_LABEL: Record<BillingModel, string> = {
+  MONTHLY_INVOICE: 'Monthly Invoice (SPX style — COD cair full, tagihan bulan depan)',
+  NETT_OFF_PER_ORDER: 'Nett-Off Per Order (Mengantar style — cair = COD - cost)',
+  DIRECT_TRANSFER: 'Direct Transfer (customer transfer langsung ke merchant)',
+  NO_RECONCILIATION: 'No Reconciliation (skip cost compute)',
+}
+
+export const BILLING_MODEL_SHORT: Record<BillingModel, string> = {
+  MONTHLY_INVOICE: 'Monthly Invoice',
+  NETT_OFF_PER_ORDER: 'Nett-Off',
+  DIRECT_TRANSFER: 'Direct Transfer',
+  NO_RECONCILIATION: 'No Reconciliation',
+}
+
+export const COD_FEE_BASE_OPTIONS = [
+  'NOMINAL_COD',
+  'BARANG_PLUS_ONGKIR_GROSS',
+  'BARANG_PLUS_ONGKIR_NET',
+] as const satisfies readonly CodFeeBase[]
+
+export const COD_FEE_BASE_LABEL: Record<CodFeeBase, string> = {
+  NOMINAL_COD: 'Nominal COD (total order)',
+  BARANG_PLUS_ONGKIR_GROSS: 'Barang + Ongkir Gross',
+  BARANG_PLUS_ONGKIR_NET: 'Barang + Ongkir Net (setelah cashback)',
+}
+
+export const COD_FEE_ROUNDING_OPTIONS = ['FLOOR', 'ROUND', 'CEIL'] as const satisfies readonly CodFeeRounding[]
+
+export const COD_FEE_ROUNDING_LABEL: Record<CodFeeRounding, string> = {
+  FLOOR: 'Floor (round down — SPX)',
+  ROUND: 'Round (nearest)',
+  CEIL: 'Ceil (round up)',
+}
+
+export const PPN_APPLIED_OPTIONS = ['COD_FEE_ONLY', 'COD_FEE_PLUS_SHIPPING', 'NONE'] as const satisfies readonly PpnAppliedTo[]
+
+export const PPN_APPLIED_LABEL: Record<PpnAppliedTo, string> = {
+  COD_FEE_ONLY: 'PPN over Fee COD only (SPX default)',
+  COD_FEE_PLUS_SHIPPING: 'PPN over Fee COD + Shipping Net',
+  NONE: 'No PPN',
+}
+
+export const channelBillingConfigSchema = z.object({
+  channel_id: z.number().int().positive('Channel wajib dipilih'),
+  cod_fee_base: z.enum(COD_FEE_BASE_OPTIONS),
+  cod_fee_rounding: z.enum(COD_FEE_ROUNDING_OPTIONS),
+  ppn_applied_to: z.enum(PPN_APPLIED_OPTIONS),
+  effective_from: z.string().min(1, 'Tanggal mulai wajib'),
+  notes: z.string().nullable().optional(),
+})
+export type ChannelBillingConfigFormData = z.infer<typeof channelBillingConfigSchema>
+
+/** Phase 4C numeric rate keys yang dipakai compute engine. */
+export const PHASE4C_RATE_KEYS = ['shipping_discount_rate', 'cod_fee_rate', 'ppn_rate'] as const
+export type Phase4cRateKey = (typeof PHASE4C_RATE_KEYS)[number]
+
+export const PHASE4C_RATE_LABEL: Record<Phase4cRateKey, string> = {
+  shipping_discount_rate: 'Cashback / Diskon Ongkir Rate',
+  cod_fee_rate: 'Fee COD Rate',
+  ppn_rate: 'PPN Rate',
 }

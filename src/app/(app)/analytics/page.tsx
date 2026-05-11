@@ -20,8 +20,9 @@ import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date
 import { formatRupiah } from '@/lib/format'
 import {
   fetchOverview, fetchDailyRevenue, fetchPerCs, fetchPerAdvertiser, fetchPerChannel,
+  fetchPerProduct,
   type AnalyticsOverview, type DailyRevenuePoint,
-  type PerCsRow, type PerAdvertiserRow, type PerChannelRow,
+  type PerCsRow, type PerAdvertiserRow, type PerChannelRow, type PerProductRow,
 } from '@/lib/supabase/queries/analytics'
 
 const supabase = createClient()
@@ -49,6 +50,7 @@ export default function AnalyticsPage() {
   const [perCs, setPerCs] = useState<PerCsRow[]>([])
   const [perAdv, setPerAdv] = useState<PerAdvertiserRow[]>([])
   const [perChan, setPerChan] = useState<PerChannelRow[]>([])
+  const [perProduct, setPerProduct] = useState<PerProductRow[]>([])
   const [loading, setLoading] = useState(true)
 
   // Lazy-init range to avoid hydration drift (thisMonth() returns Date-based label
@@ -63,18 +65,20 @@ export default function AnalyticsPage() {
     if (!isOwner || !rangeReady) return
     setLoading(true)
     try {
-      const [ov, dr, cs, adv, chan] = await Promise.all([
+      const [ov, dr, cs, adv, chan, prod] = await Promise.all([
         fetchOverview(supabase, range.from, range.to),
         fetchDailyRevenue(supabase, range.from, range.to),
         fetchPerCs(supabase, range.from, range.to),
         fetchPerAdvertiser(supabase, range.from, range.to),
         fetchPerChannel(supabase, range.from, range.to),
+        fetchPerProduct(supabase, range.from, range.to),
       ])
       setOverview(ov)
       setDaily(dr)
       setPerCs(cs)
       setPerAdv(adv)
       setPerChan(chan)
+      setPerProduct(prod)
     } finally {
       setLoading(false)
     }
@@ -145,6 +149,7 @@ export default function AnalyticsPage() {
             <TabsTrigger value="cs">Per CS ({perCs.length})</TabsTrigger>
             <TabsTrigger value="adv">Per Advertiser ({perAdv.length})</TabsTrigger>
             <TabsTrigger value="channel">Per Channel ({perChan.length})</TabsTrigger>
+            <TabsTrigger value="product">Per Produk ({perProduct.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -191,6 +196,28 @@ export default function AnalyticsPage() {
                 value={`${(overview?.profit_margin_pct ?? 0).toFixed(2)}%`}
                 sub="profit / revenue"
                 color={(overview?.profit_margin_pct ?? 0) >= 10 ? 'emerald' : (overview?.profit_margin_pct ?? 0) >= 0 ? 'amber' : 'red'}
+              />
+            </div>
+
+            {/* Phase 5A — Operational Expenses & Net Profit row */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <StatCard
+                label="Op. Expenses"
+                value={formatRupiah(overview?.total_operational_expenses ?? 0)}
+                sub="gaji, sewa, utility, dll (Phase 5A)"
+                color="amber"
+              />
+              <StatCard
+                label="Net Profit"
+                value={formatRupiah(overview?.net_profit ?? 0)}
+                sub="estimated profit − op expenses"
+                color={(overview?.net_profit ?? 0) >= 0 ? 'emerald' : 'red'}
+              />
+              <StatCard
+                label="Net Margin %"
+                value={`${(overview?.net_margin_pct ?? 0).toFixed(2)}%`}
+                sub="net profit / revenue (ad spend belum)"
+                color={(overview?.net_margin_pct ?? 0) >= 10 ? 'emerald' : (overview?.net_margin_pct ?? 0) >= 0 ? 'amber' : 'red'}
               />
             </div>
 
@@ -334,9 +361,127 @@ export default function AnalyticsPage() {
               Est. Cost / Cash In / Profit dari Phase 4C estimated_* columns. Profit = Cash In − HPP − Komisi (untuk MONTHLY_INVOICE: dikurangi cost juga). Margin % = profit / revenue.
             </p>
           </TabsContent>
+
+          <TabsContent value="product" className="space-y-4">
+            <PerProductTable rows={perProduct} loading={loading} />
+            {perProduct.length > 0 && (
+              <TopUsersBar
+                rows={perProduct.slice(0, 10).map((r) => ({
+                  name: r.product_name || `#${r.product_id}`,
+                  value: Number(r.total_revenue),
+                }))}
+                title="Top 10 Produk by Revenue"
+              />
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Gross Profit per produk = revenue − HPP. Belum include ad spend allocation (Phase 5B). Conversion rate = DITERIMA / (DITERIMA + RETUR).
+            </p>
+          </TabsContent>
         </Tabs>
       )}
     </div>
+  )
+}
+
+function PerProductTable({ rows, loading }: { rows: PerProductRow[]; loading: boolean }) {
+  const [sortBy, setSortBy] = useState<'revenue' | 'profit' | 'margin' | 'qty' | 'conv'>('revenue')
+  const sorted = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      switch (sortBy) {
+        case 'profit': return Number(b.gross_profit) - Number(a.gross_profit)
+        case 'margin': return Number(b.margin_pct) - Number(a.margin_pct)
+        case 'qty': return Number(b.total_qty) - Number(a.total_qty)
+        case 'conv': return Number(b.conversion_rate) - Number(a.conversion_rate)
+        default: return Number(b.total_revenue) - Number(a.total_revenue)
+      }
+    })
+  }, [rows, sortBy])
+
+  return (
+    <Card>
+      <CardContent className="p-0 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Produk</TableHead>
+              <TableHead>Kategori</TableHead>
+              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('qty')}>
+                <span className={`inline-flex items-center gap-1 ${sortBy === 'qty' ? 'text-violet-500 font-semibold' : ''}`}>Qty</span>
+              </TableHead>
+              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('revenue')}>
+                <span className={`inline-flex items-center gap-1 ${sortBy === 'revenue' ? 'text-violet-500 font-semibold' : ''}`}>Revenue</span>
+              </TableHead>
+              <TableHead className="text-right">HPP</TableHead>
+              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('profit')}>
+                <span className={`inline-flex items-center gap-1 ${sortBy === 'profit' ? 'text-violet-500 font-semibold' : ''}`}>Gross Profit</span>
+              </TableHead>
+              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('margin')}>
+                <span className={`inline-flex items-center gap-1 ${sortBy === 'margin' ? 'text-violet-500 font-semibold' : ''}`}>Margin %</span>
+              </TableHead>
+              <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy('conv')}>
+                <span className={`inline-flex items-center gap-1 ${sortBy === 'conv' ? 'text-violet-500 font-semibold' : ''}`}>Conv %</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                </TableCell>
+              </TableRow>
+            ) : sorted.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
+                  Belum ada order_items dengan produk di periode ini.
+                </TableCell>
+              </TableRow>
+            ) : sorted.map((r) => {
+              const profit = Number(r.gross_profit)
+              const margin = Number(r.margin_pct)
+              const conv = Number(r.conversion_rate)
+              return (
+                <TableRow key={r.product_id}>
+                  <TableCell>
+                    <div className="text-sm font-medium">{r.product_name || `#${r.product_id}`}</div>
+                    {r.product_sku && (
+                      <div className="text-[10px] text-muted-foreground font-mono">{r.product_sku}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {r.category_name ? (
+                      <Badge variant="outline" className="text-[10px]">{r.category_name}</Badge>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right text-xs font-semibold">
+                    {r.total_qty}
+                    <div className="text-[10px] text-muted-foreground">{r.total_orders} order</div>
+                  </TableCell>
+                  <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
+                  <TableCell className="text-right text-xs text-muted-foreground">{formatRupiah(Number(r.total_hpp))}</TableCell>
+                  <TableCell className={`text-right text-xs font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {formatRupiah(profit)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant="outline" className={`text-[10px] ${margin >= 30 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : margin >= 10 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
+                      {margin.toFixed(1)}%
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant="outline" className={`text-[10px] ${conv >= 80 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : conv >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
+                      {conv.toFixed(0)}%
+                      <span className="ml-1 text-[9px] opacity-70">({r.diterima_orders}/{r.final_orders})</span>
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   )
 }
 

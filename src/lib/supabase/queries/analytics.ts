@@ -20,6 +20,10 @@ export interface AnalyticsOverview {
   estimated_cash_in: number
   estimated_profit: number
   profit_margin_pct: number
+  // Phase 5A (analytics_overview_v2)
+  total_operational_expenses: number
+  net_profit: number
+  net_margin_pct: number
   orders_baru: number
   orders_siap_kirim: number
   orders_dikirim: number
@@ -96,6 +100,9 @@ const EMPTY_OVERVIEW: AnalyticsOverview = {
   estimated_cash_in: 0,
   estimated_profit: 0,
   profit_margin_pct: 0,
+  total_operational_expenses: 0,
+  net_profit: 0,
+  net_margin_pct: 0,
   orders_baru: 0,
   orders_siap_kirim: 0,
   orders_dikirim: 0,
@@ -106,18 +113,53 @@ const EMPTY_OVERVIEW: AnalyticsOverview = {
   orders_fake: 0,
 }
 
+/**
+ * Phase 5A: fetchOverview now calls analytics_overview_v2 (Phase 5A RPC)
+ * which includes total_operational_expenses + net_profit. v1 still callable
+ * via Supabase RPC directly tapi default helper sudah switch ke v2.
+ */
 export async function fetchOverview(
   supabase: SupabaseClient,
   from: string,
   to: string
 ): Promise<AnalyticsOverview> {
-  const { data, error } = await supabase.rpc('analytics_overview', {
+  const { data, error } = await supabase.rpc('analytics_overview_v2', {
     p_from: from,
     p_to: to,
   })
-  if (error) throw new Error(`analytics_overview gagal: ${error.message}`)
+  if (error) throw new Error(`analytics_overview_v2 gagal: ${error.message}`)
   if (!data || data.length === 0) return EMPTY_OVERVIEW
   return data[0] as AnalyticsOverview
+}
+
+// Phase 5A — Per Produk
+export interface PerProductRow {
+  product_id: number
+  product_name: string | null
+  product_sku: string | null
+  category_name: string | null
+  total_qty: number
+  total_orders: number
+  total_revenue: number
+  total_hpp: number
+  gross_profit: number
+  margin_pct: number
+  diterima_orders: number
+  final_orders: number
+  conversion_rate: number
+}
+
+export async function fetchPerProduct(
+  supabase: SupabaseClient,
+  from: string,
+  to: string
+): Promise<PerProductRow[]> {
+  const { data, error } = await supabase.rpc('analytics_profit_per_product', {
+    p_from: from,
+    p_to: to,
+  })
+  if (error) throw new Error(`analytics_profit_per_product gagal: ${error.message}`)
+  return (data || []) as PerProductRow[]
 }
 
 export async function fetchDailyRevenue(

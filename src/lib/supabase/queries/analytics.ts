@@ -258,6 +258,56 @@ export async function fetchFunnelPerProduct(
   return (data || []) as FunnelPerProductRow[]
 }
 
+// Phase 6 redesign — Detail page per produk: CS performance breakdown
+export interface CsPerformanceRow {
+  cs_id: string
+  cs_name: string | null
+  lead_count: number
+  closing_count: number
+  close_rate: number
+}
+
+export async function fetchCsPerformancePerProduct(
+  supabase: SupabaseClient,
+  args: { productId: number; from: string; to: string }
+): Promise<CsPerformanceRow[]> {
+  const { data, error } = await supabase.rpc('analytics_cs_performance_per_product', {
+    p_product_id: args.productId,
+    p_from: args.from,
+    p_to: args.to,
+  })
+  if (error) throw new Error(`analytics_cs_performance_per_product gagal: ${error.message}`)
+  return (data || []) as CsPerformanceRow[]
+}
+
+// Phase 6 redesign — Detail page per produk: campaign-level breakdown
+export interface CampaignsForProductRow {
+  campaign_id: number
+  campaign_name: string
+  platform: string
+  campaign_status: string
+  allocation_pct: number
+  total_spend: number
+  total_conversions: number
+  total_impressions: number
+  total_clicks: number
+  meta_lead_count: number
+  roas: number
+}
+
+export async function fetchCampaignsForProduct(
+  supabase: SupabaseClient,
+  args: { productId: number; from: string; to: string }
+): Promise<CampaignsForProductRow[]> {
+  const { data, error } = await supabase.rpc('analytics_campaigns_per_product', {
+    p_product_id: args.productId,
+    p_from: args.from,
+    p_to: args.to,
+  })
+  if (error) throw new Error(`analytics_campaigns_per_product gagal: ${error.message}`)
+  return (data || []) as CampaignsForProductRow[]
+}
+
 export async function fetchDailyRevenue(
   supabase: SupabaseClient,
   from: string,

@@ -1,34 +1,37 @@
 'use client'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
-import { LineChart as LineChartIcon, RefreshCw, Loader2, TrendingUp, TrendingDown } from 'lucide-react'
+import { LineChart as LineChartIcon, RefreshCw, Loader2, TrendingDown } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar, Legend,
+  PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts'
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
 import { formatRupiah, formatNumber } from '@/lib/format'
 import {
   fetchOverview, fetchDailyRevenue, fetchPerCs, fetchPerAdvertiser, fetchPerChannel,
-  fetchPerProduct, fetchRoasPerCampaign, fetchFunnelPerProduct,
+  fetchRoasPerCampaign, fetchFunnelPerProduct,
   type AnalyticsOverview, type DailyRevenuePoint,
-  type PerCsRow, type PerAdvertiserRow, type PerChannelRow, type PerProductRow,
+  type PerCsRow, type PerAdvertiserRow, type PerChannelRow,
   type RoasPerCampaignRow, type FunnelPerProductRow,
 } from '@/lib/supabase/queries/analytics'
 import { CAMPAIGN_PLATFORM_COLOR, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_STATUS_COLOR, CAMPAIGN_STATUS_LABEL } from '@/lib/schemas/settings'
 import type { AdPlatform, CampaignStatus } from '@/lib/types'
-import { FunnelProductCard } from '@/components/analytics/funnel-product-card'
-import { FunnelInsightCards } from '@/components/analytics/funnel-insight-cards'
+import {
+  AnalyticsNav, isAnalyticsSection, getSectionLabel,
+  type AnalyticsSection,
+} from '@/components/analytics/analytics-nav'
+import { PerProdukSection } from '@/components/analytics/per-produk-section'
 
 const supabase = createClient()
 
@@ -46,8 +49,38 @@ const STATUS_COLORS: Record<string, string> = {
 type SortField = 'orders' | 'revenue' | 'conv' | 'commission'
 
 export default function AnalyticsPage() {
+  // useSearchParams() butuh Suspense boundary di Next.js 16 (CSR bailout).
+  return (
+    <Suspense fallback={<Card><CardContent className="p-12 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></CardContent></Card>}>
+      <AnalyticsPageInner />
+    </Suspense>
+  )
+}
+
+function AnalyticsPageInner() {
   const { role, loading: authLoading } = useAuth()
   const isOwner = role === 'owner'
+
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const sectionParam = searchParams.get('section')
+  const initialSection: AnalyticsSection = isAnalyticsSection(sectionParam) ? sectionParam : 'overview'
+  const [section, setSection] = useState<AnalyticsSection>(initialSection)
+
+  // Sync section ↔ URL (one-way: state → URL)
+  const handleSelectSection = useCallback((s: AnalyticsSection) => {
+    setSection(s)
+    const next = new URLSearchParams(searchParams.toString())
+    next.set('section', s)
+    router.push(`/analytics?${next.toString()}`, { scroll: false })
+  }, [router, searchParams])
+
+  // Sync URL → state (e.g. back/forward nav)
+  useEffect(() => {
+    if (isAnalyticsSection(sectionParam) && sectionParam !== section) {
+      setSection(sectionParam)
+    }
+  }, [sectionParam, section])
 
   const [range, setRange] = useState<DateRange>(thisMonth)
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
@@ -55,7 +88,6 @@ export default function AnalyticsPage() {
   const [perCs, setPerCs] = useState<PerCsRow[]>([])
   const [perAdv, setPerAdv] = useState<PerAdvertiserRow[]>([])
   const [perChan, setPerChan] = useState<PerChannelRow[]>([])
-  const [perProduct, setPerProduct] = useState<PerProductRow[]>([])
   const [roasPerCampaign, setRoasPerCampaign] = useState<RoasPerCampaignRow[]>([])
   const [funnelRows, setFunnelRows] = useState<FunnelPerProductRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,13 +104,15 @@ export default function AnalyticsPage() {
     if (!isOwner || !rangeReady) return
     setLoading(true)
     try {
-      const [ov, dr, cs, adv, chan, prod, roas, funnel] = await Promise.all([
+      // Phase 6 redesign: PerProdukSection pakai funnelRows langsung
+      // (analytics_funnel_per_product sudah include revenue + CS + roas).
+      // analytics_profit_per_product_v2 dipakai di detail page kalau perlu drill-down.
+      const [ov, dr, cs, adv, chan, roas, funnel] = await Promise.all([
         fetchOverview(supabase, range.from, range.to),
         fetchDailyRevenue(supabase, range.from, range.to),
         fetchPerCs(supabase, range.from, range.to),
         fetchPerAdvertiser(supabase, range.from, range.to),
         fetchPerChannel(supabase, range.from, range.to),
-        fetchPerProduct(supabase, range.from, range.to),
         fetchRoasPerCampaign(supabase, range.from, range.to),
         fetchFunnelPerProduct(supabase, range.from, range.to),
       ])
@@ -87,7 +121,6 @@ export default function AnalyticsPage() {
       setPerCs(cs)
       setPerAdv(adv)
       setPerChan(chan)
-      setPerProduct(prod)
       setRoasPerCampaign(roas)
       setFunnelRows(funnel)
     } finally {
@@ -154,18 +187,15 @@ export default function AnalyticsPage() {
           description="Coba ubah date range, atau cek dashboard utama / orders untuk lihat data lain."
         />
       ) : (
-        <Tabs defaultValue="overview">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="cs">Per CS ({perCs.length})</TabsTrigger>
-            <TabsTrigger value="adv">Per Advertiser ({perAdv.length})</TabsTrigger>
-            <TabsTrigger value="channel">Per Channel ({perChan.length})</TabsTrigger>
-            <TabsTrigger value="product">Per Produk ({perProduct.length})</TabsTrigger>
-            <TabsTrigger value="roas">ROAS ({roasPerCampaign.length})</TabsTrigger>
-            <TabsTrigger value="funnel">Funnel ({funnelRows.length})</TabsTrigger>
-          </TabsList>
+        <div className="space-y-4">
+          <AnalyticsNav section={section} onSelect={handleSelectSection} />
+          <div className="min-w-0 space-y-3">
+            {/* Section subtitle (compact, no breadcrumb karena nav sudah cukup jelas) */}
+            <div className="pb-1">
+              <h2 className="text-sm font-medium text-muted-foreground">{getSectionLabel(section)}</h2>
+            </div>
 
-          <TabsContent value="overview" className="space-y-4">
+            {section === 'overview' && <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="Total Orders" value={String(overview?.total_orders ?? 0)} sub="periode ini" color="blue" />
               <StatCard label="Revenue" value={formatRupiah(overview?.total_revenue ?? 0)} sub="kotor" color="violet" />
@@ -304,23 +334,23 @@ export default function AnalyticsPage() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+            </div>}
 
-          <TabsContent value="cs" className="space-y-4">
-            <PerUserTable rows={perCs.map((r) => ({ id: r.cs_id, name: r.cs_name, ...r }))} loading={loading} kind="cs" />
-            {perCs.length > 0 && (
-              <TopUsersBar rows={perCs.slice(0, 5).map((r) => ({ name: r.cs_name || r.cs_id.slice(0, 6), value: r.total_orders }))} title="Top 5 CS by Orders" />
-            )}
-          </TabsContent>
+            {section === 'cs' && <div className="space-y-4">
+              <PerUserTable rows={perCs.map((r) => ({ id: r.cs_id, name: r.cs_name, ...r }))} loading={loading} kind="cs" />
+              {perCs.length > 0 && (
+                <TopUsersBar rows={perCs.slice(0, 5).map((r) => ({ name: r.cs_name || r.cs_id.slice(0, 6), value: r.total_orders }))} title="Top 5 CS by Orders" />
+              )}
+            </div>}
 
-          <TabsContent value="adv" className="space-y-4">
-            <PerUserTable rows={perAdv.map((r) => ({ id: r.advertiser_id, name: r.advertiser_name, ...r }))} loading={loading} kind="advertiser" />
-            {perAdv.length > 0 && (
-              <TopUsersBar rows={perAdv.slice(0, 5).map((r) => ({ name: r.advertiser_name || r.advertiser_id.slice(0, 6), value: r.total_orders }))} title="Top 5 Advertiser by Orders" />
-            )}
-          </TabsContent>
+            {section === 'adv' && <div className="space-y-4">
+              <PerUserTable rows={perAdv.map((r) => ({ id: r.advertiser_id, name: r.advertiser_name, ...r }))} loading={loading} kind="advertiser" />
+              {perAdv.length > 0 && (
+                <TopUsersBar rows={perAdv.slice(0, 5).map((r) => ({ name: r.advertiser_name || r.advertiser_id.slice(0, 6), value: r.total_orders }))} title="Top 5 Advertiser by Orders" />
+              )}
+            </div>}
 
-          <TabsContent value="channel" className="space-y-4">
+            {section === 'channel' && <div className="space-y-4">
             <Card>
               <CardContent className="p-0 overflow-x-auto">
                 <Table>
@@ -382,73 +412,39 @@ export default function AnalyticsPage() {
                 </Table>
               </CardContent>
             </Card>
-            <p className="text-[11px] text-muted-foreground">
-              Est. Cost / Cash In / Profit dari Phase 4C estimated_* columns. Profit = Cash In − HPP − Komisi (untuk MONTHLY_INVOICE: dikurangi cost juga). Margin % = profit / revenue.
-            </p>
-          </TabsContent>
+              <p className="text-[11px] text-muted-foreground">
+                Est. Cost / Cash In / Profit dari Phase 4C estimated_* columns. Profit = Cash In − HPP − Komisi (untuk MONTHLY_INVOICE: dikurangi cost juga). Margin % = profit / revenue.
+              </p>
+            </div>}
 
-          <TabsContent value="product" className="space-y-4">
-            <PerProductTable rows={perProduct} loading={loading} />
-            {perProduct.length > 0 && (
-              <TopUsersBar
-                rows={perProduct.slice(0, 10).map((r) => ({
-                  name: r.product_name || `#${r.product_id}`,
-                  value: Number(r.net_profit_after_ads),
-                }))}
-                title="Top 10 Produk by Net Profit After Ads"
-              />
-            )}
-            <p className="text-[11px] text-muted-foreground">
-              Gross Profit = revenue − HPP. Net Profit After Ads = gross − allocated ad spend (per campaign_products link). Sort default by net profit DESC. ROAS = revenue / allocated_ad_spend.
-            </p>
-          </TabsContent>
+            {section === 'produk' && <div className="space-y-4">
+              <PerProdukSection rows={funnelRows} loading={loading} />
+              <p className="text-[11px] text-muted-foreground">
+                Tabel ringkas per produk. Klik <strong>Detail →</strong> untuk lihat funnel breakdown, performa CS, dan campaign per produk. Revenue + CS + ROAS dari <code>analytics_funnel_per_product</code> RPC.
+              </p>
+            </div>}
 
-          <TabsContent value="roas" className="space-y-4">
-            <RoasPerCampaignTable rows={roasPerCampaign} loading={loading} />
-            {roasPerCampaign.length > 0 && (
-              <TopUsersBar
-                rows={[...roasPerCampaign]
-                  .filter(r => Number(r.total_spend) > 0)
-                  .sort((a, b) => Number(b.roas_diterima) - Number(a.roas_diterima))
-                  .slice(0, 10)
-                  .map((r) => ({
-                    name: r.campaign_name.length > 40 ? r.campaign_name.slice(0, 38) + '…' : r.campaign_name,
-                    value: Number(r.roas_diterima),
-                  }))}
-                title="Top 10 Campaign by ROAS (DITERIMA)"
-              />
-            )}
-            <p className="text-[11px] text-muted-foreground">
-              ROAS Gross = total revenue (semua status) / spend. ROAS DITERIMA = revenue dari order DITERIMA / spend (lebih akurat untuk COD). Cost/Conv = spend / conversions (dari platform tracking). Cost/Order = spend / linked orders count.
-            </p>
-          </TabsContent>
-
-          <TabsContent value="funnel" className="space-y-4">
-            {loading ? (
-              <Card><CardContent className="p-12 text-center">
-                <Loader2 className="w-6 h-6 animate-spin mx-auto" />
-              </CardContent></Card>
-            ) : funnelRows.length === 0 ? (
-              <EmptyState
-                icon={LineChartIcon}
-                title="Belum ada data funnel untuk periode ini"
-                description="Pastikan ada ad_spend (Phase 5B), daily_cs_report (Phase 6), atau orders dalam date range."
-              />
-            ) : (
-              <>
-                <FunnelInsightCards rows={funnelRows} />
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {funnelRows.map(r => (
-                    <FunnelProductCard key={r.product_id} row={r} />
-                  ))}
-                </div>
-              </>
-            )}
-            <p className="text-[11px] text-muted-foreground">
-              Cross-check 3 layer: <strong>Meta Ads</strong> (spend × campaign_products allocation), <strong>CS Report</strong> (daily_cs_report manual input), <strong>System Orders</strong> (orders × order_items). Variance Lead = CS lead − Meta lead (positive = organic). Variance Closing = System orders − CS closing (positive = CS lupa input). &quot;—&quot; berarti tidak ada data di layer tsb (beda dari nilai 0 eksplisit).
-            </p>
-          </TabsContent>
-        </Tabs>
+            {section === 'campaign' && <div className="space-y-4">
+              <RoasPerCampaignTable rows={roasPerCampaign} loading={loading} />
+              {roasPerCampaign.length > 0 && (
+                <TopUsersBar
+                  rows={[...roasPerCampaign]
+                    .filter(r => Number(r.total_spend) > 0)
+                    .sort((a, b) => Number(b.roas_diterima) - Number(a.roas_diterima))
+                    .slice(0, 10)
+                    .map((r) => ({
+                      name: r.campaign_name.length > 40 ? r.campaign_name.slice(0, 38) + '…' : r.campaign_name,
+                      value: Number(r.roas_diterima),
+                    }))}
+                  title="Top 10 Campaign by ROAS (DITERIMA)"
+                />
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                ROAS Gross = total revenue (semua status) / spend. ROAS DITERIMA = revenue dari order DITERIMA / spend (lebih akurat untuk COD). Cost/Conv = spend / conversions (dari platform tracking). Cost/Order = spend / linked orders count.
+              </p>
+            </div>}
+          </div>
+        </div>
       )}
     </div>
   )
@@ -550,118 +546,6 @@ function RoasPerCampaignTable({ rows, loading }: { rows: RoasPerCampaignRow[]; l
   )
 }
 
-function PerProductTable({ rows, loading }: { rows: PerProductRow[]; loading: boolean }) {
-  const [sortBy, setSortBy] = useState<'net' | 'revenue' | 'profit' | 'roas' | 'qty' | 'conv'>('net')
-  const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      switch (sortBy) {
-        case 'revenue': return Number(b.total_revenue) - Number(a.total_revenue)
-        case 'profit': return Number(b.gross_profit) - Number(a.gross_profit)
-        case 'roas': return Number(b.roas) - Number(a.roas)
-        case 'qty': return Number(b.total_qty) - Number(a.total_qty)
-        case 'conv': return Number(b.conversion_rate) - Number(a.conversion_rate)
-        default: return Number(b.net_profit_after_ads) - Number(a.net_profit_after_ads)
-      }
-    })
-  }, [rows, sortBy])
-
-  const SortHead = ({ label, field }: { label: string; field: typeof sortBy }) => (
-    <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => setSortBy(field)}>
-      <span className={`inline-flex items-center gap-1 ${sortBy === field ? 'text-violet-500 font-semibold' : ''}`}>{label}</span>
-    </TableHead>
-  )
-
-  return (
-    <Card>
-      <CardContent className="p-0 overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Produk</TableHead>
-              <TableHead>Kategori</TableHead>
-              <SortHead label="Qty" field="qty" />
-              <SortHead label="Revenue" field="revenue" />
-              <TableHead className="text-right">HPP</TableHead>
-              <SortHead label="Gross Profit" field="profit" />
-              <TableHead className="text-right">Ad Spend</TableHead>
-              <SortHead label="Net After Ads" field="net" />
-              <SortHead label="ROAS" field="roas" />
-              <SortHead label="Conv %" field="conv" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                </TableCell>
-              </TableRow>
-            ) : sorted.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-sm text-muted-foreground">
-                  Belum ada order_items dengan produk di periode ini.
-                </TableCell>
-              </TableRow>
-            ) : sorted.map((r) => {
-              const profit = Number(r.gross_profit)
-              const net = Number(r.net_profit_after_ads)
-              const adSpend = Number(r.allocated_ad_spend)
-              const roas = Number(r.roas)
-              const conv = Number(r.conversion_rate)
-              return (
-                <TableRow key={r.product_id}>
-                  <TableCell>
-                    <div className="text-sm font-medium">{r.product_name || `#${r.product_id}`}</div>
-                    {r.product_sku && (
-                      <div className="text-[10px] text-muted-foreground font-mono">{r.product_sku}</div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {r.category_name ? (
-                      <Badge variant="outline" className="text-[10px]">{r.category_name}</Badge>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right text-xs font-semibold">
-                    {r.total_qty}
-                    <div className="text-[10px] text-muted-foreground">{r.total_orders} order</div>
-                  </TableCell>
-                  <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">{formatRupiah(Number(r.total_hpp))}</TableCell>
-                  <TableCell className={`text-right text-xs ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {formatRupiah(profit)}
-                  </TableCell>
-                  <TableCell className="text-right text-xs text-orange-600">
-                    {adSpend > 0 ? formatRupiah(adSpend) : '—'}
-                  </TableCell>
-                  <TableCell className={`text-right text-xs font-bold ${net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {formatRupiah(net)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {roas > 0 ? (
-                      <Badge variant="outline" className={`text-[10px] ${roas >= 2 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : roas >= 1 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
-                        {roas.toFixed(2)}x
-                      </Badge>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline" className={`text-[10px] ${conv >= 80 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : conv >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
-                      {conv.toFixed(0)}%
-                      <span className="ml-1 text-[9px] opacity-70">({r.diterima_orders}/{r.final_orders})</span>
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  )
-}
 
 interface PerUserRow {
   id: string

@@ -1,77 +1,47 @@
 'use client'
-import { useState, useMemo } from 'react'
-import { X, Save, Lightbulb } from 'lucide-react'
+import { useMemo } from 'react'
+import { X, Lightbulb } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Combobox } from '@/components/ui/combobox'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import type {
-  SimulatorInput,
-  ProductForSimulator,
-  JenisIklan,
+import {
+  FUNNEL_OPTIONS,
+  type Funnel,
+  type ProductForSimulator,
+  type SimulatorScenario,
+  type PeriodeDays,
+  PERIODE_OPTIONS,
 } from '@/lib/types'
 import { calculate, formatIDR, formatPct, getInsight } from '@/lib/margin-simulator/calc'
-import { JENIS_IKLAN_OPTIONS } from '@/lib/schemas/settings'
 import { cn } from '@/lib/utils'
 
-export interface ScenarioState {
-  uid: string
-  name: string
-  input: SimulatorInput
-}
-
 interface Props {
-  scenario: ScenarioState
+  scenario: SimulatorScenario
+  periode: PeriodeDays
   products: ProductForSimulator[]
-  onChange: (next: ScenarioState) => void
+  onChange: (next: SimulatorScenario) => void
   onRemove: () => void
   canRemove: boolean
-  onSavePreset: (args: {
-    scenario: ScenarioState
-    scenarioName: string
-    isDefault: boolean
-    notes: string | null
-  }) => Promise<void>
-  canWrite: boolean
 }
 
-export function ScenarioCard({
-  scenario,
-  products,
-  onChange,
-  onRemove,
-  canRemove,
-  onSavePreset,
-  canWrite,
-}: Props) {
-  const [saveOpen, setSaveOpen] = useState(false)
-  const [savingScenarioName, setSavingScenarioName] = useState('')
-  const [savingNotes, setSavingNotes] = useState('')
-  const [savingIsDefault, setSavingIsDefault] = useState(false)
-  const [saving, setSaving] = useState(false)
-
+export function ScenarioCard({ scenario, periode, products, onChange, onRemove, canRemove }: Props) {
   const product = useMemo(
-    () => products.find(p => p.product_id === scenario.input.product_id) || null,
-    [products, scenario.input.product_id]
+    () => products.find(p => p.product_id === scenario.product_id) || null,
+    [products, scenario.product_id]
   )
 
-  const output = useMemo(() => calculate(scenario.input), [scenario.input])
-  const insight = useMemo(() => getInsight(scenario.input, output), [scenario.input, output])
+  const output = useMemo(() => calculate(scenario, periode), [scenario, periode])
+  const insight = useMemo(() => getInsight(scenario, output), [scenario, output])
+  const periodeLabel = useMemo(
+    () => PERIODE_OPTIONS.find(p => p.days === periode)?.label ?? `${periode} hari`,
+    [periode]
+  )
 
-  function updateInput<K extends keyof SimulatorInput>(key: K, value: SimulatorInput[K]) {
-    onChange({ ...scenario, input: { ...scenario.input, [key]: value } })
+  function update<K extends keyof SimulatorScenario>(key: K, value: SimulatorScenario[K]) {
+    onChange({ ...scenario, [key]: value })
   }
 
   function handleProductPick(value: string) {
@@ -79,44 +49,9 @@ export function ScenarioCard({
     const picked = id ? products.find(p => p.product_id === id) || null : null
     onChange({
       ...scenario,
-      input: {
-        ...scenario.input,
-        product_id: id,
-        margin_item: picked ? picked.margin_item : scenario.input.margin_item,
-      },
+      product_id: id,
+      margin_item: picked ? picked.margin_item : scenario.margin_item,
     })
-  }
-
-  function handleJenisIklan(value: JenisIklan) {
-    const hint = JENIS_IKLAN_OPTIONS.find(o => o.value === value)
-    onChange({
-      ...scenario,
-      input: {
-        ...scenario.input,
-        jenis_iklan: value,
-        multiplier: hint ? hint.hintMultiplier : scenario.input.multiplier,
-      },
-    })
-  }
-
-  async function handleSave() {
-    if (!scenario.input.product_id) return
-    if (!savingScenarioName.trim()) return
-    setSaving(true)
-    try {
-      await onSavePreset({
-        scenario,
-        scenarioName: savingScenarioName.trim(),
-        isDefault: savingIsDefault,
-        notes: savingNotes.trim() || null,
-      })
-      setSaveOpen(false)
-      setSavingScenarioName('')
-      setSavingNotes('')
-      setSavingIsDefault(false)
-    } finally {
-      setSaving(false)
-    }
   }
 
   const statusColor =
@@ -131,12 +66,13 @@ export function ScenarioCard({
   return (
     <Card className="w-full md:w-[360px] shrink-0">
       <CardContent className="p-4 space-y-3">
-        {/* Header */}
+        {/* Header: name + remove */}
         <div className="flex items-center justify-between gap-2">
           <Input
             value={scenario.name}
-            onChange={e => onChange({ ...scenario, name: e.target.value })}
+            onChange={e => update('name', e.target.value)}
             className="h-8 font-semibold text-sm"
+            maxLength={80}
           />
           <Button
             size="icon"
@@ -151,11 +87,11 @@ export function ScenarioCard({
           </Button>
         </div>
 
-        {/* Product */}
+        {/* Product picker */}
         <div className="space-y-1">
           <Label className="text-xs">Produk</Label>
           <Combobox
-            value={scenario.input.product_id ? String(scenario.input.product_id) : ''}
+            value={scenario.product_id ? String(scenario.product_id) : ''}
             onChange={handleProductPick}
             options={products.map(p => ({
               value: String(p.product_id),
@@ -173,124 +109,123 @@ export function ScenarioCard({
           {product && (
             <p className="text-[11px] text-muted-foreground">
               {formatIDR(product.price_default)} − HPP {formatIDR(product.hpp)} = margin {formatIDR(product.margin_item)}
-              {product.has_default_preset && (
-                <Badge variant="outline" className="ml-2 text-[10px]">
-                  punya default preset
-                </Badge>
-              )}
             </p>
           )}
         </div>
 
-        {/* Inputs */}
+        {/* Inputs grid */}
         <div className="grid grid-cols-2 gap-2 pt-1">
           <div className="space-y-1 col-span-2">
-            <Label className="text-xs">Margin Item (Rp)</Label>
+            <Label className="text-xs">Margin item (Rp)</Label>
             <Input
               type="number"
               inputMode="decimal"
-              value={scenario.input.margin_item}
-              onChange={e => updateInput('margin_item', Number(e.target.value) || 0)}
+              value={scenario.margin_item}
+              onChange={e => update('margin_item', Number(e.target.value) || 0)}
               min={0}
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">CPR Max (Rp)</Label>
+            <Label className="text-xs">CPR max (Rp)</Label>
             <Input
               type="number"
               inputMode="decimal"
-              value={scenario.input.cpr_max}
-              onChange={e => updateInput('cpr_max', Number(e.target.value) || 0)}
+              value={scenario.cpr_max}
+              onChange={e => update('cpr_max', Number(e.target.value) || 0)}
               min={0}
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Lead Dashboard</Label>
+            <Label className="text-xs">Lead dashboard / hari</Label>
             <Input
               type="number"
               inputMode="numeric"
-              value={scenario.input.lead_dashboard}
-              onChange={e => updateInput('lead_dashboard', Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+              value={scenario.lead_dashboard}
+              onChange={e => update('lead_dashboard', Math.max(0, Math.floor(Number(e.target.value) || 0)))}
               min={0}
               step={1}
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Jenis Iklan</Label>
+            <Label className="text-xs">Funnel</Label>
             <Select
-              value={scenario.input.jenis_iklan}
-              onValueChange={v => v && handleJenisIklan(v as JenisIklan)}
+              value={scenario.funnel}
+              onValueChange={v => v && update('funnel', v as Funnel)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih" />
+                <SelectValue placeholder="Pilih funnel" />
               </SelectTrigger>
               <SelectContent>
-                {JENIS_IKLAN_OPTIONS.map(o => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
+                {FUNNEL_OPTIONS.map(f => (
+                  <SelectItem key={f} value={f}>
+                    {f}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Multiplier</Label>
+            <Label className="text-xs">Lead real (%)</Label>
             <Input
               type="number"
               inputMode="decimal"
-              value={scenario.input.multiplier}
-              onChange={e => updateInput('multiplier', Math.min(10, Math.max(0.01, Number(e.target.value) || 0.01)))}
-              min={0.01}
-              max={10}
-              step={0.1}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Closing %</Label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              value={scenario.input.closing_rate}
-              onChange={e => updateInput('closing_rate', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+              value={scenario.lead_real_pct}
+              onChange={e => update('lead_real_pct', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
               min={0}
               max={100}
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">RTS %</Label>
+            <Label className="text-xs">Closing rate (%)</Label>
             <Input
               type="number"
               inputMode="decimal"
-              value={scenario.input.rts_rate}
-              onChange={e => updateInput('rts_rate', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+              value={scenario.closing_rate}
+              onChange={e => update('closing_rate', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+              min={0}
+              max={100}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">RTS rate (%)</Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={scenario.rts_rate}
+              onChange={e => update('rts_rate', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
               min={0}
               max={100}
             />
           </div>
           <div className="space-y-1 col-span-2">
-            <Label className="text-xs">PPN %</Label>
+            <Label className="text-xs">PPN (%)</Label>
             <Input
               type="number"
               inputMode="decimal"
-              value={scenario.input.ppn_rate}
-              onChange={e => updateInput('ppn_rate', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+              value={scenario.ppn_rate}
+              onChange={e => update('ppn_rate', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
               min={0}
               max={100}
             />
           </div>
         </div>
 
-        {/* Outputs */}
+        {/* Output */}
         <div className="pt-2 border-t border-border space-y-1 text-xs">
-          <Row label="Lead Real"   value={output.lead_real.toFixed(0)} />
-          <Row label="Closing"     value={output.closing.toFixed(1)} />
-          <Row label="Terkirim"    value={output.terkirim.toFixed(1)} />
-          <Row label="Budget"      value={formatIDR(output.budget_iklan)} />
-          <Row label="Gross Margin" value={formatIDR(output.gross_margin)} />
-          <Row label="PPN"         value={formatIDR(output.ppn_amount)} />
-          <Row label="Total Margin" value={formatIDR(output.total_margin)} bold />
-          <Row label="Profit / Loss" value={formatIDR(output.profit_loss)} bold
-               valueClass={output.profit_loss > 0 ? 'text-emerald-500' : output.profit_loss < 0 ? 'text-red-500' : ''} />
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+            Output / {periodeLabel}
+          </div>
+          <Row label="Lead real"     value={output.lead_real.toFixed(0)} />
+          <Row label="Closing"       value={output.closing.toFixed(1)} />
+          <Row label="Terkirim"      value={output.terkirim.toFixed(1)} />
+          <Row label="Budget iklan"  value={formatIDR(output.budget_iklan)} />
+          <Row label="Total margin"  value={formatIDR(output.total_margin)} bold />
+          <Row
+            label="Profit / loss"
+            value={formatIDR(output.profit_loss)}
+            bold
+            valueClass={output.profit_loss > 0 ? 'text-emerald-500' : output.profit_loss < 0 ? 'text-red-500' : ''}
+          />
         </div>
 
         {/* Status badge */}
@@ -305,76 +240,7 @@ export function ScenarioCard({
           <Lightbulb className="size-3.5 shrink-0 mt-0.5 text-amber-500" />
           <span>{insight}</span>
         </div>
-
-        {/* Save */}
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            setSavingScenarioName(scenario.name)
-            setSavingNotes('')
-            setSavingIsDefault(false)
-            setSaveOpen(true)
-          }}
-          disabled={!canWrite || !scenario.input.product_id}
-        >
-          <Save className="size-4 mr-2" />
-          Save Preset
-        </Button>
       </CardContent>
-
-      {/* Save dialog */}
-      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Save Preset</DialogTitle>
-            <DialogDescription>
-              Simpan asumsi ini supaya bisa di-load ulang nanti. Default preset akan dipakai
-              auto saat buka simulator untuk produk ini.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="scenario-name">Nama Scenario</Label>
-              <Input
-                id="scenario-name"
-                value={savingScenarioName}
-                onChange={e => setSavingScenarioName(e.target.value)}
-                placeholder="Contoh: Form 20% Close 1.0x"
-                maxLength={80}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="notes">Catatan (optional)</Label>
-              <Input
-                id="notes"
-                value={savingNotes}
-                onChange={e => setSavingNotes(e.target.value)}
-                placeholder="Asumsi konservatif untuk produk margin tipis"
-                maxLength={500}
-              />
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={savingIsDefault}
-                onCheckedChange={v => setSavingIsDefault(v === true)}
-              />
-              <span className="text-sm">Set sebagai default untuk produk ini</span>
-            </label>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSaveOpen(false)} disabled={saving}>
-              Batal
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving || !savingScenarioName.trim() || !scenario.input.product_id}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   )
 }

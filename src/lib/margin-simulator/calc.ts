@@ -1,76 +1,78 @@
 // =============================================================
-// Phase 7 — Margin Simulator calculator (pure functions)
+// Phase 7 v2 — Margin Simulator calc (per-periode aware)
 // =============================================================
-// Formula chain:
-//   lead_real     = lead_dashboard × multiplier
-//   closing       = lead_real × (closing_rate / 100)
-//   terkirim      = closing × (1 − rts_rate / 100)
-//   budget_iklan  = lead_real × cpr_max
-//   gross_margin  = terkirim × margin_item
-//   ppn_amount    = gross_margin × (ppn_rate / 100)
-//   total_margin  = gross_margin − ppn_amount
-//   profit_loss   = total_margin − budget_iklan
-//   roi_percent   = profit_loss / budget_iklan × 100
+// Formula chain (per hari → kalikan periode):
+//   lead_real_pd     = lead_dashboard × (lead_real_pct / 100)
+//   closing_pd       = lead_real_pd × (closing_rate / 100)
+//   terkirim_pd      = closing_pd × (1 − rts_rate / 100)
 //
-// CPR break-even (max CPR yang masih untung):
-//   profit_loss = 0 → total_margin = budget_iklan
-//   (lead_real × cr × (1-rts) × margin × (1-ppn)) = (lead_real × cpr_max)
-//   cpr_be = cr × (1-rts) × margin × (1-ppn)
-//   (cancel-out lead_real & multiplier — structural per-lead value)
+//   lead_real        = lead_real_pd × periode_days
+//   closing          = closing_pd × periode_days
+//   terkirim         = terkirim_pd × periode_days
+//
+//   budget_iklan     = lead_dashboard × cpr_max × periode_days
+//   (Meta charge per lead DASHBOARD, NOT per lead real — itu sebabnya
+//    cpr_max ditarik dari sisi lead_dashboard, bukan lead_real.)
+//
+//   gross_margin     = terkirim × margin_item
+//   ppn_amount       = gross_margin × (ppn_rate / 100)
+//   total_margin     = gross_margin − ppn_amount
+//   profit_loss      = total_margin − budget_iklan
+//   roi_percent      = profit_loss / budget_iklan × 100
+//
+// CPR break-even (per lead DASHBOARD, periode-independent):
+//   profit_loss = 0
+//   → terkirim × margin × (1 − ppn) = lead_dashboard × cpr_breakeven × periode
+//   Substitusi terkirim = lead_dashboard × (lr%) × (cr%) × (1−rts%) × periode:
+//   cpr_breakeven = (lr%) × (cr%) × (1 − rts%) × margin × (1 − ppn%)
+//   (periode cancel out, jadi nilai ini valid untuk semua periode toggle.)
 // =============================================================
-import type { SimulatorInput, SimulatorOutput } from '@/lib/types'
+import type {
+  SimulatorScenario,
+  SimulatorOutput,
+  PeriodeDays,
+} from '@/lib/types'
 
-export const DEFAULT_INPUT: SimulatorInput = {
-  product_id: null,
-  margin_item: 0,
-  cpr_max: 0,
-  lead_dashboard: 100,
-  jenis_iklan: 'Form',
-  multiplier: 1.0,
-  closing_rate: 20,
-  rts_rate: 20,
-  ppn_rate: 12,
-}
+export function calculate(s: SimulatorScenario, periode: PeriodeDays): SimulatorOutput {
+  const lead_real_pd = s.lead_dashboard * (s.lead_real_pct / 100)
+  const closing_pd = lead_real_pd * (s.closing_rate / 100)
+  const terkirim_pd = closing_pd * (1 - s.rts_rate / 100)
 
-export function calculate(input: SimulatorInput): SimulatorOutput {
-  const lead_real = input.lead_dashboard * input.multiplier
-  const closing = lead_real * (input.closing_rate / 100)
-  const terkirim = closing * (1 - input.rts_rate / 100)
-  const budget_iklan = lead_real * input.cpr_max
-  const gross_margin = terkirim * input.margin_item
-  const ppn_amount = gross_margin * (input.ppn_rate / 100)
+  const lead_real = lead_real_pd * periode
+  const closing = closing_pd * periode
+  const terkirim = terkirim_pd * periode
+
+  // Meta charges per lead dashboard, not per lead real.
+  const budget_iklan = s.lead_dashboard * s.cpr_max * periode
+  const gross_margin = terkirim * s.margin_item
+  const ppn_amount = gross_margin * (s.ppn_rate / 100)
   const total_margin = gross_margin - ppn_amount
   const profit_loss = total_margin - budget_iklan
   const roi_percent = budget_iklan > 0 ? (profit_loss / budget_iklan) * 100 : 0
 
-  // CPR break-even = per-lead value (structural; tidak depend on lead_real volume)
+  // CPR break-even per lead dashboard — periode cancels out, same answer for 1/7/30.
   const cpr_breakeven =
-    input.margin_item *
-    (input.closing_rate / 100) *
-    (1 - input.rts_rate / 100) *
-    (1 - input.ppn_rate / 100)
+    (s.lead_real_pct / 100) *
+    (s.closing_rate / 100) *
+    (1 - s.rts_rate / 100) *
+    s.margin_item *
+    (1 - s.ppn_rate / 100)
 
-  // Structural loss = CPR max sudah di atas break-even (impossible jadi profit
-  // selama asumsi closing/rts/margin tidak berubah).
-  const structural_loss = input.cpr_max > cpr_breakeven && cpr_breakeven > 0
-
+  // Threshold 1000 rupiah supaya status nggak flicker karena rounding kecil.
   let status: SimulatorOutput['status'] = 'breakeven'
-  if (profit_loss > 0.005) status = 'profit'
-  else if (profit_loss < -0.005) status = 'loss'
+  if (profit_loss > 1000) status = 'profit'
+  else if (profit_loss < -1000) status = 'loss'
 
   return {
     lead_real,
     closing,
     terkirim,
     budget_iklan,
-    gross_margin,
-    ppn_amount,
     total_margin,
     profit_loss,
     roi_percent,
     cpr_breakeven,
     status,
-    structural_loss,
   }
 }
 
@@ -85,15 +87,16 @@ export function formatPct(value: number, digits = 1): string {
   return `${value.toFixed(digits)}%`
 }
 
-export function getInsight(input: SimulatorInput, output: SimulatorOutput): string {
-  if (output.status === 'profit') {
-    return `CPR break-even: ${formatIDR(output.cpr_breakeven)}. Margin per lead masih aman; CPR max sekarang ${formatIDR(input.cpr_max)}.`
+export function getInsight(s: SimulatorScenario, o: SimulatorOutput): string {
+  if (o.status === 'profit') {
+    const headroom = o.cpr_breakeven - s.cpr_max
+    return `CPR break-even ${formatIDR(o.cpr_breakeven)} per lead dashboard. Headroom ${formatIDR(headroom)}.`
   }
-  if (output.status === 'loss') {
-    if (output.structural_loss) {
-      return `Struktur loss — CPR max (${formatIDR(input.cpr_max)}) di atas break-even (${formatIDR(output.cpr_breakeven)}). Turunkan CPR, naikkan closing rate, atau pilih produk dengan margin lebih besar.`
+  if (o.status === 'loss') {
+    if (o.cpr_breakeven < s.cpr_max) {
+      return `Turunkan CPR max ke ${formatIDR(o.cpr_breakeven)} atau naikkan closing rate / lead real %.`
     }
-    return `Loss. Adjust salah satu: CPR (${formatIDR(input.cpr_max)}) → ke ${formatIDR(output.cpr_breakeven)} max, closing (${formatPct(input.closing_rate, 0)}), atau RTS (${formatPct(input.rts_rate, 0)}).`
+    return `Struktur loss — adjust closing rate, RTS, atau pilih produk margin lebih besar.`
   }
-  return `Break-even. Naik 5–10% di closing rate, RTS rate (turun), atau margin per item untuk masuk zona profit.`
+  return `Break-even. Adjust 5–10% di salah satu metric untuk profit.`
 }

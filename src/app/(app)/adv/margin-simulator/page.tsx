@@ -1,197 +1,108 @@
 'use client'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Calculator, Plus, ShieldOff } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Calculator, Plus, RotateCcw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { canAccessMarginSimulator } from '@/lib/auth/permissions'
+import { fetchProductsForSimulator } from '@/lib/supabase/queries/margin-simulator'
+import { useLocalState } from '@/lib/margin-simulator/useLocalState'
 import {
-  fetchProductsForSimulator,
-  fetchAllPresets,
-  savePreset,
-  deletePreset,
-  setPresetDefault,
-} from '@/lib/supabase/queries/margin-simulator'
-import { DEFAULT_INPUT } from '@/lib/margin-simulator/calc'
-import type {
-  MarginSimulatorPreset,
-  ProductForSimulator,
-  SimulatorInput,
+  DEFAULT_SCENARIO,
+  PERIODE_OPTIONS,
+  type PeriodeDays,
+  type ProductForSimulator,
+  type SimulatorScenario,
 } from '@/lib/types'
-import { ScenarioCard, type ScenarioState } from '@/components/margin-simulator/scenario-card'
-import { SavedPresetsTable } from '@/components/margin-simulator/saved-presets-table'
+import { ScenarioCard } from '@/components/margin-simulator/scenario-card'
+import { cn } from '@/lib/utils'
 
 const MAX_SCENARIOS = 3
 const supabase = createClient()
 
-function makeUid() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
-
-function presetToScenario(preset: MarginSimulatorPreset): ScenarioState {
-  return {
-    uid: makeUid(),
-    name: preset.scenario_name,
-    input: {
-      product_id: preset.product_id,
-      margin_item: Number(preset.margin_item),
-      cpr_max: Number(preset.cpr_max),
-      lead_dashboard: preset.lead_dashboard,
-      jenis_iklan: preset.jenis_iklan,
-      multiplier: Number(preset.multiplier),
-      closing_rate: Number(preset.closing_rate),
-      rts_rate: Number(preset.rts_rate),
-      ppn_rate: Number(preset.ppn_rate),
-    },
-  }
-}
-
-function blankScenario(name = 'Scenario A'): ScenarioState {
-  return { uid: makeUid(), name, input: { ...DEFAULT_INPUT } }
-}
-
 export default function MarginSimulatorPage() {
-  const { profile, role, loading: authLoading } = useAuth()
+  const { user, profile, role, loading: authLoading } = useAuth()
   const allowed = canAccessMarginSimulator(role)
   const orgId = profile?.organization_id ?? null
+  const userId = user?.id ?? null
 
+  const { state, setState, reset, hydrated } = useLocalState(userId)
   const [products, setProducts] = useState<ProductForSimulator[]>([])
-  const [presets, setPresets] = useState<MarginSimulatorPreset[]>([])
-  const [loading, setLoading] = useState(true)
-  const [scenarios, setScenarios] = useState<ScenarioState[]>([blankScenario('Scenario A')])
-  const initRef = useRef(false)
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [resetOpen, setResetOpen] = useState(false)
+  const productsLoadedRef = useRef(false)
 
-  const loadData = useCallback(async () => {
+  const loadProducts = useCallback(async () => {
     if (!orgId) return
-    setLoading(true)
+    setProductsLoading(true)
     try {
-      const [prods, ps] = await Promise.all([
-        fetchProductsForSimulator(supabase, orgId),
-        fetchAllPresets(supabase),
-      ])
-      setProducts(prods)
-      setPresets(ps)
+      const data = await fetchProductsForSimulator(supabase, orgId)
+      setProducts(data)
     } catch (err) {
-      toast.error('Gagal load data', {
+      toast.error('Gagal load produk', {
         description: err instanceof Error ? err.message : String(err),
       })
     } finally {
-      setLoading(false)
+      setProductsLoading(false)
     }
   }, [orgId])
 
   useEffect(() => {
-    if (!allowed || !orgId || initRef.current) return
-    initRef.current = true
-    loadData()
-  }, [allowed, orgId, loadData])
+    if (!allowed || !orgId || productsLoadedRef.current) return
+    productsLoadedRef.current = true
+    loadProducts()
+  }, [allowed, orgId, loadProducts])
+
+  function setPeriode(days: PeriodeDays) {
+    setState(s => ({ ...s, periode_days: days }))
+  }
 
   function addScenario() {
-    if (scenarios.length >= MAX_SCENARIOS) return
-    const nameIdx = scenarios.length
-    const letter = String.fromCharCode('A'.charCodeAt(0) + nameIdx)
-    setScenarios(s => [...s, blankScenario(`Scenario ${letter}`)])
-  }
-
-  function updateScenario(uid: string, next: ScenarioState) {
-    setScenarios(s => s.map(sc => (sc.uid === uid ? next : sc)))
-  }
-
-  function removeScenario(uid: string) {
-    setScenarios(s => (s.length <= 1 ? s : s.filter(sc => sc.uid !== uid)))
-  }
-
-  function loadPresetIntoNewScenario(preset: MarginSimulatorPreset) {
-    if (scenarios.length >= MAX_SCENARIOS) {
-      toast.error('Maks 3 scenarios per sesi. Hapus salah satu dulu.')
-      return
-    }
-    setScenarios(s => [...s, presetToScenario(preset)])
-    toast.success(`Loaded "${preset.scenario_name}"`)
-  }
-
-  async function handleSavePreset(args: {
-    scenario: ScenarioState
-    scenarioName: string
-    isDefault: boolean
-    notes: string | null
-  }) {
-    if (!orgId || !args.scenario.input.product_id) return
-    try {
-      const inputs: Omit<SimulatorInput, 'product_id'> = {
-        margin_item: args.scenario.input.margin_item,
-        cpr_max: args.scenario.input.cpr_max,
-        lead_dashboard: args.scenario.input.lead_dashboard,
-        jenis_iklan: args.scenario.input.jenis_iklan,
-        multiplier: args.scenario.input.multiplier,
-        closing_rate: args.scenario.input.closing_rate,
-        rts_rate: args.scenario.input.rts_rate,
-        ppn_rate: args.scenario.input.ppn_rate,
+    setState(s => {
+      if (s.scenarios.length >= MAX_SCENARIOS) return s
+      const letter = String.fromCharCode('A'.charCodeAt(0) + s.scenarios.length)
+      return {
+        ...s,
+        scenarios: [...s.scenarios, { ...DEFAULT_SCENARIO, name: `Scenario ${letter}` }],
       }
-      // If a preset with same (org, product, scenario_name) exists, update via id.
-      const existing = presets.find(
-        p =>
-          p.product_id === args.scenario.input.product_id &&
-          p.scenario_name === args.scenarioName
-      )
-      await savePreset(supabase, {
-        id: existing?.id ?? null,
-        organization_id: orgId,
-        product_id: args.scenario.input.product_id,
-        scenario_name: args.scenarioName,
-        inputs,
-        is_default: args.isDefault,
-        notes: args.notes,
-        created_by: profile?.id ?? null,
-      })
-      toast.success(`Preset "${args.scenarioName}" saved`)
-      await loadData()
-    } catch (err) {
-      toast.error('Gagal save preset', {
-        description: err instanceof Error ? err.message : String(err),
-      })
-    }
+    })
   }
 
-  async function handleDeletePreset(preset: MarginSimulatorPreset) {
-    try {
-      await deletePreset(supabase, preset.id)
-      toast.success(`Preset "${preset.scenario_name}" dihapus`)
-      await loadData()
-    } catch (err) {
-      toast.error('Gagal hapus preset', {
-        description: err instanceof Error ? err.message : String(err),
-      })
-    }
+  function updateScenario(idx: number, next: SimulatorScenario) {
+    setState(s => ({
+      ...s,
+      scenarios: s.scenarios.map((sc, i) => (i === idx ? next : sc)),
+    }))
   }
 
-  async function handleSetDefault(preset: MarginSimulatorPreset) {
-    if (!orgId) return
-    try {
-      await setPresetDefault(supabase, {
-        presetId: preset.id,
-        organizationId: orgId,
-        productId: preset.product_id,
-      })
-      toast.success(`"${preset.scenario_name}" sekarang default`)
-      await loadData()
-    } catch (err) {
-      toast.error('Gagal set default', {
-        description: err instanceof Error ? err.message : String(err),
-      })
-    }
-  }
-
-  const canWrite = useMemo(() => role === 'owner' || role === 'advertiser', [role])
-
-  // Auth still resolving
-  if (authLoading) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">Loading…</div>
+  function removeScenario(idx: number) {
+    setState(s =>
+      s.scenarios.length <= 1
+        ? s
+        : { ...s, scenarios: s.scenarios.filter((_, i) => i !== idx) }
     )
+  }
+
+  function handleReset() {
+    reset()
+    setResetOpen(false)
+    toast.success('Simulator di-reset ke default')
+  }
+
+  // Auth still resolving — show loader
+  if (authLoading) {
+    return <div className="p-6 text-sm text-muted-foreground">Loading…</div>
   }
 
   // Role guard
@@ -213,51 +124,112 @@ export default function MarginSimulatorPage() {
     )
   }
 
+  // Wait for both products + localStorage to settle for stable first paint
+  const isFullyLoaded = hydrated && !productsLoading
+
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-5">
       <PageHeader
         title="Margin Simulator"
         description="Calculator margin & ROI per produk — decide CPR maks sebelum jalan campaign."
         icon={Calculator}
-        actions={
-          <Button onClick={addScenario} disabled={scenarios.length >= MAX_SCENARIOS}>
-            <Plus className="size-4 mr-2" />
-            Tambah Scenario {scenarios.length >= MAX_SCENARIOS ? `(maks ${MAX_SCENARIOS})` : ''}
-          </Button>
-        }
       />
 
-      <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap md:overflow-visible">
-        {scenarios.map(sc => (
-          <ScenarioCard
-            key={sc.uid}
-            scenario={sc}
-            products={products}
-            onChange={next => updateScenario(sc.uid, next)}
-            onRemove={() => removeScenario(sc.uid)}
-            canRemove={scenarios.length > 1}
-            onSavePreset={handleSavePreset}
-            canWrite={canWrite}
-          />
-        ))}
+      {/* Toolbar: periode toggle + actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+            Periode
+          </span>
+          <div className="inline-flex rounded-md border border-border p-0.5 bg-muted/30">
+            {PERIODE_OPTIONS.map(opt => {
+              const active = state.periode_days === opt.days
+              return (
+                <button
+                  key={opt.days}
+                  type="button"
+                  onClick={() => setPeriode(opt.days)}
+                  className={cn(
+                    'px-3 py-1 text-xs rounded transition-colors',
+                    active
+                      ? 'bg-background shadow-sm font-semibold text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  aria-pressed={active}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setResetOpen(true)}>
+            <RotateCcw className="size-4 mr-2" />
+            Reset
+          </Button>
+          <Button
+            size="sm"
+            onClick={addScenario}
+            disabled={state.scenarios.length >= MAX_SCENARIOS}
+          >
+            <Plus className="size-4 mr-2" />
+            Tambah scenario {state.scenarios.length >= MAX_SCENARIOS ? `(maks ${MAX_SCENARIOS})` : ''}
+          </Button>
+        </div>
       </div>
 
-      {loading ? (
+      {/* Scenario cards */}
+      {!isFullyLoaded ? (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            Loading presets...
-          </CardContent>
+          <CardContent className="p-6 text-sm text-muted-foreground">Loading…</CardContent>
         </Card>
       ) : (
-        <SavedPresetsTable
-          presets={presets}
-          products={products}
-          onLoad={loadPresetIntoNewScenario}
-          onDelete={handleDeletePreset}
-          onSetDefault={handleSetDefault}
-          canWrite={canWrite}
-        />
+        <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap md:overflow-visible">
+          {state.scenarios.map((sc, idx) => (
+            <ScenarioCard
+              key={idx}
+              scenario={sc}
+              periode={state.periode_days}
+              products={products}
+              onChange={next => updateScenario(idx, next)}
+              onRemove={() => removeScenario(idx)}
+              canRemove={state.scenarios.length > 1}
+            />
+          ))}
+          {state.scenarios.length < MAX_SCENARIOS && (
+            <button
+              type="button"
+              onClick={addScenario}
+              className="w-full md:w-[360px] shrink-0 min-h-[200px] rounded-xl border-2 border-dashed border-border hover:border-foreground/40 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <Plus className="size-6" />
+              <span className="text-sm">Tambah scenario</span>
+            </button>
+          )}
+        </div>
       )}
+
+      {/* Reset confirm */}
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset simulator?</DialogTitle>
+            <DialogDescription>
+              Semua scenario dan periode toggle akan dikembalikan ke default. Data simulasi
+              sekarang (tersimpan di browser ini) akan hilang.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetOpen(false)}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={handleReset}>
+              Reset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

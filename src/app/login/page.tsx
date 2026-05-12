@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { BookOpen, Loader2, Mail, Lock, Sparkles } from 'lucide-react'
+import { BookOpen, Loader2, Mail, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
@@ -37,39 +36,10 @@ export default function LoginPage() {
       toast.success('Login berhasil!')
       router.push('/dashboard')
       router.refresh()
-    } catch (err: any) {
-      toast.error('Terjadi kesalahan', { description: err?.message })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) {
-      toast.error('Masukkan email terlebih dahulu')
-      return
-    }
-    setLoading(true)
-
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+    } catch (err: unknown) {
+      toast.error('Terjadi kesalahan', {
+        description: err instanceof Error ? err.message : String(err),
       })
-
-      if (error) {
-        toast.error('Gagal mengirim magic link', { description: error.message })
-        return
-      }
-
-      toast.success('Magic link terkirim!', {
-        description: 'Cek email kamu untuk login.',
-      })
-    } catch (err: any) {
-      toast.error('Terjadi kesalahan', { description: err?.message })
     } finally {
       setLoading(false)
     }
@@ -104,96 +74,52 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="password">
-                  <Lock className="w-4 h-4 mr-2" />
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-zinc-200">
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="nama@perusahaan.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 bg-zinc-800/60 border-white/10 text-white placeholder:text-zinc-500 focus-visible:border-violet-500/50 focus-visible:ring-2 focus-visible:ring-violet-500/30"
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-zinc-200">
                   Password
-                </TabsTrigger>
-                <TabsTrigger value="magic-link">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Magic Link
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="password">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email-password">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email-password"
-                        type="email"
-                        placeholder="nama@perusahaan.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 bg-zinc-800/50 border-white/10 focus:border-violet-500/50"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 bg-zinc-800/50 border-white/10 focus:border-violet-500/50"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/25 transition-all duration-300"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Masuk
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="magic-link">
-                <form onSubmit={handleMagicLink} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email-magic">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email-magic"
-                        type="email"
-                        placeholder="nama@perusahaan.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 bg-zinc-800/50 border-white/10 focus:border-violet-500/50"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Kami akan mengirim link login ke email kamu. Tidak perlu password.
-                  </p>
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/25 transition-all duration-300"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Kirim Magic Link
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 bg-zinc-800/60 border-white/10 text-white placeholder:text-zinc-500 focus-visible:border-violet-500/50 focus-visible:ring-2 focus-visible:ring-violet-500/30"
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/25 transition-all duration-300"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Masuk
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

@@ -34,7 +34,7 @@ export async function fetchCsTeamDetail(
     p_date_to: to,
   })
   if (error) throw new Error(`fetchCsTeamDetail: ${error.message}`)
-  return (data || { stats: null, daily_trend: [], recent_orders: [], commission_history: [] }) as CsDetailResponse
+  return (data || { stats: null, daily_trend: [], recent_orders: [], commission_history: [], product_breakdown: [] }) as CsDetailResponse
 }
 
 export async function fetchAdvertiserTeamSummary(
@@ -62,5 +62,5 @@ export async function fetchAdvertiserTeamDetail(
     p_date_to: to,
   })
   if (error) throw new Error(`fetchAdvertiserTeamDetail: ${error.message}`)
-  return (data || { stats: null, daily_spend: [], campaigns: [], commission_history: [] }) as AdvertiserDetailResponse
+  return (data || { stats: null, daily_spend: [], campaigns: [], commission_history: [], product_breakdown: [] }) as AdvertiserDetailResponse
 }

@@ -24,6 +24,8 @@ import { formatRupiah, formatDateTime } from '@/lib/format'
 import { ORDER_STATUSES } from '@/lib/constants'
 import type { CsDetailResponse } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { ProductBreakdownChart } from '@/components/team/product-breakdown-chart'
+import { ProductBreakdownTable } from '@/components/team/product-breakdown-table'
 
 const supabase = createClient()
 
@@ -136,11 +138,22 @@ export default function CsDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Per-produk breakdown chart */}
+      <Card>
+        <CardContent className="p-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
+            Breakdown per produk
+          </p>
+          <ProductBreakdownChart rows={data?.product_breakdown ?? []} />
+        </CardContent>
+      </Card>
+
       {/* Tabs */}
       <Tabs defaultValue="orders">
         <TabsList>
           <TabsTrigger value="orders">Recent Orders ({data?.recent_orders.length ?? 0})</TabsTrigger>
           <TabsTrigger value="commissions">Commission History ({data?.commission_history.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="products">Per Produk ({data?.product_breakdown.length ?? 0})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders">
@@ -183,6 +196,14 @@ export default function CsDetailPage() {
                   </TableBody>
                 </Table>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="products">
+          <Card>
+            <CardContent className="p-0 overflow-x-auto">
+              <ProductBreakdownTable rows={data?.product_breakdown ?? []} />
             </CardContent>
           </Card>
         </TabsContent>

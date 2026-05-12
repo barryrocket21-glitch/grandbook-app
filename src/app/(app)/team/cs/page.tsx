@@ -132,6 +132,7 @@ export default function CsTeamListPage() {
                 <TableRow>
                   <SortableHead label="Nama" col="full_name" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} />
                   <TableHead>Status</TableHead>
+                  <TableHead>Top Produk</TableHead>
                   <SortableHead label="Orders"   col="total_orders"      sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
                   <SortableHead label="Closing"  col="closing_count"     sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
                   <SortableHead label="Conv %"   col="conv_rate"         sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
@@ -158,6 +159,7 @@ export default function CsTeamListPage() {
                         {r.is_active ? 'Aktif' : 'Nonaktif'}
                       </Badge>
                     </TableCell>
+                    <TableCell><TopProductPill name={r.top_product_name} count={r.top_product_orders} /></TableCell>
                     <TableCell className="text-right tabular-nums">{r.total_orders.toLocaleString('id-ID')}</TableCell>
                     <TableCell className="text-right tabular-nums">{r.closing_count.toLocaleString('id-ID')}</TableCell>
                     <TableCell className={cn('text-right tabular-nums', r.conv_rate >= 50 ? 'text-emerald-500' : r.conv_rate >= 30 ? 'text-amber-500' : 'text-muted-foreground')}>
@@ -174,6 +176,16 @@ export default function CsTeamListPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function TopProductPill({ name, count }: { name: string | null; count: number }) {
+  if (!name) return <span className="text-muted-foreground">—</span>
+  const truncated = name.length > 20 ? name.slice(0, 18) + '…' : name
+  return (
+    <span title={name} className="text-sm">
+      {truncated} <span className="text-muted-foreground tabular-nums">({count})</span>
+    </span>
   )
 }
 

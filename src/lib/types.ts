@@ -705,6 +705,9 @@ export interface CsPerformance {
   revenue_handled: number
   commission_earned: number
   commission_unpaid: number
+  // Phase 8 v2 — top product within periode
+  top_product_name: string | null
+  top_product_orders: number
 }
 
 export interface AdvertiserPerformance {
@@ -719,6 +722,17 @@ export interface AdvertiserPerformance {
   orders_attributed: number
   commission_earned: number
   commission_unpaid: number
+  // Phase 8 v2 — top product (via advertiser's campaigns)
+  top_product_name: string | null
+  top_product_orders: number
+}
+
+export interface ProductBreakdownRow {
+  product_id: number
+  product_name: string
+  total_orders: number
+  closing_count: number
+  revenue: number
 }
 
 export interface TeamDailyTrendRow {
@@ -767,6 +781,8 @@ export interface CsDetailResponse {
   daily_trend: TeamDailyTrendRow[]
   recent_orders: TeamRecentOrderRow[]
   commission_history: TeamCommissionHistoryRow[]
+  // Phase 8 v2
+  product_breakdown: ProductBreakdownRow[]
 }
 
 export interface AdvertiserDetailResponse {
@@ -774,4 +790,6 @@ export interface AdvertiserDetailResponse {
   daily_spend: TeamDailySpendRow[]
   campaigns: TeamCampaignRow[]
   commission_history: TeamCommissionHistoryRow[]
+  // Phase 8 v2
+  product_breakdown: ProductBreakdownRow[]
 }

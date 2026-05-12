@@ -689,3 +689,89 @@ export const DEFAULT_STATE: SimulatorState = {
   periode_days: 30,
   scenarios: [{ ...DEFAULT_SCENARIO, name: 'Scenario A' }],
 }
+
+// =============================================================
+// Phase 8 — Team Performance (/team/cs + /team/advertisers)
+// =============================================================
+
+export interface CsPerformance {
+  user_id: string
+  full_name: string
+  email: string | null
+  is_active: boolean
+  total_orders: number
+  closing_count: number
+  conv_rate: number
+  revenue_handled: number
+  commission_earned: number
+  commission_unpaid: number
+}
+
+export interface AdvertiserPerformance {
+  user_id: string
+  full_name: string
+  email: string | null
+  is_active: boolean
+  active_campaigns: number
+  total_spend: number
+  revenue_attributed: number
+  roas: number
+  orders_attributed: number
+  commission_earned: number
+  commission_unpaid: number
+}
+
+export interface TeamDailyTrendRow {
+  date: string
+  orders: number
+  closing: number
+}
+
+export interface TeamDailySpendRow {
+  date: string
+  spend: number
+}
+
+export interface TeamRecentOrderRow {
+  id: number
+  order_number: string
+  customer_name: string
+  total: number
+  status: OrderStatus
+  created_at: string
+  channel_code: string | null
+}
+
+export interface TeamCampaignRow {
+  id: number
+  campaign_name: string
+  platform: string
+  status: 'ACTIVE' | 'PAUSED' | 'ENDED'
+  spend: number
+  orders: number
+  revenue: number
+  roas: number
+}
+
+export interface TeamCommissionHistoryRow {
+  id: number
+  amount: number
+  status: CommissionStatus
+  created_at: string
+  paid_at: string | null
+  order_number: string | null
+}
+
+export interface CsDetailResponse {
+  stats: CsPerformance | null
+  daily_trend: TeamDailyTrendRow[]
+  recent_orders: TeamRecentOrderRow[]
+  commission_history: TeamCommissionHistoryRow[]
+}
+
+export interface AdvertiserDetailResponse {
+  stats: AdvertiserPerformance | null
+  daily_spend: TeamDailySpendRow[]
+  campaigns: TeamCampaignRow[]
+  commission_history: TeamCommissionHistoryRow[]
+}

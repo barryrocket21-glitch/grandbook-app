@@ -1,5 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, KeyRound, Trash2, Pencil, Wrench, AlertTriangle, Users } from 'lucide-react'
+import { UserPlus, Loader2, KeyRound, Trash2, Pencil, Wrench, AlertTriangle, Users, X } from 'lucide-react'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import type { Profile, UserRole } from '@/lib/types'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -19,7 +21,20 @@ import { EmptyState } from '@/components/ui/empty-state'
 const roles: UserRole[] = ['owner', 'admin', 'cs', 'advertiser', 'akunting']
 
 export default function UsersPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+      <UsersPageInner />
+    </Suspense>
+  )
+}
+
+function UsersPageInner() {
   const { role, loading: authLoading } = useAuth()
+  const searchParams = useSearchParams()
+  const roleFilterRaw = searchParams.get('role')
+  const roleFilter: UserRole | null = roleFilterRaw && (roles as string[]).includes(roleFilterRaw)
+    ? (roleFilterRaw as UserRole)
+    : null
   const [users, setUsers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -33,6 +48,11 @@ export default function UsersPage() {
   const [editTarget, setEditTarget] = useState<Profile | null>(null)
   const [editForm, setEditForm] = useState({ full_name: '', email: '', role: 'admin' as UserRole })
   const [editing, setEditing] = useState(false)
+
+  const filteredUsers = useMemo(
+    () => (roleFilter ? users.filter(u => u.role === roleFilter) : users),
+    [users, roleFilter]
+  )
 
   const loadUsers = async () => {
     setLoading(true)
@@ -216,7 +236,11 @@ export default function UsersPage() {
       <PageHeader
         icon={Users}
         title="Users & Roles"
-        description={`${users.length} user terdaftar`}
+        description={
+          roleFilter
+            ? `${filteredUsers.length} dari ${users.length} user (filter: ${ROLE_LABELS[roleFilter]})`
+            : `${users.length} user terdaftar`
+        }
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}><UserPlus className="w-4 h-4 mr-2" />Tambah User</DialogTrigger>
@@ -233,6 +257,22 @@ export default function UsersPage() {
         </Dialog>
         }
       />
+
+      {roleFilter && (
+        <div className="flex items-center gap-2 -mt-2">
+          <span className="text-xs text-muted-foreground">Filter aktif:</span>
+          <Badge variant="outline" className={ROLE_COLORS[roleFilter]}>
+            {ROLE_LABELS[roleFilter]}
+          </Badge>
+          <Link
+            href="/settings/users"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-3" />
+            Hapus filter
+          </Link>
+        </div>
+      )}
 
       {showSqlHelp && (
         <Card className="border-yellow-500/40 bg-yellow-500/5">
@@ -280,9 +320,9 @@ export default function UsersPage() {
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}><TableCell colSpan={6} className="py-3"><div className="h-4 bg-muted animate-pulse rounded w-full" /></TableCell></TableRow>
                 ))
-              ) : users.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="p-0"><EmptyState icon={Users} title="Belum ada user lain" description="Klik 'Tambah User' untuk mengundang teammate." /></TableCell></TableRow>
-              ) : users.map(u => (
+              ) : filteredUsers.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="p-0"><EmptyState icon={Users} title={roleFilter ? `Tidak ada user dengan role ${ROLE_LABELS[roleFilter]}` : 'Belum ada user lain'} description={roleFilter ? 'Hapus filter atau tambah user dengan role ini.' : "Klik 'Tambah User' untuk mengundang teammate."} /></TableCell></TableRow>
+              ) : filteredUsers.map(u => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.full_name}</TableCell>
                   <TableCell className="font-mono text-xs">{u.email || '-'}</TableCell>

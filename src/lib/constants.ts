@@ -125,20 +125,22 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Dashboard ADV', href: '/adv-dashboard' },
       { title: 'Campaigns', href: '/campaigns' },
       { title: 'Ad Spend', href: '/ad-spend' },
-      { title: 'Daftar Advertiser', href: '/team/advertisers' },
+      // 'Daftar Advertiser' dihapus — data sudah di /settings/users (owner-only).
+      // Path /team/advertisers redirect ke /settings/users?role=advertiser.
     ],
   },
   {
     title: 'CS',
     href: '/cs-dashboard',
     icon: Users,
-    // admin di-keep untuk akses sub-pages (Laporan Harian / Daftar CS) tapi
-    // /cs-dashboard sendiri di-gate ke cs+owner di komponen.
+    // admin di-keep untuk akses sub-page Laporan Harian; /cs-dashboard sendiri
+    // di-gate ke cs+owner di komponen.
     roles: ['owner', 'admin', 'cs'],
     children: [
       { title: 'Dashboard CS', href: '/cs-dashboard' },
       { title: 'Laporan Harian', href: '/cs-report' },
-      { title: 'Daftar CS', href: '/team/cs' },
+      // 'Daftar CS' dihapus — data sudah di /settings/users (owner-only).
+      // Path /team/cs redirect ke /settings/users?role=cs.
     ],
   },
   {

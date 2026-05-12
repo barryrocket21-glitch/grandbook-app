@@ -26,6 +26,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 6 — CS Daily Report + ADV-CS Cross-Check Funnel | ✅ DONE | 2026-05-11 |
 | Phase 6 redesign — Analytics Horizontal Nav + Detail Per Produk | ✅ DONE | 2026-05-12 |
 | Phase 6.5 — Shipping Diff Revival | ✅ DONE | 2026-05-12 |
+| Phase 7.5 — Pre-launch UX fixes (login + Combobox) | ✅ DONE | 2026-05-13 |
+
+**Phase 7.5 done.** Pre-launch UX hotfix sebelum tim mulai operasi real. 3 issues fixed di [PR #16](https://github.com/barryrocket21-glitch/grandbook-app/pull/16) (squash merge → main `6ceee36`):
+1. **Login input contrast** — `<Input>` di `/login` pakai `bg-zinc-800/50` tanpa explicit text color, di dark gradient page text inherit tidak konsisten cross-browser. Fix: `text-white placeholder:text-zinc-500` + `focus-visible:ring-2 focus-visible:ring-violet-500/30` + `<Label>` pakai `text-zinc-200`. Hardcode `text-white` intentional (login page dark-only, tidak ada theme toggle — `text-foreground` bisa resolve ke light di sistem dengan light preference).
+2. **Magic Login removed** — feature passwordless via email link bikin tim non-teknis bingung. Hapus dari `/login`: `<Tabs>` Password/Magic Link wrapper, `handleMagicLink()` + `supabase.auth.signInWithOtp()` call, `Sparkles` icon. KEEP `src/app/auth/callback/route.ts` (generic OAuth code exchange, reusable kalau Barry trigger Supabase password reset email di kemudian hari). Tidak touch Supabase Auth settings di dashboard.
+3. **Combobox auto-close** — Base UI Popover tidak fire `onOpenChange` untuk *external* `setOpen(false)` call, jadi `skipNextAutoOpenRef` tetap `false` setelah selection → focus return ke trigger → `onFocus` handler trigger re-open. Fix: set `skipNextAutoOpenRef.current = true` *explicit* di `onSelect` SEBELUM `setOpen(false)`. Base-level fix → semua page yang pakai `<Combobox>` (orders/new, settings/*, campaigns, ad-spend, products) otomatis benefit, tidak perlu per-call-site changes.
+
+LOC delta: +54 / −125 (net −71). Production deploy verified via content check (Magic Link text gone from /login HTML). No DB change, no migration.
 
 **Phase 6.5 done.** Revive `/shipping-diff` dari archived banner ke full per-order table. 3 angka ongkir (charge customer / gross / net after cashback) + 2 selisih per order (margin sebelum vs setelah cashback) + summary stat cards (loss/breakeven/profit count + avg margin). Migration 024 + 2 RPCs (`shipping_diff_per_order`, `shipping_diff_summary`) dengan filter date/channel/courier/status. Sidebar `/shipping-diff` reinstated di group Reconciliation (owner+admin). Tidak ada schema change — reuse Phase 4C columns (`shipping_cost`, `shipping_cost_actual`, `estimated_shipping_net`). Brief column refs adjusted: `orders.courier_id` tidak exist (JOIN via `courier_channels.courier_id`), `orders.estimated_shipping_discount` tidak exist (derive `GREATEST(gross − net, 0)`).
 

@@ -116,8 +116,11 @@ export function Combobox({
                     value={opt.label}
                     onSelect={() => {
                       onChange(opt.value)
-                      // Closing will set skipNextAutoOpenRef via onOpenChange,
-                      // which suppresses the focus-return re-open.
+                      // Base UI Popover doesn't fire onOpenChange for an
+                      // external setOpen(false), so set the suppression flag
+                      // explicitly here. Otherwise focus returning to the
+                      // trigger would immediately re-open the popover.
+                      skipNextAutoOpenRef.current = true
                       setOpen(false)
                     }}
                   >

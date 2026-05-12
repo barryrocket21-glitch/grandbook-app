@@ -608,3 +608,29 @@ export const dailyCsReportSchema = z.object({
   path: ['closing'],
 })
 export type DailyCsReportFormData = z.infer<typeof dailyCsReportSchema>
+
+// =============================================================
+// Phase 7 — Margin Simulator
+// =============================================================
+export const JENIS_IKLAN_OPTIONS: { value: 'Form' | 'WA' | 'Short' | 'CTWA'; label: string; hintMultiplier: number }[] = [
+  { value: 'Form',  label: 'Form (Instant Form)',     hintMultiplier: 1.0 },
+  { value: 'WA',    label: 'WA (Click-to-WhatsApp)',  hintMultiplier: 1.2 },
+  { value: 'Short', label: 'Short / Reels',           hintMultiplier: 1.5 },
+  { value: 'CTWA',  label: 'CTWA (Conversion API WA)', hintMultiplier: 1.3 },
+]
+
+export const marginSimulatorPresetSchema = z.object({
+  product_id: z.number().int().positive('Pilih produk'),
+  scenario_name: z.string().min(1, 'Nama scenario wajib').max(80, 'Max 80 karakter'),
+  margin_item: z.number().min(0, 'Margin item harus >= 0'),
+  cpr_max: z.number().min(0, 'CPR max harus >= 0'),
+  lead_dashboard: z.number().int().min(0, 'Lead dashboard harus >= 0'),
+  jenis_iklan: z.enum(['Form', 'WA', 'Short', 'CTWA']),
+  multiplier: z.number().gt(0, 'Multiplier > 0').lte(10, 'Multiplier <= 10'),
+  closing_rate: z.number().min(0).max(100),
+  rts_rate: z.number().min(0).max(100),
+  ppn_rate: z.number().min(0).max(100),
+  is_default: z.boolean().default(false),
+  notes: z.string().max(500).nullable().optional(),
+})
+export type MarginSimulatorPresetFormData = z.infer<typeof marginSimulatorPresetSchema>

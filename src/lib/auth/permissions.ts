@@ -24,3 +24,10 @@ export function canApproveOrders(role: UserRole | null | undefined): boolean {
 export function canCreateOrders(role: UserRole | null | undefined): boolean {
   return role === 'owner' || role === 'admin' || role === 'cs'
 }
+
+/**
+ * Phase 7 permission helper. ADV + Owner can access margin simulator tool.
+ */
+export function canAccessMarginSimulator(role: UserRole | null | undefined): boolean {
+  return role === 'owner' || role === 'advertiser'
+}

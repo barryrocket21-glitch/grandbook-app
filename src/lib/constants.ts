@@ -125,6 +125,7 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Dashboard ADV', href: '/adv-dashboard' },
       { title: 'Campaigns', href: '/campaigns' },
       { title: 'Ad Spend', href: '/ad-spend' },
+      { title: 'Margin Simulator', href: '/adv/margin-simulator' },
       { title: 'Daftar Advertiser', href: '/team/advertisers' },
     ],
   },
@@ -221,6 +222,13 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
       }
       if (role !== 'owner' && item.href === '/commissions') {
         return { ...item, children: [{ title: 'Komisi Saya', href: '/commissions/my' }] }
+      }
+      // Phase 7: Margin Simulator only for owner+advertiser (admin hidden).
+      if (role === 'admin' && item.href === '/adv-dashboard') {
+        return {
+          ...item,
+          children: item.children!.filter(c => c.href !== '/adv/margin-simulator'),
+        }
       }
     }
     return item

@@ -614,3 +614,66 @@ export interface NavItem {
   roles: UserRole[]
   children?: NavItem[]
 }
+
+// =============================================================
+// Phase 7 — Margin Simulator
+// =============================================================
+export const JENIS_IKLAN_VALUES = ['Form', 'WA', 'Short', 'CTWA'] as const
+export type JenisIklan = (typeof JENIS_IKLAN_VALUES)[number]
+
+export interface SimulatorInput {
+  product_id: number | null
+  margin_item: number
+  cpr_max: number
+  lead_dashboard: number
+  jenis_iklan: JenisIklan
+  multiplier: number
+  closing_rate: number
+  rts_rate: number
+  ppn_rate: number
+}
+
+export interface SimulatorOutput {
+  lead_real: number
+  closing: number
+  terkirim: number
+  budget_iklan: number
+  gross_margin: number
+  ppn_amount: number
+  total_margin: number
+  profit_loss: number
+  roi_percent: number
+  cpr_breakeven: number
+  status: 'profit' | 'breakeven' | 'loss'
+  structural_loss: boolean
+}
+
+export interface MarginSimulatorPreset {
+  id: number
+  organization_id: number
+  product_id: number
+  scenario_name: string
+  margin_item: number
+  cpr_max: number
+  lead_dashboard: number
+  jenis_iklan: JenisIklan
+  multiplier: number
+  closing_rate: number
+  rts_rate: number
+  ppn_rate: number
+  is_default: boolean
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ProductForSimulator {
+  product_id: number
+  product_name: string
+  sku: string | null
+  price_default: number
+  hpp: number
+  margin_item: number
+  has_default_preset: boolean
+}

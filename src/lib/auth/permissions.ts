@@ -31,3 +31,13 @@ export function canCreateOrders(role: UserRole | null | undefined): boolean {
 export function canAccessMarginSimulator(role: UserRole | null | undefined): boolean {
   return role === 'owner' || role === 'advertiser'
 }
+
+/**
+ * Phase 8 — Team performance dashboards (/team/cs + /team/advertisers).
+ * Hanya owner + admin: CS tidak boleh lihat performance CS lain, advertiser
+ * juga tidak boleh lihat performance advertiser lain. Sendiri-sendiri pakai
+ * /cs-dashboard atau /adv-dashboard masing-masing.
+ */
+export function canViewTeamPerformance(role: UserRole | null | undefined): boolean {
+  return role === 'owner' || role === 'admin'
+}

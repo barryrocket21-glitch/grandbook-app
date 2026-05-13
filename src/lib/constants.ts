@@ -87,7 +87,18 @@ export interface NavItem {
   href: string
   icon: typeof LayoutDashboard
   roles: UserRole[]
-  children?: { title: string; href: string }[]
+  children?: NavChild[]
+}
+
+export interface NavChild {
+  title: string
+  href: string
+  /**
+   * Optional per-child role filter. Kalau di-set, hanya role yang
+   * masuk array ini yang lihat menu item ini di sidebar. Default
+   * (undefined) = inherit dari parent group roles.
+   */
+  roles?: UserRole[]
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -125,8 +136,11 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Dashboard ADV', href: '/adv-dashboard' },
       { title: 'Campaigns', href: '/campaigns' },
       { title: 'Ad Spend', href: '/ad-spend' },
-      { title: 'Margin Simulator', href: '/adv/margin-simulator' },
-      { title: 'Daftar Advertiser', href: '/team/advertisers' },
+      // Phase 7: Margin Simulator — owner+advertiser (admin hidden via per-child filter)
+      { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
+      // Phase 8: Daftar Advertiser — team perf dashboard, owner+admin only
+      // (advertiser sendiri tidak boleh lihat performance advertiser lain).
+      { title: 'Daftar Advertiser', href: '/team/advertisers', roles: ['owner', 'admin'] },
     ],
   },
   {
@@ -139,7 +153,9 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Dashboard CS', href: '/cs-dashboard' },
       { title: 'Laporan Harian', href: '/cs-report' },
-      { title: 'Daftar CS', href: '/team/cs' },
+      // Daftar CS: team performance dashboard — hanya owner+admin
+      // (CS sendiri tidak boleh lihat performance CS lain).
+      { title: 'Daftar CS', href: '/team/cs', roles: ['owner', 'admin'] },
     ],
   },
   {
@@ -215,22 +231,18 @@ export const NAV_ITEMS: NavItem[] = [
 
 export function getNavItemsForRole(role: UserRole): NavItem[] {
   return NAV_ITEMS.filter((item) => item.roles.includes(role)).map((item) => {
-    if (item.children) {
-      // Filter children too for specific roles
-      if (role === 'admin' && item.href === '/orders') {
-        return { ...item, children: item.children }
-      }
-      if (role !== 'owner' && item.href === '/commissions') {
-        return { ...item, children: [{ title: 'Komisi Saya', href: '/commissions/my' }] }
-      }
-      // Phase 7: Margin Simulator only for owner+advertiser (admin hidden).
-      if (role === 'admin' && item.href === '/adv-dashboard') {
-        return {
-          ...item,
-          children: item.children!.filter(c => c.href !== '/adv/margin-simulator'),
-        }
-      }
+    if (!item.children) return item
+
+    // Per-child role filter (Phase 8): child with explicit roles[] only shown
+    // to roles in that array. Used for Margin Simulator (owner+advertiser),
+    // Daftar CS + Daftar Advertiser (owner+admin).
+    let filtered = item.children.filter(c => !c.roles || c.roles.includes(role))
+
+    // Legacy special case: commissions group — non-owner cuma lihat "Komisi Saya"
+    if (role !== 'owner' && item.href === '/commissions') {
+      filtered = [{ title: 'Komisi Saya', href: '/commissions/my' }]
     }
-    return item
+
+    return { ...item, children: filtered }
   })
 }

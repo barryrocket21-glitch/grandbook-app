@@ -5,6 +5,11 @@
 // =============================================================
 import { applyTransform } from './transforms'
 import { indexValueMappings, parseSource } from './parser'
+import {
+  createProductMatcher,
+  logUnmatchedProductAsync,
+  type ProductMatcher,
+} from './product-matcher'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   ConverterProfile,
@@ -115,6 +120,13 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
 
   // Pre-resolve cs_name → cs_id by fetching all profiles once (case-insensitive lookup)
   const csNameToId = await loadCsNameMap(opts.supabase)
+
+  // Phase 8.5: preload product master untuk in-memory exact-match. Yang gak
+  // match akan di-log ke inbox_unmatched_products via fire-and-forget RPC.
+  // batchId di-share semua row dari satu ingest call supaya admin bisa
+  // group unmatched per batch saat review.
+  const productMatcher = await createProductMatcher(opts.supabase)
+  const batchId = `${opts.profile.code}-${Date.now()}`
 
   for (let idx = 0; idx < rawRows.length; idx++) {
     const raw = rawRows[idx]
@@ -248,7 +260,15 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
       }
 
       // Insert order_items (1 item per row in inbound — single line item)
-      const itemPayload = buildItemPayload(itemData, ordersData, opts.organizationId, orderRow.id)
+      const itemPayload = buildItemPayload(
+        itemData,
+        ordersData,
+        opts.organizationId,
+        orderRow.id,
+        productMatcher,
+        opts.supabase,
+        batchId
+      )
       if (itemPayload) {
         const { error: itemErr } = await opts.supabase
           .from('order_items')
@@ -349,17 +369,32 @@ function buildItemPayload(
   itemData: Record<string, unknown>,
   ordersData: Record<string, unknown>,
   organizationId: number,
-  orderId: number
+  orderId: number,
+  matcher: ProductMatcher,
+  supabase: SupabaseClient,
+  batchId: string | null
 ): Record<string, unknown> | null {
   const productNameRaw = itemData.product_name_raw ?? ordersData.product_name_raw
   if (!productNameRaw || String(productNameRaw).trim() === '') {
     return null
   }
+  const trimmedName = String(productNameRaw).trim()
+  // Phase 8.5: resolve product_id via exact-match (case-insensitive + trimmed).
+  // Yang gak match → product_id stays NULL + log fire-and-forget. Trigger
+  // snapshot_hpp_on_order_items akan populate hpp_snapshot otomatis kalau
+  // product_id resolved.
+  const matchedProductId = matcher.match(trimmedName)
+  if (matchedProductId === null) {
+    logUnmatchedProductAsync(supabase, trimmedName, {
+      sampleOrderId: orderId,
+      sampleBatchId: batchId,
+    })
+  }
   return {
     organization_id: organizationId,
     order_id: orderId,
-    product_id: null,
-    product_name_raw: String(productNameRaw).trim(),
+    product_id: matchedProductId,
+    product_name_raw: trimmedName,
     variation: nullableStr(itemData.variation),
     product_code_raw: nullableStr(itemData.product_code_raw),
     qty: toInt(itemData.qty, 1),

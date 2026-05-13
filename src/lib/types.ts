@@ -614,3 +614,78 @@ export interface NavItem {
   roles: UserRole[]
   children?: NavItem[]
 }
+
+// =============================================================
+// Phase 7 v2 — Margin Simulator
+// =============================================================
+// Refactor: drop server-side presets table → localStorage per-user.
+// `multiplier` → `lead_real_pct` (0-100, more intuitive). Funnel options
+// changed. Periode toggle (1/7/30 hari) di state global, output × periode.
+// =============================================================
+
+export const FUNNEL_OPTIONS = ['WA', 'CTWA', 'Short Form', 'Full Form'] as const
+export type Funnel = (typeof FUNNEL_OPTIONS)[number]
+
+export const PERIODE_OPTIONS = [
+  { days: 1,  label: '1 hari'  },
+  { days: 7,  label: '7 hari'  },
+  { days: 30, label: '30 hari' },
+] as const
+export type PeriodeDays = (typeof PERIODE_OPTIONS)[number]['days']
+
+export interface SimulatorScenario {
+  name: string
+  product_id: number | null
+  margin_item: number
+  cpr_max: number
+  lead_dashboard: number       // per hari
+  funnel: Funnel
+  lead_real_pct: number        // 0-100, default 100
+  closing_rate: number         // 0-100
+  rts_rate: number             // 0-100
+  ppn_rate: number             // 0-100, default 12
+}
+
+export interface SimulatorState {
+  periode_days: PeriodeDays
+  scenarios: SimulatorScenario[]
+}
+
+export interface SimulatorOutput {
+  lead_real: number
+  closing: number
+  terkirim: number
+  budget_iklan: number
+  total_margin: number
+  profit_loss: number
+  roi_percent: number
+  cpr_breakeven: number
+  status: 'profit' | 'breakeven' | 'loss'
+}
+
+export interface ProductForSimulator {
+  product_id: number
+  product_name: string
+  sku: string | null
+  price_default: number
+  hpp: number
+  margin_item: number
+}
+
+export const DEFAULT_SCENARIO: SimulatorScenario = {
+  name: 'Scenario A',
+  product_id: null,
+  margin_item: 0,
+  cpr_max: 0,
+  lead_dashboard: 100,
+  funnel: 'WA',
+  lead_real_pct: 100,
+  closing_rate: 20,
+  rts_rate: 20,
+  ppn_rate: 12,
+}
+
+export const DEFAULT_STATE: SimulatorState = {
+  periode_days: 30,
+  scenarios: [{ ...DEFAULT_SCENARIO, name: 'Scenario A' }],
+}

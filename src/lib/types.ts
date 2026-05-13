@@ -27,13 +27,24 @@ export type AdPlatform = 'META' | 'GOOGLE' | 'TIKTOK' | 'SNACK' | 'OTHER'
 
 export type CommissionRuleType = 'PERCENT_REVENUE' | 'FLAT_PER_ORDER'
 
+// Phase 9 — commission redesign
+export type CommissionRateType = 'FLAT_PER_ORDER' | 'PERCENT_REVENUE' | 'NONE'
+
 // Phase 4A commission status enum (migration 016 — TEXT + CHECK constraint).
 // 'PENDING' / 'APPROVED' adalah legacy values dari pre-Phase 1 — tidak diproduksi
 // engine v2 tapi masih ada di type union supaya halaman lama tidak break kalau
 // referensi data historis.
-export type CommissionStatus = 'ESTIMATED' | 'EARNED' | 'CANCELLED' | 'PAID' | 'PENDING' | 'APPROVED'
+// Phase 9 commission redesign: PENDING / EARNED / PAID / VOIDED.
+// Legacy values (ESTIMATED, CANCELLED, APPROVED) preserved untuk type compat
+// dengan halaman lama yang reference historis data — runtime commissions
+// table sekarang cuma punya 4 nilai aktif (Phase 9 CHECK constraint).
+export type CommissionStatus = 'PENDING' | 'EARNED' | 'PAID' | 'VOIDED' | 'ESTIMATED' | 'CANCELLED' | 'APPROVED'
 
-export const COMMISSION_V2_STATUSES = ['ESTIMATED', 'EARNED', 'CANCELLED', 'PAID'] as const
+// Phase 9: state machine baru — PENDING / EARNED / PAID / VOIDED.
+// Legacy values (ESTIMATED, CANCELLED) di-keep di union untuk type compat
+// dengan halaman lama yang reference historis data, tapi runtime data
+// post-Phase 9 cuma 4 nilai baru (CHECK constraint migration 032).
+export const COMMISSION_V2_STATUSES = ['PENDING', 'EARNED', 'PAID', 'VOIDED', 'ESTIMATED', 'CANCELLED'] as const
 export type CommissionV2Status = (typeof COMMISSION_V2_STATUSES)[number]
 
 export type CommissionPaymentMethod = 'TRANSFER' | 'CASH' | 'OTHER'
@@ -369,6 +380,60 @@ export interface Product {
   updated_at?: string
   active: boolean
   category_ref?: ProductCategory | null
+  // Phase 9 — variant model
+  has_variants?: boolean
+  variants?: ProductVariant[]
+  attributes?: ProductAttribute[]
+}
+
+// =============================================================
+// Phase 9 — Variant model
+// =============================================================
+
+export interface ProductAttribute {
+  id: number
+  organization_id: number
+  name: string
+  display_order: number
+  active: boolean
+  created_at?: string
+  updated_at?: string
+  values?: ProductAttributeValue[]
+}
+
+export interface ProductAttributeValue {
+  id: number
+  attribute_id: number
+  value: string
+  display_order: number
+}
+
+export interface ProductVariant {
+  id: number
+  product_id: number
+  organization_id: number
+  variant_name: string
+  variation_code: string | null
+  price: number
+  hpp: number
+  weight_grams: number | null
+  active: boolean
+  created_at?: string
+  updated_at?: string
+  // Joined helpers
+  attribute_values?: VariantAttributeValueRow[]
+}
+
+export interface VariantAttributeValueRow {
+  attribute_id: number
+  attribute_name: string
+  value_id: number
+  value: string
+}
+
+export interface ProductWithVariants extends Product {
+  variants: ProductVariant[]
+  attributes: ProductAttribute[]
 }
 
 export type CampaignStatus = 'ACTIVE' | 'PAUSED' | 'ENDED'
@@ -493,16 +558,20 @@ export interface OperationalExpense {
   updated_at: string
 }
 
+// Phase 9 — commission_rules table redesigned (drop+recreate).
+// Old fields (rule_type/value/applies_to_status/user_id/effective_from) removed.
+// New shape: rate_type + rate_value (NULL untuk NONE). Per-user rules
+// deprecated for now — Phase 10 maybe re-introduce.
 export interface CommissionRule {
   id: number
-  role: UserRole
-  rule_type: CommissionRuleType
-  value: number
-  applies_to_status: OrderStatus[]
-  product_id: number | null
-  user_id: string | null
+  organization_id: number
+  role: 'cs' | 'advertiser'
+  product_id: number | null  // null = default rule untuk role itu
+  rate_type: CommissionRateType
+  rate_value: number | null  // null kalau rate_type = NONE
   active: boolean
-  effective_from: string | null
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Commission {

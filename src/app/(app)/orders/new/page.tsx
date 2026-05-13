@@ -68,6 +68,7 @@ export default function NewOrderPage() {
         organization_id: orgId,
         order_id: orderRow.id,
         product_id: it.product_id,
+        variant_id: it.variant_id,
         product_name_raw: it.product_name_raw,
         variation: it.variation,
         qty: it.qty,
@@ -78,6 +79,14 @@ export default function NewOrderPage() {
       const { error: itemErr } = await supabase.from('order_items').insert(itemPayload)
       if (itemErr) {
         toast.warning('Order tersimpan tapi item gagal', { description: itemErr.message })
+      }
+
+      // Phase 9: compute commissions AFTER orders + items inserted (frontend trigger)
+      try {
+        const { error: commErr } = await supabase.rpc('compute_commissions', { p_order_id: orderRow.id })
+        if (commErr) console.warn('compute_commissions failed:', commErr.message)
+      } catch (e) {
+        console.warn('compute_commissions exception:', e)
       }
 
       toast.success(`Order ${orderNumber} ter-create`)

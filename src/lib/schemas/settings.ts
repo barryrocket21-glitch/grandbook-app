@@ -238,6 +238,8 @@ export type PaymentMethodEnum = (typeof PAYMENT_METHOD_VALUES)[number]
 
 export const orderItemSchema = z.object({
   product_id: z.number().int().positive().nullable().optional(),
+  // Phase 9: variant_id is now primary FK; product_id auto-denormalized via trigger
+  variant_id: z.number().int().positive().nullable().optional(),
   product_name_raw: z.string().min(1, 'Nama produk wajib diisi'),
   variation: z.string().nullable().optional(),
   qty: z.number().int().min(1, 'Qty minimal 1'),
@@ -309,17 +311,25 @@ export const commissionPaymentSchema = z.object({
 export type CommissionPaymentFormData = z.infer<typeof commissionPaymentSchema>
 
 export const COMMISSION_STATUS_LABEL: Record<CommissionV2Status, string> = {
-  ESTIMATED: 'Estimated',
+  // Phase 9 active states
+  PENDING: 'Pending',
   EARNED: 'Earned',
-  CANCELLED: 'Cancelled',
   PAID: 'Paid',
+  VOIDED: 'Voided',
+  // Legacy (Phase 4A) — type compat only, tidak diproduksi engine v3
+  ESTIMATED: 'Estimated',
+  CANCELLED: 'Cancelled',
 }
 
 export const COMMISSION_STATUS_BADGE_COLOR: Record<CommissionV2Status, string> = {
-  ESTIMATED: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-  EARNED: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-  CANCELLED: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  // Phase 9
+  PENDING: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  EARNED: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
   PAID: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+  VOIDED: 'bg-red-500/10 text-red-600 border-red-500/30',
+  // Legacy
+  ESTIMATED: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  CANCELLED: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
 }
 
 // =============================================================

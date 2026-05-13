@@ -25,7 +25,8 @@ import {
 const supabase = createClient()
 
 interface ChannelLite { id: number; code: string; name: string; active: boolean }
-interface ProductLite { id: number; sku: string | null; name: string; price_default: number; active: boolean }
+interface ProductLite { id: number; sku: string | null; name: string; price_default: number; active: boolean; has_variants: boolean }
+interface VariantLite { id: number; product_id: number; variant_name: string; variation_code: string | null; price: number; hpp: number; weight_grams: number | null; active: boolean }
 interface AdvertiserLite { id: string; full_name: string; role: string; active: boolean }
 
 export interface OrderFormDefaults {
@@ -66,6 +67,8 @@ interface OrderFormProps {
 
 interface ItemRow {
   product_id: number | null
+  // Phase 9: variant_id is primary FK; product_id auto-denormalized via trigger
+  variant_id: number | null
   product_name_raw: string
   variation: string
   qty: number
@@ -75,6 +78,7 @@ interface ItemRow {
 
 const emptyItem = (): ItemRow => ({
   product_id: null,
+  variant_id: null,
   product_name_raw: '',
   variation: '',
   qty: 1,
@@ -108,6 +112,7 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
     d.items && d.items.length > 0
       ? d.items.map((it) => ({
           product_id: it.product_id || null,
+          variant_id: null,
           product_name_raw: it.product_name_raw,
           variation: it.variation || '',
           qty: it.qty,
@@ -132,21 +137,24 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
   const [advertiserId, setAdvertiserId] = useState(d.advertiser_id || '')
   const [notes, setNotes] = useState(d.notes || '')
 
-  // Products lookup
+  // Products + variants lookup (preloaded once)
   const [products, setProducts] = useState<ProductLite[]>([])
+  const [variants, setVariants] = useState<VariantLite[]>([])
 
   // Initial loads
   useEffect(() => {
     const load = async () => {
       try {
-        const [provs, { data: chs }, { data: prods }, { data: advs }] = await Promise.all([
+        const [provs, { data: chs }, { data: prods }, { data: vars }, { data: advs }] = await Promise.all([
           loadProvinces(supabase),
           supabase.from('courier_channels').select('id, code, name, active').eq('active', true).order('code'),
-          supabase.from('products').select('id, sku, name, price_default, active').eq('active', true).order('name'),
+          supabase.from('products').select('id, sku, name, price_default, active, has_variants').eq('active', true).order('name'),
+          supabase.from('product_variants').select('id, product_id, variant_name, variation_code, price, hpp, weight_grams, active').eq('active', true).order('id'),
           supabase.from('profiles').select('id, full_name, role, active').eq('active', true).eq('role', 'advertiser').order('full_name'),
         ])
         setProvinces(provs)
         setChannels((chs || []) as ChannelLite[])
+        setVariants((vars || []) as VariantLite[])
         setProducts((prods || []) as ProductLite[])
         setAdvertisers((advs || []) as AdvertiserLite[])
       } catch (err: any) {
@@ -205,15 +213,36 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
   }
   const pickProductForItem = (idx: number, productId: string) => {
     if (!productId || productId === 'none') {
-      updateItem(idx, { product_id: null })
+      updateItem(idx, { product_id: null, variant_id: null, variation: '' })
       return
     }
     const p = products.find((x) => String(x.id) === productId)
     if (!p) return
+    // Auto-pick variant kalau cuma 1 (simple product or variable dengan 1 active variant)
+    const productVariants = variants.filter(v => v.product_id === p.id)
+    const autoVariant = productVariants.length === 1 ? productVariants[0] : null
     updateItem(idx, {
       product_id: p.id,
+      variant_id: autoVariant?.id ?? null,
       product_name_raw: p.name,
-      price: items[idx].price > 0 ? items[idx].price : Number(p.price_default),
+      variation: autoVariant ? (autoVariant.variant_name === 'default' ? '' : autoVariant.variant_name) : '',
+      price: autoVariant ? Number(autoVariant.price) : (items[idx].price > 0 ? items[idx].price : Number(p.price_default)),
+      weight_per_unit: autoVariant?.weight_grams != null ? Number(autoVariant.weight_grams) / 1000 : items[idx].weight_per_unit,
+    })
+  }
+
+  const pickVariantForItem = (idx: number, variantId: string) => {
+    if (!variantId || variantId === 'none') {
+      updateItem(idx, { variant_id: null, variation: '' })
+      return
+    }
+    const v = variants.find(x => String(x.id) === variantId)
+    if (!v) return
+    updateItem(idx, {
+      variant_id: v.id,
+      variation: v.variant_name === 'default' ? '' : v.variant_name,
+      price: Number(v.price),
+      weight_per_unit: v.weight_grams != null ? Number(v.weight_grams) / 1000 : items[idx].weight_per_unit,
     })
   }
 
@@ -255,6 +284,7 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
       notes: notes.trim() || null,
       items: items.map((it) => ({
         product_id: it.product_id,
+        variant_id: it.variant_id,
         product_name_raw: it.product_name_raw.trim(),
         variation: it.variation || null,
         qty: Number(it.qty) || 1,
@@ -401,15 +431,42 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Nama Produk *</Label>
-                  <Input
-                    value={it.product_name_raw}
-                    onChange={(e) => updateItem(idx, { product_name_raw: e.target.value })}
-                    placeholder="Nama produk"
-                    required
-                  />
-                </div>
+                {/* Phase 9: variant picker — muncul kalau produk dipilih + ada variant >1 */}
+                {it.product_id && variants.filter(v => v.product_id === it.product_id && v.variant_name !== 'default').length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Variant *</Label>
+                    <Select
+                      value={it.variant_id ? String(it.variant_id) : 'none'}
+                      onValueChange={(v) => pickVariantForItem(idx, v || '')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih variant">
+                          {(value: string | null) =>
+                            !value || value === 'none' ? '— pilih variant —' : variants.find(v => String(v.id) === value)?.variant_name ?? '—'
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="w-[300px] max-h-60">
+                        <SelectItem value="none">— pilih variant —</SelectItem>
+                        {variants.filter(v => v.product_id === it.product_id).map(v => (
+                          <SelectItem key={v.id} value={String(v.id)}>
+                            {v.variant_name}{v.variation_code ? ` (${v.variation_code})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nama Produk *</Label>
+                    <Input
+                      value={it.product_name_raw}
+                      onChange={(e) => updateItem(idx, { product_name_raw: e.target.value })}
+                      placeholder="Nama produk"
+                      required
+                    />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">

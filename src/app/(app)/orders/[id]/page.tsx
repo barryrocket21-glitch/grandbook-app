@@ -208,6 +208,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         organization_id: order.organization_id,
         order_id: order.id,
         product_id: it.product_id,
+        variant_id: it.variant_id,
         product_name_raw: it.product_name_raw,
         variation: it.variation,
         qty: it.qty,
@@ -217,6 +218,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       }))
       const { error: insErr } = await supabase.from('order_items').insert(itemPayload)
       if (insErr) throw insErr
+
+      // Phase 9: recompute commissions after items changed
+      try {
+        const { error: commErr } = await supabase.rpc('compute_commissions', { p_order_id: order.id })
+        if (commErr) console.warn('compute_commissions failed:', commErr.message)
+      } catch (e) {
+        console.warn('compute_commissions exception:', e)
+      }
 
       toast.success('Order ter-update')
       setEditing(false)

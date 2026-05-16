@@ -211,12 +211,51 @@ export default function OrdersExportResiPage() {
 
   const startGenerate = async () => {
     if (!profileBundle || !user) return
+
+    // Phase 8F — Export gate: cek tiap order siap export (alamat lengkap + channel)
+    // Block kalau ada yang gagal. Konsisten dengan keputusan owner: STRICT mode.
+    const ids = Array.from(selectedIds)
+    const notReady: Array<{ id: number; order_number: string; missing: string[] }> = []
+    for (const id of ids) {
+      try {
+        const { data, error } = await supabase.rpc('check_order_export_ready', { p_order_id: id })
+        if (error) continue
+        const row = Array.isArray(data) ? data[0] : data
+        if (row && !row.is_ready) {
+          notReady.push({
+            id,
+            order_number: String(id),
+            missing: row.missing_fields || [],
+          })
+        }
+      } catch {
+        // ignore — kalau RPC error, skip check (jangan block generate karena infra issue)
+      }
+    }
+    if (notReady.length > 0) {
+      const sample = notReady.slice(0, 5).map(o =>
+        `• ${o.order_number} (missing: ${o.missing.join(', ')})`
+      ).join('\n')
+      const more = notReady.length > 5 ? `\n…dan ${notReady.length - 5} order lain` : ''
+      toast.error(
+        `${notReady.length} order belum siap export`,
+        {
+          description: `Lengkapi alamat/channel dulu sebelum generate:\n${sample}${more}`,
+          duration: 12000,
+          action: {
+            label: 'Buka Inbox Address Review',
+            onClick: () => { window.location.href = '/inbox/address-review' },
+          },
+        },
+      )
+      return
+    }
+
     setGenerating(true)
     setStep('generate')
     setProgress({ done: 0, total: selectedIds.size })
     try {
       const orgId = userProfile?.organization_id || 1
-      const ids = Array.from(selectedIds)
       const r = await generateOutbound({
         profile: profileBundle.profile,
         fieldMappings: profileBundle.fieldMappings,

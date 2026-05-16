@@ -150,6 +150,8 @@ export interface SaveProductPayload {
   notes?: string | null
   active: boolean
   hasVariants: boolean
+  // Phase 8A — supplier link (nullable)
+  supplierId?: number | null
   // Simple product fields
   simplePrice?: number
   simpleHpp?: number
@@ -184,6 +186,9 @@ export async function saveProduct(
     hpp: payload.hasVariants
       ? (payload.variants[0]?.hpp ?? 0)
       : (payload.simpleHpp ?? 0),
+    // Phase 8A — supplier_id (nullable). Only set kalau explicitly passed
+    // (undefined = jangan touch, null = clear)
+    ...(payload.supplierId !== undefined ? { supplier_id: payload.supplierId } : {}),
   }
 
   let productId: number

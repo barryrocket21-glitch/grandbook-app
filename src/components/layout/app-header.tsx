@@ -11,6 +11,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import { NotificationBell } from '@/components/layout/notification-bell'
 
 function BreadcrumbNav() {
   const pathname = usePathname()
@@ -69,6 +70,9 @@ export function AppHeader() {
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-2 !h-4" />
       <BreadcrumbNav />
+      <div className="ml-auto flex items-center gap-1">
+        <NotificationBell />
+      </div>
     </header>
   )
 }

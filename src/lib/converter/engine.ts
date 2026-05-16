@@ -10,6 +10,7 @@ import {
   logUnmatchedProductAsync,
   type ProductMatcher,
 } from './product-matcher'
+import { parseAddress, type WilayahCandidate } from './address-parser'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   ConverterProfile,
@@ -17,6 +18,15 @@ import type {
   ConverterValueMapping,
   OrderStatus,
 } from '@/lib/types'
+
+interface AddressParseFailureForInbox {
+  raw_address: string
+  parsing_attempt: {
+    extracted_keywords: string[]
+    candidates: WilayahCandidate[]
+    reason_failed: 'no_match' | 'ambiguous' | 'too_short' | 'empty_input'
+  }
+}
 
 export type IngestStatus = 'BARU' | 'SIAP_KIRIM'
 
@@ -77,6 +87,10 @@ const ORDER_FIELD_WHITELIST = new Set([
   'cs_name',
   'notes',
   'campaign_id',
+  // Phase 8E enrichment
+  'customer_note',
+  'tags',
+  'priority',
 ])
 const ITEM_FIELD_WHITELIST = new Set([
   'product_name_raw',
@@ -86,6 +100,9 @@ const ITEM_FIELD_WHITELIST = new Set([
   'price',
   'weight_per_unit',
   'notes',
+  // Phase 8F: hpp_snapshot dari cogs Orderonline (trigger snapshot_hpp_on_order_items
+  // tetap jalan kalau product_id resolved; explicit hpp_snapshot di sini override)
+  'hpp_snapshot',
 ])
 
 export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> {
@@ -128,6 +145,10 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
   const productMatcher = await createProductMatcher(opts.supabase)
   const batchId = `${opts.profile.code}-${Date.now()}`
 
+  // Phase 8F: address parser cuma trigger untuk profile orderonline_inbound.
+  // Profile lain (WA paste, dst) skip — address handling beda format.
+  const ENABLE_ADDRESS_PARSER = opts.profile.code === 'orderonline_inbound'
+
   for (let idx = 0; idx < rawRows.length; idx++) {
     const raw = rawRows[idx]
     const rowIndex = idx + 1
@@ -139,6 +160,46 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         result,
         rowIndex
       )
+
+      // Phase 8F: hybrid address parser. Trust structured fields kalau lengkap;
+      // kalau hanya address detail (free-text) → call RPC search_wilayah_fuzzy
+      // untuk auto-match. Gagal parse → tetap insert order, lalu queue ke inbox.
+      let addressParseFailure: AddressParseFailureForInbox | null = null
+      if (ENABLE_ADDRESS_PARSER) {
+        const detailFromMapping = String(
+          ordersData.customer_address_detail ?? ordersData.customer_address ?? ''
+        ).trim()
+        const parsed = await parseAddress(
+          {
+            address: detailFromMapping,
+            province: ordersData.customer_province as string | null,
+            city: ordersData.customer_city as string | null,
+            subdistrict: ordersData.customer_subdistrict as string | null,
+            zip: ordersData.customer_zip as string | null,
+          },
+          opts.supabase,
+        )
+        if (parsed.success) {
+          ordersData.customer_province = parsed.province
+          ordersData.customer_city = parsed.city
+          ordersData.customer_subdistrict = parsed.subdistrict
+          if (parsed.village) ordersData.customer_village = parsed.village
+          if (parsed.zip) ordersData.customer_zip = parsed.zip
+          if (parsed.address_detail) ordersData.customer_address_detail = parsed.address_detail
+          metaData.address_parse_confidence = parsed.confidence
+        } else {
+          // Queue untuk insert ke inbox_unparsed_address SETELAH order ke-create
+          addressParseFailure = {
+            raw_address: detailFromMapping || String(raw.address || ''),
+            parsing_attempt: {
+              extracted_keywords: parsed.extracted_keywords,
+              candidates: parsed.candidates,
+              reason_failed: parsed.reason,
+            },
+          }
+          metaData.address_parse_failed = parsed.reason
+        }
+      }
 
       // required check
       if (!ordersData.customer_name || String(ordersData.customer_name).trim() === '') {
@@ -218,6 +279,10 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         cs_name: csName,
         cs_id: csId,
         notes: nullableStr(ordersData.notes),
+        // Phase 8E enrichment
+        customer_note: nullableStr(ordersData.customer_note),
+        tags: Array.isArray(ordersData.tags) ? ordersData.tags : (ordersData.tags ? [String(ordersData.tags)] : []),
+        priority: ['LOW', 'NORMAL', 'URGENT'].includes(String(ordersData.priority)) ? ordersData.priority : 'NORMAL',
         meta: Object.keys(metaData).length ? metaData : null,
         raw_data: raw,
         created_by: opts.createdBy,
@@ -257,6 +322,30 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
           })
         }
         continue
+      }
+
+      // Phase 8F: kalau address parser fail, queue ke inbox_unparsed_address
+      // (fire-and-forget — kalau insert gagal, log warning tapi tetap proceed)
+      if (addressParseFailure) {
+        const { error: inboxErr } = await opts.supabase
+          .from('inbox_unparsed_address')
+          .insert({
+            organization_id: opts.organizationId,
+            order_id: orderRow.id,
+            raw_address: addressParseFailure.raw_address,
+            parsing_attempt: addressParseFailure.parsing_attempt,
+          })
+        if (inboxErr) {
+          result.warnings.push({
+            rowIndex,
+            message: `Address parse fail tapi inbox insert error: ${inboxErr.message}. Order id=${orderRow.id} tetap masuk.`,
+          })
+        } else {
+          result.warnings.push({
+            rowIndex,
+            message: `Order id=${orderRow.id} alamat butuh review manual (reason: ${addressParseFailure.parsing_attempt.reason_failed}). Cek /inbox/address-review.`,
+          })
+        }
       }
 
       // Insert order_items (1 item per row in inbound — single line item)
@@ -401,6 +490,11 @@ function buildItemPayload(
     price: toNumber(itemData.price ?? ordersData.subtotal),
     weight_per_unit:
       itemData.weight_per_unit != null ? toNumber(itemData.weight_per_unit) : null,
+    // Phase 8F: hpp_snapshot dari cogs Orderonline. Kalau di-set explicit dari
+    // CSV → pakai itu. Kalau NULL → trigger snapshot_hpp_on_order_items akan
+    // auto-populate dari products.hpp saat product_id resolved.
+    hpp_snapshot:
+      itemData.hpp_snapshot != null ? toNumber(itemData.hpp_snapshot) : null,
     notes: nullableStr(itemData.notes),
   }
 }

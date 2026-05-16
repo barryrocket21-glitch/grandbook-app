@@ -203,17 +203,22 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Status Mapping', href: '/settings/status-mapping' },
       { title: 'Converter Profiles', href: '/settings/converter-profiles' },
       { title: 'Master Wilayah', href: '/settings/wilayah' },
+      // Phase 8A — Multi-supplier (write owner+admin, read semua role
+      // karena form produk/order butuh dropdown)
+      { title: 'Suppliers', href: '/settings/suppliers' },
     ],
   },
   {
     title: 'Inbox',
     href: '/inbox/pending-review',
     icon: Inbox,
-    roles: ['owner', 'admin'],
+    roles: ['owner', 'admin', 'cs'],
     children: [
-      { title: 'Pending Review', href: '/inbox/pending-review' },
-      { title: 'Unmatched Resi', href: '/inbox/unmatched-resi' },
-      { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses' },
+      { title: 'Pending Review', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
+      { title: 'Unmatched Resi', href: '/inbox/unmatched-resi', roles: ['owner', 'admin'] },
+      { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses', roles: ['owner', 'admin'] },
+      // Phase 8F — CS perlu akses untuk resolve alamat
+      { title: 'Address Review', href: '/inbox/address-review' },
     ],
   },
   {
@@ -224,6 +229,8 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Users & Roles', href: '/settings/users' },
       { title: 'Aturan Komisi', href: '/settings/commission-rules' },
+      // Phase 8E — Audit Log (owner only)
+      { title: 'Audit Log', href: '/settings/audit-log' },
       { title: 'Reset Data', href: '/settings/reset-data' },
     ],
   },

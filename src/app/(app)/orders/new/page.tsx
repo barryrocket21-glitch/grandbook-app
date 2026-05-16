@@ -32,6 +32,32 @@ export default function NewOrderPage() {
       const orderNumber = await generateOrderNumber(supabase, orgId)
       const initialStatus = canApprove ? 'SIAP_KIRIM' : 'BARU'
 
+      // Phase 8A — auto-detect origin supplier dari produk yang dipilih.
+      // Kalau semua item dari supplier sama → set origin_supplier_id, is_multi_origin=FALSE
+      // Kalau ada >1 supplier distinct → is_multi_origin=TRUE, origin_supplier_id=NULL
+      // Kalau item tanpa product_id atau produknya nggak punya supplier_id → skip
+      const productIds = Array.from(new Set(
+        data.items.map(it => it.product_id).filter((id): id is number => typeof id === 'number')
+      ))
+      let originSupplierId: number | null = null
+      let isMultiOrigin = false
+      if (productIds.length > 0) {
+        const { data: productRows } = await supabase
+          .from('products')
+          .select('id, supplier_id')
+          .in('id', productIds)
+        const supplierIds = Array.from(new Set(
+          (productRows || [])
+            .map((p: { supplier_id: number | null }) => p.supplier_id)
+            .filter((s: number | null): s is number => s !== null)
+        ))
+        if (supplierIds.length === 1) {
+          originSupplierId = supplierIds[0]
+        } else if (supplierIds.length > 1) {
+          isMultiOrigin = true
+        }
+      }
+
       const orderPayload = {
         organization_id: orgId,
         order_number: orderNumber,
@@ -56,6 +82,9 @@ export default function NewOrderPage() {
         advertiser_id: data.advertiser_id,
         notes: data.notes,
         created_by: user.id,
+        // Phase 8A
+        origin_supplier_id: originSupplierId,
+        is_multi_origin: isMultiOrigin,
       }
       const { data: orderRow, error } = await supabase
         .from('orders')

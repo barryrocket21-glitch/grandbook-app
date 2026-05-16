@@ -11,9 +11,12 @@ export type TransformKey =
   | 'parse_date_dd-mm-yyyy'
   | 'parse_datetime_yyyy-mm-dd'
   | 'numeric_or_zero'
+  | 'numeric_or_null'
   | 'uppercase'
   | 'lowercase'
   | 'trim'
+  | 'null_if_empty'
+  | 'split_csv_to_array'
   | 'kg_format'
   | 'concat_address'
   | 'sum_qty'
@@ -63,6 +66,13 @@ export const TRANSFORMS: readonly TransformDef[] = [
     available: true,
   },
   {
+    key: 'numeric_or_null',
+    label: 'Numeric or Null',
+    description: 'Parse ke number, return null kalau empty atau invalid (Phase 8F)',
+    sample: { input: '157,350', output: '157350' },
+    available: true,
+  },
+  {
     key: 'uppercase',
     label: 'UPPERCASE',
     description: 'UPPERCASE string',
@@ -81,6 +91,20 @@ export const TRANSFORMS: readonly TransformDef[] = [
     label: 'Trim Whitespace',
     description: 'Strip leading/trailing whitespace',
     sample: { input: '  abc  ', output: 'abc' },
+    available: true,
+  },
+  {
+    key: 'null_if_empty',
+    label: 'Null if Empty (Phase 8F)',
+    description: 'Trim string. Kalau empty → null. Cegah kolom nullable jadi empty string',
+    sample: { input: '   ', output: 'null' },
+    available: true,
+  },
+  {
+    key: 'split_csv_to_array',
+    label: 'Split CSV → Array (Phase 8F)',
+    description: 'Split string by comma, trim tiap element, skip empty. Untuk kolom tags[]',
+    sample: { input: 'tag1, tag2, tag3', output: '[tag1, tag2, tag3]' },
     available: true,
   },
   {
@@ -168,6 +192,21 @@ export function applyTransform(
         const cleaned = s.replace(/[,\s]/g, '').replace(/[^\d.\-]/g, '')
         const n = Number(cleaned)
         return { ok: true, value: Number.isFinite(n) ? n : 0 }
+      }
+      case 'numeric_or_null': {
+        if (s === '' || s === '-') return { ok: true, value: null }
+        const cleaned = s.replace(/[,\s]/g, '').replace(/[^\d.\-]/g, '')
+        const n = Number(cleaned)
+        return { ok: true, value: Number.isFinite(n) ? n : null }
+      }
+      case 'null_if_empty': {
+        const trimmed = s.trim()
+        return { ok: true, value: trimmed.length === 0 ? null : trimmed }
+      }
+      case 'split_csv_to_array': {
+        if (!s || s.trim() === '') return { ok: true, value: [] }
+        const arr = s.split(',').map(p => p.trim()).filter(p => p.length > 0)
+        return { ok: true, value: arr }
       }
       case 'kg_format': {
         const n = Number(s.replace(/,/g, '.'))

@@ -27,6 +27,252 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 6 redesign — Analytics Horizontal Nav + Detail Per Produk | ✅ DONE | 2026-05-12 |
 | Phase 6.5 — Shipping Diff Revival | ✅ DONE | 2026-05-12 |
 | Phase 7.5 — Pre-launch UX fixes (login + Combobox) | ✅ DONE | 2026-05-13 |
+| Phase 8A — Multi-Supplier Foundation | ✅ DONE | 2026-05-15 |
+| Phase 8B — Resi Lifecycle Timestamps | ✅ DONE | 2026-05-16 |
+| Phase 8E — Customizable Column View + Order Ops + Notifications + Audit Log | ✅ DONE | 2026-05-16 |
+| Phase 8F — Inbound Parsing Hybrid + Outbound Resolver Fix | ✅ DONE | 2026-05-16 |
+
+**Phase 8F done.** Fix campaign + hybrid address parser. Latar: smoke test SPX outbound (Phase 8E follow-up) muncul 12 warning — 5 required field SPX kosong (address struktural), 1 weight fallback default, 3 resolver SPX seharusnya udah-fix-tapi-brief-blum-tau, sisanya: Orderonline mapping cuma 15 dari ~30 yang seharusnya. Phase 8F kerjain 3 hal: (1) Add 15 mapping missing ke `orderonline_inbound` (4 address + 2 item enrichment + 2 Phase 8E fields + 7 meta), (2) Build hybrid address parser yang trust struktural fields → fallback ke keyword search di `master_wilayah` via RPC fuzzy → fallback inbox manual review kalau gagal, (3) Block export gate via RPC `check_order_export_ready` (alamat NULL or channel NULL → tolak). Plus extend transforms (3 baru: `null_if_empty`, `numeric_or_null`, `split_csv_to_array`) + engine whitelist (customer_note, tags, priority, hpp_snapshot). Outbound resolver Bug #2 (`payment_method_cod_label_id`, dst) sebenernya udah ke-fix di SPX deploy turn lalu via switch case di `resolveSourceValue` (line 67-71) — brief mungkin di-tulis sebelum verify. Confirmed via smoke test grep + smoke test sukses (typecheck pass + build sukses).
+
+### Phase 8F — Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/036_phase8f_address_parsing.sql` — `inbox_unparsed_address` table + RLS (3 policy: select all org, insert all org, update owner/admin/cs) + 2 RPC. Idempotent.
+
+**RPC (NEW):**
+- `search_wilayah_fuzzy(p_query, p_limit)` — return wilayah candidates dengan match_score 0-100. Scoring: exact subdistrict=100, exact village=95, exact city=90, prefix=75-80, substring=50-60. SECURITY INVOKER. Min query length 3 char.
+- `check_order_export_ready(p_order_id)` — return (is_ready BOOLEAN, missing_fields TEXT[]). Check 6 field: customer_address_detail, customer_province, customer_city, customer_subdistrict, customer_zip, channel_id.
+
+**Components (NEW):**
+- `src/lib/converter/address-parser.ts` — `parseAddress()` + `extractKeywords()` + types. Hybrid strategy (STEP 1 trust struktural, STEP 2-4 keyword search + grouping + winner detection). Confidence high (>=95), medium (>=80), low (>=60). Ambigu detection via runner-up score gap <10.
+- `src/components/wilayah/wilayah-autocomplete.tsx` — debounced 300ms autocomplete pakai RPC fuzzy. Dropdown dengan subdistrict/village + city/province + zip + score badge color-coded.
+- `src/app/(app)/inbox/address-review/page.tsx` — list unresolved + filter showResolved + Resolve dialog dengan: raw address card, extracted keywords chips, kandidat clickable cards (apply auto), WilayahAutocomplete (manual search), editable form 5 field (provinsi/kota/kecamatan/desa/zip), resolution_note, Skip + Save & Resolve buttons.
+
+**Pages (UPDATED):**
+- `src/lib/converter/transforms.ts` — 3 transform baru: `null_if_empty` (trim → null kalau kosong), `numeric_or_null` (mirror numeric_or_zero tapi null), `split_csv_to_array` (split comma + trim + skip empty).
+- `src/lib/converter/engine.ts` — extend ORDER_FIELD_WHITELIST + ITEM_FIELD_WHITELIST (Phase 8E fields), tambah `customer_note`/`tags`/`priority` di insertPayload, `hpp_snapshot` di buildItemPayload, integrate `parseAddress` di loop ingest cuma untuk `orderonline_inbound`. Failure queue ke inbox_unparsed_address pakai fire-and-forget (kalau insert error, warning saja).
+- `src/lib/types.ts` — `InboxUnparsedAddress` interface + re-export `ParsedAddress`/`ParseFailure`/`ParseResult`/`WilayahCandidate` dari address-parser.
+- `src/lib/constants.ts` — sidebar entry "Address Review" di group Inbox + CS access enable (sebelumnya owner/admin only).
+- `src/app/(app)/orders/export-resi/page.tsx` — pre-check di `startGenerate`: loop tiap order panggil RPC `check_order_export_ready`, kumpul yang not_ready, kalau ada → toast error dengan list missing fields per order + action button "Buka Inbox Address Review". Block proceed ke generate.
+
+**DB Seed Extensions:**
+- 15 mapping baru di `orderonline_inbound` (existing 15 + new 15 = total 30):
+  - 4 address: `province`/`city`/`subdistrict`/`zip` → `customer_*` dengan `null_if_empty` transform
+  - 2 item enrichment: `weight` → `weight_per_unit` (numeric_or_null), `cogs` → `hpp_snapshot` (numeric_or_null)
+  - 2 Phase 8E: `notes` → `customer_note`, `tags` → `tags` (split_csv_to_array)
+  - 7 meta JSONB: `dropshipper_name`, `dropshipper_phone`, `utm_campaign`/medium/source/content/term
+
+**Docs:**
+- `docs/phase8f-test.md` (NEW) — 9 section smoke test + acceptance checklist.
+
+### Phase 8F — Decisions
+
+1. **Migration slot 036** — next free setelah 035 (Phase 8E). Tidak conflict dengan hotfix via MCP (slot di file system tetap yang authoritative).
+2. **3 transform baru, bukan 4** — `link_product_by_sku` skip karena `product-matcher.ts` sudah handle product matching (Phase 8.5). Brief proposal redundant.
+3. **15 mapping baru, bukan 17 (brief)** — 2 yang brief sebut (`product_code` → `product_sku_lookup` dengan link transform; `handled_by` → `meta.handled_by_name`) sudah ada dengan target_field yang lebih baik (preserve raw `product_code_raw` + map ke `cs_name` langsung). Tidak override.
+4. **Address parser cuma trigger untuk `orderonline_inbound`** — profile lain (WA paste, rekonsil) skip karena format beragam. Brief explicit: "❌ Address parser untuk WA paste (Phase 9)". Flag via `ENABLE_ADDRESS_PARSER = opts.profile.code === 'orderonline_inbound'`.
+5. **Insert ke inbox fire-and-forget** — kalau insert error, log warning tapi tetap proceed dengan order. Tidak block ingest karena inbox error.
+6. **Block export STRICT mode** — sesuai brief decision. RPC check tiap order sebelum generate, toast dengan action button. Tidak ada bypass.
+7. **Bug #2 sudah ke-fix di SPX deploy turn lalu** — switch case di `resolveSourceValue` line 67-71. Verify via grep + build sukses. Tidak perlu refactor jadi resolver map seperti brief hint (switch case sudah idiomatic untuk pattern existing).
+8. **Tidak buat unit test file** — project belum punya jest/vitest setup. Smoke test playbook (docs/phase8f-test.md) sebagai pengganti.
+9. **CS access ke Inbox group** — brief decision: "Workflow CS: Order yang masuk inbox manual review wajib dilengkapi alamatnya". Pre-Phase 8F, Inbox group cuma owner/admin. Sekarang CS akses ke `address-review` (sub-item lain tetap owner/admin via per-child role filter).
+10. **Engine whitelist extend** — Phase 8E fields (customer_note, tags, priority) tadinya cuma writable via direct UPDATE (8E EditableCell). Sekarang juga bisa via inbound mapping. Penting buat Orderonline import yang udah include tags column.
+
+### Phase 8F — Build status
+
+- `npx tsc --noEmit` ✅ exit 0
+- `npm run build` ✅ 57 routes intact, `/inbox/address-review` baru ke-list
+- Migration 036 ✅ applied via `apply_migration` MCP. RPC `search_wilayah_fuzzy('umalulu', 5)` smoke test return 5 rows NTT/Sumba Timur/Umalulu score 100 (verifies Jeksenn case).
+- Advisor security ✅ zero issue baru terkait Phase 8F.
+
+### Phase 8F — Hal yang perlu di-flag untuk Phase 9
+
+- **Address parser untuk WA paste** — format bebas, perlu LLM-based extraction. Phase 9.
+- **Auto-suggest typo correction** — pakai Levenshtein/trigram di RPC fuzzy. Sekarang exact substring match.
+- **Bulk resolve inbox** — current cuma one-by-one. Phase 9 nice-to-have.
+- **Notification ke CS saat ada inbox baru** — extend Phase 8E notification trigger ke type `inbox_address_unresolved`. Phase 9.
+- **Performance** — parser pre-Phase 8F: 1 row = ~3-5 keyword × 1 RPC = 3-5 query. Bulk 100 row = 300-500 query. Untuk volume tinggi (>500/batch), tambah cache per-keyword di memory selama session import. Phase 9 optimization.
+- **Confidence threshold tuning** — sekarang hard-coded 95/80/60. Phase 9 bisa configurable per-org via `organizations.settings`.
+
+---
+
+**Phase 8E done.** Customizable column view + order ops + in-app notifications + audit log page. Konteks: `/orders/list` sebelumnya cuma 8 kolom statis dari 50+ field di tabel `orders`. Phase 8E ubah jadi operational dashboard powerful: 40+ kolom available, customizable visibility/order/widths per user (`profiles.preferences`), saved views (max 10/user), team default view (owner only → `organizations.settings`), inline edit per cell dengan strict permission matrix, dropdown quick actions (Edit/Duplicate/Cancel/Mark Fake/View Audit), notification bell di header dengan adaptive polling, halaman audit log owner-only. 9 kolom enrichment baru di `orders` (delivered_at, returned_at, tags[], priority enum, internal_note, customer_note, reject_reason, cs_attempts, last_contact_at). RPC `list_orders_enriched` return 40+ field + computed metrics (actual_profit, profit_margin_pct, shipping_diff, days_in_status, is_repeat_customer). RPC `list_audit_logs` owner-only. 3 trigger DB baru: `auto_set_delivery_timestamps` (DITERIMA→delivered_at, RETUR→returned_at), `notify_owner_on_admin_financial_edit` (admin edit financial → owner dapat notif body multi-line dengan field-by-field changes), `orders_block_admin_direct_actual_edit` (admin/akunting tidak bisa direct UPDATE `payout_amount`/`shipping_cost_actual` — harus lewat RPC `update_order_from_rekonsil` yang di-patch dengan bypass setting `grandbook.bypass_actual_check`). Migration slot 035 (slot 013 brief udah dipakai Phase 1.5).
+
+### Phase 8E — Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/035_phase8e_order_enrichment.sql` — 9 kolom + 4 index + backfill + 3 trigger + 2 RPC + patch `update_order_from_rekonsil` dengan `set_config('grandbook.bypass_actual_check', 'true', TRUE)`. Dependency check di awal verify Phase 8B applied. Idempotent.
+
+**Types/Schemas (NEW):**
+- `src/lib/types.ts` — extend Order (9 field 8E), new `OrderPriority` + `ORDER_PRIORITIES` constant + `OrderEnriched` + `SavedView` + `UserPreferences` + `OrganizationSettings` + `Notification` + `AuditLogRow`.
+- `src/lib/schemas/order-update.ts` (NEW) — whitelist `OPERATIONAL_FIELDS` + `FINANCIAL_FIELDS`, Zod schema per field, `canEditField(role, field)` permission matrix (owner=all, admin=all, cs=status+internal_note only, adv/akunting=none).
+- `src/lib/schemas/saved-view.ts` (NEW) — Zod untuk SavedView + UserPreferences + OrganizationSettings.
+- `src/lib/orders/columns-config.ts` (NEW) — 40 ColumnDef object (id, label, category, default_visible, default_width, editable_field, align, format). 11 kategori untuk grouping di customizer. System default visibility sesuai brief 6.7.
+
+**Components (NEW):**
+- `src/components/layout/notification-bell.tsx` — bell icon di AppHeader, badge unread count, popover 380px list 10 notif, body multi-line preserve `\n` untuk `admin_edit_financial`, no-truncate untuk type itu, click → mark read + navigate. Adaptive polling: 30s saat tab aktif + ada unread, 60s saat idle, pause saat tab hidden, immediate refresh on window focus.
+- `src/components/orders/editable-cell.tsx` — dispatcher inline-edit per field tipe. Editor sub-components: StatusEditor + PriorityEditor (Select), TextEditor + NumberEditor (input + check/X icons), FinancialEditor (confirm Dialog dengan side-by-side "Sebelum"/"Sesudah"), TextareaPopoverEditor (Popover textarea), TagsEditor (multi-chip Popover), DateTimeEditor (datetime-local Input). ReadOnlyCell + lock icon untuk financial yang user gak bisa edit.
+- `src/components/orders/order-row-actions.tsx` — DropdownMenu `⋮` per row + 5 menu items role-gated + Cancel/Fake Dialog dengan reason wajib + Audit Trail Dialog (owner only) yang panggil RPC `list_audit_logs` filter table='orders' search=order_id.
+- `src/components/orders/column-customizer.tsx` — Sheet 3 tab (Visibility/Urutan/SavedViews). Visibility: checkbox grouped by category + search + Show/Hide all + Reset default. Urutan: dnd-kit drag-drop dengan PointerSensor + restrictToVerticalAxis modifier. SavedViews: create (max 10) + apply + delete + (owner) Set Team Default → write ke `organizations.settings.orders_list_default_view`. Helper `persistOrdersListPreferences(userId, current, next)` untuk auto-save ke `profiles.preferences`.
+
+**Pages (NEW):**
+- `src/app/(app)/settings/audit-log/page.tsx` — owner-only page (role check + "Akses Dibatasi" untuk non-owner). 6 filter (date from/to, user dropdown, table dropdown auto-distinct, action enum, search). Pagination 50/page dengan prev/next. Detail modal: INSERT (JSON dump new), DELETE (JSON dump old), UPDATE (side-by-side red/green diff per changed field).
+
+**Pages (UPDATED):**
+- `src/app/(app)/orders/list/page.tsx` — refactor lengkap. Pakai RPC `list_orders_enriched` (replace SELECT manual + JOIN), dynamic column rendering dari `columns-config.ts` + visibility/order state + auto-load user prefs dari `profiles.preferences` + cascade fallback (user > team > system). `CellRenderer` dispatch ke EditableCell untuk editable field, ke plain display dengan format-by-column-type untuk lainnya. Resi-stuck chip + URL param tetap (Phase 8B). Pagination server-side.
+- `src/app/(app)/orders/[id]/page.tsx` — extend OrderDetail interface (9 field 8E), header tampilkan priority badge (kalau != NORMAL) + tags inline, new Card "CS Tracking & Catatan" di tab Info dengan Priority + CS Attempts + Kontak Terakhir + Tags + 3 sub-section catatan (internal/customer/reject_reason).
+- `src/components/layout/app-header.tsx` — pasang NotificationBell di kanan via `ml-auto`.
+- `src/lib/constants.ts` — entry "Audit Log" di group Settings (owner only).
+
+**Docs:**
+- `docs/phase8e-test.md` (NEW) — 9 section smoke test + acceptance checklist recap brief.
+
+### Phase 8E — Decisions
+
+1. **Migration slot 035, bukan 013 (brief)** — slot 013 sudah dipakai `013_wilayah_distinct_helpers.sql` (Phase 1.5). Pakai next free slot.
+2. **`list_orders_enriched` SECURITY INVOKER** (bukan DEFINER) — sesuai brief, supaya RLS user yang apply (anti bypass). User scope tetap via `current_org_id()` yang STABLE DEFINER.
+3. **`list_audit_logs` SECURITY INVOKER dengan owner check di body** — alternative pakai `pg_has_role` atau policy, tapi explicit check lebih readable + RAISE EXCEPTION dengan ERRCODE 42501.
+4. **3 trigger baru, no conflict dengan existing** — `auto_set_delivery_timestamps` BEFORE UPDATE (alfabetik runs sebelum `trg_log_*` + `trg_set_updated_at`). `notify_owner_on_admin_financial_edit` AFTER UPDATE (boleh karena hanya insert ke `notifications`, no NEW.* manipulation). `orders_block_admin_actual` BEFORE UPDATE (RAISE EXCEPTION → tx rollback).
+5. **`update_order_from_rekonsil` patched dengan `set_config('grandbook.bypass_actual_check', 'true', TRUE)`** — RPC SECURITY DEFINER tetap perlu bypass karena trigger check `current_setting()` runs di session lokal. TRUE = local scope = otomatis reset di akhir tx. Pattern Supabase umum.
+6. **`@dnd-kit` install** (sesuai brief), bukan up/down arrow precedent Phase 2B — brief explicitly minta drag-drop. 4 package: core + sortable + modifiers + utilities. ~80KB minified, acceptable tradeoff untuk UX.
+7. **Tidak bikin `actions.ts` server action** — pattern existing 100% client-side Supabase + RLS + DB trigger. Konsisten Phase 8A/8B precedent. EditableCell direct `supabase.from('orders').update(...)`, RLS + 3 trigger handle audit + notif + block.
+8. **`persistOrdersListPreferences` helper di column-customizer.tsx** — bukan separate `actions.ts`. Caller (`/orders/list/page.tsx`) panggil dengan debounce 500ms via setTimeout di useEffect. Simple, no extra dependency (TanStack Query/SWR).
+9. **Polling adaptive di NotificationBell** — 30s saat tab visible + unread > 0, 60s saat idle, pause saat hidden (visibilitychange). Hemat resource untuk role yang jarang dapat notif (cs/adv/akunting).
+10. **Column customizer pakai Sheet, bukan Dialog** — Sheet kanan-slide lebih appropriate untuk panel settings yang bisa di-keep open sambil user lihat efek di table di kiri. Dialog modal terlalu intrusive.
+11. **Default visibility per brief 6.7** — 13 kolom visible: order_date, order_number, resi, status, priority, customer_name, customer_city, total, supplier_name, cs_name, campaign_name, days_in_status, actions. Sisanya hidden tapi available di customizer.
+12. **Editable field whitelist di `order-update.ts`** + `canEditField()` matrix — bukan inline check di setiap component. Single source of truth, mudah audit + extend.
+13. **Inline edit menggunakan langsung Supabase client** — Zod validate di FE, kalau lolos → UPDATE → RLS + trigger handle. Trigger `audit_log_trigger` (sudah ada Phase 0) auto-insert ke `audit_log` table. Trigger `notify_owner_on_admin_financial_edit` (8E baru) detect role admin + financial change → insert ke `notifications`.
+14. **Audit log diff display side-by-side red/green** — bukan pakai library `jsondiffpatch` (tambah dependency). Simple compute changed keys via `JSON.stringify` compare, render per-row dengan bg-red-500/10 (old) + bg-emerald-500/10 (new). Cukup readable untuk use case.
+15. **Soft delete only** — tidak ada hard delete option di UI. "Cancel" → status CANCEL, "Mark as Fake" → status FAKE, keduanya wajib alasan masuk `reject_reason`. Sesuai brief decision final.
+
+### Phase 8E — Build status
+
+- `npx tsc --noEmit` ✅ exit 0 (1 mid-fix: `{value}` → `{Number(value)}` di defaultRender untuk cs_attempts, ReactNode type strict).
+- `npm run build` ✅ 56 routes intact. `/settings/audit-log` baru ke-list. `/orders/list` refactor major.
+- Migration 035 ✅ applied (3 apply_migration batch terpisah karena query besar). Verify: 9 col, 3 trigger, 2 RPC, profiles.preferences + org.settings, notifications table + 3 policy.
+- Advisor security ✅ zero issue baru terkait kolom/trigger/RPC Phase 8E.
+
+### Phase 8E — Hal yang perlu di-flag untuk Phase 9
+
+- **Realtime notifications** — current polling. Phase 9 candidate: Supabase Realtime subscribe ke `notifications` channel filter by `recipient_id = auth.uid()`.
+- **Push notifications** (web push / mobile) — out of scope 8E.
+- **Email notifications** untuk financial edit / resi stuck — Phase 9.
+- **Auto-escalate** resi stuck > 7 hari ke status baru atau flag — Phase 9.
+- **Bulk inline edit** — checkbox multi-row + dropdown action di toolbar. Phase 9.
+- **Saved views juga simpan filter state** (date/status/search) — current cuma kolom visibility/order/widths. Phase 9 extension.
+- **Customizable column view untuk halaman lain** (`/products`, `/expenses`, `/commissions/manage`) — Phase 9.
+- **Column resize via drag handle** di table header — current cuma adjust default_width di config. Phase 9 nice-to-have.
+- **Bulk export filtered orders ke CSV/XLSX** — current cuma bisa per-row. Phase 9.
+- **Audit log diff dengan library `jsondiffpatch`** untuk JSON nested complex — current simple key-level diff cukup untuk flat fields. Upgrade kalau audit JSONB fields jadi banyak.
+- **Notifications types baru** — current cuma `admin_edit_financial`. Phase 8B "resi stuck" bisa generate `order_stuck_siap_kirim`. Phase 9 generate inbox alerts.
+
+---
+
+**Phase 8B done.** Resi lifecycle timestamps. Masalah: banyak resi yang sudah dicetak (status `SIAP_KIRIM`) tapi belum di-pickup ekspedisi — kelewat deadline expired, customer komplain, refund rate naik. Solusi: 2 kolom timestamp granular (`resi_printed_at`, `picked_up_at`), trigger auto-fill saat transisi status (BARU→SIAP_KIRIM set `resi_printed_at`, SIAP_KIRIM→DIKIRIM set `picked_up_at`, edge case direct BARU→DIKIRIM set keduanya), backfill data existing dari `status_changed_at`. UI baru: section "Resi Lifecycle" di order detail dengan badge severity (warning >2 hari, danger >7 hari) + manual override owner/admin via datetime-local input. Quick filter chip "⚠️ Resi Stuck (N)" di `/orders/list` dengan URL param `stuck_pickup=true` untuk deep-link. Dashboard widget "Resi Pending Pickup" (owner+admin) dengan 3 metric + per-channel breakdown + auto-refresh tiap 2 menit + button "Lihat Detail" → filtered list. 2 RPC baru (`get_pending_pickup_orders`, `pending_pickup_summary`) SECURITY INVOKER, scoped via `current_org_id()`. Threshold hard-coded 3 hari (per brief, configurable di Phase later). Migration slot 034 (slot 012 yang diminta brief sudah dipakai Phase 3A — pakai next free slot).
+
+### Phase 8B — Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/034_phase8b_resi_lifecycle.sql` — kolom timestamp + 2 index (1 partial untuk stuck query) + backfill 2 UPDATE (resi_printed dari status_changed_at untuk SIAP_KIRIM+, picked_up_at untuk DIKIRIM+) + trigger `auto_set_resi_lifecycle_timestamps` (BEFORE UPDATE, alfabetik runs first sebelum trg_log/trg_set_updated_at) + 2 RPC. Idempotent.
+
+**Components (NEW):**
+- `src/components/orders/resi-lifecycle-section.tsx` — 3-row section: Resi Dicetak / Di-pickup / Diterima dengan icon + label + value (formatDateTime) + badge "pending N hari" (zinc/amber/red severity) + pencil edit (owner+admin via PermissionGuard) + datetime-local Input dialog.
+- `src/components/dashboard/pending-pickup-widget.tsx` — 3 metric stat + per-channel breakdown chips + Refresh button + Lihat Detail link. Auto-refresh 2 menit + on window focus. Silent-fail kalau RPC error (migration belum apply).
+
+**Types/Helpers:**
+- `src/lib/types.ts` — extend `Order` (resi_printed_at + picked_up_at) + new `PendingPickupOrder` + `PendingPickupSummary` interfaces.
+
+**Pages:**
+- `src/app/(app)/orders/[id]/page.tsx` — import `ResiLifecycleSection`, render Card baru di tab "Info" antara "Pengiriman & Pembayaran" dan "People". Extend `OrderDetail` interface (resi_printed_at + picked_up_at).
+- `src/app/(app)/orders/list/page.tsx` — extend SELECT (resi_printed_at + picked_up_at), state `stuckPickup` dari URL param `stuck_pickup=true`, compute `stuckCount` + `isStuck()` helper (threshold 3 hari), tombol chip "⚠️ Resi Stuck (N)" di bawah filter row dengan color severity. Mengaktifkan chip auto-disable status/channel filter konvensional (clarity).
+- `src/app/(app)/dashboard/page.tsx` — import `PendingPickupWidget`, render di warning row (grid expand 2→3 cols di lg) dengan gate `role IN ('owner','admin')`.
+
+**Docs:**
+- `docs/phase8b-test.md` (NEW) — 7 section smoke test + acceptance checklist.
+
+### Phase 8B — Decisions
+
+1. **Migration slot 034, bukan 012 (brief)** — slot 012 sudah ke-pakai `012_order_number_generator.sql` (Phase 3A). Pakai next free slot (034). Filename content + behavior identik dengan spec brief.
+2. **Trigger BEFORE UPDATE, bukan AFTER** — supaya `NEW.*` assignment effective tanpa second UPDATE round-trip. Alfabetik trigger order (`auto_*` < `trg_*`) guarantee mine runs first → set timestamps → baru `log_order_status_change()` insert ke history dengan timestamps yang sudah lengkap.
+3. **SECURITY DEFINER untuk trigger function** — supaya trigger jalan dengan privilege superuser (bisa modify row apa saja). `SET search_path = public` lock function ke schema yang benar.
+4. **RPC SECURITY INVOKER** — bukan DEFINER. User dropping RPC tetap di-scope via `current_org_id()` yang STABLE SECURITY DEFINER. Konsisten pattern Phase 4B/5A/6 RPC.
+5. **Backfill assumption sederhana** — "status >= SIAP_KIRIM" pakai `status_changed_at` sebagai approximate `resi_printed_at`. Untuk order yang sudah jauh lewat status (DITERIMA), keduanya akan dapet timestamp yang sama. Realistically belum perfect tapi cukup untuk UI baseline + nggak ada data alternative.
+6. **datetime-local Input native, bukan Calendar+Popover** — simple, native browser picker, support keyboard, gak butuh library tambahan. UX tradeoff: browser-specific styling, no preset chips. Cukup untuk use case "occasional override".
+7. **Filter chip mutually-exclusive dengan status+channel filter** — saat user toggle "Resi Stuck", auto-reset status+channel filter (lewat side-effect di onValueChange). Alternative: AND filter, tapi membingungkan (stuck implies SIAP_KIRIM only). Chip-mode: SIAP_KIRIM+resi_printed>3d+picked_up_null. Off-mode: filter konvensional.
+8. **Dashboard widget silent-fail** — kalau RPC error (migration belum apply di staging/local), widget return null tanpa error toast. Tidak break dashboard. Console.warn cukup untuk debug.
+9. **Threshold hard-coded 3 hari** — per brief eksplisit. Configurable per-org di Phase later (kemungkinan masuk Phase 8E settings).
+10. **Widget di warning row, bukan section sendiri** — grouping logis dengan Retur Rate + Fake Rate. Grid extend dari 2 ke 3 col di lg. Mobile tetap 1 col.
+11. **Tidak bikin `/orders/pending-pickup` dedicated page** — brief eksplisit "skip kalau scope lain belum done". Existing `/orders/list?stuck_pickup=true` cukup. Bisa ditambah Phase later kalau owner perlu page khusus dengan "Mark as Picked Up" quick action.
+
+### Phase 8B — Build status
+
+- `npx tsc --noEmit` ✅ exit 0
+- `npm run build` ✅ 56 routes intact (no new routes — semua extension dari existing)
+- Migration 034 ✅ applied via `apply_migration` MCP. Verify: 2 col, 1 trigger, 2 index, 31 order ter-backfill (semua order existing di production status DIKIRIM+). RPC `pending_pickup_summary(3)` callable return zero stuck (sesuai expected: no orders SIAP_KIRIM dengan resi stale).
+- Advisor security ✅ zero issue baru terkait kolom/trigger/RPC Phase 8B.
+
+### Phase 8B — Hal yang perlu di-flag untuk Phase 8E (atau 9)
+
+- **Notifikasi resi stuck ke owner/admin** — push notif / email batching daily / Telegram bot. Out of scope Phase 8B (brief eksplisit).
+- **Auto-escalate resi stuck >7 hari** ke kategori "expired" → status baru atau flag. Phase 9 candidate.
+- **Integrasi API ekspedisi auto-update picked_up_at** — pull dari Lincah/Mengantar/SPX API. Phase 9.
+- **Configurable threshold per org** — brief hard-code 3 hari. Phase 8E ada brief settings, bisa pindah ke sana.
+- **Reports / analytics per resi lifecycle metric** — avg time resi-to-pickup per channel/CS. Bisa drive negosiasi dengan ekspedisi.
+- **Backfill assumption "status_changed_at = resi_printed_at"** — kurang akurat untuk order yang lama lewat status. Owner perlu manual cleanup kalau butuh angka historis presisi. Cukup baseline untuk UI baru.
+
+---
+
+**Phase 8A done.** Multi-supplier foundation. Konteks: owner dropship dari multiple supplier (kran Jakarta, paranet Tangerang, madu Malang) — sebelumnya sistem zero awareness soal supplier. Phase 8A bangun fondasinya: tabel `suppliers`, link `products.supplier_id`, link `orders.origin_supplier_id` + `is_multi_origin`, UI CRUD `/settings/suppliers`, dropdown supplier di form produk, auto-detect supplier di form order (kalau produk dari 2+ supplier → `is_multi_origin=TRUE`, badge amber di order detail). RLS hibrid: SELECT semua role (form butuh dropdown), INSERT/UPDATE/DELETE owner+admin only via `get_user_role()` check di DB-level. Soft-disable via `active` flag — produk/order yang sudah link tetap aman. Migration 011 (slot kosong yang sengaja di-skip Phase 3A) + seed 3 supplier contoh. Phase 8B (Resi Lifecycle Timestamps) di-batch terpisah.
+
+### Phase 8A — Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/011_phase8a_suppliers.sql` — `suppliers` table + RLS (4 policy) + `products.supplier_id` (nullable) + `orders.origin_supplier_id` (nullable) + `orders.is_multi_origin` (NOT NULL DEFAULT FALSE) + 3 index + `set_updated_at` trigger. Idempotent.
+- `src/lib/supabase/seed_phase8a_suppliers.sql` — 3 supplier contoh (JKT-KRAN / TGR-PARANET / MLG-MADU). Idempotent via `WHERE NOT EXISTS`.
+
+**Types/Schemas/Helpers:**
+- `src/lib/types.ts` — new `Supplier` interface, extend `Product` (supplier_id + supplier?), extend `Order` (origin_supplier_id + is_multi_origin + origin_supplier?).
+- `src/lib/schemas/supplier.ts` (NEW) — `supplierSchema` Zod (name required + code regex `[A-Z0-9-]+` + 7 optional fields) + `normalizeSupplierForm()` helper (empty string → null, uppercase code).
+- `src/lib/supabase/queries/variants.ts` — `SaveProductPayload.supplierId` field + conditional set di `parentData` (undefined = skip, null = clear).
+
+**Pages:**
+- `src/app/(app)/settings/suppliers/page.tsx` (NEW) — CRUD page: search/filter aktif vs disabled + product/order count per supplier + dialog form (8 field) + soft-disable confirm (warning kalau ada produk/order linked). Pattern follow `/settings/couriers` (inline Dialog, client-side Supabase, no server action — konsisten existing).
+- `src/components/products/product-variant-form.tsx` — tambah Supplier dropdown (Select dengan null-handling per Base UI quirk dari memory) + load active suppliers + preserve disabled supplier yang sudah linked.
+- `src/app/(app)/orders/new/page.tsx` — auto-detect supplier dari `data.items[].product_id`: query products → distinct supplier_ids → kalau 1 set `origin_supplier_id`, kalau 2+ set `is_multi_origin=TRUE`.
+- `src/app/(app)/orders/[id]/page.tsx` — extend `OrderDetail` interface (origin_supplier_id + is_multi_origin + origin_supplier?) + SELECT `origin_supplier:suppliers(id, code, name)` di FROM clause + render badge "Multi-Origin Order" (amber) atau "Origin: <code>" (violet) di header card.
+- `src/lib/constants.ts` — sidebar entry "Suppliers" di group Master Data (visible 5 role karena RLS SELECT permissive).
+
+**Docs:**
+- `docs/phase8a-test.md` (NEW) — 7 section smoke test + acceptance checklist recap brief.
+
+### Phase 8A — Decisions
+
+1. **Migration nomor 011** — sesuai brief. Slot 011 sengaja di-skip Phase 3A (lihat note historical), jadi numerik tetap konsisten dengan urutan kronologis Phase 1 → 8A.
+2. **RLS DB-level role check pakai `get_user_role()`** vs UI gating-only — pilih DB enforcement karena lebih aman. `get_user_role()` sudah ada di production sejak Phase 0 schema.sql, masih callable. Existing tables (couriers/products/expenses) cuma pakai `current_org_id()` — Phase 8A intentionally lebih strict untuk best practice forward.
+3. **SELECT policy permissive** (semua role dalam org) — karena form produk + form order butuh dropdown supplier list. Owner-only SELECT akan break flow CS yang harus pilih produk dengan supplier visible.
+4. **No `actions.ts` server action** — brief deliverables list `actions.ts`, tapi pattern existing 100% client-side direct Supabase (Phase 2A AGENTS.md eksplisit "prefer existing pattern over Server Actions"). Skip file itu.
+5. **No `_components/` subfolder** — brief deliverables sebut `_components/supplier-form.tsx` + `suppliers-table.tsx`, tapi pattern existing inline Dialog + Table per page (couriers/page.tsx jadi referensi). Skip subfolder, semua di `page.tsx`. Refactor jadi shared kalau Phase berikutnya butuh.
+6. **Auto-detect supplier di client submit, bukan trigger DB** — sederhanakan deploy (no SQL function), enforce di tempat order dibuat. Kalau ke depan ada flow lain insert order (rekonsil/converter), perlu replicate atau lift ke trigger. Untuk sekarang, satu jalur (`/orders/new`).
+7. **Disabled supplier preserve di edit form** — `supplierOptions = active OR id === currentlyLinked` sehingga produk yang sudah link ke supplier disabled tetap display label-nya (with `(disabled)` suffix), user bisa lihat & ganti. Tanpa logic ini, label hilang dan dropdown jadi placeholder kosong.
+8. **Soft-disable, no hard delete** — UI hanya kasih Power button (toggle active). Hard delete hanya via SQL untuk supplier yang ZERO referenced (FK ON DELETE SET NULL akan handle, tapi loss historical link). Cukup aman.
+9. **Multi-origin badge prioritas** > origin badge — kalau `is_multi_origin=TRUE`, tampilkan amber "Multi-Origin Order" saja. Kalau false dan ada origin_supplier, tampilkan violet "Origin: <code>". Kalau dua-duanya null/false, tidak ada badge supplier.
+10. **`is_multi_origin BOOLEAN NOT NULL DEFAULT FALSE`** vs nullable — pilih NOT NULL karena boolean ini selalu well-defined (TRUE/FALSE), tidak ada konsep "tidak diketahui". Backfill aman karena DEFAULT FALSE applies ke existing rows.
+
+### Phase 8A — Build status
+
+- `npx tsc --noEmit` ✅ no errors
+- `npm run build` ✅ 56 routes total, `/settings/suppliers` ke-list. Compile 5.6s, TypeScript 6.4s.
+- Migration 011 ✅ applied via `apply_migration` MCP, `suppliers_count=3`, RLS enabled, 4 policies, advisor return zero supplier-related issue baru.
+
+### Phase 8A — Hal yang perlu di-flag untuk Phase 8B (Resi Lifecycle)
+
+- **Order ingest dari converter (bulk-upload, WA-paste, rekonsil) belum auto-detect supplier** — Phase 8A cuma cover `/orders/new` (manual form). Engine `engine.ts` + `engine-rekonsil.ts` perlu hook `origin_supplier_id` + `is_multi_origin` computation post-insert. Skip di Phase 8A karena scope (brief eksplisit "Update Form Order [Optional di Phase 8A]"). Resi lifecycle (Phase 8B) baik untuk dipasangkan.
+- **Multi-origin split resi** — saat ini `is_multi_origin=TRUE` cuma flag, belum ada logic split jadi 2 resi. Brief: "Resi akan di-split — tapi ini di-handle di phase berikutnya." Phase 8B atau 8C.
+- **Per-supplier analytics** — belum ada RPC `analytics_per_supplier`. Owner butuh "berapa order/revenue/profit per supplier" untuk negosiasi. Out of scope Phase 8A, candidate Phase 8C/9.
+- **Supplier address ke shipping calculation** — saat ini ongkir compute dari customer destination only. Kalau ke depan supplier address di-jadikan origin point ekspedisi, perlu zone calculation per supplier. Out of scope Phase 8A.
+- **Notifikasi supplier baru** (WA / email PIC) saat order masuk — out of scope, Phase 9 candidate.
+
+---
 
 **Phase 7.5 done.** Pre-launch UX hotfix sebelum tim mulai operasi real. 3 issues fixed di [PR #16](https://github.com/barryrocket21-glitch/grandbook-app/pull/16) (squash merge → main `6ceee36`):
 1. **Login input contrast** — `<Input>` di `/login` pakai `bg-zinc-800/50` tanpa explicit text color, di dark gradient page text inherit tidak konsisten cross-browser. Fix: `text-white placeholder:text-zinc-500` + `focus-visible:ring-2 focus-visible:ring-violet-500/30` + `<Label>` pakai `text-zinc-200`. Hardcode `text-white` intentional (login page dark-only, tidak ada theme toggle — `text-foreground` bisa resolve ke light di sistem dengan light preference).
@@ -1162,7 +1408,11 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **022** | **Phase 6 — daily_cs_report + ad_spend.meta_lead_count + analytics_funnel_per_product + cs_daily_summary + cs_period_summary + cs_daily_series** | **✅ Active** |
 | **023** | **Phase 6 redesign — analytics_cs_performance_per_product + analytics_campaigns_per_product (untuk detail page per produk)** | **✅ Active** |
 | **024** | **Phase 6.5 — shipping_diff_per_order + shipping_diff_summary (revival /shipping-diff)** | **✅ Active** |
-| 025+ | TBD next phases | — |
+| **011** | **Phase 8A — suppliers table + RLS (owner+admin write via get_user_role) + products.supplier_id + orders.origin_supplier_id + is_multi_origin (slot 011 dipakai sesuai brief, secara kronologis di-apply terakhir)** | **✅ Active** |
+| **034** | **Phase 8B — orders.resi_printed_at + picked_up_at + 2 index (1 partial) + trigger auto_set_resi_lifecycle_timestamps + 2 RPC (get_pending_pickup_orders, pending_pickup_summary). Slot 012 dipakai migration 3A, jadi pakai next free slot 034.** | **✅ Active** |
+| **035** | **Phase 8E — 9 kolom enrichment di orders (delivered/returned_at, tags[], priority enum, internal/customer_note, reject_reason, cs_attempts, last_contact_at) + profiles.preferences + organizations.settings + notifications table + 3 trigger (auto_set_delivery, notify_owner_financial_edit, block_admin_actual_edit + bypass setting) + 2 RPC (list_orders_enriched, list_audit_logs). Patch existing update_order_from_rekonsil dengan bypass. Slot 013 di brief dipakai Phase 1.5, jadi pakai slot 035.** | **✅ Active** |
+| **036** | **Phase 8F — inbox_unparsed_address table + RLS + 2 RPC (search_wilayah_fuzzy untuk autocomplete + check_order_export_ready untuk export gate). 15 mapping baru ke orderonline_inbound (address struktural + weight/cogs + Phase 8E fields + meta UTM/dropshipper). Address parser hybrid + inbox UI + export gate strict.** | **✅ Active** |
+| 037+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

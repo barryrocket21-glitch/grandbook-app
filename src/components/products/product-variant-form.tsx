@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2, Save, ChevronLeft } from 'lucide-react'
+import { Plus, X, Loader2, Save, ChevronLeft, Warehouse } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -29,6 +29,7 @@ import type {
   ProductAttribute,
   ProductAttributeValue,
   ProductWithVariants,
+  Supplier,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -78,6 +79,10 @@ export function ProductVariantForm({ productId }: Props) {
   const [newAttrName, setNewAttrName] = useState('')
   const [newAttrValues, setNewAttrValues] = useState('')
 
+  // Phase 8A — supplier link (nullable; produk lama bisa belum punya)
+  const [supplierId, setSupplierId] = useState<number | null>(null)
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+
   // Loading existing product
   useEffect(() => {
     if (!productId) return
@@ -89,6 +94,7 @@ export function ProductVariantForm({ productId }: Props) {
         setName(product.name)
         setActive(product.active)
         setHasVariants(!!product.has_variants)
+        setSupplierId(product.supplier_id ?? null)
         if (!product.has_variants) {
           const v = product.variants[0]
           setSimplePrice(Number(v?.price ?? product.price_default ?? 0))
@@ -134,6 +140,32 @@ export function ProductVariantForm({ productId }: Props) {
   }, [orgId])
 
   useEffect(() => { loadAttributes() }, [loadAttributes])
+
+  // Phase 8A — load active suppliers untuk dropdown.
+  // Kalau supplier yang ke-link di produk udah di-disable, tetap include
+  // supaya display-nya nggak hilang (user bisa lihat & ganti).
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('suppliers')
+          .select('*')
+          .order('name')
+        if (error) throw error
+        if (!cancelled) setSuppliers((data || []) as Supplier[])
+      } catch (err) {
+        // Tabel suppliers belum ada (migration 011 belum di-apply) — skip silently
+        // sehingga form tetap usable. Console only.
+        console.warn('Suppliers load skipped:', err)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const supplierOptions = useMemo(() => {
+    return suppliers.filter(s => s.active || s.id === supplierId)
+  }, [suppliers, supplierId])
 
   // ----- Attribute picker -----
   function addExistingAttribute(attrId: number) {
@@ -282,12 +314,13 @@ export function ProductVariantForm({ productId }: Props) {
 
     setSaving(true)
     try {
-      const result = await saveProduct(supabase, {
+      await saveProduct(supabase, {
         id: productId ?? null,
         orgId,
         name,
         active,
         hasVariants,
+        supplierId,
         simplePrice,
         simpleHpp,
         attributeIds: attributesUsed.map(a => a.id),
@@ -353,6 +386,36 @@ export function ProductVariantForm({ productId }: Props) {
           <div className="flex items-center gap-2">
             <Checkbox checked={active} onCheckedChange={v => setActive(v === true)} id="active" />
             <Label htmlFor="active" className="cursor-pointer">Produk aktif (tampil di pilihan order)</Label>
+          </div>
+
+          {/* Phase 8A — Supplier picker (opsional, bisa kosong) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="supplier" className="flex items-center gap-1.5">
+              <Warehouse className="size-3.5" /> Supplier (Gudang Asal)
+            </Label>
+            <Select
+              value={supplierId !== null ? String(supplierId) : 'none'}
+              onValueChange={v => setSupplierId(!v || v === 'none' ? null : Number(v))}
+            >
+              <SelectTrigger id="supplier" className="max-w-md">
+                <SelectValue placeholder="Tidak di-link ke supplier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— Tidak di-link —</SelectItem>
+                {supplierOptions.map(s => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.code ? `${s.code} — ${s.name}` : s.name}
+                    {!s.active && ' (disabled)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              Opsional. Untuk dropship, link produk ke supplier supaya order auto-detect gudang asal.{' '}
+              <Link href="/settings/suppliers" className="text-violet-500 hover:underline">
+                Kelola supplier →
+              </Link>
+            </p>
           </div>
 
           {/* Tipe radio */}

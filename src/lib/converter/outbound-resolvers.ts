@@ -63,6 +63,13 @@ export function resolveSourceValue(
       return order.payment_method === 'TRANSFER' ? order.total : null
     case 'cod_amount_or_empty':
       return order.payment_method === 'COD' ? order.cod_amount ?? order.total : null
+    // SPX outbound derived fields (Phase 8E hotfix — seeded for spx_outbound profile)
+    case 'payment_method_cod_label_id':
+      return order.payment_method === 'COD' ? 'Paket COD' : 'Bukan Paket COD'
+    case 'payment_method_label_id':
+      return order.payment_method === 'COD' ? 'COD' : 'Bank Transfer'
+    case 'insurance_default_n':
+      return 'N'
     case 'concat_address':
       // Computed full address — handy for profiles where the courier wants a single string.
       // Mengantar pisah jadi field-field individual, tapi profile lain bisa pakai ini.

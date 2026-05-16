@@ -48,6 +48,7 @@ import {
 import { formatRupiah, formatNumber, formatPercent, getToday, getStartOfWeek, getStartOfMonth } from '@/lib/format'
 import { PageHeader } from '@/components/ui/page-header'
 import { LayoutDashboard } from 'lucide-react'
+import { PendingPickupWidget } from '@/components/dashboard/pending-pickup-widget'
 
 // Chart colors
 const CHART_COLORS = ['#8b5cf6', '#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
@@ -339,7 +340,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Warning Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="border-orange-500/20 bg-orange-500/5">
           <CardContent className="pt-4 pb-4 flex items-center gap-4">
             <div className="p-2 bg-orange-500/15 rounded-lg">
@@ -366,6 +367,10 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+        {/* Phase 8B — Resi pending pickup widget (owner+admin only).
+            /dashboard sudah owner-only via sidebar, dan widget silent-fail
+            kalau RPC gagal — admin yang kebetulan akses tetap lihat. */}
+        {(role === 'owner' || role === 'admin') && <PendingPickupWidget />}
       </div>
 
       {/* Charts Row */}

@@ -262,6 +262,26 @@ export interface Order {
   estimated_profit?: number | null
   cost_computed_at?: string | null
 
+  // Phase 8A — multi-supplier
+  origin_supplier_id?: number | null
+  is_multi_origin?: boolean
+  origin_supplier?: Supplier | null
+
+  // Phase 8B — resi lifecycle
+  resi_printed_at?: string | null
+  picked_up_at?: string | null
+
+  // Phase 8E — order enrichment
+  delivered_at?: string | null
+  returned_at?: string | null
+  tags?: string[]
+  priority?: OrderPriority
+  internal_note?: string | null
+  customer_note?: string | null
+  reject_reason?: string | null
+  cs_attempts?: number
+  last_contact_at?: string | null
+
   order_date: string
   created_at: string
   updated_at: string
@@ -384,6 +404,208 @@ export interface Product {
   has_variants?: boolean
   variants?: ProductVariant[]
   attributes?: ProductAttribute[]
+  // Phase 8A — multi-supplier
+  supplier_id?: number | null
+  supplier?: Supplier | null
+}
+
+// =============================================================
+// Phase 8A — Multi-Supplier Foundation
+// =============================================================
+export interface Supplier {
+  id: number
+  organization_id: number
+  name: string
+  code: string | null
+  address: string | null
+  city: string | null
+  province: string | null
+  pic_name: string | null
+  pic_phone: string | null
+  notes: string | null
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// =============================================================
+// Phase 8F — Hybrid Address Parser + Inbox
+// =============================================================
+export interface InboxUnparsedAddress {
+  id: number
+  organization_id: number
+  order_id: number
+  raw_address: string
+  parsing_attempt: {
+    extracted_keywords?: string[]
+    candidates?: Array<{
+      id: number
+      province: string
+      city: string
+      subdistrict: string
+      village: string
+      zip: string
+      match_score: number
+    }>
+    reason_failed?: 'no_match' | 'ambiguous' | 'too_short' | 'empty_input'
+  } | null
+  resolved: boolean
+  resolved_by: string | null
+  resolved_at: string | null
+  resolution_note: string | null
+  created_at: string
+}
+
+// Re-export dari converter/address-parser.ts untuk konsumsi UI
+export type { ParsedAddress, ParseFailure, ParseResult, WilayahCandidate } from '@/lib/converter/address-parser'
+
+// =============================================================
+// Phase 8E — Order Enrichment, Saved Views, Notifications
+// =============================================================
+export type OrderPriority = 'LOW' | 'NORMAL' | 'URGENT'
+
+export const ORDER_PRIORITIES: { value: OrderPriority; label: string; color: string }[] = [
+  { value: 'LOW',    label: 'Low',    color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400' },
+  { value: 'NORMAL', label: 'Normal', color: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+  { value: 'URGENT', label: 'Urgent', color: 'bg-red-500/15 text-red-600 dark:text-red-400' },
+]
+
+/** Enriched order row dari RPC list_orders_enriched */
+export interface OrderEnriched {
+  id: number
+  order_number: string
+  external_order_id: string | null
+  resi: string | null
+  status: OrderStatus
+  priority: OrderPriority
+  payment_method: PaymentMethod
+  customer_name: string
+  customer_phone: string | null
+  customer_city: string | null
+  customer_province: string | null
+  subtotal: number
+  discount: number
+  shipping_cost: number
+  shipping_cost_actual: number | null
+  total: number
+  payout_amount: number | null
+  estimated_profit: number | null
+  // Computed
+  actual_profit: number | null
+  profit_margin_pct: number | null
+  shipping_diff: number | null
+  days_in_status: number
+  is_repeat_customer: boolean
+  // Joined names
+  cs_name: string | null
+  advertiser_name: string | null
+  campaign_name: string | null
+  channel_name: string | null
+  supplier_name: string | null
+  is_multi_origin: boolean
+  // Tags & notes
+  tags: string[]
+  internal_note: string | null
+  customer_note: string | null
+  reject_reason: string | null
+  cs_attempts: number
+  // Timestamps
+  order_date: string
+  resi_printed_at: string | null
+  picked_up_at: string | null
+  delivered_at: string | null
+  returned_at: string | null
+  status_changed_at: string
+  last_contact_at: string | null
+  created_at: string
+  updated_at: string
+  // Pagination
+  total_count: number
+}
+
+/** Saved column view per user */
+export interface SavedView {
+  id: string
+  name: string
+  column_visibility: Record<string, boolean>
+  column_order: string[]
+  column_widths: Record<string, number>
+  filters?: Record<string, unknown>
+  created_at: string
+}
+
+/** profiles.preferences JSONB structure */
+export interface UserPreferences {
+  orders_list?: {
+    column_visibility?: Record<string, boolean>
+    column_order?: string[]
+    column_widths?: Record<string, number>
+    saved_views?: SavedView[]
+    active_view_id?: string | null
+  }
+}
+
+/** organizations.settings JSONB structure */
+export interface OrganizationSettings {
+  orders_list_default_view?: {
+    column_visibility?: Record<string, boolean>
+    column_order?: string[]
+    column_widths?: Record<string, number>
+  }
+}
+
+/** In-app notification (lightweight, polling-based) */
+export interface Notification {
+  id: number
+  organization_id: number
+  recipient_id: string
+  type: string
+  title: string
+  body: string | null
+  link: string | null
+  metadata: Record<string, unknown>
+  read_at: string | null
+  created_at: string
+}
+
+/** Audit log row dari RPC list_audit_logs */
+export interface AuditLogRow {
+  id: number
+  user_id: string | null
+  user_name: string | null
+  user_role: string | null
+  table_name: string
+  record_id: string
+  action: 'INSERT' | 'UPDATE' | 'DELETE' | string
+  old_value: Record<string, unknown> | null
+  new_value: Record<string, unknown> | null
+  created_at: string
+  total_count: number
+}
+
+// =============================================================
+// Phase 8B — Resi Lifecycle Timestamps
+// =============================================================
+export interface PendingPickupOrder {
+  id: number
+  order_number: string
+  resi: string | null
+  customer_name: string
+  customer_phone: string | null
+  customer_city: string | null
+  channel_name: string | null
+  total: number
+  resi_printed_at: string
+  days_pending: number
+  cs_name: string | null
+  campaign_name: string | null
+}
+
+export interface PendingPickupSummary {
+  total_count: number
+  total_value: number
+  oldest_days_pending: number
+  by_channel: Record<string, { count: number; value: number }>
 }
 
 // =============================================================

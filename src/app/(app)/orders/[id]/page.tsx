@@ -20,6 +20,8 @@ import { INTERNAL_STATUSES, STATUS_BADGE_COLOR, STATUS_LABEL, BILLING_MODEL_SHOR
 import { fetchChannelCostBundle, recomputeOrderCosts, type ChannelCostBundle } from '@/lib/supabase/queries/billing-config'
 import { formatRupiah, formatDateTime } from '@/lib/format'
 import { OrderForm, type OrderFormDefaults } from '@/components/orders/order-form'
+import { ResiLifecycleSection } from '@/components/orders/resi-lifecycle-section'
+import { ORDER_PRIORITIES } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import type { OrderInputFormData, PaymentMethodEnum } from '@/lib/schemas/settings'
 import type { OrderStatus } from '@/lib/types'
@@ -71,6 +73,22 @@ interface OrderDetail {
   estimated_cash_in: number | null
   estimated_profit: number | null
   cost_computed_at: string | null
+  // Phase 8A — multi-supplier
+  origin_supplier_id: number | null
+  is_multi_origin: boolean
+  // Phase 8B — resi lifecycle
+  resi_printed_at: string | null
+  picked_up_at: string | null
+  // Phase 8E — enrichment
+  delivered_at: string | null
+  returned_at: string | null
+  tags: string[]
+  priority: 'LOW' | 'NORMAL' | 'URGENT'
+  internal_note: string | null
+  customer_note: string | null
+  reject_reason: string | null
+  cs_attempts: number
+  last_contact_at: string | null
   order_date: string
   created_at: string
   updated_at: string
@@ -79,6 +97,8 @@ interface OrderDetail {
   cs?: { id: string; full_name: string }
   advertiser?: { id: string; full_name: string }
   creator?: { id: string; full_name: string }
+  // Phase 8A
+  origin_supplier?: { id: number; code: string | null; name: string } | null
 }
 
 interface OrderItem {
@@ -134,7 +154,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           source_profile:converter_profiles(id, code, name),
           cs:profiles!orders_cs_id_fkey(id, full_name),
           advertiser:profiles!orders_advertiser_id_fkey(id, full_name),
-          creator:profiles!orders_created_by_fkey(id, full_name)
+          creator:profiles!orders_created_by_fkey(id, full_name),
+          origin_supplier:suppliers(id, code, name)
         `)
         .eq('id', orderId)
         .single(),
@@ -318,6 +339,25 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <Badge variant="outline" className={STATUS_BADGE_COLOR[order.status]}>
                 {STATUS_LABEL[order.status]}
               </Badge>
+              {/* Phase 8E — priority badge */}
+              {order.priority && order.priority !== 'NORMAL' && (() => {
+                const p = ORDER_PRIORITIES.find(x => x.value === order.priority)
+                return p ? <Badge variant="outline" className={p.color}>{p.label}</Badge> : null
+              })()}
+              {/* Phase 8E — tags */}
+              {order.tags && order.tags.length > 0 && order.tags.slice(0, 3).map(t => (
+                <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
+              ))}
+              {/* Phase 8A — supplier asal / multi-origin badge */}
+              {order.is_multi_origin ? (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                  Multi-Origin Order
+                </Badge>
+              ) : order.origin_supplier ? (
+                <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/30">
+                  Origin: {order.origin_supplier.code || order.origin_supplier.name}
+                </Badge>
+              ) : null}
             </div>
             <div className="text-xs text-muted-foreground space-x-3">
               <span>Order Date: {fmt(order.order_date)}</span>
@@ -395,6 +435,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </CardContent>
             </Card>
 
+            {/* Phase 8B — Resi Lifecycle */}
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <ResiLifecycleSection
+                  orderId={order.id}
+                  status={order.status}
+                  resiPrintedAt={order.resi_printed_at ?? null}
+                  pickedUpAt={order.picked_up_at ?? null}
+                  role={role}
+                  onUpdated={load}
+                />
+              </CardContent>
+            </Card>
+
             <Card>
               <CardContent className="pt-4 pb-4 space-y-2 text-sm">
                 <h3 className="font-semibold text-base flex items-center gap-2">
@@ -415,6 +469,64 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                   {order.notes || '—'}
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* Phase 8E — CS Tracking, Catatan, Tags, Reject Reason */}
+            <Card className="md:col-span-2">
+              <CardContent className="pt-4 pb-4 space-y-3 text-sm">
+                <h3 className="font-semibold text-base flex items-center gap-2">
+                  <span className="w-1.5 h-5 bg-teal-500 rounded" />CS Tracking & Catatan
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field
+                    label="Priority"
+                    value={(() => {
+                      const p = ORDER_PRIORITIES.find(x => x.value === order.priority)
+                      return p ? <Badge variant="outline" className={p.color}>{p.label}</Badge> : '—'
+                    })()}
+                  />
+                  <Field
+                    label="CS Attempts"
+                    value={<span className="tabular-nums">{order.cs_attempts ?? 0}</span>}
+                  />
+                  <Field
+                    label="Kontak Terakhir"
+                    value={order.last_contact_at ? fmtFull(order.last_contact_at) : '—'}
+                  />
+                  <Field
+                    label="Tags"
+                    value={
+                      order.tags && order.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {order.tags.map(t => (
+                            <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
+                          ))}
+                        </div>
+                      ) : '—'
+                    }
+                  />
+                </div>
+                <div className="space-y-2 pt-2 border-t">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Catatan Internal (tim)</p>
+                    <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                      {order.internal_note || <span className="italic">—</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Catatan Customer</p>
+                    <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                      {order.customer_note || <span className="italic">—</span>}
+                    </p>
+                  </div>
+                  {order.reject_reason && (
+                    <div>
+                      <p className="text-xs text-red-500 mb-1">Alasan Reject / Cancel</p>
+                      <p className="text-sm whitespace-pre-wrap text-red-600">{order.reject_reason}</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

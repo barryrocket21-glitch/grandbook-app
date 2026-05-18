@@ -214,6 +214,13 @@ export async function parseAddress(
 
       // Filter only exact subdistrict match (score 100)
       let filtered = cands.filter(c => c.match_score === 100)
+      // Phase 8G fix: kalau exact empty + ada city context, relax ke prefix
+      // match (score >= 80). Kasus: master_wilayah lokal punya alias
+      // parenthesis (e.g. "Pinang (Penang)") → exact "pinang" miss tapi prefix hit.
+      // City/province narrowing tetap disambiguate.
+      if (filtered.length === 0 && (tokens.city_candidates.length > 0 || tokens.province_candidates.length > 0)) {
+        filtered = cands.filter(c => c.match_score >= 80)
+      }
       if (filtered.length === 0) continue
 
       // Narrow by city context kalau ada

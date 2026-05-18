@@ -137,15 +137,33 @@ const spxTests = [
     expectDistrict: 'UMALULU',
     expectPostal: '87181',
   },
+  // Test case 15 (Phase 8G hotfix 2, migration 039) — input "Pinang" tanpa
+  // alias. Pre-039: not_found karena district_normalized="pinang (penang)"
+  // vs v_dist_norm="pinang" mismatch. Post-039: alias di-strip dari DB
+  // column side via REGEXP_REPLACE → "pinang" match.
+  {
+    label: 'Pinang/Tangerang/Banten — input tanpa alias (migration 039 case)',
+    args: { p_province: 'Banten', p_city: 'Tangerang', p_subdistrict: 'Pinang' },
+    expectState: 'BANTEN',
+    expectCity: 'KOTA TANGERANG',
+    expectDistrict: 'PINANG (PENANG)',
+    expectPostal: '15142',
+  },
 ]
 
-// Test alias strip via direct comparison (not full match — SPX template ga
-// punya entry Pinang Tangerang, ini coverage gap bukan code bug)
+// Test alias strip — input "Pinang (Penang)" WITH alias. Pre-039 expected
+// not_found (asymmetric: input strip alias di 038, DB side gak). Post-039
+// strip alias di DB side juga via REGEXP_REPLACE → match ke same row sebagai
+// test case di atas (input tanpa alias).
 const spxAliasTests = [
   {
-    label: 'Pinang (Penang) — coverage gap di SPX template V2 (expected not_found)',
+    label: 'Pinang (Penang) — input dengan alias, normalized match post-039',
     args: { p_province: 'Banten', p_city: 'Tangerang', p_subdistrict: 'Pinang (Penang)' },
-    expectConfidence: 'not_found',
+    expectState: 'BANTEN',
+    expectCity: 'KOTA TANGERANG',
+    expectDistrict: 'PINANG (PENANG)',
+    expectPostal: '15142',
+    expectConfidence: 'normalized',
   },
 ]
 
@@ -169,12 +187,20 @@ for (const t of spxTests) {
 
 for (const t of spxAliasTests) {
   const { data, error } = await sb.rpc('lookup_spx_wilayah', t.args)
-  if (error || !data) { check(`SPX alias "${t.label}"`, false, `error=${error?.message}`); continue }
+  if (error || !data || data.length === 0) {
+    check(`SPX alias "${t.label}"`, false, `error=${error?.message ?? 'no data'}`)
+    continue
+  }
   const r = data[0]
+  const ok = r.spx_state === t.expectState
+    && r.spx_city === t.expectCity
+    && r.spx_district === t.expectDistrict
+    && r.spx_postal_code === t.expectPostal
+    && r.match_confidence === t.expectConfidence
   check(
     `SPX alias "${t.label}" → ${t.expectConfidence}`,
-    r.match_confidence === t.expectConfidence,
-    `actual conf=${r.match_confidence} state=${r.spx_state}`,
+    ok,
+    `state="${r.spx_state}" city="${r.spx_city}" district="${r.spx_district}" postal="${r.spx_postal_code}" conf=${r.match_confidence}`,
   )
 }
 

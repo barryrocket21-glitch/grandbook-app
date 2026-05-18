@@ -1,9 +1,14 @@
 // =============================================================
-// Outbound resolvers (Phase 3C)
+// Outbound resolvers (Phase 3C, Phase 8G: async + SPX wilayah lookups)
 // Pure functions that map a `source_field` mapping path into a
 // concrete value pulled from an order (orders + order_items + channel).
 // Used by engine-outbound.ts for both preview and final generation.
+//
+// Phase 8G: returns `unknown | Promise<unknown>`. Sync resolvers tetap sync
+// (Promise.resolve wrap di engine). Async resolvers (SPX wilayah lookup via
+// RPC `lookup_spx_wilayah`) return Promise.
 // =============================================================
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Order, OrderItem, CourierChannel } from '@/lib/types'
 
 export interface OutboundResolveWarning {
@@ -38,6 +43,10 @@ export const DEFAULT_ITEM_WEIGHT_KG = 1
  *   - `channel_courier_code` / `channel_aggregator` / `channel_name`
  *   - `total_if_cod` / `total_if_transfer` / `cod_amount_or_empty`
  */
+/**
+ * Sync resolveSourceValue — semua resolver yang tidak butuh DB lookup.
+ * Phase 8G: SPX wilayah lookups + shipping_payment moved ke resolveSourceValueAsync.
+ */
 export function resolveSourceValue(
   sourceField: string,
   order: OrderForOutbound,
@@ -63,17 +72,29 @@ export function resolveSourceValue(
       return order.payment_method === 'TRANSFER' ? order.total : null
     case 'cod_amount_or_empty':
       return order.payment_method === 'COD' ? order.cod_amount ?? order.total : null
-    // SPX outbound derived fields (Phase 8E hotfix — seeded for spx_outbound profile)
+    // SPX outbound derived fields (Phase 8E)
     case 'payment_method_cod_label_id':
       return order.payment_method === 'COD' ? 'Paket COD' : 'Bukan Paket COD'
     case 'payment_method_label_id':
+      // Deprecated Phase 8G — gunakan `shipping_payment_default_id`. Kept for backward compat.
       return order.payment_method === 'COD' ? 'COD' : 'Bank Transfer'
     case 'insurance_default_n':
       return 'N'
+    // Phase 8G — SPX *Metode Pembayaran kolom adalah "siapa bayar ongkir", bukan
+    // payment method customer. SPX cuma support 1 value: "Dibayar Pengirim".
+    case 'shipping_payment_default_id':
+      return 'Dibayar Pengirim'
     case 'concat_address':
-      // Computed full address — handy for profiles where the courier wants a single string.
-      // Mengantar pisah jadi field-field individual, tapi profile lain bisa pakai ini.
       return concatFullAddress(order)
+    // Phase 8G — SPX wilayah lookups (handled in async path; sync fallback uppercase)
+    case 'spx_state_lookup':
+      return (order.customer_province ?? '').toUpperCase()
+    case 'spx_city_lookup':
+      return (order.customer_city ?? '').toUpperCase()
+    case 'spx_district_lookup':
+      return (order.customer_subdistrict ?? '').toUpperCase()
+    case 'spx_postal_lookup':
+      return order.customer_zip ?? ''
     default: {
       const v = (order as unknown as Record<string, unknown>)[sourceField]
       if (v === undefined) {
@@ -86,6 +107,102 @@ export function resolveSourceValue(
       }
       return v ?? ''
     }
+  }
+}
+
+// =============================================================
+// Phase 8G — Async SPX wilayah resolvers (RPC lookup_spx_wilayah)
+// =============================================================
+
+const SPX_LOOKUP_FIELDS = new Set([
+  'spx_state_lookup',
+  'spx_city_lookup',
+  'spx_district_lookup',
+  'spx_postal_lookup',
+])
+
+export function isAsyncSpxLookup(sourceField: string): boolean {
+  return SPX_LOOKUP_FIELDS.has(sourceField)
+}
+
+/**
+ * Phase 8G — async resolver untuk SPX wilayah lookup. Engine outbound call
+ * ini kalau `isAsyncSpxLookup(source_field)` true. Cache hasil per-order via
+ * `SpxLookupCache` supaya 4 field (state/city/district/postal) cuma 1 RPC call.
+ */
+export interface SpxLookupResult {
+  spx_state: string | null
+  spx_city: string | null
+  spx_district: string | null
+  spx_postal_code: string | null
+  is_serviceable: boolean | null
+  match_confidence: string  // 'normalized' | 'partial' | 'district_only' | 'not_found'
+}
+
+export type SpxLookupCache = Map<number, SpxLookupResult | null>
+
+export async function getSpxLookupForOrder(
+  order: OrderForOutbound,
+  supabase: SupabaseClient,
+  cache: SpxLookupCache,
+): Promise<SpxLookupResult | null> {
+  if (cache.has(order.id)) return cache.get(order.id) ?? null
+
+  if (!order.customer_province || !order.customer_city || !order.customer_subdistrict) {
+    cache.set(order.id, null)
+    return null
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('lookup_spx_wilayah', {
+      p_province: order.customer_province,
+      p_city: order.customer_city,
+      p_subdistrict: order.customer_subdistrict,
+    })
+    if (error || !data || data.length === 0) {
+      cache.set(order.id, null)
+      return null
+    }
+    const first = (data as SpxLookupResult[])[0]
+    if (first.match_confidence === 'not_found') {
+      cache.set(order.id, null)
+      return null
+    }
+    cache.set(order.id, first)
+    return first
+  } catch {
+    cache.set(order.id, null)
+    return null
+  }
+}
+
+/**
+ * Async dispatcher untuk SPX lookup fields. Caller-nya engine-outbound.buildRow.
+ * Pakai sync resolver sebagai fallback kalau RPC lookup gagal.
+ */
+export async function resolveSpxLookupAsync(
+  sourceField: string,
+  order: OrderForOutbound,
+  supabase: SupabaseClient,
+  cache: SpxLookupCache,
+  warnings: OutboundResolveWarning[],
+): Promise<unknown> {
+  const lookup = await getSpxLookupForOrder(order, supabase, cache)
+  if (!lookup) {
+    // Fallback: sync uppercase. Emit warning supaya operator aware.
+    warnings.push({
+      orderId: order.id,
+      orderNumber: order.order_number,
+      message: `SPX wilayah lookup gagal untuk ${sourceField} (province="${order.customer_province ?? ''}", city="${order.customer_city ?? ''}", subdistrict="${order.customer_subdistrict ?? ''}"). Fallback uppercase. Order ini kemungkinan akan ditolak SPX.`,
+    })
+    return resolveSourceValue(sourceField, order, warnings)
+  }
+  switch (sourceField) {
+    case 'spx_state_lookup':    return lookup.spx_state ?? ''
+    case 'spx_city_lookup':     return lookup.spx_city ?? ''
+    case 'spx_district_lookup': return lookup.spx_district ?? ''
+    case 'spx_postal_lookup':   return lookup.spx_postal_code ?? ''
+    default: return ''
   }
 }
 

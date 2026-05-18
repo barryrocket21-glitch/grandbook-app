@@ -429,6 +429,42 @@ export interface Supplier {
 }
 
 // =============================================================
+// Phase 8G — SPX Compliance + Phone Robustness
+// =============================================================
+export interface MasterWilayahSpx {
+  id: number
+  state: string
+  city: string
+  district: string
+  postal_codes: string[]
+  is_serviceable: boolean
+  state_normalized: string
+  city_normalized: string
+  district_normalized: string
+  created_at: string
+}
+
+export type PhoneInvalidReason =
+  | 'scientific_notation'
+  | 'too_short'
+  | 'too_long'
+  | 'non_numeric'
+  | 'empty'
+
+export interface InboxInvalidPhone {
+  id: number
+  organization_id: number
+  order_id: number
+  raw_phone: string
+  reason: PhoneInvalidReason
+  resolved: boolean
+  resolved_by: string | null
+  resolved_at: string | null
+  resolved_phone: string | null
+  created_at: string
+}
+
+// =============================================================
 // Phase 8F — Hybrid Address Parser + Inbox
 // =============================================================
 export interface InboxUnparsedAddress {

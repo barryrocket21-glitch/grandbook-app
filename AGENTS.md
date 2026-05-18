@@ -31,6 +31,86 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 8B — Resi Lifecycle Timestamps | ✅ DONE | 2026-05-16 |
 | Phase 8E — Customizable Column View + Order Ops + Notifications + Audit Log | ✅ DONE | 2026-05-16 |
 | Phase 8F — Inbound Parsing Hybrid + Outbound Resolver Fix | ✅ DONE | 2026-05-16 |
+| Phase 8G — SPX Compliance + Phone Robustness + Parser Tuning | ✅ DONE | 2026-05-18 |
+
+**Phase 8G done.** Comprehensive bug fix campaign setelah smoke test real-world Phase 8F. 4 bug systemic + cleanup task:
+
+**Bug A — SPX *Metode Pembayaran:** mapping resolver `payment_method_label_id` generate "COD"/"Bank Transfer" → SPX validation tolak ("Shipping Fee Payment is not support"). SPX kolom #19 actually = "siapa bayar ongkir", bukan payment method customer. Investigasi UI SPX cuma support 1 value: "Dibayar Pengirim". Fix: resolver baru `shipping_payment_default_id` return constant "Dibayar Pengirim". Update mapping spx_outbound #19.
+
+**Bug B — Format wilayah ga sinkron:** local `master_wilayah` pakai title case ("Nusa Tenggara Timur (NTT)", "Sumba Timur"), SPX dropdown expect UPPERCASE + prefix ("NUSA TENGGARA TIMUR (NTT)", "KAB. SUMBA TIMUR"). Uppercase transform doang ga cukup. Fix: import master SPX wilayah authoritative (7092 row dari template SPX V2 sheet `List Provinsi-Kota-Kecamatan`) ke tabel baru `master_wilayah_spx` dengan generated columns untuk cross-match. RPC `lookup_spx_wilayah` 3-tier match: normalized exact → district+city partial → district only. 4 resolver baru `spx_state_lookup`/`spx_city_lookup`/`spx_district_lookup`/`spx_postal_lookup` (async, cached per-order via `SpxLookupCache` supaya 4 field share 1 RPC call). Engine outbound `buildRow` refactored ke async + dispatcher pakai `isAsyncSpxLookup` helper.
+
+**Bug C — Phone scientific notation:** Orderonline CSV export corrupt phone panjang jadi "6.28781E+12" (Excel auto-convert). Existing `normalize_phone_id` strip non-digit → output "628781" (6 digit) yang ditolak SPX. Fix: defensive `normalize_phone_id_safe` return discriminated union (isValid + reason: scientific_notation/too_short/too_long/non_numeric/empty). Detect sci notation via regex `^\d+(?:\.\d+)?[eE][+-]?\d+$`. Legacy `normalize_phone_id` transform di-update: kalau invalid, return raw string sebagai evidence (engine layer route ke inbox). Tabel baru `inbox_invalid_phone` + RLS (CS access). Engine inbound: setelah applyMappings, call `normalize_phone_id_safe` pada raw `phone` field, kalau !isValid → insert ke inbox.
+
+**Bug D — Parser threshold naive:** Phase 8F parser fail 9/9 order real well-structured ("Kec. Petarukan, Kab. Pemalang, Jawa Tengah") karena keyword "Petarukan" + "Pemalang" + "Jawa" + "Tengah" semua hit multiple wilayah → false ambiguous detection. Fix: `parseAddressV2` pattern-aware. `extractTokensWithPatterns` extract via regex `Kec(?:amatan)?\.?\s+(...)`, `Kab(?:upaten)?|Kota\.?\s+(...)`, `Kel(?:urahan)?|Desa\.?\s+(...)`. Province extraction: last comma-segment match `PROVINCE_NAMES` (38 provinsi + alias). Resolution: query RPC search_wilayah_fuzzy untuk subdistrict candidate, filter dengan city/province context. Strong winner confidence high; fallback ke parseAddressLegacyV1 (Phase 8F generic) kalau pattern miss.
+
+**Task F — Cleanup:** 9 order `GB-20260518-000001..009` dari smoke test Phase 8F yang stuck (phone corrupt + alamat NULL). Idempotent DELETE — verified 0 row di prod (owner kemungkinan udah hapus manual).
+
+Migration slot 037 + seed master_wilayah_spx via Node script (REST API batch upsert chunked 500, ~7 detik untuk 15 batch). Update 5 mapping spx_outbound via execute_sql. Pattern extraction tested: 4/4 case Orderonline real → subdistrict + city + village + province ter-extract correct. SPX lookup RPC verified: Petarukan & Umalulu both return `normalized` confidence dengan format authoritative SPX.
+
+### Phase 8G — Files yang dibuat / berubah
+
+**Migration:**
+- `src/lib/supabase/migrations/037_phase8g_spx_compliance.sql` — `master_wilayah_spx` table dengan 3 generated columns (state/city/district normalized untuk cross-match) + 4 index + RLS grants (read-only authenticated) + `lookup_spx_wilayah` RPC (3-tier match) + `inbox_invalid_phone` table dengan RLS (3 policy, CS access) + cleanup DELETE 9 stuck orders. Idempotent.
+- `scripts/seed-master-wilayah-spx.mjs` (NEW) — Node script parse XLSX sheet `List Provinsi-Kota-Kecamatan` + bulk upsert via REST API (chunked 500). Pakai service role key dari `.env.local`. Reproducible — auto-detect latest template di `~/Downloads/`.
+
+**Code (NEW):**
+- `src/app/(app)/inbox/phone-review/page.tsx` — UI mirror `/inbox/address-review`. List + ResolveDialog dengan input phone baru + live validation via `normalize_phone_id_safe` (typing → realtime feedback "✓ Valid" / "✗ Invalid: reason") + Skip button.
+
+**Code (UPDATED):**
+- `src/lib/converter/transforms.ts` — `normalize_phone_id_safe` discriminated union + helper `normalizeIndonesianPhone` (strip 62/0 prefix). Legacy `normalize_phone_id` transform di-update: pakai safe internally, kalau invalid return raw value supaya engine bisa detect. Type `PhoneInvalidReason` exported.
+- `src/lib/converter/outbound-resolvers.ts` — Sync `resolveSourceValue` extended dengan `shipping_payment_default_id` (constant "Dibayar Pengirim"), `spx_state/city/district/postal_lookup` (sync fallback uppercase). Async dispatcher `resolveSpxLookupAsync` + `getSpxLookupForOrder` (cache hit per order, 1 RPC fetch 4 fields). `SpxLookupCache = Map<number, SpxLookupResult | null>`. Helper `isAsyncSpxLookup(sourceField)` predicate.
+- `src/lib/converter/engine-outbound.ts` — `buildRow` jadi async (Promise<Record>). Tambah parameter `supabase`, `spxCache`, `profileNeedsSpxLookup`. Dispatch: kalau profile needs SPX lookup AND field is async → await `resolveSpxLookupAsync`, else sync `resolveSourceValue`. Caller `buildOutboundRows` create cache 1x per export batch.
+- `src/lib/converter/address-parser.ts` — `PROVINCE_NAMES` constant (38 provinsi + alias lowercase), `ExtractedTokens` interface, `extractTokensWithPatterns` (regex Kec./Kab./Kota/Kel./Desa + province last-segment match). `parseAddress` rewritten V2: STEP 1 trust struktural → STEP 2 pattern extraction + subdistrict exact match + city/province narrowing → STEP 3 fallback `parseAddressLegacyV1` (Phase 8F generic).
+- `src/lib/converter/engine.ts` — phone validation di loop ingest: call `normalize_phone_id_safe` pada `raw['phone']` (sebelum applyMappings sanitize), kalau !isValid push `phoneFailure` flag. Post-insert order: insert `inbox_invalid_phone` row + warning ke result.
+- `src/lib/types.ts` — `MasterWilayahSpx`, `PhoneInvalidReason`, `InboxInvalidPhone` interfaces.
+- `src/lib/constants.ts` — sidebar entry "Phone Review" di Inbox group.
+
+**DB Updates (via MCP, separate from migration file):**
+- Seed 7092 row di master_wilayah_spx via Node script + REST API (15 batch × 500 row, ~7 detik total).
+- Update 5 mapping spx_outbound (display_order 4,5,6,7,19): source_field ke spx_*_lookup + shipping_payment_default_id, transform di-null-kan (lookup handle uppercase/format).
+
+**Docs:**
+- `docs/phase8g-test.md` (NEW) — 9 test section + acceptance checklist.
+
+### Phase 8G — Decisions
+
+1. **Async resolver via separate dispatcher**, bukan refactor SEMUA resolver jadi async — `resolveSourceValue` tetap sync (Promise.resolve overhead overhead vs no overhead). Helper `isAsyncSpxLookup` predicate dispatch ke `resolveSpxLookupAsync` kalau perlu. Engine `buildRow` jadi async, sync resolvers via inline (no await needed for sync return).
+2. **SPX lookup cache per-export-batch**, bukan global — `SpxLookupCache: Map<orderId, lookup>`. 1 export 100 order = 100 RPC max (4 field per order tapi share lookup). Cache lifetime = single `buildOutboundRows` call.
+3. **`shipping_payment_default_id` constant**, bukan configurable — SPX UI verified cuma support "Dibayar Pengirim". Kalau ke depan SPX add "Dibayar Penerima" option, gampang extend dengan order metadata atau profile config. Skip premature flexibility.
+4. **Master SPX wilayah read-only authenticated**, bukan RLS per-org — data master shared across orgs (semua dropship Indonesia sama). REVOKE INSERT/UPDATE/DELETE dari authenticated, cuma SELECT. Update via seed script kalau template SPX berubah.
+5. **Seed master_wilayah_spx via Node script di luar migration SQL** — 600KB+ SQL file ga praktis di-edit/review/diff. Script reproducible (auto-detect template di Downloads), idempotent (upsert on conflict). File migration mention referensi script di komentar.
+6. **Pattern-aware parser pakai regex sederhana**, bukan NLP — Indonesia address marker (`Kec.`, `Kab.`, `Kota`, `Kel.`, `Desa`) consistent enough untuk regex. NLP-based extraction overkill untuk Phase 8G scope.
+7. **`PROVINCE_NAMES` hard-coded list 38 provinsi**, bukan query DB — small static set, no benefit dari DB lookup. Include alias umum ("ntb", "ntt", "yogyakarta", "di yogyakarta").
+8. **Legacy parseAddressLegacyV1 preserved**, bukan delete — fallback untuk address tanpa marker (eg WA paste, customer ketik bebas). Pattern-aware V2 tidak cover semua kasus.
+9. **Phone normalize transform di DB tetap `normalize_phone_id`**, bukan switch ke `normalize_phone_id_safe`. Backward compat dengan mappings existing. Legacy wrapper internal pakai safe; output rawan tidak break behavior lama.
+10. **Insert ke inbox_invalid_phone fire-and-forget** — kalau insert error (RLS issue, dst), log warning ke result tapi order tetap masuk. Konsisten pattern address inbox Phase 8F.
+11. **Cleanup 9 stuck order via DELETE SIMILAR TO**, bukan list explicit — pattern `GB-20260518-00000[1-9]` lebih DRY + idempotent (kalau sudah dihapus, no-op).
+
+### Phase 8G — Build status
+
+- `npx tsc --noEmit` ✅ exit 0
+- `npm run build` ✅ 58 routes intact, `/inbox/phone-review` baru ke-list
+- Migration 037 ✅ applied via MCP. Seed 7092 row via Node script REST API.
+- Pattern extraction smoke test ✅ — 4/4 case Orderonline real menghasilkan subdistrict + city + village + province token correct
+- SPX lookup RPC smoke test ✅ — Petarukan (Pemalang) & Umalulu (Sumba Timur) return `normalized` confidence dengan format authoritative SPX
+- Advisor security ✅ zero issue baru terkait master_wilayah_spx/inbox_invalid_phone/lookup_spx_wilayah
+
+### Phase 8G — Hal yang perlu di-flag untuk Phase 8H
+
+- **Coverage area filtering** — 157 wilayah NOT_SERVICEABLE di sheet `NON Coverage SPX`. Schema sudah siap (`master_wilayah_spx.is_serviceable` default TRUE). Phase 8H: import + UPDATE is_serviceable=FALSE untuk 157 wilayah + UX flow (block order, warn, divert ke courier alternatif?).
+- **Admin UI re-upload template SPX** — current seed via Node script manual. Phase 9: UI di /settings untuk upload XLSX baru, replace table content. Mirror pattern `/settings/wilayah` (yang sudah ada untuk master_wilayah lokal).
+- **Aggregator support** — current cuma SPX Direct. Phase 8H+ tambah Mengantar/Lincah dengan format-specific resolvers.
+- **Reconciliation problem** — Phase 8I, butuh data SPX response (settlement file format). Separate brief.
+- **Performance address parser** — 1 order = ~3-5 keyword × RPC = 3-5 query, plus pattern extraction (sync). Bulk 100 order = 300-500 query. Phase 9: cache keyword results di Map selama session ingest.
+
+### Phase 8G — Lessons Learned (append ke development workflow)
+
+1. **Mapping outbound profile WAJIB di-validate terhadap TEMPLATE ASLI ekspedisi** — Phase 8F over-generalize "*Metode Pembayaran" sebagai payment method customer. Realita: SPX kolom ini = "siapa bayar ongkir".
+2. **Format wilayah ekspedisi punya konvensi spesifik** — UPPERCASE, prefix KAB./KOTA, parenthesis preserved. Sumber canonical = dropdown list di template ekspedisi, bukan master_wilayah lokal.
+3. **CSV export untuk nomor panjang HARUS dihindari** — Excel auto-convert ke scientific notation menghilangkan presisi. XLSX preserves typing. Educate user upload XLSX, defensive normalizer detect corruption di layer engine.
+4. **Address parser threshold WAJIB pattern-aware**, bukan cuma keyword-frequency-based. Address Indonesia punya marker eksplisit (`Kec.`, `Kab.`, `Kota`) yang sangat reliable dan deterministic.
+
+---
 
 **Phase 8F done.** Fix campaign + hybrid address parser. Latar: smoke test SPX outbound (Phase 8E follow-up) muncul 12 warning — 5 required field SPX kosong (address struktural), 1 weight fallback default, 3 resolver SPX seharusnya udah-fix-tapi-brief-blum-tau, sisanya: Orderonline mapping cuma 15 dari ~30 yang seharusnya. Phase 8F kerjain 3 hal: (1) Add 15 mapping missing ke `orderonline_inbound` (4 address + 2 item enrichment + 2 Phase 8E fields + 7 meta), (2) Build hybrid address parser yang trust struktural fields → fallback ke keyword search di `master_wilayah` via RPC fuzzy → fallback inbox manual review kalau gagal, (3) Block export gate via RPC `check_order_export_ready` (alamat NULL or channel NULL → tolak). Plus extend transforms (3 baru: `null_if_empty`, `numeric_or_null`, `split_csv_to_array`) + engine whitelist (customer_note, tags, priority, hpp_snapshot). Outbound resolver Bug #2 (`payment_method_cod_label_id`, dst) sebenernya udah ke-fix di SPX deploy turn lalu via switch case di `resolveSourceValue` (line 67-71) — brief mungkin di-tulis sebelum verify. Confirmed via smoke test grep + smoke test sukses (typecheck pass + build sukses).
 
@@ -1412,7 +1492,8 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **034** | **Phase 8B — orders.resi_printed_at + picked_up_at + 2 index (1 partial) + trigger auto_set_resi_lifecycle_timestamps + 2 RPC (get_pending_pickup_orders, pending_pickup_summary). Slot 012 dipakai migration 3A, jadi pakai next free slot 034.** | **✅ Active** |
 | **035** | **Phase 8E — 9 kolom enrichment di orders (delivered/returned_at, tags[], priority enum, internal/customer_note, reject_reason, cs_attempts, last_contact_at) + profiles.preferences + organizations.settings + notifications table + 3 trigger (auto_set_delivery, notify_owner_financial_edit, block_admin_actual_edit + bypass setting) + 2 RPC (list_orders_enriched, list_audit_logs). Patch existing update_order_from_rekonsil dengan bypass. Slot 013 di brief dipakai Phase 1.5, jadi pakai slot 035.** | **✅ Active** |
 | **036** | **Phase 8F — inbox_unparsed_address table + RLS + 2 RPC (search_wilayah_fuzzy untuk autocomplete + check_order_export_ready untuk export gate). 15 mapping baru ke orderonline_inbound (address struktural + weight/cogs + Phase 8E fields + meta UTM/dropshipper). Address parser hybrid + inbox UI + export gate strict.** | **✅ Active** |
-| 037+ | TBD next phases | — |
+| **037** | **Phase 8G — master_wilayah_spx (7092 row authoritative SPX format) + lookup_spx_wilayah RPC (3-tier match) + inbox_invalid_phone table + RLS + cleanup 9 stuck orders. Plus seed via Node script `seed-master-wilayah-spx.mjs`. Update mapping spx_outbound #4-7 ke spx_*_lookup resolvers + #19 ke shipping_payment_default_id (constant "Dibayar Pengirim").** | **✅ Active** |
+| 038+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

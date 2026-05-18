@@ -10,7 +10,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { applyTransform, type TransformContext } from './transforms'
 import { indexValueMappings } from './parser'
-import { resolveSourceValue, type OutboundResolveWarning, type OrderForOutbound } from './outbound-resolvers'
+import {
+  resolveSourceValue,
+  resolveSpxLookupAsync,
+  isAsyncSpxLookup,
+  type SpxLookupCache,
+  type OutboundResolveWarning,
+  type OrderForOutbound,
+} from './outbound-resolvers'
 import { serializeForProfile, suggestOutboundFilename } from './serializer'
 import type {
   ConverterProfile,
@@ -127,6 +134,11 @@ export async function buildOutboundRows(opts: OutboundRowsOptions): Promise<Outb
   const orders = await loadOrders(opts.supabase, opts.organizationId, opts.orderIds)
   const orderMap = new Map(orders.map((o) => [o.id, o]))
 
+  // Phase 8G: cache SPX wilayah lookup per-order (4 fields share 1 RPC).
+  // Empty kalau profile tidak punya spx_*_lookup mapping.
+  const spxCache: SpxLookupCache = new Map()
+  const profileNeedsSpxLookup = sortedFields.some(fm => isAsyncSpxLookup(fm.source_field))
+
   for (let idx = 0; idx < opts.orderIds.length; idx++) {
     const id = opts.orderIds[idx]
     const order = orderMap.get(id)
@@ -141,7 +153,10 @@ export async function buildOutboundRows(opts: OutboundRowsOptions): Promise<Outb
       continue
     }
     try {
-      const row = buildRow(order, sortedFields, valueMapIndex, result.warnings)
+      const row = await buildRow(
+        order, sortedFields, valueMapIndex, result.warnings,
+        opts.supabase, spxCache, profileNeedsSpxLookup,
+      )
       result.rows.push(row)
       result.ordersIncluded++
     } catch (err) {
@@ -224,12 +239,15 @@ async function loadOrders(
   return all
 }
 
-function buildRow(
+async function buildRow(
   order: OrderForOutbound,
   fields: ConverterFieldMapping[],
   valueMapIndex: Map<string, Map<string, string>>,
-  warnings: OutboundRowWarning[]
-): Record<string, unknown> {
+  warnings: OutboundRowWarning[],
+  supabase: SupabaseClient,
+  spxCache: SpxLookupCache,
+  profileNeedsSpxLookup: boolean,
+): Promise<Record<string, unknown>> {
   const ctx: TransformContext = {
     orders: order as unknown as Record<string, unknown>,
     order_items: (order.items ?? []) as unknown as Array<Record<string, unknown>>,
@@ -237,7 +255,13 @@ function buildRow(
 
   const out: Record<string, unknown> = {}
   for (const fm of fields) {
-    let value = resolveSourceValue(fm.source_field, order, warnings)
+    // Phase 8G: dispatch async kalau spx_*_lookup field
+    let value: unknown
+    if (profileNeedsSpxLookup && isAsyncSpxLookup(fm.source_field)) {
+      value = await resolveSpxLookupAsync(fm.source_field, order, supabase, spxCache, warnings)
+    } else {
+      value = resolveSourceValue(fm.source_field, order, warnings)
+    }
 
     // Value mapping (raw → mapped). E.g. channel_courier_code 'JNE_VIA_MENGANTAR' → 'JNE'.
     const vmList = valueMapIndex.get(fm.source_field)

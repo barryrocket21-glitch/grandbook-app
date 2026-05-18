@@ -53,20 +53,47 @@ export async function parseCsv(
   return result.data || []
 }
 
+/**
+ * Phase 8I-Phone — preserve raw cell value to avoid Excel's scientific notation
+ * corruption pada integer 13 digit (phone numbers). SheetJS dengan raw:false
+ * pakai cell.w (formatted display); untuk cell type 'n' format General, Excel
+ * render integer panjang sebagai "6.28528E+12" → string presisi hilang.
+ *
+ * Fix: raw:true di sheet_to_json + cellDates:true di XLSX.read, lalu coerce
+ * setiap cell ke representation aman:
+ *   - number → toFixed(0) untuk integer (preserves "6285281479899"), else String()
+ *     Note: plain String() di JS sudah aman, toFixed(0) eksplisit untuk clarity.
+ *   - Date object (dari cellDates) → ISO string. Downstream transform parse_date_*
+ *     mungkin perlu update kalau profile pakai date-typed cells (saat ini
+ *     orderonline + SPX rekonsil store dates as STRING cells, jadi no regression).
+ *   - null/undefined → ''
+ *   - else → pass-through
+ */
+function coerceXlsxCell(v: unknown): unknown {
+  if (v === null || v === undefined) return ''
+  if (typeof v === 'number') {
+    return Number.isInteger(v) ? v.toFixed(0) : String(v)
+  }
+  if (v instanceof Date) {
+    return v.toISOString()
+  }
+  return v
+}
+
 export async function parseXlsx(
   file: File,
   profile: ConverterProfile
 ): Promise<Record<string, unknown>[]> {
   const buf = await file.arrayBuffer()
-  const wb = XLSX.read(buf, { type: 'array' })
+  const wb = XLSX.read(buf, { type: 'array', cellDates: true })
   const sheet = wb.Sheets[wb.SheetNames[0]]
   if (!sheet) return []
   const headerRowIdx = profile.has_header_row ? profile.header_row_index : 1
-  const allArrays = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+  const allArrays = (XLSX.utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,
-    raw: false,
+    raw: true,
     defval: '',
-  })
+  })).map(row => row.map(coerceXlsxCell))
   if (allArrays.length === 0) return []
   if (!profile.has_header_row) {
     return allArrays.map((arr) => {

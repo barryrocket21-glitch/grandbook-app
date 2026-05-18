@@ -55,6 +55,8 @@ export default function BulkUploadPage() {
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [result, setResult] = useState<IngestResult | null>(null)
   const [showErrorDetail, setShowErrorDetail] = useState(false)
+  // Phase 8H-1: CSV phone scientific notation pre-check
+  const [csvPhoneIssue, setCsvPhoneIssue] = useState<{ count: number } | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -102,7 +104,25 @@ export default function BulkUploadPage() {
   const goToPreview = async () => {
     if (!file || !profileDetail) return
     setPreviewLoading(true)
+    setCsvPhoneIssue(null)
     try {
+      // Phase 8H-1: CSV phone scientific notation pre-check.
+      // Excel auto-convert phone integer panjang jadi "6.28781E+12" saat
+      // open CSV → data corrupt irreversibly. Refuse preview kalau detected;
+      // suggest user re-export sebagai XLSX (preserves integer precision).
+      if (profileDetail.profile.file_format === 'CSV') {
+        const text = await file.text()
+        const sciMatches = text.match(/\b\d+(?:\.\d+)?[eE][+-]?\d+\b/g)
+        if (sciMatches && sciMatches.length > 0) {
+          setCsvPhoneIssue({ count: sciMatches.length })
+          toast.error('CSV phone corrupt', {
+            description: `${sciMatches.length} nomor scientific notation terdeteksi. Re-export Orderonline sebagai XLSX.`,
+          })
+          setPreviewLoading(false)
+          return
+        }
+      }
+
       const r = await previewParse(
         profileDetail.profile,
         profileDetail.fieldMappings,
@@ -158,6 +178,7 @@ export default function BulkUploadPage() {
     setPreview(null)
     setResult(null)
     setShowErrorDetail(false)
+    setCsvPhoneIssue(null)
   }
 
   if (!canCreate) {
@@ -246,7 +267,7 @@ export default function BulkUploadPage() {
               <input
                 type="file"
                 accept={profileDetail.profile.file_format === 'CSV' ? '.csv,text/csv' : '.xlsx,.xls'}
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={(e) => { setFile(e.target.files?.[0] || null); setCsvPhoneIssue(null) }}
                 className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-violet-500/10 file:text-violet-500 hover:file:bg-violet-500/20"
               />
               {file && (
@@ -255,6 +276,24 @@ export default function BulkUploadPage() {
                 </p>
               )}
             </div>
+            {csvPhoneIssue && (
+              <div className="text-xs space-y-2 p-3 rounded bg-red-500/10 border border-red-500/20 text-red-600">
+                <div className="font-semibold flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Phone Corrupt — Re-upload XLSX
+                </div>
+                <div>
+                  {csvPhoneIssue.count} nomor telepon terdeteksi dalam format scientific notation
+                  (mis. <code className="px-1 py-0.5 bg-red-500/10 rounded">6.28781E+12</code>).
+                  Ini terjadi karena Excel auto-convert integer panjang saat buka CSV →
+                  presisi hilang permanen, data tidak bisa di-recover.
+                </div>
+                <div>
+                  <span className="font-semibold">Fix:</span> Re-export dari Orderonline dashboard
+                  pakai format <span className="font-semibold">XLSX</span>, bukan CSV. XLSX preserve
+                  integer precision untuk nomor telepon panjang.
+                </div>
+              </div>
+            )}
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep('profile')}>
                 <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Kembali

@@ -155,17 +155,262 @@ export function extractKeywords(rawAddress: string): string[] {
     )
 }
 
+// =============================================================
+// Phase 8H — Parser V3 (lookup-driven, SPX-canonical)
+// =============================================================
+// V3 strategy: ekstrak kandidat tokens (subdistrict/city/province/village)
+// dari raw address, generate semua interpretasi (tuples), validate via
+// RPC parse_address_v3_lookup (4-tier match terhadap master_wilayah_spx).
+// DB jadi source of truth — pattern extraction kasih "guess", lookup validate.
+//
+// Address bugs fixed dibanding V2:
+//   Bug A: city as last segment, no province in text
+//          "...Kec. Pondok Aren. Tangerang Selatan"
+//          → last_segment="Tangerang Selatan" jadi city candidate
+//   Bug B: marker tanpa whitespace setelah dot
+//          "Kec.Bendo Magetan Jawa Timur"
+//          → regex relax \s* (vs \s+ V2) capture "Bendo" setelah "Kec."
+//   Bug C: city tanpa Kab./Kota prefix
+//          "Kec.Bendo Magetan Jawa Timur"
+//          → kalau province ke-detect + 2+ word setelah Kec., word ke-2 jadi
+//          implicit city candidate
+// =============================================================
+
+interface ExtractedTokensV3 {
+  subdistrict: string[]
+  city: string[]
+  province: string[]
+  village: string[]
+  last_segment: string | null
+}
+
+interface CandidateTuple {
+  province: string | null
+  city: string | null
+  subdistrict: string
+  priority: number
+}
+
+interface V3MatchRow {
+  province: string
+  city: string
+  subdistrict: string
+  zip: string
+  match_score: number
+  matched_via: string
+}
+
+const V3_MARKER_KEYWORDS = /\b(?:Kec|Kab|Kota|Kel|Desa|Kabupaten|Kecamatan|Kelurahan|Provinsi)\b/i
+const V3_STOP_PATTERN = /[,;\n]|\b(?:Kec|Kab|Kota|Kel|Desa|Kabupaten|Kecamatan|Kelurahan|Provinsi)\b|\.\s+[A-Z]|\.\s*$/
+
+function captureWordsAfterMarker(rawAddress: string, marker: RegExp): string[][] {
+  const results: string[][] = []
+  const re = new RegExp(marker.source, marker.flags)
+  let m: RegExpExecArray | null
+  while ((m = re.exec(rawAddress)) !== null) {
+    const startAfter = m.index + m[0].length
+    const remainder = rawAddress.substring(startAfter)
+    const stopMatch = remainder.match(V3_STOP_PATTERN)
+    const endIdx = stopMatch && stopMatch.index !== undefined ? stopMatch.index : remainder.length
+    const text = remainder.substring(0, endIdx).trim()
+    if (!text) continue
+    const words = text.split(/\s+/).filter(w => /^[A-Za-z][\w()]*$/.test(w))
+    if (words.length > 0) results.push(words)
+  }
+  return results
+}
+
+export function extractTokensV3(rawAddress: string): ExtractedTokensV3 {
+  const out: ExtractedTokensV3 = {
+    subdistrict: [],
+    city: [],
+    province: [],
+    village: [],
+    last_segment: null,
+  }
+
+  // Province detection — whole-word match against PROVINCE_NAMES anywhere in text
+  const lower = rawAddress.toLowerCase()
+  for (const prov of PROVINCE_NAMES) {
+    const escaped = prov.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (new RegExp(`\\b${escaped}\\b`, 'i').test(lower)) {
+      out.province.push(prov)
+    }
+  }
+  out.province = Array.from(new Set(out.province))
+  const provinceDetected = out.province.length > 0
+
+  // Subdistrict — relax to \s* (Bug B: "Kec.Bendo")
+  for (const words of captureWordsAfterMarker(rawAddress, /\bKec(?:amatan)?\.?\s*/gi)) {
+    out.subdistrict.push(words[0])
+    if (words.length >= 2) out.subdistrict.push(words.slice(0, 2).join(' '))
+    // Bug C: kalau province detected + 2+ word, word ke-2 might be implicit city
+    if (provinceDetected && words.length >= 2) {
+      out.city.push(words[1])
+      if (words.length >= 3) out.city.push(words.slice(1, 3).join(' '))
+    }
+  }
+
+  // City (Kab./Kota/Kabupaten)
+  for (const words of captureWordsAfterMarker(rawAddress, /\b(?:Kab(?:upaten)?|Kota)\.?\s*/gi)) {
+    out.city.push(words[0])
+    if (words.length >= 2) out.city.push(words.slice(0, 2).join(' '))
+    if (words.length >= 3) out.city.push(words.slice(0, 3).join(' '))
+  }
+
+  // Village (Kel./Desa/Kelurahan)
+  for (const words of captureWordsAfterMarker(rawAddress, /\b(?:Kel(?:urahan)?|Desa)\.?\s*/gi)) {
+    out.village.push(words[0])
+    if (words.length >= 2) out.village.push(words.slice(0, 2).join(' '))
+  }
+
+  // Last segment without marker — Bug A: city as last segment
+  const protectedAddr = rawAddress.replace(
+    /\b(Kec|Kab|Kota|Kel|Desa|Kabupaten|Kecamatan|Kelurahan|Provinsi)\./gi,
+    '$1__DOT__',
+  )
+  const segments = protectedAddr
+    .split(/[,;.]+/)
+    .map(s => s.replace(/__DOT__/g, '.').trim())
+    .filter(Boolean)
+
+  for (let i = segments.length - 1; i >= 0; i--) {
+    const seg = segments[i]
+    if (V3_MARKER_KEYWORDS.test(seg)) continue
+    if (/\b(RT|RW)\b/i.test(seg)) continue
+    if (seg.length < 4 || /^\d/.test(seg)) continue
+    if (out.province.some(p => seg.toLowerCase().includes(p))) continue
+    out.last_segment = seg
+    break
+  }
+
+  out.subdistrict = Array.from(new Set(out.subdistrict))
+  out.city = Array.from(new Set(out.city))
+  out.village = Array.from(new Set(out.village))
+
+  return out
+}
+
+export function buildCandidateTuples(tokens: ExtractedTokensV3): CandidateTuple[] {
+  const tuples: CandidateTuple[] = []
+  const seen = new Set<string>()
+
+  const add = (p: string | null, c: string | null, s: string) => {
+    if (!s) return
+    const key = `${p || ''}|${c || ''}|${s}`
+    if (seen.has(key)) return
+    seen.add(key)
+    const priority = p && c ? 100 : p || c ? 95 : 70
+    tuples.push({ province: p, city: c, subdistrict: s, priority })
+  }
+
+  const cityVariants = [...tokens.city, ...(tokens.last_segment ? [tokens.last_segment] : [])]
+  const provinceVariants = tokens.province
+
+  for (const sub of tokens.subdistrict) {
+    for (const prov of provinceVariants) {
+      for (const city of cityVariants) {
+        add(prov, city, sub)
+      }
+      add(prov, null, sub)
+    }
+    for (const city of cityVariants) {
+      add(null, city, sub)
+    }
+    add(null, null, sub)
+  }
+
+  return tuples.sort((a, b) => b.priority - a.priority)
+}
+
+async function tryParseAddressV3(
+  detail: string,
+  zipFromInput: string,
+  supabase: SupabaseClient,
+): Promise<ParseResult | null> {
+  const tokens = extractTokensV3(detail)
+  if (tokens.subdistrict.length === 0) return null
+
+  const tuples = buildCandidateTuples(tokens).slice(0, 20)
+  if (tuples.length === 0) return null
+
+  const allMatches: Array<V3MatchRow & { priority: number }> = []
+  for (const t of tuples) {
+    const { data, error } = await supabase.rpc('parse_address_v3_lookup', {
+      p_province: t.province,
+      p_city: t.city,
+      p_subdistrict: t.subdistrict,
+    })
+    if (error || !data) continue
+    for (const row of data as V3MatchRow[]) {
+      allMatches.push({ ...row, priority: t.priority })
+    }
+  }
+
+  if (allMatches.length === 0) return null
+
+  // Dedup by (province, city, subdistrict), keep best (score then priority)
+  const grouped = new Map<string, V3MatchRow & { priority: number }>()
+  for (const m of allMatches) {
+    const key = `${m.province}|${m.city}|${m.subdistrict}`
+    const existing = grouped.get(key)
+    if (!existing || m.match_score > existing.match_score
+        || (m.match_score === existing.match_score && m.priority > existing.priority)) {
+      grouped.set(key, m)
+    }
+  }
+  const unique = Array.from(grouped.values()).sort(
+    (a, b) => b.match_score - a.match_score || b.priority - a.priority,
+  )
+
+  const top = unique[0]
+  const runnerUp = unique[1]
+  // Ambiguous: gap < 10 AND top score < 100 (tier 1 unique wins absolutely)
+  const isAmbiguous = runnerUp !== undefined
+    && top.match_score < 100
+    && top.match_score - runnerUp.match_score < 10
+
+  if (isAmbiguous) {
+    return {
+      success: false,
+      reason: 'ambiguous',
+      candidates: unique.slice(0, 5).map(m => ({
+        id: 0,
+        province: m.province,
+        city: m.city,
+        subdistrict: m.subdistrict,
+        village: '',
+        zip: m.zip,
+        match_score: m.match_score,
+      })),
+      extracted_keywords: [],
+    }
+  }
+
+  const confidence: ParsedAddress['confidence'] =
+    top.match_score >= 95 ? 'high' : top.match_score >= 70 ? 'medium' : 'low'
+
+  return {
+    success: true,
+    province: top.province,
+    city: top.city,
+    subdistrict: top.subdistrict,
+    village: tokens.village[0] || null,
+    zip: top.zip || zipFromInput,
+    address_detail: detail,
+    confidence,
+  }
+}
+
 /**
- * Phase 8G — Pattern-aware parser. Priority:
- *   1. Trust structured fields (province + city + subdistrict ada) → high confidence
- *   2. Marker extraction (Kec./Kab./Kota/Kel.) → query subdistrict candidates,
- *      filter dengan context city/province → strong winner = high confidence
- *   3. Fallback ke generic V1 (extractKeywords + group by topScore)
- *
- * Address Indonesia well-structured (eg "Kec. Petarukan, Kab. Pemalang, Jawa Tengah")
- * harusnya HIT step 2 dan return high confidence. Phase 8F naive parser
- * gagal di kasus ini karena keyword "Petarukan", "Pemalang", "Jawa", "Tengah",
- * etc. semua hit multiple wilayah berbeda → false ambiguous detection.
+ * Phase 8H — Parser dengan V3 first → V2 pattern → V1 keyword fallback.
+ *   1. Trust structured fields (province + city + subdistrict ada) → high
+ *   2. V3: extractTokensV3 + buildCandidateTuples + parse_address_v3_lookup RPC
+ *      Handles Bug A/B/C (city as last segment, marker-tanpa-whitespace, city
+ *      tanpa Kab./Kota prefix). Operates against master_wilayah_spx (7092 row).
+ *   3. V2: extractTokensWithPatterns + search_wilayah_fuzzy (master_wilayah)
+ *      Fallback untuk address yang ga ke-cover V3 (mis. non-SPX area).
+ *   4. V1 legacy: extractKeywords + group by topScore (last resort)
  */
 export async function parseAddress(
   raw: ParseInput,
@@ -200,7 +445,11 @@ export async function parseAddress(
     }
   }
 
-  // STEP 2: Pattern-aware extraction
+  // STEP 2 (Phase 8H V3): lookup-driven against master_wilayah_spx
+  const v3 = await tryParseAddressV3(detailRaw, (raw.zip || '').trim(), supabase)
+  if (v3 && v3.success) return v3
+
+  // STEP 3 (Phase 8G V2): pattern-aware against master_wilayah (general)
   const tokens = extractTokensWithPatterns(detailRaw)
 
   if (tokens.subdistrict_candidates.length > 0) {

@@ -30,7 +30,10 @@ const cases = [
   },
 ]
 
-async function runWithClient(label: string, sb: ReturnType<typeof createClient>) {
+// Debug script — typed loose with `any` karena supabase-js typed RPC butuh
+// Database schema generic yang ga di-setup di project ini. rpc('parse_address_v3_lookup')
+// otherwise infer args type = undefined.
+async function runWithClient(label: string, sb: any) {
   console.log(`\n############### CLIENT: ${label} ###############`)
   for (const tc of cases) {
     console.log(`\n========== TC ${tc.name} ==========`)

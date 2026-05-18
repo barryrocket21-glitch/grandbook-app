@@ -136,6 +136,83 @@ export function getTransform(key: string | null | undefined): TransformDef | und
 }
 
 // =============================================================
+// Phase 8G — Defensive phone normalizer
+// =============================================================
+
+export type PhoneInvalidReason =
+  | 'scientific_notation'
+  | 'too_short'
+  | 'too_long'
+  | 'non_numeric'
+  | 'empty'
+
+export interface PhoneNormalizeResult {
+  /** Canonical 8xxx digits string (tanpa 0/+62 prefix). Atau raw kalau invalid. */
+  phone: string
+  isValid: boolean
+  reason?: PhoneInvalidReason
+}
+
+/**
+ * Defensive phone normalizer. Detects Excel scientific notation corruption
+ * ("6.28781E+12") plus length/format anomalies.
+ *
+ * INPUT: unknown — XLSX number, CSV string, atau null.
+ * OUTPUT: discriminated union dengan isValid flag.
+ *
+ * Engine inbound pakai ini setelah applyMappings untuk route invalid phones
+ * ke `inbox_invalid_phone` tabel untuk manual review.
+ */
+export function normalize_phone_id_safe(raw: unknown): PhoneNormalizeResult {
+  if (raw == null || raw === '') {
+    return { phone: '', isValid: false, reason: 'empty' }
+  }
+
+  // CASE 1: XLSX integer (e.g. 6287808123771)
+  if (typeof raw === 'number') {
+    if (!Number.isFinite(raw)) {
+      return { phone: String(raw), isValid: false, reason: 'non_numeric' }
+    }
+    const str = String(Math.trunc(raw))
+    if (str.length < 10) return { phone: str, isValid: false, reason: 'too_short' }
+    if (str.length > 15) return { phone: str, isValid: false, reason: 'too_long' }
+    return { phone: normalizeIndonesianPhone(str), isValid: true }
+  }
+
+  // CASE 2: String — bisa scientific notation, plain digits, atau dengan separator
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+
+    // CRITICAL: detect scientific notation (Excel CSV corruption pattern)
+    // Examples: "6.28781E+12", "6.28e+12", "6.2E12", "1.2345E10"
+    if (/^\d+(?:\.\d+)?[eE][+-]?\d+$/.test(trimmed)) {
+      return { phone: trimmed, isValid: false, reason: 'scientific_notation' }
+    }
+
+    const digits = trimmed.replace(/\D/g, '')
+    if (digits.length === 0) {
+      return { phone: trimmed, isValid: false, reason: 'non_numeric' }
+    }
+    if (digits.length < 10) return { phone: digits, isValid: false, reason: 'too_short' }
+    if (digits.length > 15) return { phone: digits, isValid: false, reason: 'too_long' }
+    return { phone: normalizeIndonesianPhone(digits), isValid: true }
+  }
+
+  return { phone: String(raw), isValid: false, reason: 'non_numeric' }
+}
+
+/**
+ * Canonicalize digit-only string ke 8xxxxxxxxx (strip 62 / 0 prefix).
+ * "08123456789" → "8123456789"
+ * "628123456789" → "8123456789"
+ */
+function normalizeIndonesianPhone(digits: string): string {
+  if (digits.startsWith('62')) return digits.slice(2)
+  if (digits.startsWith('0')) return digits.slice(1)
+  return digits
+}
+
+// =============================================================
 // Runtime application (preview only — Phase 3 engine may diverge)
 // =============================================================
 
@@ -172,12 +249,18 @@ export function applyTransform(
       case 'lowercase':
         return { ok: true, value: s.toLowerCase() }
       case 'normalize_phone_id': {
-        const digits = s.replace(/\D/g, '')
-        if (!digits) return { ok: true, value: '' }
-        if (digits.startsWith('62')) return { ok: true, value: '0' + digits.slice(2) }
-        if (digits.startsWith('8')) return { ok: true, value: '0' + digits }
-        if (digits.startsWith('0')) return { ok: true, value: digits }
-        return { ok: true, value: digits }
+        // Phase 8G — defensive: detect scientific notation corruption dari Excel CSV export.
+        // Pattern: "6.28781E+12" / "6.28e+12" → tetap return raw value supaya engine
+        // bisa detect invalid via normalize_phone_id_safe & route ke inbox_invalid_phone.
+        const safe = normalize_phone_id_safe(raw)
+        if (!safe.isValid) {
+          // Return raw string untuk preserve evidence di customer_phone.
+          // Engine layer akan call normalize_phone_id_safe lagi & route ke inbox.
+          return { ok: true, value: safe.phone }
+        }
+        // Canonical 08xxx format untuk display di GrandBook (mirror behavior lama)
+        const noPrefix = safe.phone  // already 8xxxxx after normalizeIndonesianPhone
+        return { ok: true, value: '0' + noPrefix }
       }
       case 'phone_to_628': {
         const digits = s.replace(/\D/g, '')

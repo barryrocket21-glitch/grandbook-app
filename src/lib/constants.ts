@@ -219,6 +219,8 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses', roles: ['owner', 'admin'] },
       // Phase 8F — CS perlu akses untuk resolve alamat
       { title: 'Address Review', href: '/inbox/address-review' },
+      // Phase 8G — CS resolve phone yang corrupt dari CSV
+      { title: 'Phone Review', href: '/inbox/phone-review' },
     ],
   },
   {

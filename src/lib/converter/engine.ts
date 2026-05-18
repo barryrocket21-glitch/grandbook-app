@@ -3,7 +3,7 @@
 // Handles INBOUND_ORDER + WA_PASTE direction.
 // REKONSIL → Phase 3B. OUTBOUND → Phase 3C.
 // =============================================================
-import { applyTransform } from './transforms'
+import { applyTransform, normalize_phone_id_safe, type PhoneInvalidReason } from './transforms'
 import { indexValueMappings, parseSource } from './parser'
 import {
   createProductMatcher,
@@ -26,6 +26,11 @@ interface AddressParseFailureForInbox {
     candidates: WilayahCandidate[]
     reason_failed: 'no_match' | 'ambiguous' | 'too_short' | 'empty_input'
   }
+}
+
+interface PhoneFailureForInbox {
+  raw_phone: string
+  reason: PhoneInvalidReason
 }
 
 export type IngestStatus = 'BARU' | 'SIAP_KIRIM'
@@ -160,6 +165,23 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         result,
         rowIndex
       )
+
+      // Phase 8G: defensive phone validation. Detect Excel scientific notation
+      // corruption (CSV export bug) + length anomalies. Invalid phone tetap masuk
+      // ordersData (best-effort preserve evidence) + queue ke inbox_invalid_phone.
+      let phoneFailure: PhoneFailureForInbox | null = null
+      // Pakai raw row value (sebelum applyTransform), supaya evidence kalau corrupt
+      // tetap utuh. Lookup by source_field 'phone' (Orderonline convention).
+      const rawPhoneFromRow = (raw as Record<string, unknown>)['phone']
+      const phoneCheck = normalize_phone_id_safe(
+        rawPhoneFromRow !== undefined ? rawPhoneFromRow : ordersData.customer_phone
+      )
+      if (!phoneCheck.isValid && phoneCheck.reason !== 'empty') {
+        phoneFailure = {
+          raw_phone: String(rawPhoneFromRow ?? ordersData.customer_phone ?? ''),
+          reason: phoneCheck.reason!,
+        }
+      }
 
       // Phase 8F: hybrid address parser. Trust structured fields kalau lengkap;
       // kalau hanya address detail (free-text) → call RPC search_wilayah_fuzzy
@@ -322,6 +344,29 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
           })
         }
         continue
+      }
+
+      // Phase 8G: kalau phone invalid, queue ke inbox_invalid_phone
+      if (phoneFailure) {
+        const { error: phErr } = await opts.supabase
+          .from('inbox_invalid_phone')
+          .insert({
+            organization_id: opts.organizationId,
+            order_id: orderRow.id,
+            raw_phone: phoneFailure.raw_phone,
+            reason: phoneFailure.reason,
+          })
+        if (phErr) {
+          result.warnings.push({
+            rowIndex,
+            message: `Phone invalid tapi inbox insert error: ${phErr.message}. Order id=${orderRow.id} tetap masuk.`,
+          })
+        } else {
+          result.warnings.push({
+            rowIndex,
+            message: `Order id=${orderRow.id} phone "${phoneFailure.raw_phone}" invalid (${phoneFailure.reason}). Cek /inbox/phone-review.`,
+          })
+        }
       }
 
       // Phase 8F: kalau address parser fail, queue ke inbox_unparsed_address

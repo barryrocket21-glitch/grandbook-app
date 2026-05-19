@@ -166,3 +166,49 @@ export function groupByCategory(): Record<ColumnCategory, ColumnDef[]> {
   }
   return map
 }
+
+/**
+ * Phase 8I-Followup Fix 2 (4-quick-fixes) — merge new system columns into user's
+ * saved column_order at their NATURAL position (bukan append ke akhir).
+ *
+ * Algorithm: untuk tiap missing column dari userOrder yang ada di systemOrder,
+ * cari anchor = kolom terdekat SEBELUMNYA di systemOrder yang juga ada di
+ * userOrder. Insert AFTER anchor itu di result. Kalau ga ada anchor (mis. new
+ * column ada di posisi 0 systemOrder dan user belum punya), insert di awal.
+ *
+ * Contoh untuk product_summary (sysIdx 7, antara customer_phone & customer_city):
+ *   - Anchor = customer_phone (sysIdx 6) kalau user punya — insert setelahnya
+ *   - Fallback ke customer_name (sysIdx 5) — insert setelahnya
+ *   - User visibility setting tetap respected — order != visibility
+ */
+export function mergeNewColumnsByAnchor(userOrder: string[], systemOrder: string[]): string[] {
+  const userSet = new Set(userOrder)
+  const result = [...userOrder]
+  const inserted = new Set<string>()
+
+  for (let sysIdx = 0; sysIdx < systemOrder.length; sysIdx++) {
+    const id = systemOrder[sysIdx]
+    if (userSet.has(id) || inserted.has(id)) continue
+
+    // Find latest anchor SEBELUM id di systemOrder yang ada di result
+    let anchorPosInResult = -1
+    for (let i = sysIdx - 1; i >= 0; i--) {
+      const anchorId = systemOrder[i]
+      const pos = result.indexOf(anchorId)
+      if (pos >= 0) {
+        anchorPosInResult = pos
+        break
+      }
+    }
+
+    if (anchorPosInResult >= 0) {
+      // Insert AFTER anchor
+      result.splice(anchorPosInResult + 1, 0, id)
+    } else {
+      // No anchor (new column di prefix systemOrder) → insert di awal
+      result.unshift(id)
+    }
+    inserted.add(id)
+  }
+  return result
+}

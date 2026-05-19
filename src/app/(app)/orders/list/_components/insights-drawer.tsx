@@ -152,7 +152,13 @@ export function InsightsDrawer({
                 value={dimension}
                 onValueChange={(v) => v && setDimension(v as OrderDimension)}
               >
-                <SelectTrigger className="w-full h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full h-8 text-xs">
+                  {/* Fix 3 (4-quick-fixes): render-fn supaya SelectValue display label
+                      Indonesia, bukan internal value ('city' → 'Kota' dst). */}
+                  <SelectValue>
+                    {(v: string | null) => v ? ORDER_DIMENSION_LABEL[v as OrderDimension] ?? v : 'Pilih dimensi'}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   {(Object.keys(ORDER_DIMENSION_LABEL) as OrderDimension[]).map((d) => (
                     <SelectItem key={d} value={d}>{ORDER_DIMENSION_LABEL[d]}</SelectItem>
@@ -166,7 +172,14 @@ export function InsightsDrawer({
                 value={statusFilter}
                 onValueChange={(v) => v && setStatusFilter(v as 'ALL' | OrderStatus)}
               >
-                <SelectTrigger className="w-full h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full h-8 text-xs">
+                  <SelectValue>
+                    {(v: string | null) => {
+                      if (!v || v === 'ALL') return 'Semua status'
+                      return STATUS_LABEL[v as OrderStatus] ?? v
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">Semua status</SelectItem>
                   {INTERNAL_STATUSES.map((s) => (

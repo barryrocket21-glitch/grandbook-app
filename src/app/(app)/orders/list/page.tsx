@@ -21,6 +21,7 @@ import { format, parseISO } from 'date-fns'
 import {
   COLUMNS, COLUMNS_BY_ID,
   SYSTEM_DEFAULT_VISIBILITY, SYSTEM_DEFAULT_ORDER, SYSTEM_DEFAULT_WIDTHS,
+  mergeNewColumnsByAnchor,
 } from '@/lib/orders/columns-config'
 import { ColumnCustomizer, persistOrdersListPreferences } from '@/components/orders/column-customizer'
 import { EditableCell } from '@/components/orders/editable-cell'
@@ -109,15 +110,16 @@ function OrdersListInner() {
           ...(userOrdersList?.column_visibility ?? {}),
         })
 
-        // Bug 2 fix (3.6): existing user yang prefs-nya disimpan sebelum kita
-        // tambah kolom baru (mis. product_summary di Phase 8I-Followup Part 2)
-        // → column_order ga punya kolom baru itu, jadi visibleColumns filter
-        // ngabaikan walau visibility=true. Solusi: append column ID baru
-        // (dari SYSTEM_DEFAULT_ORDER) ke akhir user's order kalau belum ada.
+        // Bug 2 fix (3.6) + Fix 2 (4-quick-fixes): existing user yang prefs-nya
+        // disimpan sebelum kita tambah kolom baru (mis. product_summary) → tidak
+        // ada di user's column_order. Solusi original (append ke akhir) bikin user
+        // harus drag manual karena product muncul off-screen kanan. Fix 2 update:
+        // insert tiap missing column di POSISI NATURAL — cari anchor "kolom sebelum"
+        // dari SYSTEM_DEFAULT_ORDER yang ADA di user's order, lalu insert AFTER itu.
+        // Contoh: product_summary anchor = customer_phone (atau customer_name kalau
+        // phone hidden) → muncul antara Customer dan Kota di visible order user.
         const userOrderArr = userOrdersList?.column_order ?? teamDefault?.column_order ?? SYSTEM_DEFAULT_ORDER
-        const userOrderSet = new Set(userOrderArr)
-        const missingNewColumns = SYSTEM_DEFAULT_ORDER.filter(id => !userOrderSet.has(id))
-        setOrder(missingNewColumns.length > 0 ? [...userOrderArr, ...missingNewColumns] : userOrderArr)
+        setOrder(mergeNewColumnsByAnchor(userOrderArr, SYSTEM_DEFAULT_ORDER))
 
         // Bug 3 fix (3.6): kalau user width LEBIH KECIL dari system default,
         // ada kemungkinan saved width = legacy old-default yang sekarang stale
@@ -304,10 +306,12 @@ function OrdersListInner() {
 
       {/* Phase 8I-Followup Part 3 — status breakdown stats bar.
           Bug 1 fix (3.6): wrap di div sticky top-0 supaya stats tetap visible saat
-          scroll vertikal panjang, dan z-20 supaya di atas tabel header. backdrop-blur
-          biar tetap readable saat row tabel di belakang. -mx + px ngebuat full-bleed
-          padding parent. */}
-      <div className="sticky top-0 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-2 bg-background/95 backdrop-blur-sm border-b border-border/40">
+          scroll vertikal panjang. backdrop-blur biar tetap readable saat row tabel
+          di belakang. -mx + px ngebuat full-bleed padding parent.
+          Fix 1 (4-quick-fixes): z-10 (turun dari z-20) supaya sidebar overlay (z-10
+          fixed) yang hover/expand muncul di ATAS stats bar. Stats bar cuma perlu di
+          atas table content (z-0), bukan di atas sidebar. */}
+      <div className="sticky top-0 z-10 -mx-4 md:-mx-6 px-4 md:px-6 py-2 bg-background/95 backdrop-blur-sm border-b border-border/40">
         <StatusStatsBar
           stats={statusStats}
           totalCount={statusStatsTotal}

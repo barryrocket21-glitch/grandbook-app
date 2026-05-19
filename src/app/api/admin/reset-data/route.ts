@@ -2,20 +2,23 @@ import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
+const CONFIRM_TOKEN = 'RESET'
+
 export async function POST(request: Request) {
   // Owner only
   const sb = await createServerClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await sb.from('profiles').select('role, organization_id').eq('id', user.id).single()
   if (profile?.role !== 'owner') return NextResponse.json({ error: 'Hanya Owner' }, { status: 403 })
 
   const body = await request.json().catch(() => null)
   if (!body || !body.tables || !Array.isArray(body.tables)) {
     return NextResponse.json({ error: 'Body wajib { tables: string[] }' }, { status: 400 })
   }
-  if (body.confirm !== 'HAPUS SEMUA') {
-    return NextResponse.json({ error: 'Confirm token salah. Wajib kirim confirm: "HAPUS SEMUA".' }, { status: 400 })
+  // Phase 8I-Followup Fix 4.1 — confirm token diganti dari "HAPUS SEMUA" ke "RESET".
+  if (body.confirm !== CONFIRM_TOKEN) {
+    return NextResponse.json({ error: `Confirm token salah. Wajib kirim confirm: "${CONFIRM_TOKEN}".` }, { status: 400 })
   }
 
   const ALLOWED = new Set([
@@ -37,6 +40,39 @@ export async function POST(request: Request) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
+  // Phase 8I-Followup Fix 4.3 — META audit log entry SEBELUM delete. Capture
+  // who/when/which tables/total rows. Per-row DELETE akan ke-log via trigger
+  // (Fix 4.2). Meta event ini terpisah supaya searchable & ringkas.
+  //
+  // Pre-flight: hitung baris yang AKAN dihapus per table untuk include di payload.
+  const tablesRequested: string[] = body.tables.filter((t: string) => ALLOWED.has(t))
+  const preCounts: Record<string, number | null> = {}
+  for (const t of tablesRequested) {
+    const { count } = await admin.from(t).select('*', { head: true, count: 'exact' })
+    preCounts[t] = count ?? null
+  }
+  const totalRows = Object.values(preCounts).reduce<number>((sum, c) => sum + (c ?? 0), 0)
+
+  try {
+    await admin.from('audit_log').insert({
+      user_id: user.id,
+      table_name: 'orders',  // Bucket dominant — orders is yang paling impactful biasanya
+      record_id: 'RESET_ALL',
+      action: 'BULK_DELETE',
+      old_value: {
+        reason: 'Reset Data button (/settings/reset-data)',
+        tables: tablesRequested,
+        pre_counts: preCounts,
+        total_rows: totalRows,
+        organization_id: profile?.organization_id ?? null,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  } catch (err) {
+    // Non-fatal — kalau audit_log insert gagal, lanjut tapi log warning di response.
+    console.warn('Reset Data: audit_log insert failed', err)
+  }
+
   const results: Record<string, number | string> = {}
   // Order matters: kill orders first so commissions cascade, lalu yang lain
   const order = ['orders', 'cs_daily_leads', 'ad_spend', 'expenses', 'ad_reconciliation', 'campaigns', 'commission_rules', 'products']
@@ -57,10 +93,15 @@ export async function POST(request: Request) {
       } else {
         results[t] = `${count ?? 0} rows`
       }
-    } catch (err: any) {
-      results[t] = `error: ${err.message}`
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      results[t] = `error: ${msg}`
     }
   }
 
-  return NextResponse.json({ ok: true, results })
+  return NextResponse.json({
+    ok: true,
+    results,
+    audit: { user_id: user.id, total_rows_before_delete: totalRows, timestamp: new Date().toISOString() },
+  })
 }

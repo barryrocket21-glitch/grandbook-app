@@ -576,6 +576,42 @@ export interface OrderStatusStat {
   pct: number
 }
 
+/** Phase 8I-Followup Part 4F — group-by dimensi untuk insights drawer */
+export type OrderDimension =
+  | 'city'
+  | 'province'
+  | 'product'
+  | 'supplier'
+  | 'channel'
+  | 'status'
+  | 'payment_method'
+  | 'day'
+  | 'week'
+  | 'month'
+
+export interface OrderDimensionStat {
+  dimension_value: string
+  order_count: number
+  total_value: number
+  total_payout: number | null
+  total_est_profit: number
+  pct_of_total: number
+}
+
+/** Dropdown labels Indonesian-friendly */
+export const ORDER_DIMENSION_LABEL: Record<OrderDimension, string> = {
+  city: 'Kota',
+  province: 'Provinsi',
+  product: 'Produk',
+  supplier: 'Supplier',
+  channel: 'Ekspedisi',
+  status: 'Status',
+  payment_method: 'Metode Bayar',
+  day: 'Per Hari',
+  week: 'Per Minggu',
+  month: 'Per Bulan',
+}
+
 /** Saved column view per user */
 export interface SavedView {
   id: string

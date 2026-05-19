@@ -26,6 +26,7 @@ import { ColumnCustomizer, persistOrdersListPreferences } from '@/components/ord
 import { EditableCell } from '@/components/orders/editable-cell'
 import { OrderRowActions } from '@/components/orders/order-row-actions'
 import { StatusStatsBar } from './_components/status-stats-bar'
+import { InsightsDrawer } from './_components/insights-drawer'
 import { ORDER_PRIORITIES } from '@/lib/types'
 import { isEditableField } from '@/lib/schemas/order-update'
 import type {
@@ -51,11 +52,16 @@ function OrdersListInner() {
   const searchParams = useSearchParams()
   const initialStatus = (searchParams.get('status') || 'ALL') as 'ALL' | OrderStatus
   const initialStuck  = searchParams.get('stuck_pickup') === 'true'
+  // Phase 8I-Followup Part 4F — read from/to dari URL untuk Insights drawer click-through
+  const initialFrom   = searchParams.get('from')
+  const initialTo     = searchParams.get('to')
 
   // ---------- Filters ----------
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'ALL' | OrderStatus>(initialStatus)
   const [stuckPickup, setStuckPickup] = useState(initialStuck)
+  const [dateFrom, setDateFrom] = useState<string>(initialFrom ?? '')
+  const [dateTo, setDateTo] = useState<string>(initialTo ?? '')
   const [page, setPage] = useState(0)
 
   // ---------- Data ----------
@@ -167,16 +173,16 @@ function OrdersListInner() {
       // tetap tampil di bar walau user lagi filter ke 1 status).
       const [listResp, statsResp] = await Promise.all([
         supabase.rpc('list_orders_enriched', {
-          p_from: null,
-          p_to: null,
+          p_from: dateFrom || null,
+          p_to: dateTo || null,
           p_status: stuckPickup ? 'SIAP_KIRIM' : (statusFilter === 'ALL' ? null : statusFilter),
           p_search: search.trim() || null,
           p_limit: PAGE_SIZE,
           p_offset: page * PAGE_SIZE,
         }),
         supabase.rpc('get_orders_status_stats', {
-          p_from: null,
-          p_to: null,
+          p_from: dateFrom || null,
+          p_to: dateTo || null,
           p_search: search.trim() || null,
         }),
       ])
@@ -200,12 +206,28 @@ function OrdersListInner() {
       setRefreshing(false)
       setStatsLoading(false)
     }
-  }, [statusFilter, search, page, stuckPickup])
+  }, [statusFilter, search, page, stuckPickup, dateFrom, dateTo])
 
   useEffect(() => { loadOrders() }, [loadOrders])
 
   // Reset page kalau filter berubah
-  useEffect(() => { setPage(0) }, [statusFilter, search, stuckPickup])
+  useEffect(() => { setPage(0) }, [statusFilter, search, stuckPickup, dateFrom, dateTo])
+
+  // Phase 8I-Followup Part 4F — Sync filter state ke URL params kalau berubah
+  // (mis. dari InsightsDrawer click-through yang router.push baru). Pakai search
+  // param sebagai source of truth saat URL berubah, NOT initial mount (yang sudah
+  // di-handle via useState initializer).
+  useEffect(() => {
+    const urlStatus = searchParams.get('status')
+    if (urlStatus && urlStatus !== statusFilter) {
+      setStatusFilter(urlStatus as 'ALL' | OrderStatus)
+    }
+    const urlFrom = searchParams.get('from') || ''
+    if (urlFrom !== dateFrom) setDateFrom(urlFrom)
+    const urlTo = searchParams.get('to') || ''
+    if (urlTo !== dateTo) setDateTo(urlTo)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Filter "Resi Stuck" → apply client-side filter on top of fetched data
   // (server-side cuma filter status=SIAP_KIRIM)
@@ -253,6 +275,11 @@ function OrdersListInner() {
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
+            <InsightsDrawer
+              initialFrom={dateFrom || null}
+              initialTo={dateTo || null}
+              initialStatus={statusFilter}
+            />
             <ColumnCustomizer
               visibility={visibility}
               order={order}
@@ -321,6 +348,33 @@ function OrdersListInner() {
                 ))}
               </SelectContent>
             </Select>
+            {/* Phase 8I-Followup Part 4F — date range inputs.
+                Wired ke RPC p_from/p_to. URL param `from`/`to` sync via useEffect
+                supaya InsightsDrawer click-through dimension day/month bisa apply. */}
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="w-36 text-xs"
+              title="Tanggal dari"
+            />
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="w-36 text-xs"
+              title="Tanggal sampai"
+            />
+            {(dateFrom || dateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setDateFrom(''); setDateTo('') }}
+                className="text-xs"
+              >
+                Clear tanggal
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">

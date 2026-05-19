@@ -20,6 +20,7 @@ import type { EditableField } from '@/lib/schemas/order-update'
 export type ColumnCategory =
   | 'identity'
   | 'customer'
+  | 'product'
   | 'pricing'
   | 'profit'
   | 'status_flow'
@@ -33,6 +34,7 @@ export type ColumnCategory =
 export const CATEGORY_LABEL: Record<ColumnCategory, string> = {
   identity:    'Identitas',
   customer:    'Customer',
+  product:     'Produk',
   pricing:     'Harga',
   profit:      'Profit (Computed)',
   status_flow: 'Status & Flow',
@@ -70,6 +72,12 @@ export const COLUMNS: ColumnDef[] = [
   // === Customer ===
   { id: 'customer_name',     label: 'Customer',    category: 'customer',    default_visible: true,  default_width: 180 },
   { id: 'customer_phone',    label: 'No HP',       category: 'customer',    default_visible: false, default_width: 140, editable_field: 'customer_phone' },
+
+  // === Product (Phase 8I-Followup Part 2) — posisi reading order setelah customer ===
+  { id: 'product_summary',   label: 'Produk',      category: 'product',     default_visible: true,  default_width: 200 },
+  { id: 'product_count',     label: 'Item Lines',  category: 'product',     default_visible: false, default_width: 80,  align: 'right', format: 'number' },
+  { id: 'total_qty',         label: 'Total Qty',   category: 'product',     default_visible: false, default_width: 80,  align: 'right', format: 'number' },
+
   // Phase 8I-Followup hotfix: max kota di Indonesia "KAB. PENAJAM PASER UTARA" (24 char).
   // Truncate dengan tooltip kalau lebih panjang dari ~180px (sekitar 23-24 char text-xs).
   { id: 'customer_city',     label: 'Kota',        category: 'customer',    default_visible: true,  default_width: 180, editable_field: 'customer_city' },
@@ -92,8 +100,9 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'shipping_diff',     label: 'Selisih Ongkir', category: 'profit',   default_visible: false, default_width: 110, align: 'right', format: 'rupiah' },
 
   // === Status & Flow ===
-  // Phase 8I-Followup hotfix: 130px untuk badge "Siap Kirim" + chevron (Select line-clamp-1).
-  { id: 'status',            label: 'Status',      category: 'status_flow', default_visible: true,  default_width: 130, editable_field: 'status' },
+  // Phase 8I-Followup hotfix (2nd iter): 150px — 130px masih bikin "Siap Kirim" terpotong jadi "Siap K"
+  // karena SelectTrigger chevron + padding makan ~32px, badge "Siap Kirim" butuh ~80px = total 130px tight.
+  { id: 'status',            label: 'Status',      category: 'status_flow', default_visible: true,  default_width: 150, editable_field: 'status' },
   { id: 'priority',          label: 'Prioritas',   category: 'status_flow', default_visible: true,  default_width: 90,  editable_field: 'priority' },
   { id: 'days_in_status',    label: 'Hari Status', category: 'status_flow', default_visible: true,  default_width: 90,  align: 'right' },
 

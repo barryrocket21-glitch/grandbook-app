@@ -25,10 +25,11 @@ import {
 import { ColumnCustomizer, persistOrdersListPreferences } from '@/components/orders/column-customizer'
 import { EditableCell } from '@/components/orders/editable-cell'
 import { OrderRowActions } from '@/components/orders/order-row-actions'
+import { StatusStatsBar } from './_components/status-stats-bar'
 import { ORDER_PRIORITIES } from '@/lib/types'
 import { isEditableField } from '@/lib/schemas/order-update'
 import type {
-  OrderStatus, OrderEnriched, UserPreferences, OrganizationSettings, SavedView,
+  OrderStatus, OrderEnriched, OrderStatusStat, UserPreferences, OrganizationSettings, SavedView,
 } from '@/lib/types'
 
 const supabase = createClient()
@@ -62,6 +63,11 @@ function OrdersListInner() {
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+
+  // Phase 8I-Followup Part 3 — status breakdown stats bar
+  const [statusStats, setStatusStats] = useState<OrderStatusStat[]>([])
+  const [statusStatsTotal, setStatusStatsTotal] = useState(0)
+  const [statsLoading, setStatsLoading] = useState(true)
 
   // ---------- Column view state (load dari profiles.preferences + org default) ----------
   const [visibility, setVisibility] = useState<Record<string, boolean>>(SYSTEM_DEFAULT_VISIBILITY)
@@ -137,23 +143,43 @@ function OrdersListInner() {
     if (!silent) setLoading(true)
     else setRefreshing(true)
     try {
-      const { data, error } = await supabase.rpc('list_orders_enriched', {
-        p_from: null,
-        p_to: null,
-        p_status: stuckPickup ? 'SIAP_KIRIM' : (statusFilter === 'ALL' ? null : statusFilter),
-        p_search: search.trim() || null,
-        p_limit: PAGE_SIZE,
-        p_offset: page * PAGE_SIZE,
-      })
-      if (error) throw error
-      const rs = (data || []) as OrderEnriched[]
+      // Phase 8I-Followup Part 3 — fetch list + stats parallel. Stats berbasis
+      // filter date/search yang sama, tapi TANPA p_status (supaya semua status
+      // tetap tampil di bar walau user lagi filter ke 1 status).
+      const [listResp, statsResp] = await Promise.all([
+        supabase.rpc('list_orders_enriched', {
+          p_from: null,
+          p_to: null,
+          p_status: stuckPickup ? 'SIAP_KIRIM' : (statusFilter === 'ALL' ? null : statusFilter),
+          p_search: search.trim() || null,
+          p_limit: PAGE_SIZE,
+          p_offset: page * PAGE_SIZE,
+        }),
+        supabase.rpc('get_orders_status_stats', {
+          p_from: null,
+          p_to: null,
+          p_search: search.trim() || null,
+        }),
+      ])
+      if (listResp.error) throw listResp.error
+      const rs = (listResp.data || []) as OrderEnriched[]
       setRows(rs)
       setTotalCount(rs[0]?.total_count ? Number(rs[0].total_count) : 0)
+
+      // Stats: jangan throw kalau RPC stats error (bar optional)
+      if (statsResp.error) {
+        console.warn('get_orders_status_stats failed:', statsResp.error)
+      } else {
+        const stats = (statsResp.data || []) as OrderStatusStat[]
+        setStatusStats(stats)
+        setStatusStatsTotal(stats.reduce((sum, s) => sum + Number(s.cnt), 0))
+      }
     } catch (err) {
       console.warn('list_orders_enriched failed:', err)
     } finally {
       setLoading(false)
       setRefreshing(false)
+      setStatsLoading(false)
     }
   }, [statusFilter, search, page, stuckPickup])
 
@@ -228,6 +254,18 @@ function OrdersListInner() {
             />
           </div>
         }
+      />
+
+      {/* Phase 8I-Followup Part 3 — status breakdown stats bar. Klik card → filter ke status. */}
+      <StatusStatsBar
+        stats={statusStats}
+        totalCount={statusStatsTotal}
+        activeStatus={stuckPickup ? null : statusFilter}
+        onStatusClick={(s) => {
+          if (stuckPickup) setStuckPickup(false)
+          setStatusFilter(s)
+        }}
+        loading={statsLoading}
       />
 
       <Card>
@@ -423,6 +461,38 @@ function CellRenderer({ row, colId, onUpdated }: {
     return row.is_repeat_customer
       ? <Badge variant="outline" className="bg-violet-500/10 text-violet-600 text-[10px]">Repeat</Badge>
       : <span className="text-muted-foreground">—</span>
+  }
+
+  // Phase 8I-Followup Part 2 — produk summary dengan compact display untuk multi-item.
+  // 1 item: tampil langsung "Nama Produk (1x)".
+  // N item: tampil primary_product_name + Badge "+N-1" dengan tooltip full summary.
+  if (colId === 'product_summary') {
+    const summary = row.product_summary || '—'
+    const count = row.product_count || 0
+    if (count === 0) return <span className="text-muted-foreground italic">—</span>
+    if (count === 1) {
+      return (
+        <span className="text-xs truncate inline-block max-w-full align-middle" title={summary}>
+          {summary}
+        </span>
+      )
+    }
+    // Multi-item: primary + "+N more" badge
+    const primary = row.primary_product_name || summary.split(',')[0]?.trim() || '—'
+    return (
+      <div className="flex items-center gap-1 min-w-0" title={summary}>
+        <span className="text-xs truncate min-w-0">{primary}</span>
+        <Badge variant="outline" className="text-[10px] shrink-0 bg-violet-500/10 text-violet-600">
+          +{count - 1}
+        </Badge>
+      </div>
+    )
+  }
+
+  if (colId === 'primary_product_name') {
+    return row.primary_product_name
+      ? <span className="text-xs truncate inline-block max-w-full" title={row.primary_product_name}>{row.primary_product_name}</span>
+      : <span className="text-muted-foreground italic">—</span>
   }
 
   // Editable field via EditableCell

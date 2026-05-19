@@ -560,8 +560,20 @@ export interface OrderEnriched {
   last_contact_at: string | null
   created_at: string
   updated_at: string
+  // Phase 8I-Followup Part 2 — produk summary (RPC aggregation)
+  product_summary: string | null         // e.g. "Nature Gemuk Badan (1x)" atau "Kran (2x), Paranet (1x)"
+  product_count: number                  // jumlah baris di order_items
+  total_qty: number                      // sum of qty
+  primary_product_name: string | null    // produk pertama untuk filter/sort/display compact
   // Pagination
   total_count: number
+}
+
+/** Phase 8I-Followup Part 3 — status breakdown stats untuk StatusStatsBar */
+export interface OrderStatusStat {
+  status: OrderStatus
+  cnt: number
+  pct: number
 }
 
 /** Saved column view per user */

@@ -102,12 +102,31 @@ function OrdersListInner() {
           ...(teamDefault?.column_visibility ?? {}),
           ...(userOrdersList?.column_visibility ?? {}),
         })
-        setOrder(userOrdersList?.column_order ?? teamDefault?.column_order ?? SYSTEM_DEFAULT_ORDER)
-        setWidths({
-          ...SYSTEM_DEFAULT_WIDTHS,
-          ...(teamDefault?.column_widths ?? {}),
-          ...(userOrdersList?.column_widths ?? {}),
-        })
+
+        // Bug 2 fix (3.6): existing user yang prefs-nya disimpan sebelum kita
+        // tambah kolom baru (mis. product_summary di Phase 8I-Followup Part 2)
+        // → column_order ga punya kolom baru itu, jadi visibleColumns filter
+        // ngabaikan walau visibility=true. Solusi: append column ID baru
+        // (dari SYSTEM_DEFAULT_ORDER) ke akhir user's order kalau belum ada.
+        const userOrderArr = userOrdersList?.column_order ?? teamDefault?.column_order ?? SYSTEM_DEFAULT_ORDER
+        const userOrderSet = new Set(userOrderArr)
+        const missingNewColumns = SYSTEM_DEFAULT_ORDER.filter(id => !userOrderSet.has(id))
+        setOrder(missingNewColumns.length > 0 ? [...userOrderArr, ...missingNewColumns] : userOrderArr)
+
+        // Bug 3 fix (3.6): kalau user width LEBIH KECIL dari system default,
+        // ada kemungkinan saved width = legacy old-default yang sekarang stale
+        // (mis. status width 110 saved sebelum kita naikkan ke 150 di Phase 8I).
+        // Bump ke max(saved, system default). User yang explicit pengen width
+        // lebih kecil dari default bisa set ulang via Customize.
+        const teamWidths = teamDefault?.column_widths ?? {}
+        const userWidths = userOrdersList?.column_widths ?? {}
+        const mergedWidths: Record<string, number> = {}
+        for (const id of SYSTEM_DEFAULT_ORDER) {
+          const sysDefault = SYSTEM_DEFAULT_WIDTHS[id] ?? 100
+          const chosen = userWidths[id] ?? teamWidths[id] ?? sysDefault
+          mergedWidths[id] = Math.max(chosen, sysDefault)
+        }
+        setWidths(mergedWidths)
         setSavedViews(userOrdersList?.saved_views ?? [])
         setActiveViewId(userOrdersList?.active_view_id ?? null)
         setPrefsLoaded(true)
@@ -256,17 +275,23 @@ function OrdersListInner() {
         }
       />
 
-      {/* Phase 8I-Followup Part 3 — status breakdown stats bar. Klik card → filter ke status. */}
-      <StatusStatsBar
-        stats={statusStats}
-        totalCount={statusStatsTotal}
-        activeStatus={stuckPickup ? null : statusFilter}
-        onStatusClick={(s) => {
-          if (stuckPickup) setStuckPickup(false)
-          setStatusFilter(s)
-        }}
-        loading={statsLoading}
-      />
+      {/* Phase 8I-Followup Part 3 — status breakdown stats bar.
+          Bug 1 fix (3.6): wrap di div sticky top-0 supaya stats tetap visible saat
+          scroll vertikal panjang, dan z-20 supaya di atas tabel header. backdrop-blur
+          biar tetap readable saat row tabel di belakang. -mx + px ngebuat full-bleed
+          padding parent. */}
+      <div className="sticky top-0 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-2 bg-background/95 backdrop-blur-sm border-b border-border/40">
+        <StatusStatsBar
+          stats={statusStats}
+          totalCount={statusStatsTotal}
+          activeStatus={stuckPickup ? null : statusFilter}
+          onStatusClick={(s) => {
+            if (stuckPickup) setStuckPickup(false)
+            setStatusFilter(s)
+          }}
+          loading={statsLoading}
+        />
+      </div>
 
       <Card>
         <CardContent className="pt-4 pb-4 flex flex-col gap-3">
@@ -328,8 +353,11 @@ function OrdersListInner() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
+      {/* Bug 1 fix (3.6): pakai plain div bukan Card supaya overflow-x scroll
+          benar-benar isolate dari page-level scroll. Card sebelumnya pakai
+          flex-col yang bisa propagate width child ke parent kalau ada flex-quirk. */}
+      <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -388,8 +416,8 @@ function OrdersListInner() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {totalCount > PAGE_SIZE && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">

@@ -156,6 +156,10 @@ export interface ConverterProfile {
   direction: ConverterDirection
   source_or_target: string
   channel_id: number | null
+  /** Phase 8I-Followup — default channel untuk order yang masuk via profile ini
+   *  kalau channel_id ga keisi dari file/UI. Engine fallback: channelIdOverride
+   *  → profile.channel_id → profile.default_channel_id. */
+  default_channel_id: number | null
   primary_key_field: string | null
   primary_key_target: 'external_order_id' | 'resi' | 'order_number' | null
   file_format: ConverterFileFormat
@@ -169,6 +173,7 @@ export interface ConverterProfile {
   created_at: string
   updated_at: string
   channel?: CourierChannel
+  default_channel?: CourierChannel
 }
 
 export interface ConverterFieldMapping {

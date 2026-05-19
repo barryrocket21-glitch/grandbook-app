@@ -33,6 +33,7 @@ import type {
   ConverterValueMapping,
   CourierChannel,
   OrderStatus,
+  Product,
 } from '@/lib/types'
 
 const supabase = createClient()
@@ -73,8 +74,10 @@ export default function OrdersExportResiPage() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [channels, setChannels] = useState<CourierChannel[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [channelFilter, setChannelFilter] = useState<string>('ALL')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('SIAP_KIRIM')
+  const [productFilter, setProductFilter] = useState<string>('ALL')
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')
   const [search, setSearch] = useState('')
@@ -107,7 +110,7 @@ export default function OrdersExportResiPage() {
   // ----- Effects -----
   useEffect(() => {
     const load = async () => {
-      const [{ data: ps }, { data: chs }] = await Promise.all([
+      const [{ data: ps }, { data: chs }, { data: prods }] = await Promise.all([
         supabase
           .from('converter_profiles')
           .select('*')
@@ -115,9 +118,11 @@ export default function OrdersExportResiPage() {
           .eq('direction', 'OUTBOUND_TO_COURIER')
           .order('code'),
         supabase.from('courier_channels').select('*').eq('active', true).order('code'),
+        supabase.from('products').select('id, name').eq('active', true).order('name'),
       ])
       setProfiles((ps || []) as ConverterProfile[])
       setChannels((chs || []) as CourierChannel[])
+      setProducts((prods || []) as Product[])
       setProfilesLoading(false)
     }
     load()
@@ -125,6 +130,24 @@ export default function OrdersExportResiPage() {
 
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true)
+
+    // Phase 8I-Followup — kalau product filter aktif, pre-fetch order_id yang punya
+    // produk itu (SPX dashboard 1 alamat pengirim per batch upload — operator perlu
+    // split per supplier produk).
+    let restrictToOrderIds: number[] | null = null
+    if (productFilter !== 'ALL') {
+      const { data: oiRows } = await supabase
+        .from('order_items')
+        .select('order_id')
+        .eq('product_id', Number(productFilter))
+      restrictToOrderIds = Array.from(new Set((oiRows || []).map((r) => r.order_id as number)))
+      if (restrictToOrderIds.length === 0) {
+        setOrders([])
+        setOrdersLoading(false)
+        return
+      }
+    }
+
     let q = supabase
       .from('orders')
       .select(
@@ -137,6 +160,7 @@ export default function OrdersExportResiPage() {
     else q = q.eq('status', statusFilter)
     if (dateFrom) q = q.gte('order_date', dateFrom)
     if (dateTo) q = q.lte('order_date', dateTo)
+    if (restrictToOrderIds) q = q.in('id', restrictToOrderIds)
 
     const { data } = await q
     type Row = Omit<OrderRow, 'items_count'> & { items?: { id: number }[] }
@@ -146,7 +170,7 @@ export default function OrdersExportResiPage() {
     })) as OrderRow[]
     setOrders(rows)
     setOrdersLoading(false)
-  }, [channelFilter, statusFilter, dateFrom, dateTo])
+  }, [channelFilter, statusFilter, productFilter, dateFrom, dateTo])
 
   useEffect(() => {
     if (step !== 'filter') return
@@ -410,7 +434,7 @@ export default function OrdersExportResiPage() {
               <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Filter className="w-3.5 h-3.5" /> Filter orders di bawah, lalu pilih order yang mau di-export.
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Channel</Label>
                   <Select value={channelFilter} onValueChange={(v) => v && setChannelFilter(v)}>
@@ -435,6 +459,23 @@ export default function OrdersExportResiPage() {
                     <SelectContent>
                       {STATUS_OPTIONS.map((o) => (
                         <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Produk</Label>
+                  <Select value={productFilter} onValueChange={(v) => v && setProductFilter(v)}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Semua produk">
+                      {(value: string | null) => {
+                        if (!value || value === 'ALL') return 'Semua produk'
+                        return products.find((p) => String(p.id) === value)?.name ?? value
+                      }}
+                    </SelectValue></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Semua produk</SelectItem>
+                      {products.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

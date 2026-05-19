@@ -154,6 +154,7 @@ export const converterProfileSchema = z
     direction: z.enum(CONVERTER_DIRECTIONS),
     source_or_target: z.string().min(1, 'Source/target wajib diisi'),
     channel_id: z.number().int().positive().nullable().optional(),
+    default_channel_id: z.number().int().positive().nullable().optional(),
     file_format: z.enum(CONVERTER_FILE_FORMATS),
     file_delimiter: z.string().nullable().optional(),
     file_encoding: z.string().default('utf-8'),

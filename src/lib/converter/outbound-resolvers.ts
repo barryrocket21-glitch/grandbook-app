@@ -86,6 +86,11 @@ export function resolveSourceValue(
       return 'Dibayar Pengirim'
     case 'concat_address':
       return concatFullAddress(order)
+    // Phase 8I-Followup — SPX *Berat Paket (KG). order_items.weight_per_unit
+    // stored in GRAM (Orderonline source). Sum (qty × weight_per_unit) → /1000 → toFixed(1).
+    // Default fallback "0.5" (500g) supaya kolom required SPX selalu ke-fill.
+    case 'order_total_weight_kg':
+      return resolveOrderTotalWeightKg(order)
     // Phase 8G — SPX wilayah lookups (handled in async path; sync fallback uppercase)
     case 'spx_state_lookup':
       return (order.customer_province ?? '').toUpperCase()
@@ -286,6 +291,26 @@ export function formatProductSummary(items: OrderItem[]): string {
       return `${it.qty}x ${name}${variation}`
     })
     .join(', ')
+}
+
+/**
+ * Phase 8I-Followup — Sum berat semua item dari Orderonline (weight_per_unit
+ * disimpan dalam GRAM oleh inbound engine). Convert ke KG, format 1 desimal
+ * sesuai SPX dropdown ("0.5", "1.0", "1.5", ...). Fallback "0.5" kalau zero.
+ */
+export function resolveOrderTotalWeightKg(order: OrderForOutbound): string {
+  const items = order.items ?? []
+  if (items.length === 0) return '0.5'
+
+  const totalGrams = items.reduce((sum, it) => {
+    const w = Number(it.weight_per_unit ?? 0)
+    const q = Number(it.qty ?? 1)
+    if (!Number.isFinite(w) || !Number.isFinite(q)) return sum
+    return sum + w * q
+  }, 0)
+
+  if (totalGrams <= 0) return '0.5'
+  return (totalGrams / 1000).toFixed(1)
 }
 
 export function concatFullAddress(order: OrderForOutbound): string {

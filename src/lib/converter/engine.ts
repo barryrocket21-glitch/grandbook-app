@@ -223,6 +223,20 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         }
       }
 
+      // Phase 8I-Followup — Issue #3: fallback customer_address_detail ke
+      // customer_address mentah kalau belum ke-set. Orderonline mapping cuma
+      // map `address` → `customer_address` (tidak ada mapping ke detail),
+      // jadi tanpa fallback ini `customer_address_detail` selalu NULL untuk
+      // order tanpa parsed.address_detail. Fallback universal supaya
+      // check_order_export_ready ga lagi flag missing.
+      const detailRaw = ordersData.customer_address_detail
+      if (detailRaw == null || (typeof detailRaw === 'string' && detailRaw.trim() === '')) {
+        const addressRaw = ordersData.customer_address
+        if (typeof addressRaw === 'string' && addressRaw.trim() !== '') {
+          ordersData.customer_address_detail = addressRaw
+        }
+      }
+
       // required check
       if (!ordersData.customer_name || String(ordersData.customer_name).trim() === '') {
         result.errors.push({
@@ -251,11 +265,14 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         }
       }
 
-      // Channel resolve
+      // Channel resolve. Priority: explicit override → profile.channel_id
+      // (channel "milik" profile) → profile.default_channel_id (Phase 8I-Followup
+      // — fallback supaya order Orderonline auto-set ke SPX_DIRECT tanpa
+      // bulk-assign manual di /orders/export-resi).
       const channelId =
         opts.channelIdOverride != null
           ? opts.channelIdOverride
-          : opts.profile.channel_id || null
+          : opts.profile.channel_id || opts.profile.default_channel_id || null
 
       // CS lookup
       const csName = ordersData.cs_name ? String(ordersData.cs_name).trim() : null

@@ -45,6 +45,7 @@ interface Profile {
   direction: ConverterDirectionEnum
   source_or_target: string
   channel_id: number | null
+  default_channel_id: number | null
   primary_key_field: string | null
   primary_key_target: string | null
   file_format: ConverterFileFormatEnum
@@ -56,6 +57,7 @@ interface Profile {
   notes: string | null
   active: boolean
   channel?: Channel
+  default_channel?: Channel
   field_count?: number
   value_count?: number
 }
@@ -66,6 +68,7 @@ const initialForm = {
   direction: 'INBOUND_ORDER' as ConverterDirectionEnum,
   source_or_target: '',
   channel_id: '',
+  default_channel_id: '',
   primary_key_field: '',
   primary_key_target: '',
   file_format: 'CSV' as ConverterFileFormatEnum,
@@ -99,7 +102,7 @@ export default function ConverterProfilesPage() {
     const [{ data: ps }, { data: chs }, { data: fms }, { data: vms }] = await Promise.all([
       supabase
         .from('converter_profiles')
-        .select('*, channel:courier_channels(id, code, name, active)')
+        .select('*, channel:courier_channels!converter_profiles_channel_id_fkey(id, code, name, active), default_channel:courier_channels!converter_profiles_default_channel_id_fkey(id, code, name, active)')
         .order('code'),
       supabase.from('courier_channels').select('id, code, name, active').order('code'),
       supabase.from('converter_field_mappings').select('profile_id'),
@@ -131,6 +134,7 @@ export default function ConverterProfilesPage() {
       direction: p.direction,
       source_or_target: p.source_or_target,
       channel_id: p.channel_id ? String(p.channel_id) : '',
+      default_channel_id: p.default_channel_id ? String(p.default_channel_id) : '',
       primary_key_field: p.primary_key_field || '',
       primary_key_target: p.primary_key_target || '',
       file_format: p.file_format,
@@ -153,6 +157,7 @@ export default function ConverterProfilesPage() {
       direction: form.direction,
       source_or_target: form.source_or_target.trim(),
       channel_id: form.channel_id ? Number(form.channel_id) : null,
+      default_channel_id: form.default_channel_id ? Number(form.default_channel_id) : null,
       primary_key_field: form.primary_key_field.trim() || null,
       primary_key_target:
         form.direction === 'OUTBOUND_TO_COURIER' ? null : (form.primary_key_target || null),
@@ -357,6 +362,39 @@ export default function ConverterProfilesPage() {
                       INBOUND_ORDER bisa kosong (generic). REKONSIL & OUTBOUND wajib pilih channel.
                     </p>
                   </div>
+                  {(form.direction === 'INBOUND_ORDER' || form.direction === 'WA_PASTE') && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Default Channel (Phase 8I-Followup)</Label>
+                      <Select
+                        value={form.default_channel_id || 'none'}
+                        onValueChange={(v) =>
+                          setForm({ ...form, default_channel_id: !v || v === 'none' ? '' : v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tidak ada default">
+                            {(value: string | null) =>
+                              !value || value === 'none'
+                                ? '— (tidak ada default)'
+                                : channels.find((c) => String(c.id) === value)?.name ?? 'Pilih channel'
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="w-[300px]">
+                          <SelectItem value="none">— (tidak ada default)</SelectItem>
+                          {channels.filter((c) => c.active).map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                              {c.code} — {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-muted-foreground">
+                        Kalau order yang masuk via profile ini ga punya channel di file, engine auto-set ke default ini.
+                        Hemat waktu bulk-assign manual di /orders/export-resi.
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs">File Format *</Label>

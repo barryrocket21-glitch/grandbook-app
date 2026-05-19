@@ -62,13 +62,17 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'order_date',        label: 'Tanggal',     category: 'identity',    default_visible: true,  default_width: 100, format: 'date' },
   { id: 'order_number',      label: 'Order #',     category: 'identity',    default_visible: true,  default_width: 150 },
   { id: 'external_order_id', label: 'External ID', category: 'identity',    default_visible: false, default_width: 150 },
-  { id: 'resi',              label: 'Resi',        category: 'identity',    default_visible: true,  default_width: 150, editable_field: 'resi' },
+  // Phase 8I-Followup hotfix: SPX resi format "SPXID" + 12 digit = 17 char.
+  // 180px = ~17 char × ~7px (font-mono text-xs) + edit icon + padding.
+  { id: 'resi',              label: 'Resi',        category: 'identity',    default_visible: true,  default_width: 180, editable_field: 'resi' },
   { id: 'payment_method',    label: 'Pembayaran',  category: 'identity',    default_visible: false, default_width: 100 },
 
   // === Customer ===
   { id: 'customer_name',     label: 'Customer',    category: 'customer',    default_visible: true,  default_width: 180 },
   { id: 'customer_phone',    label: 'No HP',       category: 'customer',    default_visible: false, default_width: 140, editable_field: 'customer_phone' },
-  { id: 'customer_city',     label: 'Kota',        category: 'customer',    default_visible: true,  default_width: 130, editable_field: 'customer_city' },
+  // Phase 8I-Followup hotfix: max kota di Indonesia "KAB. PENAJAM PASER UTARA" (24 char).
+  // Truncate dengan tooltip kalau lebih panjang dari ~180px (sekitar 23-24 char text-xs).
+  { id: 'customer_city',     label: 'Kota',        category: 'customer',    default_visible: true,  default_width: 180, editable_field: 'customer_city' },
   { id: 'customer_province', label: 'Provinsi',    category: 'customer',    default_visible: false, default_width: 130, editable_field: 'customer_province' },
   { id: 'is_repeat_customer', label: 'Repeat?',    category: 'customer',    default_visible: false, default_width: 80 },
 
@@ -76,7 +80,8 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'subtotal',          label: 'Subtotal',    category: 'pricing',     default_visible: false, default_width: 120, align: 'right', format: 'rupiah', editable_field: 'subtotal' },
   { id: 'discount',          label: 'Diskon',      category: 'pricing',     default_visible: false, default_width: 100, align: 'right', format: 'rupiah', editable_field: 'discount' },
   { id: 'shipping_cost',     label: 'Ongkir',      category: 'pricing',     default_visible: false, default_width: 100, align: 'right', format: 'rupiah', editable_field: 'shipping_cost' },
-  { id: 'total',             label: 'Total',       category: 'pricing',     default_visible: true,  default_width: 120, align: 'right', format: 'rupiah', editable_field: 'total' },
+  // Phase 8I-Followup hotfix: 130px untuk gap dari city + breathing room rupiah ("Rp 196.350").
+  { id: 'total',             label: 'Total',       category: 'pricing',     default_visible: true,  default_width: 130, align: 'right', format: 'rupiah', editable_field: 'total' },
   { id: 'shipping_cost_actual', label: 'Ongkir Aktual', category: 'pricing', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
   { id: 'payout_amount',     label: 'Payout',      category: 'pricing',     default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
 
@@ -87,7 +92,8 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'shipping_diff',     label: 'Selisih Ongkir', category: 'profit',   default_visible: false, default_width: 110, align: 'right', format: 'rupiah' },
 
   // === Status & Flow ===
-  { id: 'status',            label: 'Status',      category: 'status_flow', default_visible: true,  default_width: 110, editable_field: 'status' },
+  // Phase 8I-Followup hotfix: 130px untuk badge "Siap Kirim" + chevron (Select line-clamp-1).
+  { id: 'status',            label: 'Status',      category: 'status_flow', default_visible: true,  default_width: 130, editable_field: 'status' },
   { id: 'priority',          label: 'Prioritas',   category: 'status_flow', default_visible: true,  default_width: 90,  editable_field: 'priority' },
   { id: 'days_in_status',    label: 'Hari Status', category: 'status_flow', default_visible: true,  default_width: 90,  align: 'right' },
 

@@ -152,6 +152,11 @@ function defaultRender(field: EditableField, value: unknown): React.ReactNode {
   if (field === 'cs_attempts') {
     return <span className="tabular-nums">{Number(value)}</span>
   }
+  // Phase 8I-Followup hotfix: resi pakai font-mono (SPXID + 12 digit terbaca
+  // lebih konsisten + uniform char width bantu truncate menempatkan ellipsis).
+  if (field === 'resi') {
+    return <span className="font-mono whitespace-nowrap">{String(value)}</span>
+  }
   if (typeof value === 'string' && value.length > 60) {
     return <span className="line-clamp-1">{value}</span>
   }
@@ -279,12 +284,17 @@ function TextEditor({ row, field, onUpdated, renderDisplay }: EditorBaseProps) {
   }
 
   if (!editing) {
+    const tooltip = typeof currentValue === 'string' && currentValue.trim() !== '' ? currentValue : undefined
     return (
       <div
-        className="group flex items-center gap-1 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5 -mx-1 -my-0.5 min-h-[24px]"
+        className="group flex items-center gap-1 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5 -mx-1 -my-0.5 min-h-[24px] min-w-0"
         onClick={() => setEditing(true)}
+        title={tooltip}
       >
-        <div className="flex-1 text-xs">
+        {/* Phase 8I-Followup hotfix: min-w-0 + truncate biar flex item bisa shrink
+            di bawah content size + ellipsis kalau overflow (mis. resi SPX 17 char
+            atau kota panjang seperti KAB. PENAJAM PASER UTARA). */}
+        <div className="flex-1 min-w-0 truncate text-xs">
           {renderDisplay ? renderDisplay(currentValue) : defaultRender(field, currentValue)}
         </div>
         <Pencil className="w-3 h-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 shrink-0" />
@@ -349,10 +359,11 @@ function NumberEditor({ row, field, onUpdated, renderDisplay, integer = false }:
   if (!editing) {
     return (
       <div
-        className="group flex items-center gap-1 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5 -mx-1 -my-0.5 min-h-[24px] justify-end"
+        className="group flex items-center gap-1 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5 -mx-1 -my-0.5 min-h-[24px] justify-end min-w-0"
         onClick={() => setEditing(true)}
       >
-        <div className="flex-1 text-xs text-right">
+        {/* Phase 8I-Followup hotfix: whitespace-nowrap supaya rupiah ga wrap line. */}
+        <div className="flex-1 min-w-0 text-xs text-right whitespace-nowrap">
           {renderDisplay ? renderDisplay(currentValue) : defaultRender(field, currentValue)}
         </div>
         <Pencil className="w-3 h-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 shrink-0" />
@@ -416,10 +427,12 @@ function FinancialEditor({ row, field, onUpdated, renderDisplay }: EditorBasePro
   return (
     <>
       <div
-        className="group flex items-center gap-1 cursor-pointer hover:bg-amber-500/10 rounded px-1 py-0.5 -mx-1 -my-0.5 min-h-[24px] justify-end"
+        className="group flex items-center gap-1 cursor-pointer hover:bg-amber-500/10 rounded px-1 py-0.5 -mx-1 -my-0.5 min-h-[24px] justify-end min-w-0 pl-3"
         onClick={openEdit}
       >
-        <div className="flex-1 text-xs text-right">
+        {/* Phase 8I-Followup hotfix: pl-3 untuk gap dari kolom kiri (mis. KOTA),
+            whitespace-nowrap supaya format rupiah (Rp 196.350) ga wrap line. */}
+        <div className="flex-1 min-w-0 text-xs text-right whitespace-nowrap">
           {renderDisplay ? renderDisplay(currentValue) : defaultRender(field, currentValue)}
         </div>
         <Pencil className="w-3 h-3 text-amber-600/70 opacity-0 group-hover:opacity-100 shrink-0" />
@@ -639,12 +652,17 @@ function DateTimeEditor({ row, field, onUpdated, renderDisplay }: EditorBaseProp
   }
 
   if (!editing) {
+    const tooltip = typeof currentValue === 'string' && currentValue.trim() !== '' ? currentValue : undefined
     return (
       <div
-        className="group flex items-center gap-1 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5 -mx-1 -my-0.5 min-h-[24px]"
+        className="group flex items-center gap-1 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5 -mx-1 -my-0.5 min-h-[24px] min-w-0"
         onClick={() => setEditing(true)}
+        title={tooltip}
       >
-        <div className="flex-1 text-xs">
+        {/* Phase 8I-Followup hotfix: min-w-0 + truncate biar flex item bisa shrink
+            di bawah content size + ellipsis kalau overflow (mis. resi SPX 17 char
+            atau kota panjang seperti KAB. PENAJAM PASER UTARA). */}
+        <div className="flex-1 min-w-0 truncate text-xs">
           {renderDisplay ? renderDisplay(currentValue) : defaultRender(field, currentValue)}
         </div>
         <Pencil className="w-3 h-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 shrink-0" />

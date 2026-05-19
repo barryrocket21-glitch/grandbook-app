@@ -331,11 +331,15 @@ function OrdersListInner() {
                   <TableRow key={row.id}>
                     {visibleColumns.map(id => {
                       const col = COLUMNS_BY_ID[id]
+                      const w = widths[id] || col.default_width
                       return (
                         <TableCell
                           key={id}
-                          className={`text-xs ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''} ${col.format === 'rupiah' || col.format === 'number' || col.format === 'percent' ? 'tabular-nums' : ''}`}
-                          style={{ maxWidth: widths[id] || col.default_width }}
+                          // Phase 8I-Followup hotfix: overflow-hidden bikin maxWidth actually
+                          // clip overflow (sebelumnya content panjang overflow ke cell sebelah,
+                          // mis. KAB. PENAJAM PASER UTARA bocor ke kolom Total).
+                          className={`text-xs overflow-hidden align-middle ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''} ${col.format === 'rupiah' || col.format === 'number' || col.format === 'percent' ? 'tabular-nums whitespace-nowrap' : ''}`}
+                          style={{ maxWidth: w, minWidth: Math.min(w, 80) }}
                         >
                           <CellRenderer row={row} colId={id} onUpdated={() => loadOrders(true)} />
                         </TableCell>

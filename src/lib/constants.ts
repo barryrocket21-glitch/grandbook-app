@@ -179,6 +179,7 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Cross-check Platform', href: '/reconciliation' },
       { title: 'Upload File Rekonsil', href: '/reconciliation/upload' },
       { title: 'SPX Financial', href: '/reconciliation/spx' },
+      { title: 'SPX Cashflow Harian', href: '/reconciliation/spx-cashflow' },
       { title: 'Selisih Ongkir', href: '/shipping-diff' },
     ],
   },

@@ -702,6 +702,117 @@ export interface ReconApplyResult {
   applied_at: string
 }
 
+// =============================================================
+// Phase 8I-v2 — SPX Cashflow Daily Reconciliation
+// =============================================================
+
+export interface BankWithdrawal {
+  id: number
+  organization_id: number
+  channel_id: number | null
+  external_id: string | null
+  withdrawal_date: string
+  amount: number
+  fee: number
+  net_received: number
+  bank_account: string | null
+  reference_no: string | null
+  status: string
+  rejection_reason: string | null
+  balance_before: number | null
+  balance_after: number | null
+  source_batch_id: number | null
+  created_at: string
+}
+
+export interface CashflowCodMatchedRow {
+  tracking: string
+  order_number: string
+  customer_name: string
+  old_payout: number | null
+  new_payout: number
+  complete_time: string
+}
+
+export interface CashflowCodVarianceRow {
+  tracking: string
+  order_number: string
+  customer_name: string
+  old_payout: number
+  new_payout: number
+  diff: number
+  complete_time: string
+}
+
+export interface CashflowCodUnmatchedRow {
+  tracking: string
+  nominal: number
+  complete_time: string
+  reason: string
+}
+
+export interface CashflowWithdrawalRow {
+  external_id: string
+  complete_time: string
+  amount: number
+  fee: number
+  net_received: number
+  bank_account: string | null
+  reference_no: string | null
+  status: string
+  balance_before: number
+  balance_after: number
+}
+
+export interface CashflowDuplicateRow {
+  external_id?: string
+  tracking?: string
+  order_number?: string
+  tx_type?: string
+  nominal?: number
+  reason: string
+}
+
+export interface CashflowPreviewPayload {
+  cod_matched: CashflowCodMatchedRow[]
+  cod_unmatched: CashflowCodUnmatchedRow[]
+  cod_variance: CashflowCodVarianceRow[]
+  withdrawals: CashflowWithdrawalRow[]
+  duplicates: CashflowDuplicateRow[]
+  withdrawal_count: number
+  total_withdrawal_amount: number
+}
+
+export interface CashflowPreviewResult {
+  batch_id: number
+  total_rows: number
+  cod_matched_count: number
+  cod_unmatched_count: number
+  cod_variance_count: number
+  withdrawal_count: number
+  duplicate_count: number
+  total_cod_amount: number
+  total_withdrawal_amount: number
+  preview_data: CashflowPreviewPayload
+}
+
+export interface CashflowApplyResult {
+  batch_id: number
+  cod_updated: number
+  withdrawals_created: number
+  unmatched_to_inbox: number
+}
+
+export interface CashflowSummary {
+  saldo_terakhir: number | null
+  total_cod_bulan_ini: number
+  total_penarikan_bulan_ini: number
+  last_withdrawal_date: string | null
+  last_withdrawal_amount: number | null
+  unsettled_count: number
+  unsettled_amount: number
+}
+
 /** Saved column view per user */
 export interface SavedView {
   id: string

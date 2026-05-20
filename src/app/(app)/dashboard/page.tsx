@@ -49,6 +49,7 @@ import { formatRupiah, formatNumber, formatPercent, getToday, getStartOfWeek, ge
 import { PageHeader } from '@/components/ui/page-header'
 import { LayoutDashboard } from 'lucide-react'
 import { PendingPickupWidget } from '@/components/dashboard/pending-pickup-widget'
+import { CashflowSummaryWidget } from '@/components/dashboard/cashflow-summary-widget'
 
 // Chart colors
 const CHART_COLORS = ['#8b5cf6', '#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
@@ -371,6 +372,9 @@ export default function DashboardPage() {
             /dashboard sudah owner-only via sidebar, dan widget silent-fail
             kalau RPC gagal — admin yang kebetulan akses tetap lihat. */}
         {(role === 'owner' || role === 'admin') && <PendingPickupWidget />}
+        {/* Phase 8I-v2 — Saldo SPX & Cashflow widget (owner+admin+akunting).
+            Silent-fail kalau migration 048 belum apply. */}
+        {(role === 'owner' || role === 'admin' || role === 'akunting') && <CashflowSummaryWidget />}
       </div>
 
       {/* Charts Row */}

@@ -129,6 +129,72 @@ npx tsc --noEmit
 npm run build
 ```
 
+## Big Picture & Roadmap GrandBook
+
+### Visi (kenapa GrandBook ada)
+
+Barry punya bisnis dropship COD multi-supplier multi-channel. Sebelum GrandBook, semua di Excel manual: input order, rekap pencairan SPX/JNE, hitung komisi CS/Advertiser, tracking selisih ongkir. Repot, sering salah hitung, ga ada audit trail.
+
+GrandBook = single source of truth untuk:
+
+1. **Operasional harian** — CS input order, cetak resi, follow-up customer
+2. **Financial reconciliation** — pencairan COD per kurir, komisi tim, biaya operasional
+3. **Analytics** — best-selling produk, daerah paling rame, ROAS per campaign
+4. **Audit trail** — semua perubahan tercatat (siapa, kapan, dari mana)
+
+### Roadmap (urutan prioritas, JANGAN diubah tanpa Barry approval)
+
+**Fase 8 (sedang berjalan):**
+
+- ✅ 8A Multi-Supplier Foundation
+- ✅ 8B Resi Lifecycle Timestamps
+- ✅ 8E Customizable column + inline edit + audit log
+- ✅ 8F Orderonline inbound + SPX outbound
+- ✅ 8G SPX Outbound Resolver
+- ✅ 8H Antrian Kerja (orders_draft physical separation)
+- ✅ 8I SPX Financial Reconciliation
+- ✅ 8I-v2 SPX Cashflow Daily
+- ⏳ **8K WA Paste** (next priority — CS sering terima order via WhatsApp, butuh paste cepat)
+- ⏳ **8J Inventory & Deposit Dashboard** (financial position "duit gw ada di mana": SPX saldo, deposit kurir, HPP terbayar)
+- ⏳ **8C Variant Analytics** (ROAS per varian, butuh revisi konsep dulu)
+- ⏳ **8H Coverage Area SPX** (pending data)
+
+**Fase 9 (later):**
+
+- Notifikasi in-app (bell icon: "5 resi belum pickup", "12 selisih ongkir minggu ini")
+- Bulk edit di list view
+- Search global di header
+- Export full backup
+- Multi-tenant (kalau Barry mau jual ke seller lain)
+
+**Fase 10 (vision, masih jauh):**
+
+- Mobile app native (Indra & CS mobile-first)
+- AI-assisted: auto-classify customer issue, generate FU script, predict reject reason
+- Forecasting: prediksi cashflow 30 hari ke depan dari pipeline draft + delivery rate
+
+### Pattern Operasional Harian (yang akan terus dipakai)
+
+- **Reconciliation workflow** — upload XLSX → preview diff → apply. Pattern reusable untuk SPX, JNE, J&T, Lazada, dll.
+- **Order lifecycle** — orders_draft (CS work) → orders (archive). Trigger promote saat resi keisi.
+- **Role-based access** — owner sees all, admin operational, akunting financial, advertiser ads-only, cs order-only.
+
+### Yang JANGAN diubah tanpa diskusi besar
+
+- 8-state status enum
+- 3-tier priority (LOW/NORMAL/URGENT)
+- 5-role system
+- Physical separation orders/orders_draft
+- Reconciliation 2-RPC pattern (preview/apply)
+- `organization_id` di setiap tabel transaksional (multi-tenant ready)
+
+### Kalau Barry minta fitur baru
+
+1. Klarifikasi dulu — fitur ini cocoknya di fase mana (8K? 9? 10?)
+2. Cek standing patterns — bisa pakai pattern existing atau perlu pattern baru?
+3. Spec-first — kalau ada decision baru (e.g. tabel baru vs extend existing), kasih opsi A/B
+4. Implement → smoke test sendiri → report dengan screenshot
+
 ## Autonomous Workflow Mode (POST-PLAYWRIGHT-MCP)
 
 Setelah Playwright MCP installed (SHA setup di skill grandbook-smoke-test), Claude Code MUST execute workflow autonomous end-to-end. Barry cuma intervene di explicit checkpoints.

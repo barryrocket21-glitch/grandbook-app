@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "import:wilayah": "tsx scripts/import_master_wilayah.ts"
+    "import:wilayah": "tsx scripts/import_master_wilayah.ts",
+    "capture-session": "node scripts/capture-session.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -48,6 +49,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "playwright": "^1.60.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

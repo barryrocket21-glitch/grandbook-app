@@ -127,7 +127,13 @@ Kalau pernah accidental delete:
 ```bash
 npx tsc --noEmit
 npm run build
+
+# Smoke test setup (Phase 8K-Playwright)
+npm run capture-session -- owner barry@owner.com 'PASSWORD'
+npm run capture-session -- indra indra@mbc.com 'PASSWORD'
 ```
+
+Detail smoke test workflow: `.claude/skills/grandbook-smoke-test/SKILL.md`
 
 ## Big Picture & Roadmap GrandBook
 

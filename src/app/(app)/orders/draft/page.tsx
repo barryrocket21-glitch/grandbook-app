@@ -31,6 +31,7 @@ import type {
 import { DraftStatusStatsBar } from './_components/draft-status-stats-bar'
 import { ResiInputDialog } from './_components/resi-input-dialog'
 import { DraftRowActions } from './_components/draft-row-actions'
+import { BulkResiDialog } from './_components/bulk-resi-dialog'
 
 const supabase = createClient()
 const PAGE_SIZE = 100
@@ -68,7 +69,9 @@ function OrdersDraftInner() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkResiOpen, setBulkResiOpen] = useState(false)
   const canBulkDelete = role === 'owner' || role === 'admin'
+  const canSetResi = role === 'owner' || role === 'admin' || role === 'cs'
 
   // Resi input dialog state
   const [resiDialogOpen, setResiDialogOpen] = useState(false)
@@ -196,6 +199,17 @@ function OrdersDraftInner() {
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
+            {canSetResi && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkResiOpen(true)}
+                className="gap-1.5 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
+              >
+                <Truck className="w-3.5 h-3.5" />
+                Set Resi Massal
+              </Button>
+            )}
             <Link href="/orders/new">
               <Button size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700">
                 <Plus className="w-3.5 h-3.5" />
@@ -354,6 +368,12 @@ function OrdersDraftInner() {
         onOpenChange={setResiDialogOpen}
         draft={resiDialogDraft}
         onPromoted={() => loadDrafts(true)}
+      />
+
+      <BulkResiDialog
+        open={bulkResiOpen}
+        onOpenChange={setBulkResiOpen}
+        onApplied={() => loadDrafts(true)}
       />
 
       {/* Bulk action bar — sticky bottom kalau ada selection */}

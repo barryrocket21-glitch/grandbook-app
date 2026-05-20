@@ -129,6 +129,147 @@ npx tsc --noEmit
 npm run build
 ```
 
+## Autonomous Workflow Mode (POST-PLAYWRIGHT-MCP)
+
+Setelah Playwright MCP installed (SHA setup di skill grandbook-smoke-test), Claude Code MUST execute workflow autonomous end-to-end. Barry cuma intervene di explicit checkpoints.
+
+### Loop Standar per Brief
+
+```
+Receive brief from Barry
+       ↓
+Investigate state (DB via Supabase MCP, files via grep/view)
+       ↓
+Apply changes (DB migration + code edit)
+       ↓
+Local verify (tsc + build pass)
+       ↓
+Commit + push
+       ↓
+Wait Vercel deploy ready (~90 sec)
+       ↓
+Autonomous smoke test via Playwright MCP
+       ↓
+   ┌─ Pass → Report success + screenshots
+   └─ Fail → Debug + propose fix + ask Barry "OK to apply?"
+```
+
+### Mandatory Smoke Test Triggers
+
+Run smoke test SECARA OTOMATIS setelah:
+
+- `git push` ke main branch
+- Migration applied via Supabase MCP
+- Schema-affecting RPC change
+- Sidebar/permission update
+
+### Smoke Test Scope per Feature Type
+
+| Feature changed | Test what |
+|---|---|
+| New page | Page loads, accessibility OK, role-restricted correctly |
+| New RPC | RPC return data via UI, not just SQL |
+| Sidebar/nav update | Login as affected role, verify visibility |
+| Form/dialog | Submit dummy → verify side effect (toast, redirect) |
+| Reconciliation | Upload sample file (from fixtures/), verify preview, JANGAN apply |
+| Destructive operation | NEVER smoke test, ask Barry manual |
+
+### Test Account Available
+
+- `tests/auth/owner-session.json` — Barry (owner)
+- `tests/auth/indra-session.json` — Indra (admin)
+- Tambahkan kalau perlu role lain
+
+### Reporting Format Wajib
+
+Setelah smoke test, kasih Barry format ini:
+
+```
+## ✅/❌ Patch SHA <sha> — Smoke Test Result
+**Feature:** <feature name>
+**Deployed:** <Vercel URL>
+
+### Tests Run
+| Test | Result |
+|---|---|
+| Page loads | ✅/❌ |
+| Critical interaction works | ✅/❌ |
+| Side effect verified | ✅/❌ |
+
+### Screenshots
+- `tests/screenshots/<feature>-<timestamp>-1.png` — initial state
+- `tests/screenshots/<feature>-<timestamp>-2.png` — after action
+- etc.
+
+### Next Action
+- [ ] Barry approve OR specify issue
+```
+
+### Hard Constraints
+
+Claude Code MUST NOT:
+
+- Run smoke test against `/settings/reset-data`
+- Click Apply pada reconciliation tanpa Barry approval
+- Test dengan data production untuk destructive operations
+- Skip smoke test untuk save time
+- Claim "done" tanpa screenshot evidence
+
+Claude Code MUST:
+
+- Run smoke test even kalau perubahan "kecil"
+- Screenshot per major step (3-5 screenshots typical)
+- Report fail dengan reproducible steps (URL, action, expected vs actual)
+
+### When Smoke Test Fails
+
+1. Capture failure screenshot
+2. Read DOM accessibility tree at fail point
+3. Cek browser console (warnings/errors)
+4. Propose hypothesis
+5. Ask Barry: "Fail at step X. Hypothesis: <reason>. Proposed fix: <code change>. OK to apply?"
+6. Don't auto-fix without approval
+
+### Pre-Approval Categories
+
+Barry pre-approves Claude Code to auto-fix (without asking) for:
+
+- TypeScript compile errors
+- Missing imports
+- Lint warnings
+- Migration file numbering (rename to next sequence)
+
+Everything else: ASK FIRST.
+
+### Loop Efficiency Metrics
+
+Target untuk setiap brief:
+
+- Brief intake → first commit: ≤ 30 min
+- First commit → smoke test pass: ≤ 5 min
+- Barry intervention: ≤ 2 messages
+
+Kalau lebih dari ini, brief mungkin kurang spesifik. Flag ke Barry.
+
+### Communication Style
+
+- Bahasa: Indonesia (mix English untuk technical term)
+- Format: ringkas, bullet, screenshot link
+- Tone: factual, no fluff, no excessive apology
+- Frequency: report final result + screenshot, BUKAN play-by-play setiap edit file
+
+Don't post:
+
+- "Saya akan mulai dengan..."
+- "Sekarang saya..."
+- "Step 1: ..."
+- "Step 2: ..."
+
+Do post:
+
+- Final result dengan SHA + screenshots
+- Blockers atau decision points yang butuh Barry
+
 ## When in Doubt
 
 Barry's priorities:

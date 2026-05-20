@@ -187,6 +187,8 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Scale,
     roles: ['owner', 'admin', 'akunting'],
     children: [
+      // Phase 8J — Financial Position dashboard ("duit gw ada di mana")
+      { title: 'Posisi Keuangan', href: '/financial-position', badge: 'BARU' },
       { title: 'Cross-check Platform', href: '/reconciliation' },
       { title: 'Upload File Rekonsil', href: '/reconciliation/upload' },
       { title: 'SPX Financial', href: '/reconciliation/spx' },

@@ -115,6 +115,28 @@ export async function parseXlsx(
   })
 }
 
+/**
+ * WhatsApp Web copy format header pattern.
+ * Matches `[HH.MM, dd/mm/yyyy] Sender Name: ` at start of line (Indonesian locale).
+ * Only consumes the timestamp + sender prefix — order content on same line preserved.
+ *
+ * Example match: `[21.12, 20/5/2026] Bojo Pertama: ` (leaves `(10) CS : Fiaro\n...` intact)
+ *
+ * Used to split multi-order paste into per-order blocks (Phase 8K).
+ */
+const WA_TIMESTAMP_LINE = /^\[\d{1,2}[.:]\d{1,2}[,\s]+\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+?:\s*/gm
+
+/**
+ * Split text into per-order blocks based on WA timestamp lines.
+ * If no timestamps found → return [text] (single block, backward compat).
+ */
+function splitByWaTimestamp(text: string): string[] {
+  // String.split with regex preserves segments between matches.
+  // First element is text BEFORE first timestamp (usually empty).
+  const parts = text.split(WA_TIMESTAMP_LINE).map(p => p.trim()).filter(p => p.length > 0)
+  return parts.length > 0 ? parts : [text]
+}
+
 export function parseRegex(
   text: string,
   pattern: string,
@@ -126,18 +148,33 @@ export function parseRegex(
   } catch (err) {
     throw new Error(`Regex tidak valid: ${err instanceof Error ? err.message : String(err)}`)
   }
+
+  // Phase 8K — pre-split multi-order WA paste by timestamp line, then apply
+  // pattern per block. Profile regex stays simple (single-block extraction).
+  const blocks = splitByWaTimestamp(text)
+
   const rows: Record<string, unknown>[] = []
-  let m: RegExpExecArray | null
-  let safety = 0
-  while ((m = re.exec(text)) !== null && safety < 5000) {
-    safety++
-    const groups = m.groups || {}
-    if (Object.keys(groups).length === 0) {
-      warnings.push('Regex pattern tidak punya named groups (?<name>...). Hasil tidak bisa di-mapping.')
-      return []
+  let warnedNoGroups = false
+
+  for (const block of blocks) {
+    re.lastIndex = 0
+    let m: RegExpExecArray | null
+    let safety = 0
+    // Within each block, run pattern as before (loop in case pattern matches
+    // multiple times within 1 block — rare but possible for non-WA formats).
+    while ((m = re.exec(block)) !== null && safety < 5000) {
+      safety++
+      const groups = m.groups || {}
+      if (Object.keys(groups).length === 0) {
+        if (!warnedNoGroups) {
+          warnings.push('Regex pattern tidak punya named groups (?<name>...). Hasil tidak bisa di-mapping.')
+          warnedNoGroups = true
+        }
+        break
+      }
+      rows.push({ ...groups })
+      if (m.index === re.lastIndex) re.lastIndex++
     }
-    rows.push({ ...groups })
-    if (m.index === re.lastIndex) re.lastIndex++
   }
   return rows
 }

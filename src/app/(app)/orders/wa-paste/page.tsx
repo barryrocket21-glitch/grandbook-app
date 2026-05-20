@@ -228,9 +228,29 @@ export default function WaPastePage() {
                   value={text}
                   onChange={(e) => { setText(e.target.value); setPreview(null) }}
                   rows={12}
-                  placeholder={`Paste teks WA chat di sini...\n\nNama: Jems Suawa\nNomor: 081354...\nAlamat: Lingkungan 4 RT 12...\n...`}
+                  placeholder={`Nama: Budi Santoso
+HP: 081234567890
+Alamat: Jl. Mawar No. 5 RT 03 RW 04
+Produk: Madu Hutan 250ml
+Kota: Bandung           (optional)
+Provinsi: Jawa Barat    (optional)
+Kodepos: 40123          (optional)
+Catatan: tolong dibungkus rapih  (optional)`}
                   className="font-mono text-xs"
                 />
+                <div className="rounded-md bg-violet-500/5 border border-violet-500/20 p-3 text-xs space-y-1.5">
+                  <div className="font-semibold text-violet-600">Format yang ke-recognize (profile wa_paste_keyvalue):</div>
+                  <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                    <li><span className="font-mono">Nama:</span> <span className="text-foreground">Nama customer</span> <span className="text-red-500">(wajib)</span></li>
+                    <li><span className="font-mono">HP:</span> <span className="text-foreground">No HP / WhatsApp</span> <span className="text-red-500">(wajib)</span></li>
+                    <li><span className="font-mono">Alamat:</span> <span className="text-foreground">Alamat lengkap</span> <span className="text-red-500">(wajib)</span></li>
+                    <li><span className="font-mono">Produk:</span> <span className="text-foreground">Nama produk + varian</span> <span className="text-red-500">(wajib)</span></li>
+                    <li><span className="font-mono">Kota / Provinsi / Kodepos / Catatan:</span> opsional</li>
+                  </ul>
+                  <div className="text-muted-foreground pt-1">
+                    Urutan field bebas. Case-insensitive untuk huruf pertama (Nama/nama, HP/hp). 1 paste = 1 order. Detail (channel, harga, qty) edit di Antrian Kerja setelah import.
+                  </div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button

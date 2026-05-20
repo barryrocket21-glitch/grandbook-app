@@ -9,12 +9,18 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Inbox, Plus, Search, Filter, ChevronLeft, ChevronRight, RefreshCw, Truck,
+  Trash2, AlertTriangle, Loader2, X,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { STATUS_BADGE_COLOR, STATUS_LABEL } from '@/lib/schemas/settings'
@@ -40,7 +46,7 @@ export default function OrdersDraftPage() {
 }
 
 function OrdersDraftInner() {
-  const { user, profile } = useAuth()
+  const { user, profile, role } = useAuth()
   const searchParams = useSearchParams()
   const initialStatus = (searchParams.get('status') || 'ALL') as 'ALL' | DraftOrderStatus
 
@@ -57,6 +63,12 @@ function OrdersDraftInner() {
   const [statusStats, setStatusStats] = useState<DraftStatusStat[]>([])
   const [statusStatsTotal, setStatusStatsTotal] = useState(0)
   const [statsLoading, setStatsLoading] = useState(true)
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const canBulkDelete = role === 'owner' || role === 'admin'
 
   // Resi input dialog state
   const [resiDialogOpen, setResiDialogOpen] = useState(false)
@@ -103,7 +115,53 @@ function OrdersDraftInner() {
   }, [statusFilter, search, page, dateFrom, dateTo])
 
   useEffect(() => { loadDrafts() }, [loadDrafts])
-  useEffect(() => { setPage(0) }, [statusFilter, search, dateFrom, dateTo])
+  useEffect(() => { setPage(0); setSelectedIds(new Set()) }, [statusFilter, search, dateFrom, dateTo])
+
+  // Bulk select helpers
+  const allOnPageSelected = rows.length > 0 && rows.every(r => selectedIds.has(r.id))
+  const someOnPageSelected = rows.some(r => selectedIds.has(r.id))
+  const toggleAllOnPage = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allOnPageSelected) {
+        rows.forEach(r => next.delete(r.id))
+      } else {
+        rows.forEach(r => next.add(r.id))
+      }
+      return next
+    })
+  }
+  const toggleRow = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    setBulkDeleting(true)
+    try {
+      const ids = Array.from(selectedIds)
+      const { error } = await supabase.from('orders_draft').delete().in('id', ids)
+      if (error) throw error
+      toast.success(`${ids.length} draft dihapus`)
+      setBulkDeleteOpen(false)
+      setSelectedIds(new Set())
+      await loadDrafts(true)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error('Gagal bulk delete', { description: msg })
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  // Compute summary of selected for delete dialog
+  const selectedRows = rows.filter(r => selectedIds.has(r.id))
+  const selectedTotal = selectedRows.reduce((sum, r) => sum + Number(r.total || 0), 0)
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
@@ -219,6 +277,14 @@ function OrdersDraftInner() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10 text-center">
+                  <Checkbox
+                    checked={allOnPageSelected}
+                    onCheckedChange={toggleAllOnPage}
+                    aria-label="Select all on page"
+                    className={someOnPageSelected && !allOnPageSelected ? 'opacity-60' : ''}
+                  />
+                </TableHead>
                 {visibleColumns.map(c => (
                   <TableHead
                     key={c.id}
@@ -233,14 +299,14 @@ function OrdersDraftInner() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={visibleColumns.length}>
+                    <TableCell colSpan={visibleColumns.length + 1}>
                       <div className="h-4 bg-muted animate-pulse rounded" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={visibleColumns.length} className="p-0">
+                  <TableCell colSpan={visibleColumns.length + 1} className="p-0">
                     <EmptyState
                       icon={search || statusFilter !== 'ALL' || dateFrom || dateTo ? Filter : Inbox}
                       title={search || statusFilter !== 'ALL' || dateFrom || dateTo ? 'Tidak ada hasil' : 'Antrian kosong'}
@@ -257,6 +323,8 @@ function OrdersDraftInner() {
                   <DraftRow
                     key={row.id}
                     row={row}
+                    selected={selectedIds.has(row.id)}
+                    onToggleSelect={() => toggleRow(row.id)}
                     onResiClick={() => openResiDialog(row)}
                     onUpdated={() => loadDrafts(true)}
                   />
@@ -287,6 +355,74 @@ function OrdersDraftInner() {
         draft={resiDialogDraft}
         onPromoted={() => loadDrafts(true)}
       />
+
+      {/* Bulk action bar — sticky bottom kalau ada selection */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 bg-card border shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 min-w-[400px]">
+          <div className="text-sm">
+            <span className="font-semibold tabular-nums">{selectedIds.size}</span>
+            <span className="text-muted-foreground ml-1">draft selected</span>
+            {selectedTotal > 0 && (
+              <span className="text-muted-foreground ml-2">· total {formatRupiah(selectedTotal)}</span>
+            )}
+          </div>
+          <div className="ml-auto flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="gap-1.5">
+              <X className="w-3.5 h-3.5" />
+              Clear
+            </Button>
+            {canBulkDelete && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkDeleteOpen(true)}
+                className="gap-1.5 border-red-500/40 text-red-600 hover:bg-red-500/10"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Hapus Massal
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk delete confirm */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+              Hapus {selectedIds.size} draft?
+            </DialogTitle>
+            <DialogDescription>
+              Semua draft yang di-select akan dihapus permanent dari Antrian Kerja. Audit log mencatat tiap DELETE event.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md bg-red-500/5 border border-red-500/20 p-3 text-xs space-y-1 max-h-48 overflow-y-auto">
+            {selectedRows.slice(0, 10).map(r => (
+              <div key={r.id} className="flex justify-between gap-2">
+                <span className="font-mono text-violet-500 shrink-0">{r.order_number}</span>
+                <span className="truncate">{r.customer_name}</span>
+                <span className="tabular-nums shrink-0">{formatRupiah(Number(r.total))}</span>
+              </div>
+            ))}
+            {selectedRows.length > 10 && (
+              <div className="text-muted-foreground text-center pt-1">+ {selectedRows.length - 10} draft lain</div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={bulkDeleting}>Batal</Button>
+            <Button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white gap-2"
+            >
+              {bulkDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Ya, hapus {selectedIds.size}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -294,8 +430,10 @@ function OrdersDraftInner() {
 // =======================================================================
 // Row renderer
 // =======================================================================
-function DraftRow({ row, onResiClick, onUpdated }: {
+function DraftRow({ row, selected, onToggleSelect, onResiClick, onUpdated }: {
   row: OrderDraftEnriched
+  selected: boolean
+  onToggleSelect: () => void
   onResiClick: () => void
   onUpdated: () => void
 }) {
@@ -319,7 +457,10 @@ function DraftRow({ row, onResiClick, onUpdated }: {
   ) : <span className="text-muted-foreground">—</span>
 
   return (
-    <TableRow>
+    <TableRow className={selected ? 'bg-violet-500/5' : ''}>
+      <TableCell className="text-center">
+        <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label={`Select ${row.order_number}`} />
+      </TableCell>
       <TableCell className="text-xs whitespace-nowrap">{formatDate(row.created_at)}</TableCell>
       <TableCell>
         <Link href={`/orders/${row.id}?draft=1`} className="text-violet-400 hover:underline font-mono text-xs whitespace-nowrap">

@@ -109,8 +109,6 @@ src/lib/
 
 ## Known Bugs / Backlog
 
-- User creation flow: `organization_id` ga auto-inherit pas bikin user baru → blank state akun baru
-- Indra (admin) ga bisa akses banyak menu → audit sidebar + page guards
 - Phase 8K (WA Paste parser key-value format) — pending
 - Phase 8J (Inventory & Deposit dashboard) — pending
 - JNE Mengantar Mei backfill — pending file

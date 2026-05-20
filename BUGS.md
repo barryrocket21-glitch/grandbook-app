@@ -1,32 +1,31 @@
 # GrandBook Bug Log
 
 > Bug & UX friction yang ke-detect selama development & pakai harian.
-> Akan di-batch fix di phase polish berikutnya.
 
-## Pending (ke-detect saat dev)
-
-### #1 Copy text di /settings/commission-rules
-- **Where:** Aturan Komisi page, info banner di top
-- **Issue:** Text "Berlaku Mulai = tanggal 1 bulan baru" misleading — 
-  user mengira rule harus mulai tanggal 1 setiap bulan
-- **Should be:** "Berlaku Mulai = tanggal kapan rule mulai dipakai" 
-  (bisa kapan aja: hari ini, besok, bulan depan)
-- **Severity:** Low (copy text only)
+## Pending
 
 ### #2 Bug minor advertiser dropdown
 - **Where:** /orders/new form, section People & Notes
-- **Issue:** User report "ada bug pas pilih advertiser" — belum konkret 
+- **Issue:** User report "ada bug pas pilih advertiser" — belum konkret
   detailnya
-- **Action:** Reproduce saat pakai real, catat repro step di sini
+- **Investigasi (2026-05-21):** Combobox advertiser di `order-form.tsx`
+  ditelaah — tidak ditemukan bug konkret, komponennya normal. Kemungkinan
+  edge case: order lama yang advertiser-nya sudah dinonaktifkan tidak
+  tampil saat edit (query master data filter `active=true`).
+- **Action:** Butuh repro step dari user — kejadian saat input order baru
+  atau edit order existing? Gejala persisnya apa?
 - **Severity:** Unknown (pending repro)
 
-### #3 Empty state /commissions/my untuk owner
-- **Where:** /commissions/my page
-- **Issue:** Owner buka page → tampil kosong (karena owner bukan 
-  CS/advertiser yang dapet commission record). UX bingung.
-- **Should be:** Empty state hint "Anda owner, lihat semua komisi di 
-  [Kelola Komisi]" + clickable link
-- **Severity:** Low (UX improvement)
+## Resolved
+
+### #1 Copy text di /settings/commission-rules — OBSOLETE (2026-05-21)
+Halaman commission-rules sudah di-redesign di Phase 4A (Commission Engine
+v2). Tidak lagi punya field "Berlaku Mulai" / info banner yang dimaksud.
+Bug tidak relevan lagi.
+
+### #3 Empty state /commissions/my untuk owner — FIXED (2026-05-21, 03bfff4)
+Empty state sekarang role-aware: owner lihat "Tidak ada komisi pribadi"
++ link ke Kelola Komisi. Role lain tetap pesan generic.
 
 ## Bug baru muncul saat pakai
 

@@ -24,6 +24,7 @@ import type {
 } from '@/lib/types'
 import { DraftStatusStatsBar } from './_components/draft-status-stats-bar'
 import { ResiInputDialog } from './_components/resi-input-dialog'
+import { DraftRowActions } from './_components/draft-row-actions'
 
 const supabase = createClient()
 const PAGE_SIZE = 100
@@ -122,7 +123,7 @@ function OrdersDraftInner() {
     { id: 'priority', label: 'Prio', align: 'center', width: 'w-16' },
     { id: 'cs_name', label: 'CS', width: 'w-24' },
     { id: 'days_in_draft', label: 'Umur', align: 'right', width: 'w-16' },
-    { id: 'actions', label: '', align: 'center', width: 'w-20' },
+    { id: 'actions', label: '', align: 'center', width: 'w-32' },
   ], [])
 
   return (
@@ -257,6 +258,7 @@ function OrdersDraftInner() {
                     key={row.id}
                     row={row}
                     onResiClick={() => openResiDialog(row)}
+                    onUpdated={() => loadDrafts(true)}
                   />
                 ))
               )}
@@ -292,9 +294,10 @@ function OrdersDraftInner() {
 // =======================================================================
 // Row renderer
 // =======================================================================
-function DraftRow({ row, onResiClick }: {
+function DraftRow({ row, onResiClick, onUpdated }: {
   row: OrderDraftEnriched
   onResiClick: () => void
+  onUpdated: () => void
 }) {
   const status = row.status as OrderStatus
   const statusColor = STATUS_BADGE_COLOR[status] || 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30'
@@ -338,17 +341,20 @@ function DraftRow({ row, onResiClick }: {
       <TableCell className="text-xs">{row.cs_name || <span className="text-muted-foreground italic">—</span>}</TableCell>
       <TableCell className={`text-xs text-right tabular-nums ${ageColor}`}>{daysInDraft}h</TableCell>
       <TableCell className="text-center">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onResiClick}
-          className="gap-1 text-[11px] h-7 px-2 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
-          disabled={row.status === 'CANCEL'}
-          title={row.status === 'CANCEL' ? 'Order cancelled — tidak bisa diberi resi' : 'Input resi & cetak'}
-        >
-          <Truck className="w-3 h-3" />
-          Resi
-        </Button>
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onResiClick}
+            className="gap-1 text-[11px] h-7 px-2 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
+            disabled={row.status === 'CANCEL'}
+            title={row.status === 'CANCEL' ? 'Order cancelled — tidak bisa diberi resi' : 'Input resi & cetak'}
+          >
+            <Truck className="w-3 h-3" />
+            Resi
+          </Button>
+          <DraftRowActions row={row} onUpdated={onUpdated} />
+        </div>
       </TableCell>
     </TableRow>
   )

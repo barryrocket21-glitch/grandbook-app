@@ -20,17 +20,19 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth } from '@/components/providers/auth-provider'
 import { getNavItemsForRole, ROLE_LABELS } from '@/lib/constants'
+import { useSidebarCounts, getCountForHref } from '@/lib/hooks/use-sidebar-counts'
 import { BookOpen, ChevronUp, LogOut, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronRight } from 'lucide-react'
 
 export function AppSidebar() {
-  const { profile, role, signOut } = useAuth()
+  const { user, profile, role, signOut } = useAuth()
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
 
   const navItems = role ? getNavItemsForRole(role) : []
+  const counts = useSidebarCounts(user?.id ?? null)
 
   const getInitials = (name: string) => {
     return name
@@ -87,7 +89,9 @@ export function AppSidebar() {
                         </SidebarMenuButton>
                         <CollapsibleContent>
                           <SidebarMenuSub>
-                            {item.children.map((child) => (
+                            {item.children.map((child) => {
+                              const count = getCountForHref(child.href, counts)
+                              return (
                               <SidebarMenuSubItem key={child.href}>
                                 <SidebarMenuSubButton
                                   render={<Link href={child.href} />}
@@ -95,7 +99,12 @@ export function AppSidebar() {
                                 >
                                   <span className="flex items-center gap-1.5 w-full">
                                     <span className="truncate">{child.title}</span>
-                                    {child.badge && (
+                                    {count > 0 && (
+                                      <span className="ml-auto rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums min-w-[20px] text-center">
+                                        {count > 99 ? '99+' : count}
+                                      </span>
+                                    )}
+                                    {!count && child.badge && (
                                       <span className="ml-auto rounded bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-600">
                                         {child.badge}
                                       </span>
@@ -103,7 +112,7 @@ export function AppSidebar() {
                                   </span>
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
-                            ))}
+                            )})}
                           </SidebarMenuSub>
                         </CollapsibleContent>
                       </SidebarMenuItem>

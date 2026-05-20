@@ -4,13 +4,11 @@ import {
   ShoppingCart,
   Megaphone,
   Package,
-  Receipt,
   Users,
   Settings,
   Coins,
   LineChart,
   Scale,
-  Truck,
   Inbox,
 } from 'lucide-react'
 
@@ -111,89 +109,52 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    // Phase 8H audit — Admin Indra perlu lihat KPI overview operasional.
     roles: ['owner', 'admin'],
   },
   {
-    title: 'Analytics',
-    href: '/analytics',
-    icon: LineChart,
-    // Phase 8H audit — Admin perlu lihat conversion/profit untuk decision harian.
-    roles: ['owner', 'admin'],
-  },
-  {
-    title: 'Orders',
+    // Order — pipeline utama. Submenu urut alur kerja:
+    // 3 cara input → numpuk di Antrian Kerja → Export → pindah ke Arsip.
+    title: 'Order',
     href: '/orders',
     icon: ShoppingCart,
-    roles: ['owner', 'admin', 'cs', 'akunting', 'advertiser'],
+    roles: ['owner', 'admin', 'cs', 'akunting'],
     children: [
-      // Phase 8H — Antrian Kerja default landing untuk CS/Admin.
-      // Per-child role filter (Phase 8H audit): tighten beyond parent scope
-      // supaya cs/akunting/advertiser tidak lihat menu yang bukan untuk mereka.
-      { title: 'Antrian Kerja', href: '/orders/draft', badge: 'BARU', roles: ['owner', 'admin', 'cs'] },
       { title: 'Input Order Baru', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
       { title: 'Upload Massal', href: '/orders/bulk-upload', roles: ['owner', 'admin'] },
       { title: 'WA Paste', href: '/orders/wa-paste', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Antrian Kerja', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },
       { title: 'Export ke Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
       { title: 'Arsip Semua Order', href: '/orders/list', roles: ['owner', 'admin', 'akunting'] },
     ],
   },
   {
-    title: 'ADV',
-    href: '/adv-dashboard',
-    icon: Megaphone,
-    roles: ['owner', 'admin', 'advertiser'],
-    children: [
-      { title: 'Dashboard ADV', href: '/adv-dashboard' },
-      { title: 'Campaigns', href: '/campaigns' },
-      { title: 'Ad Spend', href: '/ad-spend' },
-      // Phase 7: Margin Simulator — owner+advertiser (admin hidden via per-child filter)
-      { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
-      // Phase 8: Daftar Advertiser — team perf dashboard, owner+admin only
-      // (advertiser sendiri tidak boleh lihat performance advertiser lain).
-      { title: 'Daftar Advertiser', href: '/team/advertisers', roles: ['owner', 'admin'] },
-    ],
-  },
-  {
-    title: 'CS',
-    href: '/cs-dashboard',
-    icon: Users,
-    // owner+admin dapat supervisor view (dropdown pilih CS) di /cs-dashboard;
-    // cs lihat dirinya sendiri.
+    // Inbox — item yang nyangkut di pipeline, perlu resolusi manual.
+    title: 'Inbox',
+    href: '/inbox',
+    icon: Inbox,
     roles: ['owner', 'admin', 'cs'],
     children: [
-      { title: 'Dashboard CS', href: '/cs-dashboard' },
-      { title: 'Laporan Harian', href: '/cs-report' },
-      // Daftar CS: team performance dashboard — hanya owner+admin
-      // (CS sendiri tidak boleh lihat performance CS lain).
-      { title: 'Daftar CS', href: '/team/cs', roles: ['owner', 'admin'] },
+      { title: 'Pending Review', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
+      { title: 'Unmatched Resi', href: '/inbox/unmatched-resi', roles: ['owner', 'admin'] },
+      { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses', roles: ['owner', 'admin'] },
+      { title: 'Address Review', href: '/inbox/address-review' },
+      { title: 'Phone Review', href: '/inbox/phone-review' },
     ],
   },
   {
-    title: 'Produk',
-    href: '/products',
-    icon: Package,
-    roles: ['owner', 'admin', 'akunting'],
-  },
-  {
-    title: 'Biaya Operasional',
-    href: '/expenses',
-    icon: Receipt,
-    roles: ['owner', 'admin', 'akunting'],
-  },
-  {
-    title: 'Reconciliation',
-    href: '/reconciliation',
+    // Keuangan — gabungan Reconciliation + Biaya Operasional.
+    title: 'Keuangan',
+    href: '/financial-position',
     icon: Scale,
     roles: ['owner', 'admin', 'akunting'],
     children: [
-      // Phase 8J — Financial Position dashboard ("duit gw ada di mana")
-      { title: 'Posisi Keuangan', href: '/financial-position', badge: 'BARU' },
+      { title: 'Posisi Keuangan', href: '/financial-position' },
       { title: 'Cross-check Platform', href: '/reconciliation' },
       { title: 'Upload File Rekonsil', href: '/reconciliation/upload' },
       { title: 'SPX Financial', href: '/reconciliation/spx' },
       { title: 'SPX Cashflow Harian', href: '/reconciliation/spx-cashflow' },
-      { title: 'Selisih Ongkir', href: '/shipping-diff' },
+      { title: 'Selisih Ongkir', href: '/shipping-diff', roles: ['owner', 'admin'] },
+      { title: 'Biaya Operasional', href: '/expenses' },
     ],
   },
   {
@@ -203,52 +164,64 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'cs', 'advertiser'],
     children: [
       { title: 'Komisi Saya', href: '/commissions/my' },
-      { title: 'Kelola Komisi', href: '/commissions/manage' },
+      { title: 'Kelola Komisi', href: '/commissions/manage', roles: ['owner', 'admin'] },
     ],
   },
   {
+    title: 'Marketing',
+    href: '/adv-dashboard',
+    icon: Megaphone,
+    roles: ['owner', 'admin', 'advertiser'],
+    children: [
+      { title: 'Dashboard ADV', href: '/adv-dashboard' },
+      { title: 'Campaigns', href: '/campaigns' },
+      { title: 'Ad Spend', href: '/ad-spend' },
+      { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
+      { title: 'Performa Advertiser', href: '/team/advertisers', roles: ['owner', 'admin'] },
+    ],
+  },
+  {
+    title: 'CS',
+    href: '/cs-dashboard',
+    icon: Users,
+    roles: ['owner', 'admin', 'cs'],
+    children: [
+      { title: 'Dashboard CS', href: '/cs-dashboard' },
+      { title: 'Laporan Harian', href: '/cs-report' },
+      { title: 'Performa CS', href: '/team/cs', roles: ['owner', 'admin'] },
+    ],
+  },
+  {
+    title: 'Analytics',
+    href: '/analytics',
+    icon: LineChart,
+    roles: ['owner', 'admin'],
+  },
+  {
+    // Master Data — config bisnis. Produk masuk sini (master, bareng Supplier).
     title: 'Master Data',
-    href: '/settings/couriers',
-    icon: Truck,
+    href: '/products',
+    icon: Package,
     roles: ['owner', 'admin', 'cs', 'advertiser', 'akunting'],
     children: [
+      { title: 'Produk', href: '/products', roles: ['owner', 'admin', 'akunting'] },
+      { title: 'Supplier', href: '/settings/suppliers' },
       { title: 'Couriers', href: '/settings/couriers' },
       { title: 'Channels', href: '/settings/courier-channels' },
       { title: 'Rates', href: '/settings/courier-rates' },
       { title: 'Status Mapping', href: '/settings/status-mapping' },
       { title: 'Converter Profiles', href: '/settings/converter-profiles' },
       { title: 'Master Wilayah', href: '/settings/wilayah' },
-      // Phase 8A — Multi-supplier (write owner+admin, read semua role
-      // karena form produk/order butuh dropdown)
-      { title: 'Suppliers', href: '/settings/suppliers' },
     ],
   },
   {
-    title: 'Inbox',
-    href: '/inbox/pending-review',
-    icon: Inbox,
-    roles: ['owner', 'admin', 'cs'],
-    children: [
-      { title: 'Pending Review', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
-      { title: 'Unmatched Resi', href: '/inbox/unmatched-resi', roles: ['owner', 'admin'] },
-      { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses', roles: ['owner', 'admin'] },
-      // Phase 8F — CS perlu akses untuk resolve alamat
-      { title: 'Address Review', href: '/inbox/address-review' },
-      // Phase 8G — CS resolve phone yang corrupt dari CSV
-      { title: 'Phone Review', href: '/inbox/phone-review' },
-    ],
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
+    title: 'Pengaturan Sistem',
+    href: '/settings/users',
     icon: Settings,
-    // Phase 8H audit — extend parent ke owner+admin. Per-child roles tighten
-    // back ke owner-only untuk Aturan Komisi + Reset Data.
     roles: ['owner', 'admin'],
     children: [
       { title: 'Users & Roles', href: '/settings/users' },
       { title: 'Aturan Komisi', href: '/settings/commission-rules', roles: ['owner'] },
-      // Phase 8E — Audit Log. Phase 8H audit: extend ke admin.
       { title: 'Audit Log', href: '/settings/audit-log' },
       { title: 'Reset Data', href: '/settings/reset-data', roles: ['owner'] },
     ],
@@ -256,21 +229,14 @@ export const NAV_ITEMS: NavItem[] = [
 ]
 
 export function getNavItemsForRole(role: UserRole): NavItem[] {
-  return NAV_ITEMS.filter((item) => item.roles.includes(role)).map((item) => {
-    if (!item.children) return item
-
-    // Per-child role filter (Phase 8): child with explicit roles[] only shown
-    // to roles in that array. Used for Margin Simulator (owner+advertiser),
-    // Daftar CS + Daftar Advertiser (owner+admin).
-    let filtered = item.children.filter(c => !c.roles || c.roles.includes(role))
-
-    // Commissions group — owner+admin lihat semua (Kelola + Saya), role lain
-    // cuma "Komisi Saya". Phase 8H audit: admin perlu Kelola untuk approve
-    // pencairan + mark paid (workflow operasional harian).
-    if (role !== 'owner' && role !== 'admin' && item.href === '/commissions') {
-      filtered = [{ title: 'Komisi Saya', href: '/commissions/my' }]
-    }
-
-    return { ...item, children: filtered }
-  })
+  return NAV_ITEMS
+    .filter((item) => item.roles.includes(role))
+    .map((item) => {
+      if (!item.children) return item
+      // Per-child role filter — child tanpa roles[] inherit dari parent group.
+      const children = item.children.filter((c) => !c.roles || c.roles.includes(role))
+      return { ...item, children }
+    })
+    // Buang group yang semua child-nya ter-filter habis untuk role ini.
+    .filter((item) => !item.children || item.children.length > 0)
 }

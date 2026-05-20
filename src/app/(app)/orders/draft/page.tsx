@@ -120,6 +120,49 @@ function OrdersDraftInner() {
   useEffect(() => { loadDrafts() }, [loadDrafts])
   useEffect(() => { setPage(0); setSelectedIds(new Set()) }, [statusFilter, search, dateFrom, dateTo])
 
+  // Phase 8K polish: auto-refresh polling 30s. Pause saat tab hidden
+  // (visibility API). Indra paste WA → 30s later list updates otomatis.
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null
+    const tick = () => {
+      if (document.visibilityState === 'visible') loadDrafts(true)
+    }
+    intervalId = setInterval(tick, 30000)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadDrafts(true)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [loadDrafts])
+
+  // Quality issues — compute per row
+  const computeQualityIssues = (r: OrderDraftEnriched): string[] => {
+    const issues: string[] = []
+    if (!r.customer_phone || String(r.customer_phone).trim().length < 8) issues.push('No HP missing/invalid')
+    if (!r.customer_city) issues.push('Kota kosong')
+    if (!r.customer_name || r.customer_name.trim().length < 3) issues.push('Nama terlalu pendek')
+    if (Number(r.total) === 0) issues.push('Total Rp 0')
+    return issues
+  }
+  const issuesPerRow = useMemo(() => {
+    const map = new Map<number, string[]>()
+    rows.forEach(r => {
+      const issues = computeQualityIssues(r)
+      if (issues.length > 0) map.set(r.id, issues)
+    })
+    return map
+  }, [rows])
+
+  // Filter chip: show only rows with issues
+  const [showIssuesOnly, setShowIssuesOnly] = useState(false)
+  useEffect(() => { setShowIssuesOnly(false) }, [statusFilter, search])
+  const visibleRows = useMemo(() => {
+    return showIssuesOnly ? rows.filter(r => issuesPerRow.has(r.id)) : rows
+  }, [rows, showIssuesOnly, issuesPerRow])
+
   // Bulk select helpers
   const allOnPageSelected = rows.length > 0 && rows.every(r => selectedIds.has(r.id))
   const someOnPageSelected = rows.some(r => selectedIds.has(r.id))
@@ -277,8 +320,31 @@ function OrdersDraftInner() {
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="ml-auto">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
+            {/* Quality filter chip */}
+            <Button
+              type="button"
+              variant={showIssuesOnly ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowIssuesOnly(v => !v)}
+              className={`h-7 text-xs gap-1.5 ${
+                showIssuesOnly
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
+                  : issuesPerRow.size > 0
+                    ? 'border-amber-500/50 text-amber-600 hover:bg-amber-500/10'
+                    : ''
+              }`}
+              disabled={issuesPerRow.size === 0 && !showIssuesOnly}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Data tidak lengkap ({issuesPerRow.size})
+            </Button>
+            {showIssuesOnly && (
+              <span className="text-xs text-muted-foreground">
+                Hanya draft dengan no HP, kota, atau total kosong.
+              </span>
+            )}
+            <span className="ml-auto text-muted-foreground">
               {totalCount.toLocaleString('id-ID')} order · halaman {page + 1}/{totalPages}
             </span>
           </div>
@@ -333,11 +399,12 @@ function OrdersDraftInner() {
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map(row => (
+                visibleRows.map(row => (
                   <DraftRow
                     key={row.id}
                     row={row}
                     selected={selectedIds.has(row.id)}
+                    issues={issuesPerRow.get(row.id)}
                     onToggleSelect={() => toggleRow(row.id)}
                     onResiClick={() => openResiDialog(row)}
                     onUpdated={() => loadDrafts(true)}
@@ -450,9 +517,10 @@ function OrdersDraftInner() {
 // =======================================================================
 // Row renderer
 // =======================================================================
-function DraftRow({ row, selected, onToggleSelect, onResiClick, onUpdated }: {
+function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdated }: {
   row: OrderDraftEnriched
   selected: boolean
+  issues?: string[]
   onToggleSelect: () => void
   onResiClick: () => void
   onUpdated: () => void
@@ -492,7 +560,14 @@ function DraftRow({ row, selected, onToggleSelect, onResiClick, onUpdated }: {
           {row.product_summary || '—'}
         </span>
       </TableCell>
-      <TableCell className="text-xs">{row.customer_name}</TableCell>
+      <TableCell className="text-xs">
+        <div className="flex items-center gap-1.5" title={issues && issues.length > 0 ? issues.join(' · ') : undefined}>
+          {issues && issues.length > 0 && (
+            <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" aria-label="Data tidak lengkap" />
+          )}
+          <span className="truncate">{row.customer_name}</span>
+        </div>
+      </TableCell>
       <TableCell className="text-xs">{row.customer_city || <span className="text-muted-foreground italic">—</span>}</TableCell>
       <TableCell className="text-xs text-right tabular-nums whitespace-nowrap">{formatRupiah(Number(row.total))}</TableCell>
       <TableCell className="text-center">

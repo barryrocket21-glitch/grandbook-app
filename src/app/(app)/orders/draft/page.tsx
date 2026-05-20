@@ -10,6 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import {
   Inbox, Plus, Search, Filter, ChevronLeft, ChevronRight, RefreshCw, Truck,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
@@ -168,6 +171,19 @@ function OrdersDraftInner() {
                 className="pl-9"
               />
             </div>
+            <Select
+              value={statusFilter}
+              onValueChange={v => v && setStatusFilter(v as 'ALL' | DraftOrderStatus)}
+            >
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent className="w-[220px]">
+                <SelectItem value="ALL">Semua status</SelectItem>
+                <SelectItem value="BARU">Baru</SelectItem>
+                <SelectItem value="SIAP_KIRIM">Siap Kirim</SelectItem>
+                <SelectItem value="PROBLEM">Problem</SelectItem>
+                <SelectItem value="CANCEL">Cancel</SelectItem>
+              </SelectContent>
+            </Select>
             <Input
               type="date"
               value={dateFrom}

@@ -227,28 +227,51 @@ export default function WaPastePage() {
                 <Textarea
                   value={text}
                   onChange={(e) => { setText(e.target.value); setPreview(null) }}
-                  rows={12}
-                  placeholder={`Nama: Budi Santoso
-HP: 081234567890
-Alamat: Jl. Mawar No. 5 RT 03 RW 04
-Produk: Madu Hutan 250ml
-Kota: Bandung           (optional)
-Provinsi: Jawa Barat    (optional)
-Kodepos: 40123          (optional)
-Catatan: tolong dibungkus rapih  (optional)`}
+                  rows={14}
+                  placeholder={`(53) CS : Fiaro
+KODE ADV : Umo
+Produk : 1 PAVIO SLIPPERS (1pcs)
+
+Nama penerima :  Jems Suawa
+No HP : +6281354807676
+Alamat Lengkap : Lingkungan 4 RT 12 Jl.Raya pinanguniaan, Kel. Winenet Satu
+Kecamatan : Aertembaga
+Kota/Kab : Bitung
+Provinsi : Sulawesi Utara
+
+Ongkir : Rp 63.000
+Total Bayar :  Rp 188.000
+Pembayaran : COD
+
+Keterangan : Hitam 42`}
                   className="font-mono text-xs"
                 />
                 <div className="rounded-md bg-violet-500/5 border border-violet-500/20 p-3 text-xs space-y-1.5">
                   <div className="font-semibold text-violet-600">Format yang ke-recognize (profile wa_paste_keyvalue):</div>
-                  <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
-                    <li><span className="font-mono">Nama:</span> <span className="text-foreground">Nama customer</span> <span className="text-red-500">(wajib)</span></li>
-                    <li><span className="font-mono">HP:</span> <span className="text-foreground">No HP / WhatsApp</span> <span className="text-red-500">(wajib)</span></li>
-                    <li><span className="font-mono">Alamat:</span> <span className="text-foreground">Alamat lengkap</span> <span className="text-red-500">(wajib)</span></li>
-                    <li><span className="font-mono">Produk:</span> <span className="text-foreground">Nama produk + varian</span> <span className="text-red-500">(wajib)</span></li>
-                    <li><span className="font-mono">Kota / Provinsi / Kodepos / Catatan:</span> opsional</li>
-                  </ul>
-                  <div className="text-muted-foreground pt-1">
-                    Urutan field bebas. Case-insensitive untuk huruf pertama (Nama/nama, HP/hp). 1 paste = 1 order. Detail (channel, harga, qty) edit di Antrian Kerja setelah import.
+                  <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+                    <div>
+                      <div className="text-red-500 font-semibold mb-0.5">Wajib (4)</div>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        <li><code>Nama penerima :</code></li>
+                        <li><code>No HP :</code></li>
+                        <li><code>Alamat Lengkap :</code></li>
+                        <li><code>Produk :</code></li>
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="text-emerald-500 font-semibold mb-0.5">Opsional (9)</div>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        <li><code>(NN) CS :</code> → cs_name</li>
+                        <li><code>KODE ADV :</code> → meta</li>
+                        <li><code>Kecamatan / Kota/Kab / Provinsi</code></li>
+                        <li><code>Ongkir / Total Bayar</code> (Rp auto-strip)</li>
+                        <li><code>Pembayaran :</code> COD / Transfer</li>
+                        <li><code>Keterangan :</code></li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="text-muted-foreground pt-1.5 border-t border-violet-500/20">
+                    Urutan field bebas (lookahead-based). 1 paste = 1 order → masuk <strong>Antrian Kerja</strong>. CS edit channel + harga di sana setelah import.
                   </div>
                 </div>
               </div>

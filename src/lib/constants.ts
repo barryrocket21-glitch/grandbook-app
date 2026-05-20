@@ -158,8 +158,8 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'CS',
     href: '/cs-dashboard',
     icon: Users,
-    // admin di-keep untuk akses sub-pages (Laporan Harian / Daftar CS) tapi
-    // /cs-dashboard sendiri di-gate ke cs+owner di komponen.
+    // owner+admin dapat supervisor view (dropdown pilih CS) di /cs-dashboard;
+    // cs lihat dirinya sendiri.
     roles: ['owner', 'admin', 'cs'],
     children: [
       { title: 'Dashboard CS', href: '/cs-dashboard' },

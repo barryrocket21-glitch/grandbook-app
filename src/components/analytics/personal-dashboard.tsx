@@ -50,8 +50,8 @@ interface Props {
 
 export function PersonalDashboard({ role, pageTitle, pageDescription, icon: Icon, emptyHintForOwner, commissionLink = '/commissions/my', renderExtraSection }: Props) {
   const { user, role: viewerRole, loading: authLoading } = useAuth()
-  const isOwner = viewerRole === 'owner'
-  const isOwnerLooking = isOwner
+  // Owner & admin keduanya dapat "supervisor view": dropdown pilih user mana saja.
+  const isOwnerLooking = viewerRole === 'owner' || viewerRole === 'admin'
 
   const [range, setRange] = useState<DateRange>(thisMonth)
   const [rangeReady, setRangeReady] = useState(false)

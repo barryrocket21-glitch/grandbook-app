@@ -50,7 +50,7 @@ const TAB_TO_FILTER: Record<TabKey, CommissionV2Status[] | undefined> = {
 
 export default function ManageCommissionsPage() {
   const { role, loading: authLoading } = useAuth()
-  const isOwner = role === 'owner'
+  const canManageCommissions = role === 'owner' || role === 'admin'
 
   const [tab, setTab] = useState<TabKey>('EARNED')
   const [rows, setRows] = useState<CommissionRow[]>([])
@@ -84,11 +84,11 @@ export default function ManageCommissionsPage() {
         .order('full_name')
       setUsers((data || []) as typeof users)
     }
-    if (isOwner) void loadUsers()
-  }, [isOwner])
+    if (canManageCommissions) void loadUsers()
+  }, [canManageCommissions])
 
   const load = useCallback(async () => {
-    if (!isOwner) return
+    if (!canManageCommissions) return
     setLoading(true)
     try {
       const { dateFrom, dateTo } = periodToDates(period, customFrom || null, customTo || null)
@@ -109,11 +109,11 @@ export default function ManageCommissionsPage() {
     } finally {
       setLoading(false)
     }
-  }, [isOwner, tab, period, customFrom, customTo, userFilter, search])
+  }, [canManageCommissions, tab, period, customFrom, customTo, userFilter, search])
 
   useEffect(() => {
-    if (!authLoading && isOwner) void load()
-  }, [authLoading, isOwner, load])
+    if (!authLoading && canManageCommissions) void load()
+  }, [authLoading, canManageCommissions, load])
 
   const stats = useMemo(() => computeStats(rows), [rows])
 
@@ -191,12 +191,12 @@ export default function ManageCommissionsPage() {
   }
 
   // ---------- Permission gate ----------
-  if (!authLoading && !isOwner) {
+  if (!authLoading && !canManageCommissions) {
     return (
       <div className="space-y-6">
         <PageHeader icon={Coins} title="Kelola Komisi" />
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
-          Hanya owner yang bisa mengelola pencairan komisi.
+          Hanya owner &amp; admin yang bisa mengelola pencairan komisi.
           Untuk lihat komisi Anda sendiri, buka <Link href="/commissions/my" className="text-violet-500 hover:underline">/commissions/my</Link>.
         </CardContent></Card>
       </div>

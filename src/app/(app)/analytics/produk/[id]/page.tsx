@@ -51,7 +51,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const { id: idParam } = use(params)
   const productId = Number(idParam)
   const { role, loading: authLoading } = useAuth()
-  const isOwner = role === 'owner'
+  const canViewAnalytics = role === 'owner' || role === 'admin'
 
   const [range, setRange] = useState<DateRange>(thisMonth)
   const [rangeReady, setRangeReady] = useState(false)
@@ -83,14 +83,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }, [productId, range.from, range.to, rangeReady])
 
   useEffect(() => {
-    if (!authLoading && isOwner && rangeReady) void load()
-  }, [authLoading, isOwner, rangeReady, load])
+    if (!authLoading && canViewAnalytics && rangeReady) void load()
+  }, [authLoading, canViewAnalytics, rangeReady, load])
 
-  if (!authLoading && !isOwner) {
+  if (!authLoading && !canViewAnalytics) {
     return (
       <div className="space-y-6">
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
-          Halaman ini owner-only. Untuk performance individual buka{' '}
+          Halaman ini hanya untuk owner &amp; admin. Untuk performance individual buka{' '}
           <Link href="/cs-dashboard" className="text-violet-500 hover:underline">/cs-dashboard</Link>.
         </CardContent></Card>
       </div>

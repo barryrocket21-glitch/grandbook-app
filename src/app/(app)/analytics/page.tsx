@@ -59,7 +59,7 @@ export default function AnalyticsPage() {
 
 function AnalyticsPageInner() {
   const { role, loading: authLoading } = useAuth()
-  const isOwner = role === 'owner'
+  const canViewAnalytics = role === 'owner' || role === 'admin'
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -101,7 +101,7 @@ function AnalyticsPageInner() {
   }, [])
 
   const load = useCallback(async () => {
-    if (!isOwner || !rangeReady) return
+    if (!canViewAnalytics || !rangeReady) return
     setLoading(true)
     try {
       // Phase 6 redesign: PerProdukSection pakai funnelRows langsung
@@ -126,18 +126,18 @@ function AnalyticsPageInner() {
     } finally {
       setLoading(false)
     }
-  }, [isOwner, range.from, range.to, rangeReady])
+  }, [canViewAnalytics, range.from, range.to, rangeReady])
 
   useEffect(() => {
-    if (!authLoading && isOwner && rangeReady) void load()
-  }, [authLoading, isOwner, load, rangeReady])
+    if (!authLoading && canViewAnalytics && rangeReady) void load()
+  }, [authLoading, canViewAnalytics, load, rangeReady])
 
-  if (!authLoading && !isOwner) {
+  if (!authLoading && !canViewAnalytics) {
     return (
       <div className="space-y-6">
         <PageHeader icon={LineChartIcon} title="Analytics" />
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
-          Hanya owner yang bisa lihat full analytics. CS bisa lihat performa sendiri di{' '}
+          Hanya owner &amp; admin yang bisa lihat full analytics. CS bisa lihat performa sendiri di{' '}
           <Link href="/cs-dashboard" className="text-violet-500 hover:underline">/cs-dashboard</Link>,
           advertiser di <Link href="/adv-dashboard" className="text-violet-500 hover:underline">/adv-dashboard</Link>.
         </CardContent></Card>

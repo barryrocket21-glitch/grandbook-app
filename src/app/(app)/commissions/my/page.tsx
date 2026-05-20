@@ -27,7 +27,7 @@ const supabase = createClient()
 type Period = 'this_month' | 'last_month' | 'all' | 'custom'
 
 export default function MyCommissionsPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, role, loading: authLoading } = useAuth()
   const [rows, setRows] = useState<CommissionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>('this_month')
@@ -154,11 +154,24 @@ export default function MyCommissionsPage() {
                 </TableCell></TableRow>
               ) : rows.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="p-0">
-                  <EmptyState
-                    icon={Coins}
-                    title="Belum ada komisi"
-                    description="Komisi otomatis terisi saat order yang Anda handle (sebagai CS, Advertiser, atau Admin) status DITERIMA. Hubungi owner kalau ada order yang seharusnya menghasilkan komisi tapi tidak muncul."
-                  />
+                  {role === 'owner' ? (
+                    <EmptyState
+                      icon={Coins}
+                      title="Tidak ada komisi pribadi"
+                      description="Sebagai owner, Anda mengelola komisi tim — bukan menerimanya. Buka Kelola Komisi untuk melihat & mencairkan komisi CS dan Advertiser."
+                      action={
+                        <Link href="/commissions/manage" className="text-sm font-medium text-violet-500 hover:underline">
+                          Buka Kelola Komisi →
+                        </Link>
+                      }
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={Coins}
+                      title="Belum ada komisi"
+                      description="Komisi otomatis terisi saat order yang Anda handle (sebagai CS, Advertiser, atau Admin) status DITERIMA. Hubungi owner kalau ada order yang seharusnya menghasilkan komisi tapi tidak muncul."
+                    />
+                  )}
                 </TableCell></TableRow>
               ) : rows.map((c) => (
                 <TableRow key={c.id}>

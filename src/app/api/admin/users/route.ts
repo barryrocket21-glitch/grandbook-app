@@ -8,11 +8,11 @@ async function requireOwner() {
   const sb = await createServerClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'Unauthorized', status: 401 as const }
-  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await sb.from('profiles').select('role, organization_id').eq('id', user.id).single()
   if (profile?.role !== 'owner' && profile?.role !== 'admin') {
     return { error: 'Hanya Owner atau Admin yang dapat mengakses', status: 403 as const }
   }
-  return { ok: true as const }
+  return { ok: true as const, orgId: profile.organization_id as number | null }
 }
 
 function getAdmin() {
@@ -71,12 +71,15 @@ export async function POST(request: Request) {
     }, { status: 400 })
   }
 
-  // Upsert (handles both: trigger already inserted a row, or no trigger)
+  // Upsert (handles both: trigger already inserted a row, or no trigger).
+  // organization_id wajib di-set — tanpa ini RLS current_org_id() mismatch
+  // dan user baru ke-block dari semua data (blank state).
   const { error: profileErr } = await admin.from('profiles').upsert({
     id: created.user.id,
     full_name: body.full_name,
     role: body.role,
     active: true,
+    organization_id: auth.orgId,
   }, { onConflict: 'id' })
   if (profileErr) {
     await admin.auth.admin.deleteUser(created.user.id)

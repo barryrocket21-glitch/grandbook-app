@@ -228,22 +228,24 @@ export default function WaPastePage() {
                   value={text}
                   onChange={(e) => { setText(e.target.value); setPreview(null) }}
                   rows={14}
-                  placeholder={`(53) CS : Fiaro
+                  placeholder={`Bisa paste 1 atau lebih order sekaligus (WA Web copy format ke-detect otomatis):
+
+[21.12, 20/5/2026] Bojo Pertama: (10) CS : Fiaro
 KODE ADV : Umo
-Produk : 1 PAVIO SLIPPERS (1pcs)
+Produk : 1 Sandal GD F (1pcs)
 
-Nama penerima :  Jems Suawa
-No HP : +6281354807676
-Alamat Lengkap : Lingkungan 4 RT 12 Jl.Raya pinanguniaan, Kel. Winenet Satu
-Kecamatan : Aertembaga
-Kota/Kab : Bitung
-Provinsi : Sulawesi Utara
+Nama penerima : Andi Darmawan
+No HP : +6281234567890
+Alamat Lengkap : Jl. Merdeka No. 10
+Kecamatan : Sukmajaya
+Kota/Kab : Depok
+Provinsi : Jawa Barat
 
-Ongkir : Rp 63.000
-Total Bayar :  Rp 188.000
+Ongkir : Rp 15.000
+Total Bayar : Rp 140.000
 Pembayaran : COD
 
-Keterangan : Hitam 42`}
+Keterangan : Coklat 40`}
                   className="font-mono text-xs"
                 />
                 <div className="rounded-md bg-violet-500/5 border border-violet-500/20 p-3 text-xs space-y-1.5">
@@ -255,7 +257,7 @@ Keterangan : Hitam 42`}
                         <li><code>Nama penerima :</code></li>
                         <li><code>No HP :</code></li>
                         <li><code>Alamat Lengkap :</code></li>
-                        <li><code>Produk :</code></li>
+                        <li><code>Produk :</code> &lt;qty&gt; &lt;nama&gt;</li>
                       </ul>
                     </div>
                     <div>
@@ -264,14 +266,16 @@ Keterangan : Hitam 42`}
                         <li><code>(NN) CS :</code> → cs_name</li>
                         <li><code>KODE ADV :</code> → meta</li>
                         <li><code>Kecamatan / Kota/Kab / Provinsi</code></li>
-                        <li><code>Ongkir / Total Bayar</code> (Rp auto-strip)</li>
+                        <li><code>Ongkir / Total Bayar</code> (Rp 140.000 → 140000)</li>
                         <li><code>Pembayaran :</code> COD / Transfer</li>
                         <li><code>Keterangan :</code></li>
                       </ul>
                     </div>
                   </div>
-                  <div className="text-muted-foreground pt-1.5 border-t border-violet-500/20">
-                    Urutan field bebas (lookahead-based). 1 paste = 1 order → masuk <strong>Antrian Kerja</strong>. CS edit channel + harga di sana setelah import.
+                  <div className="text-muted-foreground pt-1.5 border-t border-violet-500/20 space-y-0.5">
+                    <div>• <strong>Multi-order</strong>: paste WA Web copy dengan multiple <code>[HH.MM, dd/mm/yyyy] Sender:</code> prefix akan ke-split otomatis per order.</div>
+                    <div>• <strong>Qty</strong>: leading digit di <code>Produk : 2 Sandal Hitam</code> → qty=2. Default 1.</div>
+                    <div>• Urutan field bebas. Masuk ke <strong>Antrian Kerja</strong> setelah import.</div>
                   </div>
                 </div>
               </div>

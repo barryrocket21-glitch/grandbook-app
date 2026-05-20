@@ -12,6 +12,7 @@ export type TransformKey =
   | 'parse_datetime_yyyy-mm-dd'
   | 'numeric_or_zero'
   | 'numeric_or_null'
+  | 'numeric_id_currency'
   | 'uppercase'
   | 'lowercase'
   | 'trim'
@@ -70,6 +71,13 @@ export const TRANSFORMS: readonly TransformDef[] = [
     label: 'Numeric or Null',
     description: 'Parse ke number, return null kalau empty atau invalid (Phase 8F)',
     sample: { input: '157,350', output: '157350' },
+    available: true,
+  },
+  {
+    key: 'numeric_id_currency',
+    label: 'Numeric (ID Currency)',
+    description: 'Parse format mata uang Indonesia. "." = thousand sep, "," = decimal sep (Phase 8K)',
+    sample: { input: 'Rp 140.000', output: '140000' },
     available: true,
   },
   {
@@ -281,6 +289,17 @@ export function applyTransform(
         const cleaned = s.replace(/[,\s]/g, '').replace(/[^\d.\-]/g, '')
         const n = Number(cleaned)
         return { ok: true, value: Number.isFinite(n) ? n : null }
+      }
+      case 'numeric_id_currency': {
+        // Indonesian currency format: "Rp 140.000" → 140000 (. = thousand sep, , = decimal sep)
+        // Generic numeric_or_zero salah karena treat "." sebagai JS decimal point.
+        if (s === '' || s === '-') return { ok: true, value: 0 }
+        // Strip non-digit/separator chars (Rp, spaces, etc)
+        let cleaned = s.replace(/[^\d.,\-]/g, '')
+        // Strip thousand seps (.), convert decimal sep (,) → JS decimal (.)
+        cleaned = cleaned.replace(/\./g, '').replace(',', '.')
+        const n = Number(cleaned)
+        return { ok: true, value: Number.isFinite(n) ? n : 0 }
       }
       case 'null_if_empty': {
         const trimmed = s.trim()

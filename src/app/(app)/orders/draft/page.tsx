@@ -111,18 +111,18 @@ function OrdersDraftInner() {
     setResiDialogOpen(true)
   }
 
-  const visibleColumns: { id: string; label: string; align?: 'right' | 'center' }[] = useMemo(() => [
-    { id: 'created_at', label: 'Input' },
-    { id: 'order_number', label: 'Order#' },
-    { id: 'product_summary', label: 'Produk' },
-    { id: 'customer_name', label: 'Customer' },
-    { id: 'customer_city', label: 'Kota' },
-    { id: 'total', label: 'Total', align: 'right' },
-    { id: 'status', label: 'Status', align: 'center' },
-    { id: 'priority', label: 'Prio', align: 'center' },
-    { id: 'cs_name', label: 'CS' },
-    { id: 'days_in_draft', label: 'Umur', align: 'right' },
-    { id: 'actions', label: '', align: 'center' },
+  const visibleColumns: { id: string; label: string; align?: 'right' | 'center'; width?: string }[] = useMemo(() => [
+    { id: 'created_at', label: 'Input', width: 'w-24' },
+    { id: 'order_number', label: 'Order#', width: 'w-40' },
+    { id: 'product_summary', label: 'Produk', width: 'w-64' },
+    { id: 'customer_name', label: 'Customer', width: 'w-36' },
+    { id: 'customer_city', label: 'Kota', width: 'w-32' },
+    { id: 'total', label: 'Total', align: 'right', width: 'w-28' },
+    { id: 'status', label: 'Status', align: 'center', width: 'w-24' },
+    { id: 'priority', label: 'Prio', align: 'center', width: 'w-16' },
+    { id: 'cs_name', label: 'CS', width: 'w-24' },
+    { id: 'days_in_draft', label: 'Umur', align: 'right', width: 'w-16' },
+    { id: 'actions', label: '', align: 'center', width: 'w-20' },
   ], [])
 
   return (
@@ -221,7 +221,7 @@ function OrdersDraftInner() {
                 {visibleColumns.map(c => (
                   <TableHead
                     key={c.id}
-                    className={c.align === 'right' ? 'text-right' : c.align === 'center' ? 'text-center' : ''}
+                    className={`${c.width || ''} ${c.align === 'right' ? 'text-right' : c.align === 'center' ? 'text-center' : ''}`}
                   >
                     {c.label}
                   </TableHead>
@@ -330,7 +330,7 @@ function DraftRow({ row, onResiClick }: {
       </TableCell>
       <TableCell className="text-xs">{row.customer_name}</TableCell>
       <TableCell className="text-xs">{row.customer_city || <span className="text-muted-foreground italic">—</span>}</TableCell>
-      <TableCell className="text-xs text-right tabular-nums">{formatRupiah(Number(row.total))}</TableCell>
+      <TableCell className="text-xs text-right tabular-nums whitespace-nowrap">{formatRupiah(Number(row.total))}</TableCell>
       <TableCell className="text-center">
         <Badge variant="outline" className={`${statusColor} text-[10px]`}>{statusLabel}</Badge>
       </TableCell>

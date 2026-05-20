@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -30,6 +31,10 @@ export function AppSidebar() {
   const { user, profile, role, signOut } = useAuth()
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
+  // next-themes resolves the theme only on the client; rendering theme-
+  // dependent UI during SSR causes a hydration mismatch. Gate it on mount.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const navItems = role ? getNavItemsForRole(role) : []
   const counts = useSidebarCounts(user?.id ?? null)
@@ -161,8 +166,8 @@ export function AppSidebar() {
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
-                {theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-                {theme === 'dark' ? 'Terang' : 'Gelap'}
+                {mounted && theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                {mounted && theme === 'dark' ? 'Terang' : 'Gelap'}
               </button>
               <button
                 onClick={signOut}

@@ -612,6 +612,96 @@ export const ORDER_DIMENSION_LABEL: Record<OrderDimension, string> = {
   month: 'Per Bulan',
 }
 
+// =============================================================
+// Phase 8I — SPX Financial Reconciliation
+// =============================================================
+
+export type ReconBatchStatus = 'PREVIEW' | 'APPLIED' | 'CANCELLED' | 'FAILED'
+
+export interface ReconciliationBatch {
+  id: number
+  organization_id: number
+  channel_id: number | null
+  profile_id: number | null
+  uploaded_by: string | null
+  uploaded_at: string
+  file_name: string | null
+  file_size_bytes: number | null
+  total_rows: number
+  matched_count: number
+  unmatched_count: number
+  variance_count: number
+  total_payout_applied: number
+  total_shipping_applied: number
+  status: ReconBatchStatus
+  applied_at: string | null
+  applied_by: string | null
+  preview_payload: ReconPreviewPayload | null
+  notes: string | null
+  created_at: string
+  uploaded_by_profile?: { full_name: string | null }
+  applied_by_profile?: { full_name: string | null }
+}
+
+export interface ReconPreviewPayload {
+  matched: ReconMatchedRow[]
+  variance: ReconVarianceRow[]
+  unmatched: ReconUnmatchedRow[]
+}
+
+export interface ReconMatchedRow {
+  resi: string
+  order_id: number
+  order_number: string
+  customer_name: string
+  old_payout: number | null
+  new_payout: number
+  new_shipping: number
+  new_cod: number
+}
+
+export interface ReconVarianceRow {
+  resi: string
+  order_id: number
+  order_number: string
+  customer_name: string
+  old_payout: number
+  new_payout: number
+  diff: number
+  old_shipping: number | null
+  new_shipping: number
+  new_cod: number
+}
+
+export interface ReconUnmatchedRow {
+  resi?: string
+  reason: 'empty_resi' | 'no_order'
+  // raw file row fields (passthrough)
+  [key: string]: unknown
+}
+
+/** Return shape dari RPC preview_spx_recon */
+export interface ReconPreviewResult {
+  batch_id: number
+  total_rows: number
+  matched_count: number
+  unmatched_count: number
+  variance_count: number
+  total_payout_estimated: number
+  total_shipping_estimated: number
+  preview_data: ReconPreviewPayload
+}
+
+/** Return shape dari RPC apply_spx_recon */
+export interface ReconApplyResult {
+  batch_id: number
+  status: 'APPLIED'
+  matched_updated: number
+  variance_updated: number
+  unmatched_logged: number
+  applied_at: string
+}
+
 /** Saved column view per user */
 export interface SavedView {
   id: string

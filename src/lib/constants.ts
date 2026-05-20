@@ -174,10 +174,11 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Reconciliation',
     href: '/reconciliation',
     icon: Scale,
-    roles: ['owner', 'admin'],
+    roles: ['owner', 'admin', 'akunting'],
     children: [
       { title: 'Cross-check Platform', href: '/reconciliation' },
       { title: 'Upload File Rekonsil', href: '/reconciliation/upload' },
+      { title: 'SPX Financial', href: '/reconciliation/spx' },
       { title: 'Selisih Ongkir', href: '/shipping-diff' },
     ],
   },

@@ -50,10 +50,19 @@ async function main() {
     await page.fill('input[type="email"], input[name="email"], input[id="email"]', email)
     await page.fill('input[type="password"], input[name="password"], input[id="password"]', password)
     console.log(`[capture] Submitting login for ${email}...`)
-    await Promise.all([
-      page.waitForURL(/\/(dashboard|orders|adv-dashboard|reconciliation|cs-dashboard)/, { timeout: 15000 }),
-      page.click('button[type="submit"]'),
-    ])
+    await page.click('button[type="submit"]')
+
+    // Wait for either redirect or error toast
+    try {
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20000 })
+    } catch {
+      // Take screenshot for diagnostic
+      const errScreenshot = join(REPO_ROOT, 'tests', 'screenshots', `capture-fail-${slot}-${Date.now()}.png`)
+      await page.screenshot({ path: errScreenshot, fullPage: true })
+      const bodyText = await page.locator('body').innerText().catch(() => '?')
+      const currentUrl = page.url()
+      throw new Error(`Login redirect timeout. URL still: ${currentUrl}. Screenshot: ${errScreenshot}. Body excerpt: ${bodyText.substring(0, 500)}`)
+    }
 
     console.log(`[capture] Logged in successfully. Current URL: ${page.url()}`)
 

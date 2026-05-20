@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "import:wilayah": "tsx scripts/import_master_wilayah.ts",
-    "capture-session": "node scripts/capture-session.mjs"
+    "capture-session": "node scripts/capture-session.mjs",
+    "smoke": "node tests/scripts/smoke-all.mjs",
+    "smoke:8h": "node tests/scripts/smoke-phase8h-orders-draft.mjs",
+    "smoke:8j": "node tests/scripts/smoke-phase8j-financial-position.mjs",
+    "smoke:8k": "node tests/scripts/smoke-phase8k-wa-paste.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

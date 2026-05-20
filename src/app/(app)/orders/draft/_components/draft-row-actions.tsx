@@ -13,13 +13,13 @@ import { MoreHorizontal, Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-r
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import type { OrderDraftEnriched } from '@/lib/types'
-import { DraftQuickEditDialog } from './draft-quick-edit-dialog'
 
 const supabase = createClient()
 
 interface Props {
   row: OrderDraftEnriched
   onUpdated: () => void
+  onEdit: () => void
 }
 
 /**
@@ -32,11 +32,10 @@ interface Props {
  * Workflow Resi (cetak + promote ke arsip) tetap via tombol "Resi" di kolom
  * actions — bukan via dropdown ini.
  */
-export function DraftRowActions({ row, onUpdated }: Props) {
+export function DraftRowActions({ row, onUpdated, onEdit }: Props) {
   const { role } = useAuth()
   const isOwnerOrAdmin = role === 'owner' || role === 'admin'
 
-  const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -67,7 +66,7 @@ export function DraftRowActions({ row, onUpdated }: Props) {
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel>Aksi Draft</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setEditOpen(true)}>
+          <DropdownMenuItem onClick={onEdit}>
             <Pencil className="w-3.5 h-3.5 mr-2" />
             Edit cepat
           </DropdownMenuItem>
@@ -85,13 +84,6 @@ export function DraftRowActions({ row, onUpdated }: Props) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <DraftQuickEditDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        draft={row}
-        onSaved={onUpdated}
-      />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="sm:max-w-md">

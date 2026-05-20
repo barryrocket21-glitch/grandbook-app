@@ -32,6 +32,7 @@ import { DraftStatusStatsBar } from './_components/draft-status-stats-bar'
 import { ResiInputDialog } from './_components/resi-input-dialog'
 import { DraftRowActions } from './_components/draft-row-actions'
 import { BulkResiDialog } from './_components/bulk-resi-dialog'
+import { DraftQuickEditDialog } from './_components/draft-quick-edit-dialog'
 
 const supabase = createClient()
 const PAGE_SIZE = 100
@@ -525,6 +526,7 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
   onResiClick: () => void
   onUpdated: () => void
 }) {
+  const [editOpen, setEditOpen] = useState(false)
   const status = row.status as OrderStatus
   const statusColor = STATUS_BADGE_COLOR[status] || 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30'
   const statusLabel = STATUS_LABEL[status] || row.status
@@ -551,9 +553,14 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
       </TableCell>
       <TableCell className="text-xs whitespace-nowrap">{formatDate(row.created_at)}</TableCell>
       <TableCell>
-        <Link href={`/orders/${row.id}?draft=1`} className="text-violet-400 hover:underline font-mono text-xs whitespace-nowrap">
+        <button
+          type="button"
+          onClick={() => setEditOpen(true)}
+          className="text-violet-400 hover:underline font-mono text-xs whitespace-nowrap cursor-pointer"
+          title="Klik untuk Edit cepat"
+        >
           {row.order_number}
-        </Link>
+        </button>
       </TableCell>
       <TableCell className="text-xs max-w-[260px]">
         <span className="truncate inline-block max-w-full align-middle" title={row.product_summary || ''}>
@@ -589,9 +596,16 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
             <Truck className="w-3 h-3" />
             Resi
           </Button>
-          <DraftRowActions row={row} onUpdated={onUpdated} />
+          <DraftRowActions row={row} onUpdated={onUpdated} onEdit={() => setEditOpen(true)} />
         </div>
       </TableCell>
+      {/* Edit dialog lifted to row level — shared antara Order# click + dropdown menu */}
+      <DraftQuickEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        draft={row}
+        onSaved={onUpdated}
+      />
     </TableRow>
   )
 }

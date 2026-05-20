@@ -1,0 +1,339 @@
+'use client'
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/components/providers/auth-provider'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Inbox, Plus, Search, Filter, ChevronLeft, ChevronRight, RefreshCw, Truck,
+} from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
+import { STATUS_BADGE_COLOR, STATUS_LABEL } from '@/lib/schemas/settings'
+import { formatRupiah, formatDate } from '@/lib/format'
+import type {
+  OrderDraftEnriched, DraftOrderStatus, DraftStatusStat, OrderStatus,
+} from '@/lib/types'
+import { DraftStatusStatsBar } from './_components/draft-status-stats-bar'
+import { ResiInputDialog } from './_components/resi-input-dialog'
+
+const supabase = createClient()
+const PAGE_SIZE = 100
+
+export default function OrdersDraftPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6"><PageHeader icon={Inbox} title="Antrian Kerja" /></div>
+    }>
+      <OrdersDraftInner />
+    </Suspense>
+  )
+}
+
+function OrdersDraftInner() {
+  const { user, profile } = useAuth()
+  const searchParams = useSearchParams()
+  const initialStatus = (searchParams.get('status') || 'ALL') as 'ALL' | DraftOrderStatus
+
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | DraftOrderStatus>(initialStatus)
+  const [dateFrom, setDateFrom] = useState<string>('')
+  const [dateTo, setDateTo] = useState<string>('')
+  const [page, setPage] = useState(0)
+
+  const [rows, setRows] = useState<OrderDraftEnriched[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [statusStats, setStatusStats] = useState<DraftStatusStat[]>([])
+  const [statusStatsTotal, setStatusStatsTotal] = useState(0)
+  const [statsLoading, setStatsLoading] = useState(true)
+
+  // Resi input dialog state
+  const [resiDialogOpen, setResiDialogOpen] = useState(false)
+  const [resiDialogDraft, setResiDialogDraft] = useState<OrderDraftEnriched | null>(null)
+
+  const loadDrafts = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
+    try {
+      const [listResp, statsResp] = await Promise.all([
+        supabase.rpc('list_orders_draft_enriched', {
+          p_from: dateFrom || null,
+          p_to: dateTo || null,
+          p_status: statusFilter === 'ALL' ? null : statusFilter,
+          p_search: search.trim() || null,
+          p_limit: PAGE_SIZE,
+          p_offset: page * PAGE_SIZE,
+        }),
+        supabase.rpc('get_draft_status_stats', {
+          p_from: dateFrom || null,
+          p_to: dateTo || null,
+          p_search: search.trim() || null,
+        }),
+      ])
+      if (listResp.error) throw listResp.error
+      const rs = (listResp.data || []) as OrderDraftEnriched[]
+      setRows(rs)
+      setTotalCount(rs[0]?.total_count ? Number(rs[0].total_count) : 0)
+
+      if (statsResp.error) {
+        console.warn('get_draft_status_stats failed:', statsResp.error)
+      } else {
+        const stats = (statsResp.data || []) as DraftStatusStat[]
+        setStatusStats(stats)
+        setStatusStatsTotal(stats.reduce((sum, s) => sum + Number(s.cnt), 0))
+      }
+    } catch (err) {
+      console.warn('list_orders_draft_enriched failed:', err)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+      setStatsLoading(false)
+    }
+  }, [statusFilter, search, page, dateFrom, dateTo])
+
+  useEffect(() => { loadDrafts() }, [loadDrafts])
+  useEffect(() => { setPage(0) }, [statusFilter, search, dateFrom, dateTo])
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+
+  const openResiDialog = (row: OrderDraftEnriched) => {
+    setResiDialogDraft(row)
+    setResiDialogOpen(true)
+  }
+
+  const visibleColumns: { id: string; label: string; align?: 'right' | 'center' }[] = useMemo(() => [
+    { id: 'created_at', label: 'Input' },
+    { id: 'order_number', label: 'Order#' },
+    { id: 'product_summary', label: 'Produk' },
+    { id: 'customer_name', label: 'Customer' },
+    { id: 'customer_city', label: 'Kota' },
+    { id: 'total', label: 'Total', align: 'right' },
+    { id: 'status', label: 'Status', align: 'center' },
+    { id: 'priority', label: 'Prio', align: 'center' },
+    { id: 'cs_name', label: 'CS' },
+    { id: 'days_in_draft', label: 'Umur', align: 'right' },
+    { id: 'actions', label: '', align: 'center' },
+  ], [])
+
+  return (
+    <div className="space-y-4">
+      <PageHeader
+        icon={Inbox}
+        title="Antrian Kerja"
+        description="Order yang menunggu cetak resi atau follow-up CS. Begitu resi keisi, order pindah ke Arsip."
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => loadDrafts(true)} disabled={refreshing} className="gap-1.5">
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Link href="/orders/new">
+              <Button size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700">
+                <Plus className="w-3.5 h-3.5" />
+                Input Order Baru
+              </Button>
+            </Link>
+          </div>
+        }
+      />
+
+      {/* Status stats bar */}
+      <div className="sticky top-0 z-10 -mx-4 md:-mx-6 px-4 md:px-6 py-2 bg-background/95 backdrop-blur-sm border-b border-border/40">
+        <DraftStatusStatsBar
+          stats={statusStats}
+          totalCount={statusStatsTotal}
+          activeStatus={statusFilter}
+          onStatusClick={(s) => setStatusFilter(s)}
+          loading={statsLoading}
+        />
+      </div>
+
+      {/* Filter row */}
+      <Card>
+        <CardContent className="pt-4 pb-4 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+            <div className="flex-1 min-w-[200px] relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Cari order # / customer / no HP..."
+                className="pl-9"
+              />
+            </div>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="w-36 text-xs"
+              title="Tanggal dari"
+            />
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="w-36 text-xs"
+              title="Tanggal sampai"
+            />
+            {(dateFrom || dateTo) && (
+              <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo('') }} className="text-xs">
+                Clear tanggal
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="ml-auto">
+              {totalCount.toLocaleString('id-ID')} order · halaman {page + 1}/{totalPages}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {visibleColumns.map(c => (
+                  <TableHead
+                    key={c.id}
+                    className={c.align === 'right' ? 'text-right' : c.align === 'center' ? 'text-center' : ''}
+                  >
+                    {c.label}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={visibleColumns.length}>
+                      <div className="h-4 bg-muted animate-pulse rounded" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={visibleColumns.length} className="p-0">
+                    <EmptyState
+                      icon={search || statusFilter !== 'ALL' || dateFrom || dateTo ? Filter : Inbox}
+                      title={search || statusFilter !== 'ALL' || dateFrom || dateTo ? 'Tidak ada hasil' : 'Antrian kosong'}
+                      description={
+                        search || statusFilter !== 'ALL' || dateFrom || dateTo
+                          ? 'Coba ubah filter.'
+                          : 'Belum ada draft. Tambah lewat tombol "Input Order Baru".'
+                      }
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map(row => (
+                  <DraftRow
+                    key={row.id}
+                    row={row}
+                    onResiClick={() => openResiDialog(row)}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{totalCount.toLocaleString('id-ID')} entries · halaman {page + 1} dari {totalPages}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>
+              <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
+              Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <ResiInputDialog
+        open={resiDialogOpen}
+        onOpenChange={setResiDialogOpen}
+        draft={resiDialogDraft}
+        onPromoted={() => loadDrafts(true)}
+      />
+    </div>
+  )
+}
+
+// =======================================================================
+// Row renderer
+// =======================================================================
+function DraftRow({ row, onResiClick }: {
+  row: OrderDraftEnriched
+  onResiClick: () => void
+}) {
+  const status = row.status as OrderStatus
+  const statusColor = STATUS_BADGE_COLOR[status] || 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30'
+  const statusLabel = STATUS_LABEL[status] || row.status
+
+  // Umur draft = jumlah hari sejak created_at
+  const daysInDraft = Math.max(0, Math.floor(
+    (Date.now() - new Date(row.created_at).getTime()) / (1000 * 60 * 60 * 24)
+  ))
+  const ageColor = daysInDraft > 3 ? 'text-amber-600' : daysInDraft > 7 ? 'text-red-600' : 'text-muted-foreground'
+
+  const priorityBadge = row.priority && row.priority !== 'NORMAL' ? (
+    <Badge variant="outline" className={
+      row.priority === 'URGENT' ? 'bg-red-500/10 text-red-600 text-[10px]'
+      : 'bg-zinc-500/10 text-zinc-600 text-[10px]'
+    }>
+      {row.priority}
+    </Badge>
+  ) : <span className="text-muted-foreground">—</span>
+
+  return (
+    <TableRow>
+      <TableCell className="text-xs whitespace-nowrap">{formatDate(row.created_at)}</TableCell>
+      <TableCell>
+        <Link href={`/orders/${row.id}?draft=1`} className="text-violet-400 hover:underline font-mono text-xs whitespace-nowrap">
+          {row.order_number}
+        </Link>
+      </TableCell>
+      <TableCell className="text-xs max-w-[260px]">
+        <span className="truncate inline-block max-w-full align-middle" title={row.product_summary || ''}>
+          {row.product_summary || '—'}
+        </span>
+      </TableCell>
+      <TableCell className="text-xs">{row.customer_name}</TableCell>
+      <TableCell className="text-xs">{row.customer_city || <span className="text-muted-foreground italic">—</span>}</TableCell>
+      <TableCell className="text-xs text-right tabular-nums">{formatRupiah(Number(row.total))}</TableCell>
+      <TableCell className="text-center">
+        <Badge variant="outline" className={`${statusColor} text-[10px]`}>{statusLabel}</Badge>
+      </TableCell>
+      <TableCell className="text-center">{priorityBadge}</TableCell>
+      <TableCell className="text-xs">{row.cs_name || <span className="text-muted-foreground italic">—</span>}</TableCell>
+      <TableCell className={`text-xs text-right tabular-nums ${ageColor}`}>{daysInDraft}h</TableCell>
+      <TableCell className="text-center">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onResiClick}
+          className="gap-1 text-[11px] h-7 px-2 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
+          disabled={row.status === 'CANCEL'}
+          title={row.status === 'CANCEL' ? 'Order cancelled — tidak bisa diberi resi' : 'Input resi & cetak'}
+        >
+          <Truck className="w-3 h-3" />
+          Resi
+        </Button>
+      </TableCell>
+    </TableRow>
+  )
+}

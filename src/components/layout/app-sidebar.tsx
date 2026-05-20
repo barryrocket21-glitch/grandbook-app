@@ -93,7 +93,14 @@ export function AppSidebar() {
                                   render={<Link href={child.href} />}
                                   isActive={pathname === child.href}
                                 >
-                                  <span>{child.title}</span>
+                                  <span className="flex items-center gap-1.5 w-full">
+                                    <span className="truncate">{child.title}</span>
+                                    {child.badge && (
+                                      <span className="ml-auto rounded bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-600">
+                                        {child.badge}
+                                      </span>
+                                    )}
+                                  </span>
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
                             ))}

@@ -99,6 +99,11 @@ export interface NavChild {
    * (undefined) = inherit dari parent group roles.
    */
   roles?: UserRole[]
+  /**
+   * Optional small badge label (e.g. "BARU") yang ditampilkan di kanan
+   * label menu untuk highlight item baru / penting.
+   */
+  badge?: string
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -106,13 +111,15 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    roles: ['owner'],
+    // Phase 8H audit — Admin Indra perlu lihat KPI overview operasional.
+    roles: ['owner', 'admin'],
   },
   {
     title: 'Analytics',
     href: '/analytics',
     icon: LineChart,
-    roles: ['owner'],
+    // Phase 8H audit — Admin perlu lihat conversion/profit untuk decision harian.
+    roles: ['owner', 'admin'],
   },
   {
     title: 'Orders',
@@ -120,11 +127,15 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ShoppingCart,
     roles: ['owner', 'admin', 'cs', 'akunting', 'advertiser'],
     children: [
-      { title: 'Input Order Baru', href: '/orders/new' },
-      { title: 'Upload Massal', href: '/orders/bulk-upload' },
-      { title: 'WA Paste', href: '/orders/wa-paste' },
-      { title: 'Export ke Ekspedisi', href: '/orders/export-resi' },
-      { title: 'Daftar Order', href: '/orders/list' },
+      // Phase 8H — Antrian Kerja default landing untuk CS/Admin.
+      // Per-child role filter (Phase 8H audit): tighten beyond parent scope
+      // supaya cs/akunting/advertiser tidak lihat menu yang bukan untuk mereka.
+      { title: 'Antrian Kerja', href: '/orders/draft', badge: 'BARU', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Input Order Baru', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Upload Massal', href: '/orders/bulk-upload', roles: ['owner', 'admin'] },
+      { title: 'WA Paste', href: '/orders/wa-paste', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Export ke Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
+      { title: 'Arsip Semua Order', href: '/orders/list', roles: ['owner', 'admin', 'akunting'] },
     ],
   },
   {
@@ -229,13 +240,15 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Settings',
     href: '/settings',
     icon: Settings,
-    roles: ['owner'],
+    // Phase 8H audit — extend parent ke owner+admin. Per-child roles tighten
+    // back ke owner-only untuk Aturan Komisi + Reset Data.
+    roles: ['owner', 'admin'],
     children: [
       { title: 'Users & Roles', href: '/settings/users' },
-      { title: 'Aturan Komisi', href: '/settings/commission-rules' },
-      // Phase 8E — Audit Log (owner only)
+      { title: 'Aturan Komisi', href: '/settings/commission-rules', roles: ['owner'] },
+      // Phase 8E — Audit Log. Phase 8H audit: extend ke admin.
       { title: 'Audit Log', href: '/settings/audit-log' },
-      { title: 'Reset Data', href: '/settings/reset-data' },
+      { title: 'Reset Data', href: '/settings/reset-data', roles: ['owner'] },
     ],
   },
 ]
@@ -249,8 +262,10 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
     // Daftar CS + Daftar Advertiser (owner+admin).
     let filtered = item.children.filter(c => !c.roles || c.roles.includes(role))
 
-    // Legacy special case: commissions group — non-owner cuma lihat "Komisi Saya"
-    if (role !== 'owner' && item.href === '/commissions') {
+    // Commissions group — owner+admin lihat semua (Kelola + Saya), role lain
+    // cuma "Komisi Saya". Phase 8H audit: admin perlu Kelola untuk approve
+    // pencairan + mark paid (workflow operasional harian).
+    if (role !== 'owner' && role !== 'admin' && item.href === '/commissions') {
       filtered = [{ title: 'Komisi Saya', href: '/commissions/my' }]
     }
 

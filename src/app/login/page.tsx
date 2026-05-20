@@ -23,7 +23,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -33,8 +33,35 @@ export default function LoginPage() {
         return
       }
 
+      // Phase 8H — role-aware default landing. CS + Admin landing ke
+      // Antrian Kerja supaya langsung lihat draft yang perlu di-print resi
+      // (bukan ke Arsip yang isinya 1067 order historic).
+      let landing = '/dashboard'
+      if (signInData.user) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', signInData.user.id)
+          .maybeSingle()
+        switch (prof?.role) {
+          case 'cs':
+          case 'admin':
+            landing = '/orders/draft'
+            break
+          case 'advertiser':
+            landing = '/adv-dashboard'
+            break
+          case 'akunting':
+            landing = '/reconciliation/spx'
+            break
+          case 'owner':
+          default:
+            landing = '/dashboard'
+        }
+      }
+
       toast.success('Login berhasil!')
-      router.push('/dashboard')
+      router.push(landing)
       router.refresh()
     } catch (err: unknown) {
       toast.error('Terjadi kesalahan', {

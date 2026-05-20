@@ -265,7 +265,8 @@ export default function DashboardPage() {
     fetchDashboardData()
   }
 
-  if (role && role !== 'owner') {
+  // Phase 8H audit — Admin Indra perlu KPI overview operasional.
+  if (role && role !== 'owner' && role !== 'admin') {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="max-w-md">
@@ -273,7 +274,7 @@ export default function DashboardPage() {
             <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">Akses Terbatas</h2>
             <p className="text-muted-foreground">
-              Dashboard ini hanya dapat diakses oleh Owner.
+              Dashboard ini hanya dapat diakses oleh Owner atau Admin.
             </p>
           </CardContent>
         </Card>

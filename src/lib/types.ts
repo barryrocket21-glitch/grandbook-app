@@ -576,6 +576,49 @@ export interface OrderStatusStat {
   pct: number
 }
 
+/**
+ * Phase 8H — Antrian Kerja (orders_draft).
+ * Mirror dari RPC `list_orders_draft_enriched`. Status terbatas ke 4 nilai
+ * (BARU/SIAP_KIRIM/PROBLEM/CANCEL). Tidak ada actual cost / shipping diff /
+ * delivered_at karena draft hanya workspace pre-resi.
+ */
+export type DraftOrderStatus = 'BARU' | 'SIAP_KIRIM' | 'PROBLEM' | 'CANCEL'
+
+export interface OrderDraftEnriched {
+  id: number
+  order_number: string
+  customer_name: string
+  customer_phone: string | null
+  customer_city: string | null
+  customer_province: string | null
+  status: DraftOrderStatus
+  priority: OrderPriority
+  payment_method: PaymentMethod
+  subtotal: number
+  total: number
+  cod_amount: number | null
+  estimated_profit: number | null
+  cs_name: string | null
+  channel_name: string | null
+  product_summary: string | null
+  product_count: number
+  cs_attempts: number
+  internal_note: string | null
+  customer_note: string | null
+  reject_reason: string | null
+  last_contact_at: string | null
+  order_date: string
+  created_at: string
+  updated_at: string
+  total_count: number
+}
+
+export interface DraftStatusStat {
+  status: DraftOrderStatus
+  cnt: number
+  pct: number
+}
+
 /** Phase 8I-Followup Part 4F — group-by dimensi untuk insights drawer */
 export type OrderDimension =
   | 'city'
@@ -811,6 +854,49 @@ export interface CashflowSummary {
   last_withdrawal_amount: number | null
   unsettled_count: number
   unsettled_amount: number
+}
+
+// =============================================================
+// Phase 8I-v3 — orders_draft (workspace antrian kerja)
+// =============================================================
+
+export type DraftStatus = 'BARU' | 'SIAP_KIRIM' | 'PROBLEM' | 'CANCEL'
+
+/** Return shape dari RPC list_orders_draft_enriched */
+export interface OrderDraftEnriched {
+  id: number
+  order_number: string
+  customer_name: string
+  customer_phone: string | null
+  customer_city: string | null
+  customer_province: string | null
+  status: DraftStatus
+  priority: OrderPriority
+  payment_method: PaymentMethod
+  subtotal: number
+  total: number
+  cod_amount: number | null
+  estimated_profit: number | null
+  cs_name: string | null
+  channel_name: string | null
+  product_summary: string | null
+  product_count: number
+  cs_attempts: number
+  internal_note: string | null
+  customer_note: string | null
+  reject_reason: string | null
+  last_contact_at: string | null
+  order_date: string
+  created_at: string
+  updated_at: string
+  days_in_status: number
+  total_count: number
+}
+
+export interface DraftStatusStat {
+  status: DraftStatus
+  cnt: number
+  pct: number
 }
 
 /** Saved column view per user */

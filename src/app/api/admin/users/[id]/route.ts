@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
+// Phase 8H audit — extend ke admin. UPDATE/DELETE operasional CRUD users
+// (toggle active, ganti password, dst).
 async function requireOwner() {
   const sb = await createServerClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'Unauthorized', status: 401 as const, callerId: '' }
   const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'owner') return { error: 'Hanya Owner yang dapat mengakses', status: 403 as const, callerId: user.id }
+  if (profile?.role !== 'owner' && profile?.role !== 'admin') {
+    return { error: 'Hanya Owner atau Admin yang dapat mengakses', status: 403 as const, callerId: user.id }
+  }
   return { ok: true as const, callerId: user.id }
 }
 

@@ -156,6 +156,8 @@ export default function BulkUploadPage() {
         createdBy: user.id,
         supabase,
         onProgress: (done, total) => setProgress({ done, total }),
+        // Phase 8H — bulk upload manual = workspace pre-resi
+        targetDraft: true,
       })
       setResult(r)
       setStep('done')

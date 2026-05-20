@@ -115,6 +115,8 @@ export default function WaPastePage() {
         organizationId: orgId,
         createdBy: user.id,
         supabase,
+        // Phase 8H — WA paste never has resi → workspace pre-resi
+        targetDraft: true,
       })
       setResult(r)
       if (r.errors.length === 0 && r.inserted > 0) {

@@ -30,6 +30,9 @@ export default function NewOrderPage() {
     try {
       const orgId = profile?.organization_id || 1
       const orderNumber = await generateOrderNumber(supabase, orgId)
+      // Phase 8H — Order baru selalu masuk orders_draft (workspace pre-resi).
+      // Status di draft cuma BARU/SIAP_KIRIM/PROBLEM/CANCEL. Admin/owner langsung
+      // SIAP_KIRIM (siap di-print resi); CS mulai dari BARU (menunggu validasi).
       const initialStatus = canApprove ? 'SIAP_KIRIM' : 'BARU'
 
       // Phase 8A — auto-detect origin supplier dari produk yang dipilih.
@@ -87,7 +90,7 @@ export default function NewOrderPage() {
         is_multi_origin: isMultiOrigin,
       }
       const { data: orderRow, error } = await supabase
-        .from('orders')
+        .from('orders_draft')
         .insert(orderPayload)
         .select('id')
         .single()
@@ -105,21 +108,18 @@ export default function NewOrderPage() {
         weight_per_unit: it.weight_per_unit,
         notes: it.notes,
       }))
-      const { error: itemErr } = await supabase.from('order_items').insert(itemPayload)
+      const { error: itemErr } = await supabase.from('order_items_draft').insert(itemPayload)
       if (itemErr) {
         toast.warning('Order tersimpan tapi item gagal', { description: itemErr.message })
       }
 
-      // Phase 9: compute commissions AFTER orders + items inserted (frontend trigger)
-      try {
-        const { error: commErr } = await supabase.rpc('compute_commissions', { p_order_id: orderRow.id })
-        if (commErr) console.warn('compute_commissions failed:', commErr.message)
-      } catch (e) {
-        console.warn('compute_commissions exception:', e)
-      }
+      // Phase 8H — commissions di-skip untuk draft. Compute dilakukan saat
+      // order graduasi ke `orders` (via trigger promote_draft_to_orders + DB
+      // trigger update_commission_on_order_status). Tidak ada compute_commissions
+      // di-call dari draft path.
 
-      toast.success(`Order ${orderNumber} ter-create`)
-      router.push(`/orders/${orderRow.id}`)
+      toast.success(`Order ${orderNumber} masuk Antrian Kerja`)
+      router.push('/orders/draft')
     } catch (err: any) {
       toast.error('Gagal simpan', { description: err.message })
     } finally {
@@ -145,8 +145,8 @@ export default function NewOrderPage() {
         title="Input Order Baru"
         description={
           canApprove
-            ? 'Order langsung masuk dengan status SIAP_KIRIM (admin/owner mode).'
-            : 'Order masuk dengan status BARU dan menunggu approval admin.'
+            ? 'Order masuk ke Antrian Kerja dengan status SIAP_KIRIM (admin/owner mode). Resi diisi setelah cetak.'
+            : 'Order masuk ke Antrian Kerja dengan status BARU dan menunggu approval admin.'
         }
       />
       <OrderForm

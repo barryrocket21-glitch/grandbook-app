@@ -132,13 +132,14 @@ export default function ReconciliationPage() {
   }, [rows])
 
   if (authLoading) return <div className="text-sm text-muted-foreground">Memeriksa akses...</div>
-  if (role !== 'owner') {
+  // Phase 8H audit — Cross-check reconciliation: owner+admin+akunting.
+  if (role !== 'owner' && role !== 'admin' && role !== 'akunting') {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6 text-center space-y-2">
           <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto" />
           <h2 className="text-lg font-semibold">Akses Dibatasi</h2>
-          <p className="text-sm text-muted-foreground">Halaman reconciliation hanya untuk Owner.</p>
+          <p className="text-sm text-muted-foreground">Halaman reconciliation hanya untuk Owner, Admin, atau Akunting.</p>
         </CardContent>
       </Card>
     )

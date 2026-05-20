@@ -67,6 +67,12 @@ export interface IngestOptions {
   supabase: SupabaseClient
   /** Optional callback after each row processed (for progress UI). */
   onProgress?: (processed: number, total: number) => void
+  /**
+   * Phase 8H — kalau true, insert ke orders_draft + order_items_draft
+   * (workspace pre-resi). Inbox queueing (phone/address) di-skip karena
+   * inbox FK ke orders only. Default false (orders + order_items).
+   */
+  targetDraft?: boolean
 }
 
 const ALLOWED_DIRECTIONS = new Set(['INBOUND_ORDER', 'WA_PASTE'])
@@ -247,19 +253,28 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         continue
       }
 
-      // External-id duplicate detection
+      // External-id duplicate detection. Phase 8H — check BOTH orders + orders_draft
+      // supaya draft yang sudah ada tidak di-double-insert (mis. re-upload CSV).
       const extId =
         ordersData.external_order_id != null && String(ordersData.external_order_id).trim() !== ''
           ? String(ordersData.external_order_id)
           : null
       if (extId) {
-        const { data: existing } = await opts.supabase
-          .from('orders')
-          .select('id')
-          .eq('organization_id', opts.organizationId)
-          .eq('external_order_id', extId)
-          .maybeSingle()
-        if (existing?.id) {
+        const [archiveResp, draftResp] = await Promise.all([
+          opts.supabase
+            .from('orders')
+            .select('id')
+            .eq('organization_id', opts.organizationId)
+            .eq('external_order_id', extId)
+            .maybeSingle(),
+          opts.supabase
+            .from('orders_draft')
+            .select('id')
+            .eq('organization_id', opts.organizationId)
+            .eq('external_order_id', extId)
+            .maybeSingle(),
+        ])
+        if (archiveResp.data?.id || draftResp.data?.id) {
           result.skipped_duplicates++
           continue
         }
@@ -342,14 +357,19 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
           toNumber(insertPayload.discount)
       }
 
+      // Phase 8H — pick target table. Default orders (legacy/backfill);
+      // targetDraft=true insert ke orders_draft (manual entry → workspace).
+      const orderTable = opts.targetDraft ? 'orders_draft' : 'orders'
+      const itemTable  = opts.targetDraft ? 'order_items_draft' : 'order_items'
+
       // Insert order
       const { data: orderRow, error: insErr } = await opts.supabase
-        .from('orders')
+        .from(orderTable)
         .insert(insertPayload)
         .select('id')
         .single()
       if (insErr || !orderRow) {
-        // duplicate via UNIQUE(organization_id, external_order_id) returns 23505
+        // duplicate via UNIQUE(organization_id, external_order_id|order_number) returns 23505
         const code = (insErr as { code?: string } | null)?.code
         if (code === '23505') {
           result.skipped_duplicates++
@@ -363,50 +383,67 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         continue
       }
 
-      // Phase 8G: kalau phone invalid, queue ke inbox_invalid_phone
-      if (phoneFailure) {
-        const { error: phErr } = await opts.supabase
-          .from('inbox_invalid_phone')
-          .insert({
-            organization_id: opts.organizationId,
-            order_id: orderRow.id,
-            raw_phone: phoneFailure.raw_phone,
-            reason: phoneFailure.reason,
-          })
-        if (phErr) {
+      // Phase 8H — inbox tables FK ke orders only (bukan orders_draft), jadi
+      // skip queueing untuk draft path. Tetap surface warning supaya user tahu.
+      if (opts.targetDraft) {
+        if (phoneFailure) {
           result.warnings.push({
             rowIndex,
-            message: `Phone invalid tapi inbox insert error: ${phErr.message}. Order id=${orderRow.id} tetap masuk.`,
-          })
-        } else {
-          result.warnings.push({
-            rowIndex,
-            message: `Order id=${orderRow.id} phone "${phoneFailure.raw_phone}" invalid (${phoneFailure.reason}). Cek /inbox/phone-review.`,
+            message: `Order id=${orderRow.id} (draft) phone "${phoneFailure.raw_phone}" invalid (${phoneFailure.reason}). Inbox queue di-skip untuk draft — fix manual saat input resi.`,
           })
         }
-      }
+        if (addressParseFailure) {
+          result.warnings.push({
+            rowIndex,
+            message: `Order id=${orderRow.id} (draft) alamat butuh review manual (reason: ${addressParseFailure.parsing_attempt.reason_failed}). Inbox queue di-skip untuk draft — fix manual saat input resi.`,
+          })
+        }
+      } else {
+        // Phase 8G: kalau phone invalid, queue ke inbox_invalid_phone
+        if (phoneFailure) {
+          const { error: phErr } = await opts.supabase
+            .from('inbox_invalid_phone')
+            .insert({
+              organization_id: opts.organizationId,
+              order_id: orderRow.id,
+              raw_phone: phoneFailure.raw_phone,
+              reason: phoneFailure.reason,
+            })
+          if (phErr) {
+            result.warnings.push({
+              rowIndex,
+              message: `Phone invalid tapi inbox insert error: ${phErr.message}. Order id=${orderRow.id} tetap masuk.`,
+            })
+          } else {
+            result.warnings.push({
+              rowIndex,
+              message: `Order id=${orderRow.id} phone "${phoneFailure.raw_phone}" invalid (${phoneFailure.reason}). Cek /inbox/phone-review.`,
+            })
+          }
+        }
 
-      // Phase 8F: kalau address parser fail, queue ke inbox_unparsed_address
-      // (fire-and-forget — kalau insert gagal, log warning tapi tetap proceed)
-      if (addressParseFailure) {
-        const { error: inboxErr } = await opts.supabase
-          .from('inbox_unparsed_address')
-          .insert({
-            organization_id: opts.organizationId,
-            order_id: orderRow.id,
-            raw_address: addressParseFailure.raw_address,
-            parsing_attempt: addressParseFailure.parsing_attempt,
-          })
-        if (inboxErr) {
-          result.warnings.push({
-            rowIndex,
-            message: `Address parse fail tapi inbox insert error: ${inboxErr.message}. Order id=${orderRow.id} tetap masuk.`,
-          })
-        } else {
-          result.warnings.push({
-            rowIndex,
-            message: `Order id=${orderRow.id} alamat butuh review manual (reason: ${addressParseFailure.parsing_attempt.reason_failed}). Cek /inbox/address-review.`,
-          })
+        // Phase 8F: kalau address parser fail, queue ke inbox_unparsed_address
+        // (fire-and-forget — kalau insert gagal, log warning tapi tetap proceed)
+        if (addressParseFailure) {
+          const { error: inboxErr } = await opts.supabase
+            .from('inbox_unparsed_address')
+            .insert({
+              organization_id: opts.organizationId,
+              order_id: orderRow.id,
+              raw_address: addressParseFailure.raw_address,
+              parsing_attempt: addressParseFailure.parsing_attempt,
+            })
+          if (inboxErr) {
+            result.warnings.push({
+              rowIndex,
+              message: `Address parse fail tapi inbox insert error: ${inboxErr.message}. Order id=${orderRow.id} tetap masuk.`,
+            })
+          } else {
+            result.warnings.push({
+              rowIndex,
+              message: `Order id=${orderRow.id} alamat butuh review manual (reason: ${addressParseFailure.parsing_attempt.reason_failed}). Cek /inbox/address-review.`,
+            })
+          }
         }
       }
 
@@ -422,7 +459,7 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
       )
       if (itemPayload) {
         const { error: itemErr } = await opts.supabase
-          .from('order_items')
+          .from(itemTable)
           .insert(itemPayload)
         if (itemErr) {
           result.warnings.push({

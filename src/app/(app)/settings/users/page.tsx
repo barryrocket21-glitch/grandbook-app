@@ -195,17 +195,18 @@ export default function UsersPage() {
     }
   }
 
-  // Strict owner-only gate
+  // Phase 8H audit — Admin Indra perlu manage users (CRUD operasional).
+  // Restrict critical ops (delete owner, role change) tetap di API layer kalau perlu.
   if (authLoading) {
     return <div className="text-sm text-muted-foreground">Memeriksa akses...</div>
   }
-  if (role !== 'owner') {
+  if (role !== 'owner' && role !== 'admin') {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6 text-center space-y-2">
           <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto" />
           <h2 className="text-lg font-semibold">Akses Dibatasi</h2>
-          <p className="text-sm text-muted-foreground">Hanya Owner yang dapat mengelola users. Hubungi Owner jika kamu butuh akses.</p>
+          <p className="text-sm text-muted-foreground">Hanya Owner atau Admin yang dapat mengelola users.</p>
         </CardContent>
       </Card>
     )

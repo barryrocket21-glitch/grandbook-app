@@ -42,7 +42,7 @@ const PERSIST_DEBOUNCE_MS = 500
 
 export default function OrdersListPage() {
   return (
-    <Suspense fallback={<div className="space-y-6"><PageHeader icon={ClipboardList} title="Daftar Order" /></div>}>
+    <Suspense fallback={<div className="space-y-6"><PageHeader icon={ClipboardList} title="Arsip Semua Order" /></div>}>
       <OrdersListInner />
     </Suspense>
   )
@@ -269,8 +269,8 @@ function OrdersListInner() {
     <div className="space-y-4">
       <PageHeader
         icon={ClipboardList}
-        title="Daftar Order"
-        description="Customizable view + inline edit + quick actions."
+        title="Arsip Semua Order"
+        description="Semua order yang sudah punya resi: aktif kirim, settled, retur, dan cancelled."
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => loadOrders(true)} disabled={refreshing} className="gap-1.5">

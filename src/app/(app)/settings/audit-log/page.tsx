@@ -82,7 +82,7 @@ export default function AuditLogPage() {
 
   // Load metadata (distinct table names, users) once
   useEffect(() => {
-    if (role !== 'owner') return
+    if (role !== 'owner' && role !== 'admin') return
     ;(async () => {
       try {
         const [{ data: tableData }, { data: userData }] = await Promise.all([
@@ -99,7 +99,7 @@ export default function AuditLogPage() {
   }, [role])
 
   useEffect(() => {
-    if (role !== 'owner') return
+    if (role !== 'owner' && role !== 'admin') return
     load()
   }, [role, load])
 
@@ -112,7 +112,7 @@ export default function AuditLogPage() {
     return <div className="p-6 text-sm text-muted-foreground">Loading…</div>
   }
 
-  if (role !== 'owner') {
+  if (role !== 'owner' && role !== 'admin') {
     return (
       <div className="space-y-6">
         <PageHeader icon={ShieldCheck} title="Audit Log" />
@@ -122,7 +122,7 @@ export default function AuditLogPage() {
             <div>
               <p className="text-sm font-medium text-red-500">Akses Dibatasi</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Halaman audit log hanya bisa diakses oleh role <strong>owner</strong>.
+                Halaman audit log hanya bisa diakses oleh role <strong>owner</strong> atau <strong>admin</strong>.
               </p>
             </div>
           </CardContent>

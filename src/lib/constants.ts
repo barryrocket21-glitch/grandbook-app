@@ -149,6 +149,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'akunting'],
     children: [
       { title: 'Posisi Keuangan', href: '/financial-position' },
+      { title: 'Laporan Laba Rugi', href: '/laba-rugi', badge: 'BARU' },
       { title: 'Cross-check Platform', href: '/reconciliation' },
       { title: 'Upload File Rekonsil', href: '/reconciliation/upload' },
       { title: 'SPX Financial', href: '/reconciliation/spx' },

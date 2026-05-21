@@ -1,53 +1,24 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  DollarSign,
-  ShoppingCart,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  Package,
-  AlertTriangle,
-  RefreshCw,
-  ArrowUpRight,
-  ArrowDownRight,
-  Target,
-  Megaphone,
-  CircleDollarSign,
-  Activity,
+  DollarSign, CircleDollarSign, Target, ShoppingCart, Package,
+  AlertTriangle, RefreshCw, Activity, Scale, Wallet, ArrowRight,
+  LayoutDashboard,
 } from 'lucide-react'
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell,
 } from 'recharts'
-import { formatRupiah, formatNumber, formatPercent, getToday, getStartOfWeek, getStartOfMonth } from '@/lib/format'
+import { formatRupiah, formatPercent, getToday, getStartOfMonth } from '@/lib/format'
 import { PageHeader } from '@/components/ui/page-header'
-import { LayoutDashboard } from 'lucide-react'
 import { PendingPickupWidget } from '@/components/dashboard/pending-pickup-widget'
 import { CashflowSummaryWidget } from '@/components/dashboard/cashflow-summary-widget'
 
@@ -59,41 +30,24 @@ const supabase = createClient()
 
 interface DashboardData {
   omzetHariIni: number
-  omzetMingguIni: number
   omzetBulanIni: number
   totalOrdersHariIni: number
   totalOrdersBulanIni: number
   ordersByStatus: Record<string, number>
   totalAdSpendBulanIni: number
   blendedROAS: number
-  profitEstimasi: number
+  // P&L resmi (RPC laba_rugi_summary)
+  labaBersihAct: number
+  labaBersihEst: number
+  diterimaCount: number
+  // Posisi keuangan (RPC get_financial_position)
+  posisiBersih: number
+  totalAset: number
+  totalUtang: number
   returPercentage: number
   fakePercentage: number
-  dailyChart: Array<{
-    date: string
-    omzet: number
-    spend: number
-    profit: number
-  }>
-  topProducts: Array<{
-    name: string
-    qty: number
-    revenue: number
-  }>
-  topCampaigns: Array<{
-    name: string
-    platform: string
-    orders: number
-    revenue: number
-    spend: number
-    roas: number
-  }>
-  cpaByPlatform: Array<{
-    platform: string
-    cpa: number
-    orders: number
-    spend: number
-  }>
+  dailyChart: Array<{ date: string; omzet: number; spend: number; profit: number }>
+  topProducts: Array<{ name: string; qty: number; revenue: number }>
 }
 
 export default function DashboardPage() {
@@ -108,70 +62,62 @@ export default function DashboardPage() {
     fetchingRef.current = true
     try {
       const today = getToday()
-      const startOfWeek = getStartOfWeek()
       const startOfMonth = getStartOfMonth()
 
-      // Single query for orders (replaces 4 redundant queries)
-      // Then derive today/week/month from in-memory data
       const [
         { data: ordersAllMonth },
         { data: adSpendMonth },
         { data: orderItems },
-        { data: expenses },
+        { data: labaRows },
+        { data: posisiRows },
       ] = await Promise.all([
         supabase.from('orders').select('total, status, order_date').gte('order_date', startOfMonth),
         supabase.from('ad_spend').select('spend, spend_date').gte('spend_date', startOfMonth),
-        supabase.from('order_items').select('qty, price, hpp_snapshot, products(name), orders!inner(order_date, status)').gte('orders.order_date', startOfMonth),
-        supabase.from('expenses').select('amount').gte('expense_date', startOfMonth),
+        supabase.from('order_items').select('qty, price, products(name), orders!inner(order_date, status)').gte('orders.order_date', startOfMonth),
+        supabase.rpc('laba_rugi_summary', { p_from: startOfMonth, p_to: today }),
+        supabase.rpc('get_financial_position'),
       ])
 
       const ordersMonth = ordersAllMonth || []
-      const ordersWeek = ordersMonth.filter((o: any) => o.order_date >= startOfWeek)
       const ordersToday = ordersMonth.filter((o: any) => o.order_date === today)
-      const allOrdersMonth = ordersMonth
+      const safeArr = (arr: any[] | null) => arr || []
 
-      const safeOrders = (arr: any[] | null) => arr || []
-
-      // Calculate omzet
-      const omzetHariIni = safeOrders(ordersToday)
-        .filter(o => !['CANCEL', 'FAKE'].includes(o.status))
+      const sumOmzet = (arr: any[]) => arr
+        .filter((o) => !['CANCEL', 'FAKE'].includes(o.status))
         .reduce((sum: number, o: any) => sum + Number(o.total), 0)
-      const omzetMingguIni = safeOrders(ordersWeek)
-        .filter(o => !['CANCEL', 'FAKE'].includes(o.status))
-        .reduce((sum: number, o: any) => sum + Number(o.total), 0)
-      const omzetBulanIni = safeOrders(ordersMonth)
-        .filter(o => !['CANCEL', 'FAKE'].includes(o.status))
-        .reduce((sum: number, o: any) => sum + Number(o.total), 0)
+      const omzetHariIni = sumOmzet(ordersToday)
+      const omzetBulanIni = sumOmzet(ordersMonth)
 
       // Orders by status
       const ordersByStatus: Record<string, number> = {}
-      safeOrders(ordersMonth).forEach((o: any) => {
+      ordersMonth.forEach((o: any) => {
         ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1
       })
 
-      // Ad spend
-      const totalAdSpendBulanIni = safeOrders(adSpendMonth).reduce(
-        (sum: number, s: any) => sum + Number(s.spend), 0
+      // Ad spend + ROAS
+      const totalAdSpendBulanIni = safeArr(adSpendMonth).reduce(
+        (sum: number, s: any) => sum + Number(s.spend), 0,
       )
-
-      // HPP
-      const totalHPP = safeOrders(orderItems)
-        .filter((i: any) => !['CANCEL', 'FAKE'].includes(i.orders?.status))
-        .reduce((sum: number, i: any) => sum + Number(i.hpp_snapshot) * i.qty, 0)
-
-      // Expenses
-      const totalExpenses = safeOrders(expenses).reduce(
-        (sum: number, e: any) => sum + Number(e.amount), 0
-      )
-
-      // ROAS
       const blendedROAS = totalAdSpendBulanIni > 0 ? omzetBulanIni / totalAdSpendBulanIni : 0
 
-      // Profit
-      const profitEstimasi = omzetBulanIni - totalHPP - totalAdSpendBulanIni - totalExpenses
+      // Laba Rugi — angka P&L resmi (cascade lengkap, status-aware)
+      const laba: any = Array.isArray(labaRows) ? labaRows[0] : null
+      const labaBersihAct = Number(laba?.laba_bersih_act) || 0
+      const labaBersihEst = Number(laba?.laba_bersih_est) || 0
+      const diterimaCount = Number(laba?.diterima_count) || 0
+
+      // Posisi Keuangan — peta cashflow COD
+      const pos: any = Array.isArray(posisiRows) ? posisiRows[0] : null
+      const totalAset = pos
+        ? (Number(pos.in_transit_cod) || 0) + (Number(pos.cod_at_spx) || 0)
+        : 0
+      const totalUtang = pos
+        ? (Number(pos.hpp_supplier_owed) || 0) + (Number(pos.ongkir_spx_owed) || 0) + (Number(pos.komisi_owed) || 0)
+        : 0
+      const posisiBersih = totalAset - totalUtang
 
       // Retur & Fake %
-      const totalOrdersMonth = safeOrders(ordersMonth).length
+      const totalOrdersMonth = ordersMonth.length
       const returCount = ordersByStatus['RETUR'] || 0
       const fakeCount = ordersByStatus['FAKE'] || 0
       const returPercentage = totalOrdersMonth > 0 ? (returCount / totalOrdersMonth) * 100 : 0
@@ -179,7 +125,7 @@ export default function DashboardPage() {
 
       // Top products
       const productMap = new Map<string, { qty: number; revenue: number }>()
-      safeOrders(orderItems)
+      safeArr(orderItems)
         .filter((i: any) => !['CANCEL', 'FAKE'].includes(i.orders?.status))
         .forEach((i: any) => {
           const name = i.products?.name || 'Unknown'
@@ -190,7 +136,7 @@ export default function DashboardPage() {
           })
         })
       const topProducts = Array.from(productMap.entries())
-        .map(([name, data]) => ({ name, ...data }))
+        .map(([name, d]) => ({ name, ...d }))
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5)
 
@@ -199,26 +145,18 @@ export default function DashboardPage() {
       for (let i = 29; i >= 0; i--) {
         const d = new Date()
         d.setDate(d.getDate() - i)
-        const key = d.toISOString().split('T')[0]
-        dailyMap.set(key, { omzet: 0, spend: 0 })
+        dailyMap.set(d.toISOString().split('T')[0], { omzet: 0, spend: 0 })
       }
-
-      safeOrders(allOrdersMonth)
+      ordersMonth
         .filter((o: any) => !['CANCEL', 'FAKE'].includes(o.status))
         .forEach((o: any) => {
           const day = dailyMap.get(o.order_date)
-          if (day) {
-            day.omzet += Number(o.total)
-          }
+          if (day) day.omzet += Number(o.total)
         })
-
-      safeOrders(adSpendMonth).forEach((s: any) => {
+      safeArr(adSpendMonth).forEach((s: any) => {
         const day = dailyMap.get(s.spend_date)
-        if (day) {
-          day.spend += Number(s.spend)
-        }
+        if (day) day.spend += Number(s.spend)
       })
-
       const dailyChart = Array.from(dailyMap.entries()).map(([date, vals]) => ({
         date: new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
         omzet: vals.omzet,
@@ -226,26 +164,24 @@ export default function DashboardPage() {
         profit: vals.omzet - vals.spend,
       }))
 
-      // Top campaigns - simplified since we don't have full join
-      const topCampaigns: DashboardData['topCampaigns'] = []
-      const cpaByPlatform: DashboardData['cpaByPlatform'] = []
-
       setData({
         omzetHariIni,
-        omzetMingguIni,
         omzetBulanIni,
-        totalOrdersHariIni: safeOrders(ordersToday).length,
+        totalOrdersHariIni: ordersToday.length,
         totalOrdersBulanIni: totalOrdersMonth,
         ordersByStatus,
         totalAdSpendBulanIni,
         blendedROAS,
-        profitEstimasi,
+        labaBersihAct,
+        labaBersihEst,
+        diterimaCount,
+        posisiBersih,
+        totalAset,
+        totalUtang,
         returPercentage,
         fakePercentage,
         dailyChart,
         topProducts,
-        topCampaigns,
-        cpaByPlatform,
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -290,6 +226,8 @@ export default function DashboardPage() {
     name: status,
     value: count,
   })) : []
+  const labaPositive = (data?.labaBersihAct || 0) >= 0
+  const posisiPositive = (data?.posisiBersih || 0) >= 0
 
   return (
     <div className="space-y-6">
@@ -305,14 +243,66 @@ export default function DashboardPage() {
         }
       />
 
+      {/* Hero — Laba Bersih & Posisi Bersih (link ke halaman detail) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link href="/laba-rugi" className="group block">
+          <Card className={`h-full transition-all hover:shadow-md ${labaPositive ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-lg ${labaPositive ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                    <Scale className={`w-4 h-4 ${labaPositive ? 'text-emerald-600' : 'text-red-600'}`} />
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">Laba Bersih — Bulan Ini</div>
+                    <div className="text-[10px] text-muted-foreground">Aktual, dari order Diterima</div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              </div>
+              <div className={`text-3xl font-bold tabular-nums mt-3 ${labaPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                {formatRupiah(data?.labaBersihAct || 0)}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-1">
+                Estimasi {formatRupiah(data?.labaBersihEst || 0)} · {data?.diterimaCount || 0} order Diterima
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/financial-position" className="group block">
+          <Card className="h-full transition-all hover:shadow-md border-violet-500/30 bg-violet-500/5">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-violet-500/10">
+                    <Wallet className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">Posisi Bersih</div>
+                    <div className="text-[10px] text-muted-foreground">Aset COD − utang</div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              </div>
+              <div className={`text-3xl font-bold tabular-nums mt-3 ${posisiPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                {formatRupiah(data?.posisiBersih || 0)}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-1">
+                Aset {formatRupiah(data?.totalAset || 0)} · Utang {formatRupiah(data?.totalUtang || 0)}
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           title="Omzet Hari Ini"
           value={formatRupiah(data?.omzetHariIni || 0)}
           subtitle={`${data?.totalOrdersHariIni || 0} orders`}
           icon={DollarSign}
-          trend="up"
           gradient="from-emerald-500 to-teal-600"
         />
         <StatCard
@@ -320,23 +310,13 @@ export default function DashboardPage() {
           value={formatRupiah(data?.omzetBulanIni || 0)}
           subtitle={`${data?.totalOrdersBulanIni || 0} orders`}
           icon={CircleDollarSign}
-          trend="up"
           gradient="from-violet-500 to-indigo-600"
-        />
-        <StatCard
-          title="Profit Estimasi"
-          value={formatRupiah(data?.profitEstimasi || 0)}
-          subtitle="Omzet - HPP - Ads - Ops"
-          icon={(data?.profitEstimasi || 0) >= 0 ? TrendingUp : TrendingDown}
-          trend={(data?.profitEstimasi || 0) >= 0 ? 'up' : 'down'}
-          gradient={(data?.profitEstimasi || 0) >= 0 ? 'from-emerald-500 to-green-600' : 'from-red-500 to-rose-600'}
         />
         <StatCard
           title="ROAS Blended"
           value={`${(data?.blendedROAS || 0).toFixed(2)}x`}
           subtitle={`Ad Spend: ${formatRupiah(data?.totalAdSpendBulanIni || 0)}`}
           icon={Target}
-          trend={(data?.blendedROAS || 0) >= 2 ? 'up' : 'down'}
           gradient="from-amber-500 to-orange-600"
         />
       </div>
@@ -369,12 +349,9 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        {/* Phase 8B — Resi pending pickup widget (owner+admin only).
-            /dashboard sudah owner-only via sidebar, dan widget silent-fail
-            kalau RPC gagal — admin yang kebetulan akses tetap lihat. */}
+        {/* Phase 8B — Resi pending pickup widget (owner+admin only). */}
         {(role === 'owner' || role === 'admin') && <PendingPickupWidget />}
-        {/* Phase 8I-v2 — Saldo SPX & Cashflow widget (owner+admin+akunting).
-            Silent-fail kalau migration 048 belum apply. */}
+        {/* Phase 8I-v2 — Saldo SPX & Cashflow widget. */}
         {(role === 'owner' || role === 'admin' || role === 'akunting') && <CashflowSummaryWidget />}
       </div>
 
@@ -422,7 +399,7 @@ export default function DashboardPage() {
                   <Legend />
                   <Area type="monotone" dataKey="omzet" stroke="#8b5cf6" fill="url(#gradientOmzet)" strokeWidth={2} name="Omzet" />
                   <Area type="monotone" dataKey="spend" stroke="#ef4444" fill="url(#gradientSpend)" strokeWidth={2} name="Ad Spend" />
-                  <Area type="monotone" dataKey="profit" stroke="#10b981" fill="url(#gradientProfit)" strokeWidth={2} name="Profit" />
+                  <Area type="monotone" dataKey="profit" stroke="#10b981" fill="url(#gradientProfit)" strokeWidth={2} name="Omzet − Ad Spend" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -481,82 +458,38 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Top Products & Campaigns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Products */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-violet-500" />
-              Top 5 Produk
-            </CardTitle>
-            <CardDescription>By revenue bulan ini</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {data?.topProducts && data.topProducts.length > 0 ? (
-              <div className="space-y-3">
-                {data.topProducts.map((product, idx) => (
-                  <div key={product.name} className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-violet-400 text-sm font-bold">
-                      {idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{product.name}</p>
-                      <p className="text-xs text-muted-foreground">{product.qty} unit terjual</p>
-                    </div>
-                    <p className="text-sm font-semibold text-emerald-500">
-                      {formatRupiah(product.revenue)}
-                    </p>
+      {/* Top Products */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5 text-violet-500" />
+            Top 5 Produk
+          </CardTitle>
+          <CardDescription>By revenue bulan ini</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {data?.topProducts && data.topProducts.length > 0 ? (
+            <div className="space-y-3">
+              {data.topProducts.map((product, idx) => (
+                <div key={product.name} className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-violet-400 text-sm font-bold">
+                    {idx + 1}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm text-center py-8">Belum ada data produk</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Campaigns */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-violet-500" />
-              Top 5 Campaign
-            </CardTitle>
-            <CardDescription>By ROAS bulan ini</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {data?.topCampaigns && data.topCampaigns.length > 0 ? (
-              <div className="space-y-3">
-                {data.topCampaigns.map((campaign, idx) => (
-                  <div key={campaign.name} className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-400 text-sm font-bold">
-                      {idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{campaign.name}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {campaign.platform}
-                        </Badge>
-                        <span>{campaign.orders} orders</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-emerald-500">
-                        {campaign.roas.toFixed(2)}x
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">ROAS</p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{product.name}</p>
+                    <p className="text-xs text-muted-foreground">{product.qty} unit terjual</p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm text-center py-8">Belum ada data campaign</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  <p className="text-sm font-semibold text-emerald-500">
+                    {formatRupiah(product.revenue)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm text-center py-8">Belum ada data produk</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -567,14 +500,12 @@ function StatCard({
   value,
   subtitle,
   icon: Icon,
-  trend,
   gradient,
 }: {
   title: string
   value: string
   subtitle: string
   icon: any
-  trend: 'up' | 'down'
   gradient: string
 }) {
   return (
@@ -604,8 +535,19 @@ function DashboardSkeleton() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-64 mt-2" />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[...Array(2)].map((_, i) => (
+          <Card key={i}>
+            <CardContent className="pt-5 pb-5">
+              <Skeleton className="h-4 w-32 mb-3" />
+              <Skeleton className="h-8 w-40 mb-2" />
+              <Skeleton className="h-3 w-48" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(3)].map((_, i) => (
           <Card key={i}>
             <CardContent className="pt-5 pb-4">
               <Skeleton className="h-4 w-24 mb-2" />

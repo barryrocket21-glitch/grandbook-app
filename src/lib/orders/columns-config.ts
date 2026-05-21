@@ -29,6 +29,8 @@ export type ColumnCategory =
   | 'supplier'
   | 'tags_notes'
   | 'timestamps'
+  | 'bookkeeping_est'
+  | 'bookkeeping_act'
   | 'actions'
 
 export const CATEGORY_LABEL: Record<ColumnCategory, string> = {
@@ -43,6 +45,8 @@ export const CATEGORY_LABEL: Record<ColumnCategory, string> = {
   supplier:    'Supplier',
   tags_notes:  'Tags & Notes',
   timestamps:  'Timestamps',
+  bookkeeping_est: 'Pembukuan — Estimasi',
+  bookkeeping_act: 'Pembukuan — Aktual',
   actions:     'Aksi',
 }
 
@@ -77,6 +81,7 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'product_summary',   label: 'Produk',      category: 'product',     default_visible: true,  default_width: 200 },
   { id: 'product_count',     label: 'Item Lines',  category: 'product',     default_visible: false, default_width: 80,  align: 'right', format: 'number' },
   { id: 'total_qty',         label: 'Total Qty',   category: 'product',     default_visible: false, default_width: 80,  align: 'right', format: 'number' },
+  { id: 'product_category',  label: 'Kategori',    category: 'product',     default_visible: false, default_width: 130 },
 
   // Phase 8I-Followup hotfix: max kota di Indonesia "KAB. PENAJAM PASER UTARA" (24 char).
   // Truncate dengan tooltip kalau lebih panjang dari ~180px (sekitar 23-24 char text-xs).
@@ -134,6 +139,29 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'status_changed_at', label: 'Status Berubah', category: 'timestamps', default_visible: false, default_width: 140, format: 'datetime' },
   { id: 'created_at',        label: 'Dibuat',       category: 'timestamps', default_visible: false, default_width: 140, format: 'datetime' },
   { id: 'updated_at',        label: 'Diupdate',     category: 'timestamps', default_visible: false, default_width: 140, format: 'datetime' },
+
+  // === Pembukuan — Estimasi (proyeksi "kalau order sukses", status-blind) ===
+  { id: 'est_pendapatan',    label: 'Est. Pendapatan',   category: 'bookkeeping_est', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
+  { id: 'est_fee_cod',       label: 'Est. Fee COD',      category: 'bookkeeping_est', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'est_cashback',      label: 'Est. Cashback',     category: 'bookkeeping_est', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'est_ppn',           label: 'Est. PPN',          category: 'bookkeeping_est', default_visible: false, default_width: 110, align: 'right', format: 'rupiah' },
+  { id: 'est_hpp',           label: 'Est. HPP',          category: 'bookkeeping_est', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'est_omset',         label: 'Est. Omset',        category: 'bookkeeping_est', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
+  { id: 'est_margin',        label: 'Est. Margin',       category: 'bookkeeping_est', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
+  { id: 'est_fee_cs',        label: 'Est. Fee CS',       category: 'bookkeeping_est', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'est_gross_profit',  label: 'Est. Gross Profit', category: 'bookkeeping_est', default_visible: false, default_width: 140, align: 'right', format: 'rupiah' },
+
+  // === Pembukuan — Aktual (status-aware: DITERIMA realized · RETUR rugi · CANCEL/FAKE 0 · in-flight —) ===
+  { id: 'act_pendapatan',    label: 'Pendapatan',    category: 'bookkeeping_act', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
+  { id: 'act_fee_cod',       label: 'Fee COD',       category: 'bookkeeping_act', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'act_cashback',      label: 'Cashback',      category: 'bookkeeping_act', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'act_ppn',           label: 'PPN',           category: 'bookkeeping_act', default_visible: false, default_width: 110, align: 'right', format: 'rupiah' },
+  { id: 'act_hpp',           label: 'HPP',           category: 'bookkeeping_act', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'act_omset',         label: 'Omset',         category: 'bookkeeping_act', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
+  { id: 'act_margin',        label: 'Margin',        category: 'bookkeeping_act', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
+  { id: 'act_fee_cs',        label: 'Fee CS',        category: 'bookkeeping_act', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'act_gross_profit',  label: 'Gross Profit',  category: 'bookkeeping_act', default_visible: false, default_width: 140, align: 'right', format: 'rupiah' },
+  { id: 'dicairkan',         label: 'Dicairkan',     category: 'bookkeeping_act', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
 
   // === Actions (always at the end) ===
   { id: 'actions',           label: 'Aksi',         category: 'actions',    default_visible: true,  default_width: 60, align: 'center' },

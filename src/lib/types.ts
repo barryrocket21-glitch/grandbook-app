@@ -565,6 +565,28 @@ export interface OrderEnriched {
   product_count: number                  // jumlah baris di order_items
   total_qty: number                      // sum of qty
   primary_product_name: string | null    // produk pertama untuk filter/sort/display compact
+  product_category: string | null        // kategori produk primary item
+  // Pembukuan — Estimasi (proyeksi, dari list_orders_enriched)
+  est_pendapatan: number | null
+  est_fee_cod: number | null
+  est_cashback: number | null
+  est_ppn: number | null
+  est_hpp: number | null
+  est_omset: number | null
+  est_margin: number | null
+  est_fee_cs: number | null
+  est_gross_profit: number | null
+  // Pembukuan — Aktual (status-aware)
+  act_pendapatan: number | null
+  act_fee_cod: number | null
+  act_cashback: number | null
+  act_ppn: number | null
+  act_hpp: number | null
+  act_omset: number | null
+  act_margin: number | null
+  act_fee_cs: number | null
+  act_gross_profit: number | null
+  dicairkan: number | null
   // Pagination
   total_count: number
 }

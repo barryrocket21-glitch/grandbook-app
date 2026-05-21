@@ -230,7 +230,7 @@ export default function WaPastePage() {
                   rows={14}
                   placeholder={`Bisa paste 1 atau lebih order sekaligus (WA Web copy format ke-detect otomatis):
 
-[21.12, 20/5/2026] Bojo Pertama: (10) CS : Fiaro
+[21.12, 20/5/2026] Grup Order: (10) CS : Fiaro
 KODE ADV : Umo
 Produk : 1 Sandal GD F (1pcs)
 

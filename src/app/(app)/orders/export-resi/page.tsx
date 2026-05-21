@@ -55,6 +55,15 @@ interface OrderRow {
   items_count?: number
 }
 
+// Phase 8H — order yang tujuannya ke area SPX non-coverage.
+interface CoverageRow {
+  order_id: number
+  order_number: string
+  customer_name: string
+  customer_city: string | null
+  customer_province: string | null
+}
+
 const ELIGIBLE_STATUSES: OrderStatus[] = ['SIAP_KIRIM', 'BARU']
 const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
   { value: 'SIAP_KIRIM', label: 'Siap Kirim (default)' },
@@ -96,6 +105,7 @@ export default function OrdersExportResiPage() {
   // Step 3: Preview
   const [preview, setPreview] = useState<OutboundPreviewResult | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [coverageWarn, setCoverageWarn] = useState<CoverageRow[]>([])
 
   // Step 4: Generate
   const [progress, setProgress] = useState({ done: 0, total: 0 })
@@ -224,6 +234,14 @@ export default function OrdersExportResiPage() {
         5
       )
       setPreview(r)
+      // Phase 8H — cek coverage SPX (hanya untuk profile channel SPX)
+      const profCode = channels.find((c) => c.id === b.profile.channel_id)?.code || ''
+      if (!profCode || profCode.toUpperCase().includes('SPX')) {
+        const { data: cov } = await supabase.rpc('check_orders_spx_coverage', { p_order_ids: ids })
+        setCoverageWarn((cov || []) as CoverageRow[])
+      } else {
+        setCoverageWarn([])
+      }
       setStep('preview')
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -339,6 +357,7 @@ export default function OrdersExportResiPage() {
     setSelectedProfileId('')
     setProfileBundle(null)
     setPreview(null)
+    setCoverageWarn([])
     setResult(null)
     setMarkedCount(null)
     setBatchNote('')
@@ -644,6 +663,26 @@ export default function OrdersExportResiPage() {
                 <span className="font-mono">{channelMismatch.offendingCodes.filter((c) => c !== channelMismatch.profileChannelCode).join(', ')}</span>.
                 File akan tetap di-generate, tapi format mungkin tidak cocok untuk channel non-target.
               </p>
+            </div>
+          )}
+
+          {coverageWarn.length > 0 && (
+            <div className="text-xs space-y-1.5 p-3 rounded bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+              <div className="font-semibold flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {coverageWarn.length} order ke area yang TIDAK dilayani SPX
+              </div>
+              <p className="text-muted-foreground">
+                Tujuan order ini di luar coverage SPX — besar kemungkinan ditolak / retur.
+                File tetap bisa di-generate, tapi pertimbangkan kirim pakai ekspedisi lain.
+              </p>
+              <div className="max-h-40 overflow-y-auto space-y-0.5 pt-1 font-mono">
+                {coverageWarn.map((c) => (
+                  <div key={c.order_id}>
+                    {c.order_number} — {c.customer_name} · {c.customer_city}, {c.customer_province}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

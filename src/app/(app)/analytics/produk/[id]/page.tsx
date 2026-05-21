@@ -5,9 +5,10 @@
 // Sections (atas → bawah):
 //   1. Stat cards 4 kolom: Spend / Revenue / Close Rate / ROAS
 //   2. Funnel visual single row: 4 boxes Meta → CS Lead → CS Close → System Order
-//   3. Performa CS per produk (tabel sortable)
-//   4. ROAS per Campaign untuk produk ini (tabel)
-//   5. Insight box compact (auto-generated)
+//   3. Performa per Varian (omset/profit/retur per varian — Phase 8C)
+//   4. Performa CS per produk (tabel sortable)
+//   5. ROAS per Campaign untuk produk ini (tabel)
+//   6. Insight box compact (auto-generated)
 // =============================================================
 import { use, useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
@@ -23,7 +24,9 @@ import {
 } from 'lucide-react'
 import {
   fetchFunnelPerProduct, fetchCsPerformancePerProduct, fetchCampaignsForProduct,
+  fetchVariantPerProduct,
   type FunnelPerProductRow, type CsPerformanceRow, type CampaignsForProductRow,
+  type VariantPerProductRow,
 } from '@/lib/supabase/queries/analytics'
 import { CAMPAIGN_PLATFORM_COLOR, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_STATUS_COLOR, CAMPAIGN_STATUS_LABEL } from '@/lib/schemas/settings'
 import type { AdPlatform, CampaignStatus } from '@/lib/types'
@@ -58,6 +61,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [funnel, setFunnel] = useState<FunnelPerProductRow | null>(null)
   const [csRows, setCsRows] = useState<CsPerformanceRow[]>([])
   const [campRows, setCampRows] = useState<CampaignsForProductRow[]>([])
+  const [varRows, setVarRows] = useState<VariantPerProductRow[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -69,14 +73,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (!rangeReady || !productId || isNaN(productId)) return
     setLoading(true)
     try {
-      const [funnelAll, cs, camps] = await Promise.all([
+      const [funnelAll, cs, camps, vars] = await Promise.all([
         fetchFunnelPerProduct(supabase, range.from, range.to),
         fetchCsPerformancePerProduct(supabase, { productId, from: range.from, to: range.to }),
         fetchCampaignsForProduct(supabase, { productId, from: range.from, to: range.to }),
+        fetchVariantPerProduct(supabase, { productId, from: range.from, to: range.to }),
       ])
       setFunnel(funnelAll.find(r => Number(r.product_id) === productId) ?? null)
       setCsRows(cs)
       setCampRows(camps)
+      setVarRows(vars)
     } finally {
       setLoading(false)
     }
@@ -202,7 +208,20 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </CardContent>
           </Card>
 
-          {/* 3. Performa CS — tabel */}
+          {/* 3. Performa per Varian — tabel */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="px-4 py-3 border-b">
+                <h3 className="text-sm font-semibold">Performa per Varian</h3>
+                <p className="text-xs text-muted-foreground">
+                  {varRows.length} varian terjual — omset, profit &amp; retur per varian
+                </p>
+              </div>
+              <VariantTable rows={varRows} />
+            </CardContent>
+          </Card>
+
+          {/* 4. Performa CS — tabel */}
           <Card>
             <CardContent className="p-0">
               <div className="px-4 py-3 border-b">
@@ -213,7 +232,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </CardContent>
           </Card>
 
-          {/* 4. ROAS per Campaign — tabel */}
+          {/* 5. ROAS per Campaign — tabel */}
           <Card>
             <CardContent className="p-0">
               <div className="px-4 py-3 border-b">
@@ -224,7 +243,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </CardContent>
           </Card>
 
-          {/* 5. Insight box */}
+          {/* 6. Insight box */}
           <InsightCompact funnel={funnel} />
         </>
       )}
@@ -369,6 +388,48 @@ function CampaignsTable({ rows }: { rows: CampaignsForProductRow[] }) {
                     {roas.toFixed(2)}x
                   </Badge>
                 ) : <span className="text-[10px] text-muted-foreground">—</span>}
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
+  )
+}
+
+// --- Sub: variant performance table --------------------------------------
+function VariantTable({ rows }: { rows: VariantPerProductRow[] }) {
+  if (rows.length === 0) {
+    return <div className="px-4 py-8 text-center text-sm text-muted-foreground">Belum ada penjualan varian untuk produk ini di periode.</div>
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Varian</TableHead>
+          <TableHead className="text-right">Order</TableHead>
+          <TableHead className="text-right">Qty</TableHead>
+          <TableHead className="text-right">Omset</TableHead>
+          <TableHead className="text-right">Gross Profit</TableHead>
+          <TableHead className="text-right">Margin</TableHead>
+          <TableHead className="text-right">Retur %</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((r) => {
+          const retur = Number(r.retur_pct)
+          return (
+            <TableRow key={r.variant_id ?? 'none'}>
+              <TableCell className="text-sm font-medium">{r.variant_name}</TableCell>
+              <TableCell className="text-right text-xs">{formatNumber(Number(r.order_count))}</TableCell>
+              <TableCell className="text-right text-xs">{formatNumber(Number(r.qty_sold))}</TableCell>
+              <TableCell className="text-right text-xs">{formatRupiah(Number(r.revenue))}</TableCell>
+              <TableCell className="text-right text-xs text-emerald-600 dark:text-emerald-400">{formatRupiah(Number(r.gross_profit))}</TableCell>
+              <TableCell className="text-right text-xs">{Number(r.margin_pct).toFixed(1)}%</TableCell>
+              <TableCell className="text-right">
+                <Badge variant="outline" className={`text-[10px] ${retur >= 40 ? 'bg-red-500/10 text-red-600 border-red-500/30' : retur >= 25 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'}`}>
+                  {retur.toFixed(1)}%
+                </Badge>
               </TableCell>
             </TableRow>
           )

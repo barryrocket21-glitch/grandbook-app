@@ -308,6 +308,34 @@ export async function fetchCampaignsForProduct(
   return (data || []) as CampaignsForProductRow[]
 }
 
+// Phase 8C — Detail page per produk: variant performance breakdown
+export interface VariantPerProductRow {
+  variant_id: number | null
+  variant_name: string
+  order_count: number
+  qty_sold: number
+  revenue: number
+  hpp: number
+  gross_profit: number
+  margin_pct: number
+  diterima_count: number
+  retur_count: number
+  retur_pct: number
+}
+
+export async function fetchVariantPerProduct(
+  supabase: SupabaseClient,
+  args: { productId: number; from: string; to: string }
+): Promise<VariantPerProductRow[]> {
+  const { data, error } = await supabase.rpc('analytics_variant_per_product', {
+    p_product_id: args.productId,
+    p_from: args.from,
+    p_to: args.to,
+  })
+  if (error) throw new Error(`analytics_variant_per_product gagal: ${error.message}`)
+  return (data || []) as VariantPerProductRow[]
+}
+
 export async function fetchDailyRevenue(
   supabase: SupabaseClient,
   from: string,

@@ -80,13 +80,19 @@ export function AppSidebar() {
                 const Icon = item.icon
 
                 if (item.children && item.children.length > 0) {
+                  // Auto-expand a group when the current route matches the group
+                  // OR any of its children — child hrefs don't always share the
+                  // group's href prefix (e.g. Keuangan group → /laba-rugi).
+                  const groupActive = isActive || item.children.some(
+                    (c) => pathname === c.href || pathname.startsWith(c.href + '/'),
+                  )
                   return (
-                    <Collapsible key={item.href} defaultOpen={isActive} className="group/collapsible">
+                    <Collapsible key={item.href} defaultOpen={groupActive} className="group/collapsible">
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           render={<CollapsibleTrigger />}
                           tooltip={item.title}
-                          isActive={isActive}
+                          isActive={groupActive}
                         >
                           <Icon className="size-4" />
                           <span>{item.title}</span>

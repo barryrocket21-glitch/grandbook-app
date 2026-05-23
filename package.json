@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "import:wilayah": "tsx scripts/import_master_wilayah.ts",
+    "seed:wilayah-extra": "node scripts/seed-master-wilayah-extra.mjs",
     "capture-session": "node scripts/capture-session.mjs",
     "smoke": "node tests/scripts/smoke-all.mjs",
     "smoke:8h": "node tests/scripts/smoke-phase8h-orders-draft.mjs",

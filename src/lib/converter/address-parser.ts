@@ -424,16 +424,44 @@ export async function parseAddress(
   const subStruct  = raw.subdistrict?.trim() || ''
 
   if (provStruct && cityStruct && subStruct) {
-    return {
-      success: true,
-      province: provStruct,
-      city: cityStruct,
-      subdistrict: subStruct,
-      village: null,
-      zip: (raw.zip || '').trim(),
-      address_detail: detailRaw,
-      confidence: 'high',
+    // Phase 8K-Geo: don't trust structured fields blindly — validate against
+    // master_wilayah_spx so a user-typed combo that doesn't exist in any
+    // ekspedisi master list (e.g. "Lampung / Pesawaran / Teluk Pandan", a
+    // post-2021 pemekaran no master has synced yet) doesn't silently ship
+    // wrong wilayah to the courier. If the structured combo resolves, use
+    // master's canonical spelling; if it doesn't, fall through to the
+    // detail-based STEP 2/3 so the row can still be salvaged or flagged.
+    const { data: hits } = await supabase.rpc('parse_address_v3_lookup', {
+      p_province: provStruct,
+      p_city: cityStruct,
+      p_subdistrict: subStruct,
+    })
+    type RpcHit = {
+      province: string
+      city: string
+      subdistrict: string
+      zip: string
+      match_score: number
+      matched_via: string
     }
+    const hit = (hits as RpcHit[] | null)?.[0]
+    if (hit) {
+      const conflict = hit.matched_via !== 'tier1_exact'
+      return {
+        success: true,
+        province: hit.province,
+        city: hit.city,
+        subdistrict: hit.subdistrict,
+        village: null,
+        zip: (raw.zip || '').trim() || hit.zip,
+        address_detail: detailRaw,
+        // tier1 = clean exact match. Anything else = best-guess that conflicts
+        // with the user's province or city; flag low so downstream can route
+        // it to the address-review inbox instead of silently accepting.
+        confidence: conflict ? 'low' : 'high',
+      }
+    }
+    // No master hit at all — let STEP 2/3 try the free-text detail.
   }
 
   if (!detailRaw) {

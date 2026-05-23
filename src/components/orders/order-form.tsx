@@ -150,7 +150,12 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
           supabase.from('courier_channels').select('id, code, name, active').eq('active', true).order('code'),
           supabase.from('products').select('id, sku, name, price_default, active, has_variants').eq('active', true).order('name'),
           supabase.from('product_variants').select('id, product_id, variant_name, variation_code, price, hpp, weight_grams, active').eq('active', true).order('id'),
-          supabase.from('profiles').select('id, full_name, role, active').eq('active', true).eq('role', 'advertiser').order('full_name'),
+          // BUGS.md #2 fix — include inactive advertisers JIKA already linked ke order ini
+          // supaya saat edit order lama yang advertiser-nya dinonaktifkan, dropdown tetap
+          // show current selection. Pattern mirror Phase 8A supplier handling.
+          supabase.from('profiles').select('id, full_name, role, active').eq('role', 'advertiser').or(
+            d.advertiser_id ? `active.eq.true,id.eq.${d.advertiser_id}` : 'active.eq.true'
+          ).order('full_name'),
         ])
         setProvinces(provs)
         setChannels((chs || []) as ChannelLite[])
@@ -578,7 +583,12 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
               <Combobox
                 value={advertiserId}
                 onChange={setAdvertiserId}
-                options={advertisers.map((a) => ({ value: a.id, label: a.full_name }))}
+                options={advertisers.map((a) => ({
+                  value: a.id,
+                  // BUGS.md #2 fix — show "(non-aktif)" suffix kalau advertiser di-include
+                  // karena legacy link tapi sudah dinonaktifkan
+                  label: a.active === false ? `${a.full_name} (non-aktif)` : a.full_name,
+                }))}
                 placeholder="Pilih advertiser (opsional)"
                 searchPlaceholder="Cari advertiser..."
                 emptyHint={{

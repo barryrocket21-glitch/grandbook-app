@@ -4,19 +4,23 @@
 
 ## Pending
 
-### #2 Bug minor advertiser dropdown
-- **Where:** /orders/new form, section People & Notes
-- **Issue:** User report "ada bug pas pilih advertiser" — belum konkret
-  detailnya
-- **Investigasi (2026-05-21):** Combobox advertiser di `order-form.tsx`
-  ditelaah — tidak ditemukan bug konkret, komponennya normal. Kemungkinan
-  edge case: order lama yang advertiser-nya sudah dinonaktifkan tidak
-  tampil saat edit (query master data filter `active=true`).
-- **Action:** Butuh repro step dari user — kejadian saat input order baru
-  atau edit order existing? Gejala persisnya apa?
-- **Severity:** Unknown (pending repro)
+(none currently)
 
 ## Resolved
+
+### #2 Advertiser dropdown — inactive advertiser tidak tampil saat edit (2026-05-23)
+- **Where:** `/orders/new` + edit form di `/orders/[id]`, section People & Notes
+- **Root cause:** `order-form.tsx` line 148 query master profiles dengan
+  `.eq('active', true).eq('role', 'advertiser')` — kalau order lama linked
+  ke advertiser yang kemudian di-nonaktifkan via `/settings/users`, dropdown
+  tidak include advertiser tersebut → user lihat empty selection padahal
+  `advertiser_id` set di DB.
+- **Fix:** Same pattern Phase 8A supplier handling. Query advertisers
+  dengan `.or('active.eq.true,id.eq.{currently_linked}')` — include
+  active OR the specific advertiser already linked ke order ini. Plus
+  label suffix `"(non-aktif)"` di Combobox option supaya user tahu.
+- **Severity:** Medium (silent data integrity issue saat edit legacy orders)
+
 
 ### #1 Copy text di /settings/commission-rules — OBSOLETE (2026-05-21)
 Halaman commission-rules sudah di-redesign di Phase 4A (Commission Engine

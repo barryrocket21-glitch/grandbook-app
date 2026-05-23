@@ -878,48 +878,8 @@ export interface CashflowSummary {
   unsettled_amount: number
 }
 
-// =============================================================
-// Phase 8I-v3 — orders_draft (workspace antrian kerja)
-// =============================================================
-
-export type DraftStatus = 'BARU' | 'SIAP_KIRIM' | 'PROBLEM' | 'CANCEL'
-
-/** Return shape dari RPC list_orders_draft_enriched */
-export interface OrderDraftEnriched {
-  id: number
-  order_number: string
-  customer_name: string
-  customer_phone: string | null
-  customer_city: string | null
-  customer_province: string | null
-  status: DraftStatus
-  priority: OrderPriority
-  payment_method: PaymentMethod
-  subtotal: number
-  total: number
-  cod_amount: number | null
-  estimated_profit: number | null
-  cs_name: string | null
-  channel_name: string | null
-  product_summary: string | null
-  product_count: number
-  cs_attempts: number
-  internal_note: string | null
-  customer_note: string | null
-  reject_reason: string | null
-  last_contact_at: string | null
-  order_date: string
-  created_at: string
-  updated_at: string
-  days_in_status: number
-  total_count: number
-}
-
-export interface DraftStatusStat {
-  status: DraftStatus
-  cnt: number
-  pct: number
-}
+// (Phase 8I-v3 types duplikat dihapus — already defined as DraftOrderStatus +
+// OrderDraftEnriched + DraftStatusStat di Phase 8H section di atas line 607)
 
 /** Saved column view per user */
 export interface SavedView {

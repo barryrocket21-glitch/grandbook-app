@@ -32,6 +32,73 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Phase 8E — Customizable Column View + Order Ops + Notifications + Audit Log | ✅ DONE | 2026-05-16 |
 | Phase 8F — Inbound Parsing Hybrid + Outbound Resolver Fix | ✅ DONE | 2026-05-16 |
 | Phase 8G — SPX Compliance + Phone Robustness + Parser Tuning | ✅ DONE | 2026-05-18 |
+| Phase 8H — orders_draft Separation + Admin Permission Audit | ✅ DONE | 2026-05-20 |
+| Phase 8I — SPX Financial Reconciliation (upload + preview + apply) | ✅ DONE | 2026-05-20 |
+| Phase 8I-v2 — SPX Cashflow Daily (COD + withdrawals tracking) | ✅ DONE | 2026-05-20 |
+| Phase 8J — Financial Position (COD cashflow map dashboard) | ✅ DONE | 2026-05-21 |
+| Phase 8K — WA Paste v2 + Lincah + SPX Coverage + Geo enrichment | ✅ DONE | 2026-05-22 |
+| Phase 8K-Playwright — Smoke test infra (3-suite runner) | ✅ DONE | 2026-05-22 |
+| Phase 8L — Sidebar Count Badges (live counts visible everywhere) | ✅ DONE | 2026-05-22 |
+| Phase 9 — Variant Model + Commission State Machine Redesign | ✅ DONE | 2026-05-21 |
+| Audit Cleanup (mig 068-071) — function search_path + FK indexes + RLS initplan + dedupe policies | ✅ DONE | 2026-05-23 |
+
+**Audit Cleanup done (2026-05-23).** 4 migrations land untuk Supabase advisor cleanup:
+- **Migration 068** — lock `SET search_path TO 'public'` on 10 legacy functions (audit_log_trigger, current_org_id, get_user_role, set_updated_at, exec_sql, dst). Security advisor `function_search_path_mutable` 10 → 0.
+- **Migration 069** — add 42 missing FK indexes. Naming convention `idx_{table}_{column}`. Critical highlights: `profiles.organization_id` (RLS helper hot path), `orders.created_by/campaign_id/admin_id`, `audit_log.user_id`. Perf advisor `unindexed_foreign_keys` 42 → 0.
+- **Migration 070** — wrap `auth.uid()` di `(SELECT auth.uid())` untuk 32 RLS policies. PostgreSQL initplan caches result once per query instead of per-row evaluation. Perf advisor `auth_rls_initplan` 40 → 0. Method via `ALTER POLICY ... USING/WITH CHECK` (preserve role + permissive + cmd attributes).
+- **Migration 071** — drop 2 redundant overlapping permissive policies (`ad_spend_own` redundant vs `ad_spend_select`; `items_draft_all` duplicate `order_items_draft_all`). Pure duplicate cleanup. Perf advisor count partial fix (155 remaining adalah ALL-vs-specific cmd overlap di ad_spend/campaigns/products yang nuanced, defer).
+
+Net: Security WARN 140→128, Perf WARN ~250→~210. Tidak ada Vercel deploy needed (DB-only). RLS perf improvement scale linearly dengan row count (5-30% latency reduction untuk wide scans).
+
+**Phase 9 done (2026-05-21).** Variant Model + Commission State Machine. Migration 031-033 (Phase 9 v1) + 063-064 (variant matcher + analytics):
+- New `product_variants` table dengan attribute-value model (variant = combination of `product_attributes` × `product_attribute_values`). Existing `products.variation` text deprecated soft, baseline migration backfill default variant for all products.
+- `order_items.variant_id` FK ditambah + backfill via `variant_matcher` function (match by product_id + variation text fuzzy).
+- Commission state machine redesigned: PENDING → EARNED → PAID → VOIDED (drop legacy `commission_status` enum). State transitions via DB-level CHECK + trigger.
+- `analytics_variant_per_product` RPC untuk per-variant breakdown di `/products/[id]` detail page (qty, revenue, profit, conversion per variant).
+- Phase 10 candidate: variant-aware commission rules (current cuma product-level).
+
+**Phase 8L done (2026-05-22).** Sidebar count badges. RPC `sidebar_counts` return live counts: orders_draft pending, inbox unmatched_resi unresolved, inbox unmatched_products, inbox unparsed_address, inbox invalid_phone, orders PROBLEM. Badge merah/amber di tiap sidebar entry. Polling 60s + on focus. Indra langsung lihat antrian kerja dari mana aja di app.
+
+**Phase 8K-Playwright done (2026-05-22).** Smoke test infra: `tests/playwright/` dengan runner config + 3 initial suites (login, orders/draft row actions, sidebar overflow, dropdown menu Base UI #31 fix). Skill `grandbook-smoke-test` di `.claude/skills/` untuk autonomous post-deploy verification. Setiap UI/RPC change wajib smoke test before claim done (per AGENTS rules).
+
+**Phase 8K done (2026-05-22).** Multiple sub-features in this phase code:
+- **WA Paste v2** (mig 051-053): key-value converter profile dengan ID currency parsing ("Rp 100.000" → 100000) + qty extraction. Multi-order paste support (timestamp pre-split). Real-format regex updated.
+- **SPX coverage area** (mig 061-062): import 157 non-coverage cities ke `master_wilayah_spx.is_serviceable = FALSE`. Export-resi page warn user kalau order ke wilayah non-coverage (block + suggest courier alternatif).
+- **Multi-source wilayah** (mig 065): 637 kecamatan tambahan dari Mengantar/Komship master di-merge ke `master_wilayah_spx` (parser sekarang lebih toleran).
+- **Lincah outbound profile** (mig 066-067): replace generic `JNE_VIA_MENGANTAR` channel. Profile baru `lincah_outbound` + 4 channels (Lincah JNE / Ninja / J&T / SiCepat) dengan value mappings per courier code.
+- **/orders/draft polish**: bulk select + Hapus Massal, Bulk Set Resi Massal (killer feature — paste resi dari Excel kolom), Edit + Delete actions, quality flags + filter chip (missing no HP / kota / total Rp 0), auto-refresh polling 30s.
+
+**Phase 8J done (2026-05-21).** Financial Position dashboard — full COD cashflow map. Migration 054 (v1) + 060 (v2 rebuild). RPC `financial_position` return: saldo SPX latest, total masuk COD bulan ini, total ditarik bulan ini, total belum cair (orders DITERIMA tanpa cod_settled_at), per-channel breakdown, supplier payables outstanding. Dashboard widget `FinancialPositionCard` di `/dashboard` + dedicated page `/financial-position`. Plus `supplier_payable` table untuk track HPP outstanding ke supplier (sliding window — saat order DITERIMA, debt ke supplier ditambah; saat dibayar, dikurangi). Migration 058 — `laba_rugi_summary` RPC + page `/laba-rugi` (monthly P&L: revenue, HPP, ops expenses, ad spend, profit margin).
+
+**Phase 8I-v2 done (2026-05-20).** SPX Cashflow Daily Reconciliation. Migration 048: `bank_withdrawals` table (external_id unique untuk dedupe, balance_before/after, source_batch_id FK to reconciliation_batches) + `orders.cod_settled_at` column + audit trigger. 3 RPC baru:
+- `preview_spx_cashflow_recon(p_rows, p_file_name, p_file_size_bytes)` — categorize 5 kategori: cod_matched / cod_variance (existing payout berbeda > Rp 100) / cod_unmatched / withdrawals / duplicates.
+- `apply_spx_cashflow_recon(p_batch_id)` — UPDATE orders SET payout + cod_settled_at, INSERT bank_withdrawals (ON CONFLICT external_id DO NOTHING), INSERT inbox_unmatched_resi, mark batch APPLIED.
+- `get_cashflow_summary()` — dashboard widget data (saldo terakhir, total bulan ini, last withdrawal, unsettled count).
+
+UI `/reconciliation/spx-cashflow` + 4-tab preview + dashboard widget "Saldo SPX & Cashflow". XLSX parser dengan header row 1 (BUKAN row 2 seperti Financial Report). Workflow harian: Barry download Account Transaction dari Shopee Seller Center → upload → preview → apply.
+
+**Phase 8I done (2026-05-20).** SPX Financial Reconciliation. Migration 047: `reconciliation_batches` table (track setiap upload event dengan preview_payload JSONB untuk resume) + 2 RPC:
+- `preview_spx_recon(p_rows, ...)` — categorize matched / unmatched / variance per row.
+- `apply_spx_recon(p_batch_id)` — UPDATE orders SET shipping_cost_actual + payout_amount, INSERT inbox untuk unmatched. Mark batch APPLIED dengan audit log entry.
+
+UI `/reconciliation/spx` + Upload → Preview → Apply → Done 5-step flow + History list (10 batch terakhir, Resume + Cancel actions). XLSX parser pakai existing field mappings dari `spx_financial_rekonsil` profile.
+
+**Phase 8I followup (mig 042-046).** 4 quick fixes + Insights drawer:
+- Mig 042: weight resolver fix (KG vs gram bug — Orderonline kasih gram, SPX expect KG), product filter di `/orders/export-resi`, auto-fill customer_address_detail saat parse success, default channel per converter profile.
+- Mig 043: `list_orders_enriched` extended dengan `product_summary` aggregation (untuk Kolom Produk di /orders/list).
+- Mig 044: `get_orders_status_stats` RPC untuk status breakdown card di top /orders/list.
+- Mig 045: `get_orders_by_dimension` RPC (group-by city / province / product / supplier / channel / status / payment_method / day / week / month) untuk Insights drawer.
+- Mig 046: restore audit_log triggers (post-Reset Data hardening — type RESET confirmation + count summary).
+- Plus UI iterations: layout fix tabel volume tinggi, status pill width, stats bar sticky z-index, kolom Produk natural position via neighbor anchor, Reset Data confirmation modal.
+
+**Phase 8H done (2026-05-20).** Major refactor — `orders_draft` physical separation dari `orders`. Migration 049-050, 052:
+- `orders_draft` + `order_items_draft` tables (mirror `orders` schema, omit actuals like shipping_cost_actual / payout / picked_up_at / delivered_at / returned_at / cod_settled_at) + RLS + audit trigger.
+- `promote_draft_to_orders` trigger — kalau resi set NULL→non-NULL di orders_draft → BEFORE UPDATE fires → INSERT row ke orders + INSERT order_items dari draft + audit_log PROMOTE_TO_ORDERS event + DELETE draft row. Return NULL (cancel original update karena row sudah delete).
+- 2 RPC: `list_orders_draft_enriched` + `get_draft_status_stats` (mirror orders pattern).
+- 140 Indra orders (status SIAP_KIRIM, resi IS NULL, created_at hari ini) migrate dari orders → orders_draft via transactional INSERT + DELETE.
+- `generate_order_number` updated jadi draft-aware (count from GREATEST orders + orders_draft).
+- Sidebar: "Antrian Kerja" entry → `/orders/draft` (CS/admin default landing), "Arsip Semua Order" → `/orders/list`.
+- UI `/orders/draft` page dengan stats bar 4-status + table + Quick Resi dialog (set resi → trigger promote → row hilang dari draft, muncul di orders archive). Plus bulk select + Hapus Massal + Bulk Set Resi Massal di Phase 8K.
 
 **Phase 8G done.** Comprehensive bug fix campaign setelah smoke test real-world Phase 8F. 4 bug systemic + cleanup task:
 
@@ -1493,7 +1560,41 @@ Setup database fresh = mulai dari **migration 010**. Migration 001-009 adalah hi
 | **035** | **Phase 8E — 9 kolom enrichment di orders (delivered/returned_at, tags[], priority enum, internal/customer_note, reject_reason, cs_attempts, last_contact_at) + profiles.preferences + organizations.settings + notifications table + 3 trigger (auto_set_delivery, notify_owner_financial_edit, block_admin_actual_edit + bypass setting) + 2 RPC (list_orders_enriched, list_audit_logs). Patch existing update_order_from_rekonsil dengan bypass. Slot 013 di brief dipakai Phase 1.5, jadi pakai slot 035.** | **✅ Active** |
 | **036** | **Phase 8F — inbox_unparsed_address table + RLS + 2 RPC (search_wilayah_fuzzy untuk autocomplete + check_order_export_ready untuk export gate). 15 mapping baru ke orderonline_inbound (address struktural + weight/cogs + Phase 8E fields + meta UTM/dropshipper). Address parser hybrid + inbox UI + export gate strict.** | **✅ Active** |
 | **037** | **Phase 8G — master_wilayah_spx (7092 row authoritative SPX format) + lookup_spx_wilayah RPC (3-tier match) + inbox_invalid_phone table + RLS + cleanup 9 stuck orders. Plus seed via Node script `seed-master-wilayah-spx.mjs`. Update mapping spx_outbound #4-7 ke spx_*_lookup resolvers + #19 ke shipping_payment_default_id (constant "Dibayar Pengirim").** | **✅ Active** |
-| 038+ | TBD next phases | — |
+| **038** | **Phase 8G hotfix — lookup_spx_wilayah alias relaxation (district-only fallback).** | **✅ Active** |
+| **039** | **Phase 8G hotfix — strip district alias from BOTH input and DB columns.** | **✅ Active** |
+| **040** | **Phase 8H Parser V3 — lookup-driven address parser + CSV scientific notation refusal.** | **✅ Active** |
+| **041** | **Phase 8H — RLS SELECT policy untuk master_wilayah_spx (authenticated read access).** | **✅ Active** |
+| **042** | **Phase 8I followup — weight resolver fix (KG vs gram) + product filter + auto-fill detail + default channel per profile.** | **✅ Active** |
+| **043** | **Phase 8I — list_orders_enriched extended dengan product_summary aggregation.** | **✅ Active** |
+| **044** | **Phase 8I — get_orders_status_stats RPC untuk status breakdown card.** | **✅ Active** |
+| **045** | **Phase 8I-followup — get_orders_by_dimension untuk Insights drawer group-by analytics.** | **✅ Active** |
+| **046** | **Phase 8I followup — restore audit_log triggers (post-reset hardening, type RESET confirmation).** | **✅ Active** |
+| **047** | **Phase 8I — reconciliation_batches table + RPCs (preview/apply SPX Financial Report).** | **✅ Active** |
+| **048** | **Phase 8I-v2 — SPX Cashflow Daily: bank_withdrawals table + orders.cod_settled_at + 3 RPC (preview/apply/summary) + Account Transaction List parser.** | **✅ Active** |
+| **049** | **Phase 8H — orders_draft + order_items_draft + RLS + audit trigger + promote_draft_to_orders trigger + 2 RPC (list_orders_draft_enriched, get_draft_status_stats). Migrate 140 Indra orders → draft.** | **✅ Active** |
+| **050** | **Phase 8H — audit_log table admin access policy.** | **✅ Active** |
+| **051** | **Phase 8K — WA Paste key-value converter profile.** | **✅ Active** |
+| **052** | **Phase 8H — generate_order_number draft-aware (GREATEST count across orders + orders_draft).** | **✅ Active** |
+| **053** | **Phase 8K v2 — WA Paste extend dengan ID currency parsing + qty extraction.** | **✅ Active** |
+| **054** | **Phase 8J — financial_position RPC + supplier_payable table (COD cashflow map).** | **✅ Active** |
+| **055** | **Phase 8L — sidebar_counts RPC (live counts: drafts pending, inbox unresolved, problem orders).** | **✅ Active** |
+| **056** | **Bookkeeping — extra columns di /orders/list (Arsip): payment_method, channel_name, cost_actual, cash_in.** | **✅ Active** |
+| **057** | **Cost engine fix — stale HPP snapshot (refresh saat item edit).** | **✅ Active** |
+| **058** | **Laba Rugi — monthly P&L summary RPC.** | **✅ Active** |
+| **059** | **Cost engine fix — count bank-transfer orders as cash received (was excluded from cash_in).** | **✅ Active** |
+| **060** | **Phase 8J v2 — financial_position rebuild jadi full COD cashflow map (saldo + masuk + ditarik + belum cair + per channel breakdown).** | **✅ Active** |
+| **061** | **SPX coverage area — 157 non-coverage cities flagged di master_wilayah_spx.is_serviceable.** | **✅ Active** |
+| **062** | **Export warning — check_orders_spx_coverage RPC validation di /orders/export-resi (warn kalau order ke wilayah non-coverage).** | **✅ Active** |
+| **063** | **Phase 9 — variant_matcher + backfill order_items.variant_id berdasarkan product_id + variation text.** | **✅ Active** |
+| **064** | **Phase 9 — analytics_variant_per_product RPC untuk per-variant breakdown di /products/[id].** | **✅ Active** |
+| **065** | **Phase 8K-geo — multi-source wilayah enrichment: 637 kecamatan dari Mengantar/Komship merged ke master_wilayah_spx.** | **✅ Active** |
+| **066** | **Phase 8K-geo — Lincah outbound converter profile (replace JNE_VIA_MENGANTAR generic).** | **✅ Active** |
+| **067** | **Phase 8K-geo — seed 4 Lincah channels (JNE/Ninja/J&T/SiCepat) + value mappings.** | **✅ Active** |
+| **068** | **Audit cleanup — lock search_path TO 'public' on 10 legacy functions (security advisor: function_search_path_mutable 10 → 0).** | **✅ Active** |
+| **069** | **Audit cleanup — 42 FK indexes added (perf advisor: unindexed_foreign_keys 42 → 0).** | **✅ Active** |
+| **070** | **Audit cleanup — 32 RLS policies wrapped auth.uid() di (SELECT auth.uid()) untuk caching (perf advisor: auth_rls_initplan 40 → 0).** | **✅ Active** |
+| **071** | **Audit cleanup — drop 2 redundant overlapping permissive policies (ad_spend_own + items_draft_all).** | **✅ Active** |
+| 072+ | TBD next phases | — |
 
 ## How to apply migrations going forward
 

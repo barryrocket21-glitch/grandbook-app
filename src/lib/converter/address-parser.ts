@@ -428,9 +428,13 @@ export async function parseAddress(
     // master_wilayah_spx so a user-typed combo that doesn't exist in any
     // ekspedisi master list (e.g. "Lampung / Pesawaran / Teluk Pandan", a
     // post-2021 pemekaran no master has synced yet) doesn't silently ship
-    // wrong wilayah to the courier. If the structured combo resolves, use
-    // master's canonical spelling; if it doesn't, fall through to the
-    // detail-based STEP 2/3 so the row can still be salvaged or flagged.
+    // wrong wilayah to the courier.
+    //
+    // Tier1 exact → use master's canonical spelling, high confidence.
+    // Tier2/3/4 (user-typed combo doesn't fully match master) → return as
+    //   ambiguous so the row keeps user's raw input AND queues to the
+    //   address-review inbox with the candidates surfaced for picking.
+    // No hit at all → fall through to STEP 2/3 for free-text detail parsing.
     const { data: hits } = await supabase.rpc('parse_address_v3_lookup', {
       p_province: provStruct,
       p_city: cityStruct,
@@ -444,21 +448,37 @@ export async function parseAddress(
       match_score: number
       matched_via: string
     }
-    const hit = (hits as RpcHit[] | null)?.[0]
-    if (hit) {
-      const conflict = hit.matched_via !== 'tier1_exact'
+    const rpcHits = (hits as RpcHit[] | null) ?? []
+    const top = rpcHits[0]
+    if (top && top.matched_via === 'tier1_exact') {
       return {
         success: true,
-        province: hit.province,
-        city: hit.city,
-        subdistrict: hit.subdistrict,
+        province: top.province,
+        city: top.city,
+        subdistrict: top.subdistrict,
         village: null,
-        zip: (raw.zip || '').trim() || hit.zip,
+        zip: (raw.zip || '').trim() || top.zip,
         address_detail: detailRaw,
-        // tier1 = clean exact match. Anything else = best-guess that conflicts
-        // with the user's province or city; flag low so downstream can route
-        // it to the address-review inbox instead of silently accepting.
-        confidence: conflict ? 'low' : 'high',
+        confidence: 'high',
+      }
+    }
+    if (top) {
+      // Best-guess conflicts with the user's province/city. Surface every hit
+      // as a pickable candidate; let the user reconcile in the inbox.
+      const candidates: WilayahCandidate[] = rpcHits.map((h) => ({
+        id: 0,
+        province: h.province,
+        city: h.city,
+        subdistrict: h.subdistrict,
+        village: '',
+        zip: h.zip,
+        match_score: h.match_score,
+      }))
+      return {
+        success: false,
+        reason: 'ambiguous',
+        candidates,
+        extracted_keywords: [provStruct, cityStruct, subStruct],
       }
     }
     // No master hit at all — let STEP 2/3 try the free-text detail.

@@ -523,15 +523,18 @@ export default function OrdersExportResiPage() {
                     </SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">Semua channel</SelectItem>
+                      {/* Aggregator-level entries (LINCAH/MENGANTAR) — pilih 1 entry
+                          untuk export semua sub-courier di bawahnya. */}
                       {aggregatorOptions.map((a) => (
                         <SelectItem key={`agg-${a.name}`} value={`AGG:${a.name}`}>
-                          {a.name} (semua, {a.count} courier)
+                          {a.name} ({a.count} courier)
                         </SelectItem>
                       ))}
-                      {channels.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.code}{c.aggregator ? ` · ${c.aggregator}` : ''}
-                        </SelectItem>
+                      {/* Direct channels (aggregator=NULL, e.g. SPX_DIRECT) —
+                          tampil per channel. Sub-courier under aggregator di-skip
+                          karena udah ke-cover lewat aggregator entry. */}
+                      {channels.filter((c) => !c.aggregator).map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

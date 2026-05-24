@@ -197,20 +197,21 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin'],
   },
   {
-    // Master Data — config bisnis. Produk masuk sini (master, bareng Supplier).
+    // Master Data — config bisnis. Per-child roles supaya CS/Advertiser
+    // gak lihat menu config operational yang gak relevan untuk mereka.
     title: 'Master Data',
     href: '/products',
     icon: Package,
-    roles: ['owner', 'admin', 'cs', 'advertiser', 'akunting'],
+    roles: ['owner', 'admin', 'akunting'],
     children: [
       { title: 'Produk', href: '/products', roles: ['owner', 'admin', 'akunting'] },
-      { title: 'Supplier', href: '/settings/suppliers' },
-      { title: 'Couriers', href: '/settings/couriers' },
-      { title: 'Channels', href: '/settings/courier-channels' },
-      { title: 'Rates', href: '/settings/courier-rates' },
-      { title: 'Status Mapping', href: '/settings/status-mapping' },
-      { title: 'Converter Profiles', href: '/settings/converter-profiles' },
-      { title: 'Master Wilayah', href: '/settings/wilayah' },
+      { title: 'Supplier', href: '/settings/suppliers', roles: ['owner', 'admin', 'akunting'] },
+      { title: 'Couriers', href: '/settings/couriers', roles: ['owner', 'admin'] },
+      { title: 'Channels', href: '/settings/courier-channels', roles: ['owner', 'admin'] },
+      { title: 'Rates', href: '/settings/courier-rates', roles: ['owner', 'admin'] },
+      { title: 'Status Mapping', href: '/settings/status-mapping', roles: ['owner', 'admin'] },
+      { title: 'Converter Profiles', href: '/settings/converter-profiles', roles: ['owner', 'admin'] },
+      { title: 'Master Wilayah', href: '/settings/wilayah', roles: ['owner', 'admin', 'akunting'] },
     ],
   },
   {

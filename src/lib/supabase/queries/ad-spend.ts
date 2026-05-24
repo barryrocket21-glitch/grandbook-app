@@ -44,6 +44,7 @@ export interface AdSpendPayload {
   spend_date: string
   campaign_id: number
   spend: number
+  ppn_rate?: number    // default 12 (Indonesia)
   impressions: number | null
   reach: number | null
   clicks: number | null
@@ -143,12 +144,15 @@ export async function bulkInsertAdSpend(
 // ----- Summary RPCs -----
 
 export interface AdSpendSummary {
-  total_spend: number
-  total_campaigns: number
+  total_spend: number              // gross (tanpa PPN)
+  total_ppn?: number               // PPN amount (mig 073)
+  total_spend_with_ppn?: number    // gross + PPN (mig 073) — actual cost
+  total_campaigns?: number         // legacy alias, RPC returns campaigns_count
+  campaigns_count?: number
   total_conversions: number
   total_impressions: number
   total_clicks: number
-  by_platform: Record<string, number>
+  by_platform: Record<string, unknown>
 }
 
 export async function fetchAdSpendSummary(
@@ -163,9 +167,12 @@ export async function fetchAdSpendSummary(
   if (error) throw new Error(`analytics_ad_spend_summary: ${error.message}`)
   if (!data || data.length === 0) {
     return {
-      total_spend: 0, total_campaigns: 0, total_conversions: 0,
+      total_spend: 0, total_ppn: 0, total_spend_with_ppn: 0,
+      total_campaigns: 0, campaigns_count: 0, total_conversions: 0,
       total_impressions: 0, total_clicks: 0, by_platform: {},
     }
   }
-  return data[0] as AdSpendSummary
+  const row = data[0] as AdSpendSummary
+  // Backward-compat alias
+  return { ...row, total_campaigns: row.campaigns_count ?? row.total_campaigns ?? 0 }
 }

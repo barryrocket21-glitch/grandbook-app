@@ -51,6 +51,7 @@ interface SpendForm {
   spend_date: string
   campaign_id: number
   spend: number
+  ppn_rate: number  // %, default 12 (Indonesia)
   impressions: number
   reach: number
   clicks: number
@@ -63,6 +64,7 @@ const emptyForm: SpendForm = {
   spend_date: today(),
   campaign_id: 0,
   spend: 0,
+  ppn_rate: 12,
   impressions: 0,
   reach: 0,
   clicks: 0,
@@ -130,6 +132,7 @@ export default function AdSpendPage() {
       spend_date: r.spend_date,
       campaign_id: r.campaign_id,
       spend: Number(r.spend),
+      ppn_rate: Number(r.ppn_rate ?? 12),
       impressions: r.impressions ?? 0,
       reach: r.reach ?? 0,
       clicks: r.clicks ?? 0,
@@ -145,12 +148,14 @@ export default function AdSpendPage() {
     e.preventDefault()
     if (!form.campaign_id) return toast.error('Pilih campaign dulu')
     if (form.spend <= 0) return toast.error('Spend harus > 0')
+    if (form.ppn_rate < 0 || form.ppn_rate > 100) return toast.error('PPN harus 0-100%')
     setSaving(true)
     try {
       const payload = {
         spend_date: form.spend_date,
         campaign_id: form.campaign_id,
         spend: form.spend,
+        ppn_rate: form.ppn_rate,
         impressions: form.impressions || null,
         reach: form.reach || null,
         clicks: form.clicks || null,
@@ -236,9 +241,11 @@ export default function AdSpendPage() {
               <Coins className="w-5 h-5 text-violet-500" />
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Spend</p>
-              <p className="text-xl font-bold text-violet-500">{formatRupiah(summary?.total_spend ?? 0)}</p>
-              <p className="text-[10px] text-muted-foreground">{summary?.total_campaigns ?? 0} campaign aktif</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Spend (+PPN)</p>
+              <p className="text-xl font-bold text-violet-500">{formatRupiah(summary?.total_spend_with_ppn ?? summary?.total_spend ?? 0)}</p>
+              <p className="text-[10px] text-muted-foreground">
+                Gross {formatRupiah(summary?.total_spend ?? 0)} + PPN {formatRupiah(summary?.total_ppn ?? 0)}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -340,11 +347,11 @@ export default function AdSpendPage() {
                 <TableHead>Campaign</TableHead>
                 <TableHead>Platform</TableHead>
                 <TableHead className="text-right">Spend</TableHead>
+                <TableHead className="text-right">PPN</TableHead>
+                <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Impr</TableHead>
-                <TableHead className="text-right">Reach</TableHead>
                 <TableHead className="text-right">Clicks</TableHead>
                 <TableHead className="text-right">Conv</TableHead>
-                <TableHead className="text-right">Revenue (Reported)</TableHead>
                 <TableHead className="text-center">Source</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
@@ -364,7 +371,7 @@ export default function AdSpendPage() {
                     <EmptyState
                       icon={DollarSign}
                       title="Belum ada ad spend di periode ini"
-                      description="Tambah manual atau upload CSV dari Meta Ads Manager export."
+                      description="Tambah manual atau upload CSV dari Meta Ads Manager export. Default PPN 12% otomatis ditambahkan ke total."
                     />
                   </TableCell>
                 </TableRow>
@@ -384,12 +391,17 @@ export default function AdSpendPage() {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right font-semibold whitespace-nowrap">{formatRupiah(r.spend)}</TableCell>
+                  <TableCell className="text-right text-xs whitespace-nowrap">{formatRupiah(r.spend)}</TableCell>
+                  <TableCell className="text-right text-[11px] text-muted-foreground whitespace-nowrap">
+                    {r.ppn_amount != null ? formatRupiah(r.ppn_amount) : '—'}
+                    <div className="text-[9px]">({Number(r.ppn_rate ?? 12)}%)</div>
+                  </TableCell>
+                  <TableCell className="text-right font-semibold whitespace-nowrap">
+                    {r.spend_total != null ? formatRupiah(r.spend_total) : formatRupiah(r.spend)}
+                  </TableCell>
                   <TableCell className="text-right text-xs">{r.impressions != null ? formatNumber(r.impressions) : '—'}</TableCell>
-                  <TableCell className="text-right text-xs">{r.reach != null ? formatNumber(r.reach) : '—'}</TableCell>
                   <TableCell className="text-right text-xs">{r.clicks != null ? formatNumber(r.clicks) : '—'}</TableCell>
                   <TableCell className="text-right text-xs text-emerald-600 font-semibold">{r.conversions != null ? formatNumber(r.conversions) : '—'}</TableCell>
-                  <TableCell className="text-right text-xs">{r.revenue_reported != null ? formatRupiah(r.revenue_reported) : '—'}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant="outline" className="text-[10px]">{AD_SPEND_SOURCE_LABEL[r.source || 'MANUAL']}</Badge>
                   </TableCell>
@@ -432,13 +444,39 @@ export default function AdSpendPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Spend (Rp) *</Label>
+                <Label>Spend Gross (Rp) *</Label>
                 <Input
                   type="number"
                   value={form.spend}
                   onChange={e => setForm({ ...form, spend: Number(e.target.value) })}
                   required
                 />
+                <p className="text-[10px] text-muted-foreground">Tanpa PPN — angka dari Ads Manager.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3 -mt-2">
+              <div className="space-y-1">
+                <Label className="text-xs">PPN (%)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={form.ppn_rate}
+                  onChange={e => setForm({ ...form, ppn_rate: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">PPN (Rp)</Label>
+                <div className="h-9 px-3 flex items-center rounded-md border bg-muted/30 text-xs">
+                  {formatRupiah(Math.round(form.spend * form.ppn_rate / 100))}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-violet-500 font-semibold">Total Bayar</Label>
+                <div className="h-9 px-3 flex items-center rounded-md border bg-violet-500/5 text-sm font-semibold text-violet-600">
+                  {formatRupiah(Math.round(form.spend * (1 + form.ppn_rate / 100)))}
+                </div>
               </div>
             </div>
             <div className="space-y-2">

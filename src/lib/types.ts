@@ -1071,6 +1071,10 @@ export interface AdSpend {
   import_batch_id?: string | null
   // Phase 6
   meta_lead_count?: number | null
+  // Phase 5B v2 (mig 073) — PPN 12% Meta Ads Indonesia
+  ppn_rate?: number              // %, default 12
+  ppn_amount?: number | null     // GENERATED: spend * ppn_rate/100
+  spend_total?: number | null    // GENERATED: spend + ppn_amount
   notes: string | null
   created_by: string | null
   created_at: string

@@ -165,7 +165,23 @@ export default function OrdersExportResiPage() {
       )
       .order('order_date', { ascending: false })
       .limit(500)
-    if (channelFilter !== 'ALL') q = q.eq('channel_id', Number(channelFilter))
+    if (channelFilter !== 'ALL') {
+      // Phase 8K — aggregator filter (e.g. "AGG:LINCAH") expands to all channels
+      // under that aggregator. Lincah/Mengantar pakai 1 profile untuk semua
+      // sub-courier; user gak perlu split export per courier.
+      if (channelFilter.startsWith('AGG:')) {
+        const agg = channelFilter.slice(4)
+        const channelIds = channels.filter((c) => c.aggregator === agg).map((c) => c.id)
+        if (channelIds.length === 0) {
+          setOrders([])
+          setOrdersLoading(false)
+          return
+        }
+        q = q.in('channel_id', channelIds)
+      } else {
+        q = q.eq('channel_id', Number(channelFilter))
+      }
+    }
     if (statusFilter === 'ELIGIBLE') q = q.in('status', ELIGIBLE_STATUSES)
     else q = q.eq('status', statusFilter)
     if (dateFrom) q = q.gte('order_date', dateFrom)
@@ -180,7 +196,7 @@ export default function OrdersExportResiPage() {
     })) as OrderRow[]
     setOrders(rows)
     setOrdersLoading(false)
-  }, [channelFilter, statusFilter, productFilter, dateFrom, dateTo])
+  }, [channelFilter, statusFilter, productFilter, dateFrom, dateTo, channels])
 
   useEffect(() => {
     if (step !== 'filter') return
@@ -403,11 +419,52 @@ export default function OrdersExportResiPage() {
     return Array.from(set)
   }, [orders, selectedIds])
 
+  // Phase 8K — aggregator-aware grouping. Channels under the same aggregator
+  // (e.g. JNE_VIA_LINCAH + NINJA_VIA_LINCAH both → LINCAH) collapse ke 1 group
+  // karena profile aggregator (lincah_outbound) handle semua sub-courier via
+  // value_mapping `channel_courier_code`. Direct channels (aggregator=NULL,
+  // e.g. SPX_DIRECT) tetap distinct per channel.
+  const selectedAggregatorGroups = useMemo(() => {
+    const set = new Set<string>()
+    for (const cid of selectedChannels) {
+      if (cid == null) {
+        set.add('NO_CHANNEL')
+        continue
+      }
+      const ch = channels.find((c) => c.id === cid)
+      if (ch?.aggregator) set.add(`AGG:${ch.aggregator}`)
+      else set.add(`CH:${cid}`)
+    }
+    return Array.from(set)
+  }, [selectedChannels, channels])
+
+  // List of distinct aggregators across all channels — drives the Step 1 filter
+  // dropdown ("Semua LINCAH" / "Semua MENGANTAR" entries).
+  const aggregatorOptions = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const c of channels) {
+      if (!c.active || !c.aggregator) continue
+      map.set(c.aggregator, (map.get(c.aggregator) || 0) + 1)
+    }
+    return Array.from(map.entries()).map(([name, count]) => ({ name, count }))
+  }, [channels])
+
   const channelMismatch = useMemo(() => {
     if (!profileBundle) return null
     const profChannel = profileBundle.profile.channel_id
     if (!profChannel) return null
-    const offending = selectedChannels.filter((cid) => cid !== profChannel)
+    const profChannelObj = channels.find((c) => c.id === profChannel)
+    const profAggregator = profChannelObj?.aggregator || null
+    // Offending = selected channels yang BUKAN profile channel AND
+    // (kalau profile aggregator-scoped) BUKAN dari aggregator yang sama.
+    const offending = selectedChannels.filter((cid) => {
+      if (cid === profChannel) return false
+      if (profAggregator) {
+        const ch = channels.find((c) => c.id === cid)
+        if (ch?.aggregator === profAggregator) return false
+      }
+      return true
+    })
     if (offending.length === 0) return null
     const channelLookup = (id: number | null) =>
       channels.find((c) => c.id === id)?.code || (id == null ? '(tidak ada channel)' : `#${id}`)
@@ -460,13 +517,21 @@ export default function OrdersExportResiPage() {
                     <SelectTrigger className="w-full"><SelectValue placeholder="Semua channel">
                       {(value: string | null) => {
                         if (!value || value === 'ALL') return 'Semua channel'
+                        if (value.startsWith('AGG:')) return `${value.slice(4)} (semua)`
                         return channels.find((c) => String(c.id) === value)?.code ?? value
                       }}
                     </SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">Semua channel</SelectItem>
+                      {aggregatorOptions.map((a) => (
+                        <SelectItem key={`agg-${a.name}`} value={`AGG:${a.name}`}>
+                          {a.name} (semua, {a.count} courier)
+                        </SelectItem>
+                      ))}
                       {channels.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.code}{c.aggregator ? ` · ${c.aggregator}` : ''}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -627,12 +692,14 @@ export default function OrdersExportResiPage() {
               </p>
             </div>
 
-            {selectedChannels.length > 1 && (
+            {selectedAggregatorGroups.length > 1 && (
               <div className="text-xs space-y-1 p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
                 <div className="font-semibold flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Mixed channels</div>
                 <p>
-                  Order yang dipilih mengandung {selectedChannels.length} channel berbeda. Profile outbound biasanya
-                  hanya cocok untuk 1 channel — disarankan kembali ke Step 1 dan filter per channel.
+                  Order yang dipilih mengandung {selectedChannels.length} channel dari{' '}
+                  {selectedAggregatorGroups.length} group berbeda (aggregator/direct). Profile outbound
+                  biasanya cocok untuk 1 aggregator (e.g. semua LINCAH) atau 1 channel direct (e.g. SPX) —
+                  disarankan kembali ke Step 1 dan filter per group.
                 </p>
               </div>
             )}

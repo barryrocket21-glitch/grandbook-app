@@ -1139,16 +1139,19 @@ export interface OperationalExpense {
 }
 
 // Phase 9 — commission_rules table redesigned (drop+recreate).
-// Old fields (rule_type/value/applies_to_status/user_id/effective_from) removed.
-// New shape: rate_type + rate_value (NULL untuk NONE). Per-user rules
-// deprecated for now — Phase 10 maybe re-introduce.
+// Phase 4A v2 (mig 072) — per-user + per-period re-introduced.
+// Lookup priority: (user+product) > (user) > (role+product) > (role).
+// Period filter via order_date >= effective_from AND <= effective_to.
 export interface CommissionRule {
   id: number
   organization_id: number
   role: 'cs' | 'advertiser'
-  product_id: number | null  // null = default rule untuk role itu
+  user_id: string | null  // null = berlaku untuk semua user di role itu
+  product_id: number | null  // null = default rule untuk role/user itu
   rate_type: CommissionRateType
   rate_value: number | null  // null kalau rate_type = NONE
+  effective_from: string | null  // ISO date, null = open-ended start
+  effective_to: string | null  // ISO date, null = open-ended end
   active: boolean
   created_at?: string
   updated_at?: string

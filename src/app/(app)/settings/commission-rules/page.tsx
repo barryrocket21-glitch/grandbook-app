@@ -29,27 +29,40 @@ const supabase = createClient()
 interface FormState {
   id: number | null
   role: 'cs' | 'advertiser'
+  user_id: string | null
   product_id: number | null
   rate_type: CommissionRateType
   rate_value: number
+  effective_from: string
+  effective_to: string
   active: boolean
 }
 
 const emptyForm: FormState = {
   id: null,
   role: 'cs',
+  user_id: null,
   product_id: null,
   rate_type: 'FLAT_PER_ORDER',
   rate_value: 0,
+  effective_from: '',
+  effective_to: '',
   active: true,
+}
+
+interface UserOption {
+  id: string
+  full_name: string
+  role: string
 }
 
 export default function CommissionRulesPage() {
   const { profile, role, loading: authLoading } = useAuth()
   const orgId = profile?.organization_id ?? null
 
-  const [rules, setRules] = useState<Array<CommissionRule & { product_name: string | null }>>([])
+  const [rules, setRules] = useState<Array<CommissionRule & { product_name: string | null; user_name: string | null }>>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [users, setUsers] = useState<UserOption[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -60,12 +73,18 @@ export default function CommissionRulesPage() {
     if (!orgId) return
     setLoading(true)
     try {
-      const [r, p] = await Promise.all([
+      const [r, p, u] = await Promise.all([
         listCommissionRules(supabase, orgId),
         listProductsWithCounts(supabase, orgId),
+        supabase
+          .from('profiles')
+          .select('id, full_name, role')
+          .in('role', ['cs', 'advertiser'])
+          .order('full_name'),
       ])
       setRules(r)
       setProducts(p as Product[])
+      setUsers((u.data || []) as UserOption[])
     } catch (err) {
       toast.error('Gagal load', { description: err instanceof Error ? err.message : String(err) })
     } finally {
@@ -83,9 +102,12 @@ export default function CommissionRulesPage() {
     setForm({
       id: r.id,
       role: r.role,
+      user_id: r.user_id,
       product_id: r.product_id,
       rate_type: r.rate_type,
       rate_value: Number(r.rate_value ?? 0),
+      effective_from: r.effective_from || '',
+      effective_to: r.effective_to || '',
       active: r.active,
     })
     setDialogOpen(true)
@@ -97,15 +119,22 @@ export default function CommissionRulesPage() {
       toast.error('Rate value harus >= 0')
       return
     }
+    if (form.effective_from && form.effective_to && form.effective_from > form.effective_to) {
+      toast.error('Tanggal mulai tidak boleh setelah tanggal selesai')
+      return
+    }
     setSaving(true)
     try {
       await saveCommissionRule(supabase, {
         id: form.id,
         orgId,
         role: form.role,
+        user_id: form.user_id,
         product_id: form.product_id,
         rate_type: form.rate_type,
         rate_value: form.rate_type === 'NONE' ? null : form.rate_value,
+        effective_from: form.effective_from || null,
+        effective_to: form.effective_to || null,
         active: form.active,
       })
       toast.success(form.id ? 'Rule diupdate' : 'Rule dibuat')
@@ -182,9 +211,11 @@ export default function CommissionRulesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Role</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>Produk</TableHead>
                   <TableHead>Tipe</TableHead>
                   <TableHead className="text-right">Rate</TableHead>
+                  <TableHead>Periode</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -198,7 +229,10 @@ export default function CommissionRulesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {r.product_name ? r.product_name : <span className="text-muted-foreground italic">(default — semua produk)</span>}
+                      {r.user_name ? r.user_name : <span className="text-muted-foreground italic">(semua {r.role.toUpperCase()})</span>}
+                    </TableCell>
+                    <TableCell>
+                      {r.product_name ? r.product_name : <span className="text-muted-foreground italic">(semua produk)</span>}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{r.rate_type}</Badge>
@@ -209,6 +243,15 @@ export default function CommissionRulesPage() {
                         : r.rate_type === 'PERCENT_REVENUE'
                           ? `${r.rate_value}%`
                           : formatRupiah(Number(r.rate_value ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {r.effective_from || r.effective_to ? (
+                        <span>
+                          {r.effective_from || '—'} → {r.effective_to || '∞'}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground italic">selalu</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="outline" className={r.active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-zinc-500/10 text-zinc-500'}>
@@ -241,13 +284,40 @@ export default function CommissionRulesPage() {
           <div className="space-y-3">
             <div className="space-y-1">
               <Label>Role</Label>
-              <Select value={form.role} onValueChange={v => v && setForm({ ...form, role: v as 'cs' | 'advertiser' })}>
+              <Select
+                value={form.role}
+                onValueChange={v => {
+                  // Saat ganti role, reset user_id karena dropdown user nge-filter by role
+                  if (v) setForm({ ...form, role: v as 'cs' | 'advertiser', user_id: null })
+                }}
+              >
                 <SelectTrigger><SelectValue/></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cs">Customer Service</SelectItem>
                   <SelectItem value="advertiser">Advertiser</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>User</Label>
+              <Select
+                value={form.user_id || 'all'}
+                onValueChange={v => setForm({ ...form, user_id: v === 'all' ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Pilih user">
+                  {(value: string | null) => {
+                    if (!value || value === 'all') return `— Semua ${form.role.toUpperCase()} (default) —`
+                    return users.find(u => u.id === value)?.full_name ?? value
+                  }}
+                </SelectValue></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">— Semua {form.role.toUpperCase()} (default) —</SelectItem>
+                  {users.filter(u => u.role === form.role).map(u => (
+                    <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">Pilih user spesifik untuk override default — e.g. Lisa beda dari Miranda.</p>
             </div>
             <div className="space-y-1">
               <Label>Produk</Label>
@@ -287,6 +357,27 @@ export default function CommissionRulesPage() {
                 />
               </div>
             )}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Periode mulai (opsional)</Label>
+                <Input
+                  type="date"
+                  value={form.effective_from}
+                  onChange={e => setForm({ ...form, effective_from: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Periode selesai (opsional)</Label>
+                <Input
+                  type="date"
+                  value={form.effective_to}
+                  onChange={e => setForm({ ...form, effective_to: e.target.value })}
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground -mt-1">
+              Kosongkan periode = berlaku selamanya. Filter pakai order_date saat compute commission.
+            </p>
             <label className="flex items-center gap-2 cursor-pointer pt-1">
               <Checkbox checked={form.active} onCheckedChange={v => setForm({ ...form, active: v === true })} />
               <span className="text-sm">Aktif</span>

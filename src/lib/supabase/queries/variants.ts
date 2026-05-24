@@ -294,17 +294,19 @@ export async function listVariantsForProduct(
 export async function listCommissionRules(
   supabase: SupabaseClient,
   orgId: number
-): Promise<Array<CommissionRule & { product_name: string | null }>> {
+): Promise<Array<CommissionRule & { product_name: string | null; user_name: string | null }>> {
   const { data, error } = await supabase
     .from('commission_rules')
-    .select('*, products(name)')
+    .select('*, products(name), profiles!commission_rules_user_id_fkey(full_name)')
     .eq('organization_id', orgId)
     .order('role', { ascending: true })
+    .order('user_id', { ascending: true, nullsFirst: true })
     .order('product_id', { ascending: true, nullsFirst: true })
   if (error) throw new Error(`listCommissionRules: ${error.message}`)
   return (data || []).map((r: any) => ({
     ...r,
     product_name: r.products?.name ?? null,
+    user_name: r.profiles?.full_name ?? null,
   }))
 }
 
@@ -312,9 +314,12 @@ export interface SaveCommissionRulePayload {
   id?: number | null
   orgId: number
   role: 'cs' | 'advertiser'
+  user_id: string | null
   product_id: number | null
   rate_type: 'FLAT_PER_ORDER' | 'PERCENT_REVENUE' | 'NONE'
   rate_value: number | null
+  effective_from: string | null
+  effective_to: string | null
   active: boolean
 }
 
@@ -325,9 +330,12 @@ export async function saveCommissionRule(
   const payload = {
     organization_id: p.orgId,
     role: p.role,
+    user_id: p.user_id,
     product_id: p.product_id,
     rate_type: p.rate_type,
     rate_value: p.rate_type === 'NONE' ? null : p.rate_value,
+    effective_from: p.effective_from,
+    effective_to: p.effective_to,
     active: p.active,
   }
   if (p.id) {

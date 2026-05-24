@@ -150,10 +150,8 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Posisi Keuangan', href: '/financial-position' },
       { title: 'Laporan Laba Rugi', href: '/laba-rugi', badge: 'BARU' },
-      { title: 'Cross-check Platform', href: '/reconciliation' },
-      { title: 'Upload File Rekonsil', href: '/reconciliation/upload' },
-      { title: 'SPX Financial', href: '/reconciliation/spx' },
-      { title: 'SPX Cashflow Harian', href: '/reconciliation/spx-cashflow' },
+      { title: 'Rekonsiliasi Ekspedisi', href: '/reconciliation/ekspedisi' },
+      { title: 'Cross-check Platform Iklan', href: '/reconciliation' },
       { title: 'Selisih Ongkir', href: '/shipping-diff', roles: ['owner', 'admin'] },
       { title: 'Biaya Operasional', href: '/expenses' },
     ],

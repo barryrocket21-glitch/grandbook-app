@@ -24,9 +24,9 @@ import {
 } from 'lucide-react'
 import {
   fetchFunnelPerProduct, fetchCsPerformancePerProduct, fetchCampaignsForProduct,
-  fetchVariantPerProduct,
+  fetchVariantPerProduct, fetchProfitPerProductPerPlatform,
   type FunnelPerProductRow, type CsPerformanceRow, type CampaignsForProductRow,
-  type VariantPerProductRow,
+  type VariantPerProductRow, type ProfitPerPlatformRow,
 } from '@/lib/supabase/queries/analytics'
 import { CAMPAIGN_PLATFORM_COLOR, CAMPAIGN_PLATFORM_LABEL, CAMPAIGN_STATUS_COLOR, CAMPAIGN_STATUS_LABEL } from '@/lib/schemas/settings'
 import type { AdPlatform, CampaignStatus } from '@/lib/types'
@@ -62,6 +62,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [csRows, setCsRows] = useState<CsPerformanceRow[]>([])
   const [campRows, setCampRows] = useState<CampaignsForProductRow[]>([])
   const [varRows, setVarRows] = useState<VariantPerProductRow[]>([])
+  const [platformRows, setPlatformRows] = useState<ProfitPerPlatformRow[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -73,16 +74,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (!rangeReady || !productId || isNaN(productId)) return
     setLoading(true)
     try {
-      const [funnelAll, cs, camps, vars] = await Promise.all([
+      const [funnelAll, cs, camps, vars, platforms] = await Promise.all([
         fetchFunnelPerProduct(supabase, range.from, range.to),
         fetchCsPerformancePerProduct(supabase, { productId, from: range.from, to: range.to }),
         fetchCampaignsForProduct(supabase, { productId, from: range.from, to: range.to }),
         fetchVariantPerProduct(supabase, { productId, from: range.from, to: range.to }),
+        fetchProfitPerProductPerPlatform(supabase, { productId, from: range.from, to: range.to }),
       ])
       setFunnel(funnelAll.find(r => Number(r.product_id) === productId) ?? null)
       setCsRows(cs)
       setCampRows(camps)
       setVarRows(vars)
+      setPlatformRows(platforms)
     } finally {
       setLoading(false)
     }
@@ -243,10 +246,80 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </CardContent>
           </Card>
 
+          {/* 5b. Profit per Platform — breakdown Meta/Snack/Google */}
+          {platformRows.length > 0 && (
+            <Card>
+              <CardContent className="p-0">
+                <div className="px-4 py-3 border-b">
+                  <h3 className="text-sm font-semibold">Profit per Platform Iklan</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Revenue di-attribute proporsional berdasarkan share ad spend per platform.
+                    ROAS akan sama per platform untuk produk yg sama (limitation attribution model).
+                  </p>
+                </div>
+                <PerPlatformTable rows={platformRows} />
+              </CardContent>
+            </Card>
+          )}
+
           {/* 6. Insight box */}
           <InsightCompact funnel={funnel} />
         </>
       )}
+    </div>
+  )
+}
+
+// --- Sub: per-platform profit table -------------------------------------
+function PerPlatformTable({ rows }: { rows: ProfitPerPlatformRow[] }) {
+  if (rows.length === 0) {
+    return <EmptyState icon={Package} title="Belum ada ad spend untuk produk ini" description="Insert ad_spend di /ad-spend dengan campaign yg linked ke produk ini." />
+  }
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Platform</TableHead>
+            <TableHead className="text-right">Ad Spend</TableHead>
+            <TableHead className="text-right">Share</TableHead>
+            <TableHead className="text-right">Conv</TableHead>
+            <TableHead className="text-right">Revenue (attr)</TableHead>
+            <TableHead className="text-right">Gross Profit</TableHead>
+            <TableHead className="text-right">Net Profit</TableHead>
+            <TableHead className="text-right">ROAS</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(r => {
+            const platformKey = r.platform as AdPlatform
+            const netPositive = Number(r.net_profit) >= 0
+            return (
+              <TableRow key={r.platform}>
+                <TableCell>
+                  <Badge variant="outline" className={`text-[10px] ${CAMPAIGN_PLATFORM_COLOR[platformKey] || ''}`}>
+                    {CAMPAIGN_PLATFORM_LABEL[platformKey] || r.platform}
+                  </Badge>
+                  <div className="text-[9px] text-muted-foreground mt-0.5">{Number(r.campaigns_count)} campaign</div>
+                </TableCell>
+                <TableCell className="text-right text-xs whitespace-nowrap">{formatRupiah(Number(r.total_ad_spend))}</TableCell>
+                <TableCell className="text-right text-xs">{Number(r.attribution_pct).toFixed(1)}%</TableCell>
+                <TableCell className="text-right text-xs">{Number(r.total_conversions) > 0 ? formatNumber(Number(r.total_conversions)) : '—'}</TableCell>
+                <TableCell className="text-right text-xs whitespace-nowrap">{formatRupiah(Number(r.attributed_revenue))}</TableCell>
+                <TableCell className="text-right text-xs whitespace-nowrap text-emerald-600">{formatRupiah(Number(r.gross_profit))}</TableCell>
+                <TableCell className={`text-right text-xs font-semibold whitespace-nowrap ${netPositive ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {formatRupiah(Number(r.net_profit))}
+                </TableCell>
+                <TableCell className="text-right text-xs">
+                  <Badge variant="outline" className={`text-[10px] ${Number(r.roas) >= 2 ? 'bg-emerald-500/10 text-emerald-600' : Number(r.roas) >= 1 ? 'bg-amber-500/10 text-amber-600' : 'bg-red-500/10 text-red-500'}`}>
+                    {Number(r.roas).toFixed(2)}x
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
     </div>
   )
 }

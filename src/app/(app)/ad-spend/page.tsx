@@ -64,7 +64,7 @@ const emptyForm: SpendForm = {
   spend_date: today(),
   campaign_id: 0,
   spend: 0,
-  ppn_rate: 12,
+  ppn_rate: 0,  // Default 0 — kalau spend yg di-input udah include PPN. Set 12 manual kalau billing platform pisah PPN.
   impressions: 0,
   reach: 0,
   clicks: 0,
@@ -241,10 +241,12 @@ export default function AdSpendPage() {
               <Coins className="w-5 h-5 text-violet-500" />
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Spend (+PPN)</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Spend</p>
               <p className="text-xl font-bold text-violet-500">{formatRupiah(summary?.total_spend_with_ppn ?? summary?.total_spend ?? 0)}</p>
               <p className="text-[10px] text-muted-foreground">
-                Gross {formatRupiah(summary?.total_spend ?? 0)} + PPN {formatRupiah(summary?.total_ppn ?? 0)}
+                {(summary?.total_ppn ?? 0) > 0
+                  ? `Gross ${formatRupiah(summary?.total_spend ?? 0)} + PPN ${formatRupiah(summary?.total_ppn ?? 0)}`
+                  : `${summary?.campaigns_count ?? summary?.total_campaigns ?? 0} campaign aktif`}
               </p>
             </div>
           </CardContent>
@@ -444,19 +446,19 @@ export default function AdSpendPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Spend Gross (Rp) *</Label>
+                <Label>Spend (Rp) *</Label>
                 <Input
                   type="number"
                   value={form.spend}
                   onChange={e => setForm({ ...form, spend: Number(e.target.value) })}
                   required
                 />
-                <p className="text-[10px] text-muted-foreground">Tanpa PPN — angka dari Ads Manager.</p>
+                <p className="text-[10px] text-muted-foreground">Total yang lo bayar (kalau udah include PPN biarin PPN 0% di bawah).</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3 -mt-2">
               <div className="space-y-1">
-                <Label className="text-xs">PPN (%)</Label>
+                <Label className="text-xs">PPN (%) <span className="text-muted-foreground font-normal">— optional</span></Label>
                 <Input
                   type="number"
                   min="0"
@@ -464,7 +466,9 @@ export default function AdSpendPage() {
                   step="0.1"
                   value={form.ppn_rate}
                   onChange={e => setForm({ ...form, ppn_rate: Number(e.target.value) })}
+                  placeholder="0"
                 />
+                <p className="text-[9px] text-muted-foreground">Default 0. Set 12 cuma kalau billing platform pisah PPN.</p>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">PPN (Rp)</Label>
@@ -473,7 +477,7 @@ export default function AdSpendPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-violet-500 font-semibold">Total Bayar</Label>
+                <Label className="text-xs text-violet-500 font-semibold">Total</Label>
                 <div className="h-9 px-3 flex items-center rounded-md border bg-violet-500/5 text-sm font-semibold text-violet-600">
                   {formatRupiah(Math.round(form.spend * (1 + form.ppn_rate / 100)))}
                 </div>

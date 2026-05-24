@@ -308,6 +308,37 @@ export async function fetchCampaignsForProduct(
   return (data || []) as CampaignsForProductRow[]
 }
 
+// Phase 5B v3 — Profit per produk per platform (Meta/Snack/Google)
+// Attribution: spend-share proportional (revenue distributed by % of total ad spend).
+// Note: ROAS akan sama per platform untuk produk yg sama (limitation model).
+export interface ProfitPerPlatformRow {
+  platform: string
+  total_ad_spend: number
+  total_conversions: number
+  campaigns_count: number
+  attribution_pct: number
+  attributed_revenue: number
+  attributed_hpp: number
+  attributed_shipping: number
+  attributed_komisi: number
+  gross_profit: number
+  net_profit: number
+  roas: number
+}
+
+export async function fetchProfitPerProductPerPlatform(
+  supabase: SupabaseClient,
+  args: { productId: number; from: string; to: string }
+): Promise<ProfitPerPlatformRow[]> {
+  const { data, error } = await supabase.rpc('analytics_profit_per_product_per_platform', {
+    p_product_id: args.productId,
+    p_from: args.from,
+    p_to: args.to,
+  })
+  if (error) throw new Error(`analytics_profit_per_product_per_platform gagal: ${error.message}`)
+  return (data || []) as ProfitPerPlatformRow[]
+}
+
 // Phase 8C — Detail page per produk: variant performance breakdown
 export interface VariantPerProductRow {
   variant_id: number | null

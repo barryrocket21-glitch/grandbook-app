@@ -8,9 +8,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { MessageSquare, Loader2, CheckCircle2, AlertTriangle, ArrowRight, RotateCcw } from 'lucide-react'
+import { MessageSquare, Loader2, CheckCircle2, AlertTriangle, ArrowRight, RotateCcw, Info } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { canCreateOrders } from '@/lib/auth/permissions'
 import { parseWaPasteV3, type ParsedWaOrder } from '@/lib/converter/wa-paste-v3'
@@ -240,39 +239,11 @@ export default function WaPastePage() {
       {step === 'paste' && (
         <Card>
           <CardContent className="pt-4 pb-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Channel Ekspedisi *</Label>
-                <Select value={channelId} onValueChange={(v) => v && setChannelId(v)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih channel">
-                      {(value: string | null) => {
-                        if (!value) return 'Pilih channel'
-                        return channels.find((c) => String(c.id) === value)?.code ?? value
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {channels.map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {c.code}
-                        {c.aggregator ? ` · ${c.aggregator}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-[10px] text-muted-foreground">
-                  Semua order di paste session ini pakai channel ini.
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Initial Status</Label>
-                <div className="h-9 px-3 flex items-center rounded-md border bg-muted/30 text-sm">
-                  BARU
-                  <Badge variant="outline" className="ml-2 text-[10px]">
-                    Perlu approval admin
-                  </Badge>
-                </div>
+            <div className="flex items-start gap-2 px-3 py-2 rounded-md border bg-muted/30 text-[11px]">
+              <Info className="w-3.5 h-3.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+              <div className="text-muted-foreground">
+                Order masuk ke <strong>Antrian Kerja</strong> dengan status <strong>BARU</strong>. Channel default
+                <strong className="mx-1">{channelLabel}</strong>— bisa diubah per-order di Antrian Kerja sebelum cetak resi.
               </div>
             </div>
 

@@ -314,8 +314,8 @@ export default function WaPastePage() {
 
       {step === 'preview' && (
         <div className="space-y-3">
-          {/* Compact stats bar — single horizontal strip menggantikan 4 stat cards lebar */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 rounded-lg bg-muted/30 border">
+          {/* Sticky stats bar — selalu visible saat scroll banyak order */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 rounded-lg bg-card/95 backdrop-blur border shadow-sm sticky top-0 z-20">
             <div className="flex items-center gap-1.5 text-xs">
               <span className="text-muted-foreground">Channel:</span>
               <Badge variant="outline" className="text-[10px]">

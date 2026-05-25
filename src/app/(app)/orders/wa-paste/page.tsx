@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -8,19 +8,26 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { MessageSquare, Loader2, CheckCircle2, AlertTriangle, ArrowRight, RotateCcw } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { canCreateOrders } from '@/lib/auth/permissions'
-import { parseWaPasteV3 } from '@/lib/converter/wa-paste-v3'
-import { adaptOrders, insertAdaptedOrders, type AdaptedOrder } from '@/lib/converter/wa-paste-adapter'
+import { parseWaPasteV3, type ParsedWaOrder } from '@/lib/converter/wa-paste-v3'
+import {
+  adaptOrder,
+  preloadAdapterData,
+  insertAdaptedOrders,
+  type AdaptedOrder,
+  type AdapterContext,
+} from '@/lib/converter/wa-paste-adapter'
+import { WaPastePreviewTable } from '@/components/orders/wa-paste-preview-table'
 import type { CourierChannel } from '@/lib/types'
 
 const supabase = createClient()
 
 type StepKey = 'paste' | 'preview' | 'submitting' | 'done'
+type RefData = Awaited<ReturnType<typeof preloadAdapterData>>
 
 const SAMPLE_TEXT = `SALE LISA (22)
 
@@ -65,14 +72,20 @@ export default function WaPastePage() {
   const [channelId, setChannelId] = useState<string>('')
   const [parseWarnings, setParseWarnings] = useState<string[]>([])
   const [adapted, setAdapted] = useState<AdaptedOrder[]>([])
-  const [insertResult, setInsertResult] = useState<{ inserted: number; failed: number; errors: Array<{ index: number; message: string }> } | null>(null)
+  const [refData, setRefData] = useState<RefData | null>(null)
+  const [insertResult, setInsertResult] = useState<{
+    inserted: number
+    failed: number
+    errors: Array<{ index: number; message: string }>
+  } | null>(null)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from('courier_channels').select('*').eq('active', true).order('code')
       const list = (data || []) as CourierChannel[]
       setChannels(list)
-      const spx = list.find(c => c.code === 'SPX_DIRECT')
+      const spx = list.find((c) => c.code === 'SPX_DIRECT')
       if (spx) setChannelId(String(spx.id))
       else if (list[0]) setChannelId(String(list[0].id))
     }
@@ -81,32 +94,102 @@ export default function WaPastePage() {
 
   const orgId = userProfile?.organization_id ?? 1
 
-  const stats = useMemo(() => {
-    const matched = adapted.filter(a => a.productId).length
-    const validPhone = adapted.filter(a => a.phoneValid).length
-    const csMatched = adapted.filter(a => a.csMatched).length
-    return { matched, validPhone, csMatched, total: adapted.length }
-  }, [adapted])
-
-  async function handleParse() {
-    if (!text.trim()) return toast.error('Paste teks WA dulu')
-    if (!channelId) return toast.error('Pilih channel dulu')
-    const result = parseWaPasteV3(text)
-    if (result.orders.length === 0) {
-      toast.error('Gak ada order yang kebaca', { description: result.warnings.join('; ') })
-      return
+  // Preload reference data sekali per session (products + cs profiles).
+  // Dipakai utk re-adapt 1 row begitu user edit cell di preview.
+  useEffect(() => {
+    let cancelled = false
+    if (orgId) {
+      preloadAdapterData(supabase, orgId).then((data) => {
+        if (!cancelled) setRefData(data)
+      })
     }
-    setParseWarnings(result.warnings)
-    const ad = await adaptOrders(result.orders, {
+    return () => {
+      cancelled = true
+    }
+  }, [orgId])
+
+  const ctx: AdapterContext | null = useMemo(() => {
+    if (!channelId) return null
+    return {
       supabase,
       organizationId: orgId,
       channelId: Number(channelId),
       createdBy: user?.id ?? null,
       initialStatus: 'BARU',
-    })
-    setAdapted(ad)
-    setStep('preview')
+    }
+  }, [channelId, orgId, user?.id])
+
+  const stats = useMemo(() => {
+    const total = adapted.length
+    const matched = adapted.filter((a) => a.productId).length
+    const validPhone = adapted.filter((a) => a.phoneValid).length
+    const csMatched = adapted.filter((a) => a.csMatched).length
+    const incomplete = adapted.filter(
+      (a) =>
+        !a.parsed.nama ||
+        !a.parsed.hp ||
+        !a.parsed.alamat ||
+        !a.parsed.produk ||
+        a.parsed.hargaTotal == null ||
+        !a.phoneValid,
+    ).length
+    return { total, matched, validPhone, csMatched, incomplete }
+  }, [adapted])
+
+  const channelLabel = useMemo(() => {
+    const c = channels.find((c) => String(c.id) === channelId)
+    if (!c) return '—'
+    return c.aggregator ? `${c.code} · ${c.aggregator}` : c.code
+  }, [channelId, channels])
+
+  async function handleParse() {
+    if (!text.trim()) return toast.error('Paste teks WA dulu')
+    if (!channelId) return toast.error('Pilih channel dulu')
+    if (!ctx || !refData) return toast.error('Loading data master… coba lagi sebentar')
+    setBusy(true)
+    try {
+      const result = parseWaPasteV3(text)
+      if (result.orders.length === 0) {
+        toast.error('Gak ada order yang kebaca', {
+          description: result.warnings.join('; ') || undefined,
+        })
+        return
+      }
+      setParseWarnings(result.warnings)
+      const ad = result.orders.map((p, i) => adaptOrder(p, i, ctx, refData))
+      setAdapted(ad)
+      setStep('preview')
+      if (result.warnings.length > 0) {
+        toast.warning(`${result.orders.length} order kebaca dengan ${result.warnings.length} catatan`)
+      } else {
+        toast.success(`${result.orders.length} order kebaca`)
+      }
+    } finally {
+      setBusy(false)
+    }
   }
+
+  // Re-adapt 1 row saat user edit cell. Pakai cached refData + ctx
+  // supaya product/CS/phone re-resolve otomatis tanpa round-trip ke DB.
+  const handleUpdate = useCallback(
+    (index: number, field: keyof ParsedWaOrder, value: string | number | null) => {
+      if (!ctx || !refData) return
+      setAdapted((prev) => {
+        const cur = prev[index]
+        if (!cur) return prev
+        const newParsed = { ...cur.parsed, [field]: value as never }
+        const re = adaptOrder(newParsed, cur.originalIndex, ctx, refData)
+        const next = [...prev]
+        next[index] = re
+        return next
+      })
+    },
+    [ctx, refData],
+  )
+
+  const handleRemove = useCallback((index: number) => {
+    setAdapted((prev) => prev.filter((_, i) => i !== index))
+  }, [])
 
   async function handleSubmit() {
     if (adapted.length === 0) return
@@ -130,24 +213,28 @@ export default function WaPastePage() {
     return (
       <div className="space-y-6">
         <PageHeader icon={MessageSquare} title="WA Paste" />
-        <Card><CardContent className="p-6 text-sm text-muted-foreground">
-          Hanya owner/admin/cs yang bisa input order via WA Paste.
-        </CardContent></Card>
+        <Card>
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            Hanya owner/admin/cs yang bisa input order via WA Paste.
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         icon={MessageSquare}
         title="WA Paste"
-        description="Paste teks order dari WhatsApp → parser ekstrak otomatis nama, alamat, produk, dst. Bisa multi-order sekaligus."
-        actions={step !== 'paste' ? (
-          <Button variant="outline" size="sm" onClick={reset}>
-            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Mulai Ulang
-          </Button>
-        ) : null}
+        description="Paste teks order dari WhatsApp → parser ekstrak otomatis. Bisa multi-order sekaligus."
+        actions={
+          step !== 'paste' ? (
+            <Button variant="outline" size="sm" onClick={reset}>
+              <RotateCcw className="w-3.5 h-3.5 mr-1" /> Mulai Ulang
+            </Button>
+          ) : null
+        }
       />
 
       {step === 'paste' && (
@@ -157,46 +244,67 @@ export default function WaPastePage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Channel Ekspedisi *</Label>
                 <Select value={channelId} onValueChange={(v) => v && setChannelId(v)}>
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Pilih channel">
-                    {(value: string | null) => {
-                      if (!value) return 'Pilih channel'
-                      return channels.find(c => String(c.id) === value)?.code ?? value
-                    }}
-                  </SelectValue></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih channel">
+                      {(value: string | null) => {
+                        if (!value) return 'Pilih channel'
+                        return channels.find((c) => String(c.id) === value)?.code ?? value
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
-                    {channels.map(c => (
-                      <SelectItem key={c.id} value={String(c.id)}>{c.code}{c.aggregator ? ` · ${c.aggregator}` : ''}</SelectItem>
+                    {channels.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.code}
+                        {c.aggregator ? ` · ${c.aggregator}` : ''}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[10px] text-muted-foreground">Semua order di paste session ini pakai channel ini.</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Semua order di paste session ini pakai channel ini.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Initial Status</Label>
                 <div className="h-9 px-3 flex items-center rounded-md border bg-muted/30 text-sm">
-                  BARU <Badge variant="outline" className="ml-2 text-[10px]">Perlu approval admin</Badge>
+                  BARU
+                  <Badge variant="outline" className="ml-2 text-[10px]">
+                    Perlu approval admin
+                  </Badge>
                 </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">Paste teks WA di bawah (bisa multi-order)</Label>
+              <Label className="text-xs">Paste teks WA di bawah (bisa multi-order sekaligus)</Label>
               <Textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Paste chat WA langsung di sini..."
-                className="font-mono text-xs min-h-[280px]"
+                placeholder="Paste chat WA langsung di sini... Banyak orderan? Tinggal paste semua sekaligus."
+                className="font-mono text-xs min-h-[220px]"
               />
               <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>{text.split('\n').length} baris · {text.length} karakter</span>
-                <button type="button" onClick={() => setText(SAMPLE_TEXT)} className="text-violet-500 hover:underline">
+                <span>
+                  {text.split('\n').length} baris · {text.length} karakter
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setText(SAMPLE_TEXT)}
+                  className="text-violet-500 hover:underline"
+                >
                   Isi sample
                 </button>
               </div>
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={handleParse} disabled={!text.trim() || !channelId} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+              <Button
+                onClick={handleParse}
+                disabled={!text.trim() || !channelId || busy || !refData}
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              >
+                {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
                 Parse & Preview <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             </div>
@@ -205,98 +313,77 @@ export default function WaPastePage() {
       )}
 
       {step === 'preview' && (
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="pt-4 pb-4 space-y-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                <Stat label="Order terbaca" value={String(stats.total)} color="violet" />
-                <Stat label="Produk match" value={`${stats.matched}/${stats.total}`} color={stats.matched === stats.total ? 'emerald' : 'amber'} />
-                <Stat label="HP valid" value={`${stats.validPhone}/${stats.total}`} color={stats.validPhone === stats.total ? 'emerald' : 'amber'} />
-                <Stat label="CS resolved" value={`${stats.csMatched}/${stats.total}`} color={stats.csMatched === stats.total ? 'emerald' : 'amber'} />
-              </div>
-
-              {parseWarnings.length > 0 && (
-                <div className="text-xs space-y-1 p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
-                  <div className="font-semibold flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Parser warnings</div>
-                  {parseWarnings.map((w, i) => <div key={i}>• {w}</div>)}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">#</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>HP</TableHead>
-                      <TableHead>Alamat</TableHead>
-                      <TableHead>Produk → Match</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead>CS</TableHead>
-                      <TableHead>Issues</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {adapted.map((a, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell>
-                          <div className="text-xs font-medium">{a.parsed.nama || <span className="text-red-500">(kosong)</span>}</div>
-                          <div className="text-[10px] text-muted-foreground">{a.parsed.kota ?? ''}{a.parsed.provinsi ? `, ${a.parsed.provinsi}` : ''}</div>
-                        </TableCell>
-                        <TableCell className="text-xs font-mono">
-                          {a.phoneValid ? a.parsed.hp : <span className="text-red-500">{a.parsed.hp} ⚠</span>}
-                        </TableCell>
-                        <TableCell className="text-[10px] max-w-[200px] truncate" title={a.parsed.alamat}>{a.parsed.alamat}</TableCell>
-                        <TableCell className="text-xs">
-                          <div className="text-[10px] text-muted-foreground italic">{a.parsed.produk}</div>
-                          {a.parsed.variation && (
-                            <div className="text-[9px] text-muted-foreground">↳ {a.parsed.variation}</div>
-                          )}
-                          {a.productMatchedName ? (
-                            <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600">→ {a.productMatchedName}</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-500">Tidak match</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right text-xs">{a.parsed.qty}</TableCell>
-                        <TableCell className="text-right text-xs whitespace-nowrap">
-                          {a.parsed.hargaTotal != null ? `Rp ${a.parsed.hargaTotal.toLocaleString('id-ID')}` : '—'}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {a.csMatched ? (
-                            <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600">{a.parsed.csName}</Badge>
-                          ) : a.parsed.csName ? (
-                            <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600">{a.parsed.csName} (?)</Badge>
-                          ) : <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                        <TableCell className="text-[10px]">
-                          {a.warnings.length > 0 ? (
-                            <span className="text-amber-600">{a.warnings.length} warn</span>
-                          ) : <span className="text-emerald-600">✓</span>}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-between items-center">
-            <p className="text-xs text-muted-foreground">
-              ✓ Order akan masuk ke <strong>Antrian Kerja</strong> dengan status <strong>BARU</strong>.
-              Admin perlu approve di Inbox Pending Review sebelum bisa di-export.
-            </p>
-            <Button onClick={handleSubmit} disabled={adapted.length === 0} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Submit {adapted.length} Order
-            </Button>
+        <div className="space-y-3">
+          {/* Compact stats bar — single horizontal strip menggantikan 4 stat cards lebar */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 rounded-lg bg-muted/30 border">
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-muted-foreground">Channel:</span>
+              <Badge variant="outline" className="text-[10px]">
+                {channelLabel}
+              </Badge>
+            </div>
+            <Sep />
+            <StatChip label="Order" value={stats.total} tone="violet" />
+            <StatChip
+              label="Produk match"
+              value={`${stats.matched}/${stats.total}`}
+              tone={stats.matched === stats.total ? 'emerald' : 'amber'}
+            />
+            <StatChip
+              label="HP valid"
+              value={`${stats.validPhone}/${stats.total}`}
+              tone={stats.validPhone === stats.total ? 'emerald' : 'amber'}
+            />
+            <StatChip
+              label="CS resolved"
+              value={`${stats.csMatched}/${stats.total}`}
+              tone={stats.csMatched === stats.total ? 'emerald' : 'amber'}
+            />
+            {stats.incomplete > 0 && (
+              <>
+                <Sep />
+                <StatChip label="Belum lengkap" value={stats.incomplete} tone="red" />
+              </>
+            )}
+            <div className="ml-auto">
+              <Button
+                onClick={handleSubmit}
+                disabled={adapted.length === 0}
+                size="sm"
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Submit {adapted.length} Order
+              </Button>
+            </div>
           </div>
+
+          {parseWarnings.length > 0 && (
+            <details className="text-xs rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+              <summary className="cursor-pointer px-3 py-2 font-semibold flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" /> {parseWarnings.length} parser warning
+              </summary>
+              <div className="px-3 pb-2 space-y-0.5">
+                {parseWarnings.map((w, i) => (
+                  <div key={i}>• {w}</div>
+                ))}
+              </div>
+            </details>
+          )}
+
+          <p className="text-[11px] text-muted-foreground">
+            💡 Cell merah = field wajib kosong. Klik & edit langsung di tabel. Salah baca? Klik × buat hapus order. Order
+            akan masuk <strong>Antrian Kerja</strong> dengan status <strong>BARU</strong>.
+          </p>
+
+          {adapted.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 pb-6 text-center text-sm text-muted-foreground">
+                Semua order udah dihapus. Klik &quot;Mulai Ulang&quot; di atas buat paste lagi.
+              </CardContent>
+            </Card>
+          ) : (
+            <WaPastePreviewTable orders={adapted} onUpdate={handleUpdate} onRemove={handleRemove} />
+          )}
         </div>
       )}
 
@@ -318,23 +405,36 @@ export default function WaPastePage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Stat label="Berhasil" value={String(insertResult.inserted)} color="emerald" />
-              <Stat label="Gagal" value={String(insertResult.failed)} color={insertResult.failed > 0 ? 'red' : 'emerald'} />
+              <Stat
+                label="Gagal"
+                value={String(insertResult.failed)}
+                color={insertResult.failed > 0 ? 'red' : 'emerald'}
+              />
             </div>
             {insertResult.errors.length > 0 && (
               <details className="text-xs">
-                <summary className="cursor-pointer text-red-600 font-medium">Detail {insertResult.errors.length} error</summary>
+                <summary className="cursor-pointer text-red-600 font-medium">
+                  Detail {insertResult.errors.length} error
+                </summary>
                 <div className="mt-2 space-y-1 max-h-40 overflow-y-auto border rounded p-2">
                   {insertResult.errors.map((e, i) => (
-                    <div key={i} className="text-muted-foreground">Row {e.index + 1}: {e.message}</div>
+                    <div key={i} className="text-muted-foreground">
+                      Row {e.index + 1}: {e.message}
+                    </div>
                   ))}
                 </div>
               </details>
             )}
             <div className="flex gap-2 pt-1">
-              <Button onClick={() => router.push('/orders/draft')} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+              <Button
+                onClick={() => router.push('/orders/draft')}
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              >
                 Buka Antrian Kerja
               </Button>
-              <Button variant="outline" onClick={reset}>Paste Lagi</Button>
+              <Button variant="outline" onClick={reset}>
+                Paste Lagi
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -343,7 +443,42 @@ export default function WaPastePage() {
   )
 }
 
-function Stat({ label, value, color }: { label: string; value: string; color: 'emerald' | 'red' | 'amber' | 'violet' }) {
+function Sep() {
+  return <span className="text-muted-foreground/30 select-none">|</span>
+}
+
+function StatChip({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string | number
+  tone: 'emerald' | 'red' | 'amber' | 'violet'
+}) {
+  const toneMap: Record<string, string> = {
+    emerald: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10',
+    red: 'text-red-700 dark:text-red-300 bg-red-500/10',
+    amber: 'text-amber-700 dark:text-amber-300 bg-amber-500/10',
+    violet: 'text-violet-700 dark:text-violet-300 bg-violet-500/10',
+  }
+  return (
+    <div className="flex items-center gap-1.5 text-xs">
+      <span className="text-muted-foreground">{label}:</span>
+      <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] tabular-nums ${toneMap[tone]}`}>{value}</span>
+    </div>
+  )
+}
+
+function Stat({
+  label,
+  value,
+  color,
+}: {
+  label: string
+  value: string
+  color: 'emerald' | 'red' | 'amber' | 'violet'
+}) {
   const colorMap: Record<string, string> = {
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
     red: 'bg-red-500/10 border-red-500/30 text-red-600',

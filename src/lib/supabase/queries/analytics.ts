@@ -137,6 +137,87 @@ export async function fetchOverview(
   return data[0] as AnalyticsOverview
 }
 
+// Phase 5B v4 — Forecast overview (mig 075). Extends realized dengan
+// pipeline_in_transit × success_rate per produk untuk forecast picture.
+export interface AnalyticsOverviewForecast {
+  // Realized (sama dengan v3)
+  total_orders: number
+  total_revenue: number
+  total_cogs: number
+  total_shipping: number
+  total_commissions_earned: number
+  diterima_count: number
+  retur_count: number
+  cancel_count: number
+  fake_count: number
+  baru_count: number
+  dikirim_count: number
+  siap_kirim_count: number
+  total_operational_expenses: number
+  total_ad_spend: number
+  net_profit_realized: number
+  // Forecast (mig 075)
+  success_rate_pct: number
+  pipeline_in_transit_count: number
+  pipeline_in_transit_revenue: number
+  expected_diterima: number
+  forecast_revenue: number
+  forecast_hpp: number
+  forecast_shipping: number
+  forecast_komisi: number
+  forecast_net_profit_after_ads: number
+}
+
+export async function fetchOverviewWithForecast(
+  supabase: SupabaseClient,
+  from: string,
+  to: string
+): Promise<AnalyticsOverviewForecast | null> {
+  const { data, error } = await supabase.rpc('analytics_overview_v4', {
+    p_from: from,
+    p_to: to,
+  })
+  if (error) throw new Error(`analytics_overview_v4 gagal: ${error.message}`)
+  if (!data || data.length === 0) return null
+  return data[0] as AnalyticsOverviewForecast
+}
+
+// Phase 5B v4 — Per produk forecast (mig 075b)
+export interface PerProductForecastRow {
+  product_id: number
+  product_name: string
+  diterima_count: number
+  retur_count: number
+  dikirim_count: number
+  revenue_realized: number
+  hpp_realized: number
+  shipping_realized: number
+  komisi_realized: number
+  ad_spend_total: number
+  net_profit_realized: number
+  success_rate_pct: number
+  pipeline_revenue: number
+  expected_diterima: number
+  forecast_revenue: number
+  forecast_hpp: number
+  forecast_shipping: number
+  forecast_komisi: number
+  forecast_net_profit: number
+}
+
+export async function fetchPerProductForecast(
+  supabase: SupabaseClient,
+  from: string,
+  to: string
+): Promise<PerProductForecastRow[]> {
+  const { data, error } = await supabase.rpc('analytics_profit_per_product_v3', {
+    p_from: from,
+    p_to: to,
+  })
+  if (error) throw new Error(`analytics_profit_per_product_v3 gagal: ${error.message}`)
+  return (data || []) as PerProductForecastRow[]
+}
+
 // Phase 5A — Per Produk (extended Phase 5B dengan ad spend allocation)
 export interface PerProductRow {
   product_id: number
@@ -324,6 +405,11 @@ export interface ProfitPerPlatformRow {
   gross_profit: number
   net_profit: number
   roas: number
+  // Phase 5B v4 — Forecast (mig 075c)
+  forecast_attributed_revenue?: number
+  forecast_gross_profit?: number
+  forecast_net_profit?: number
+  forecast_roas?: number
 }
 
 export async function fetchProfitPerProductPerPlatform(

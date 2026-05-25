@@ -19,9 +19,10 @@ import {
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
 import { formatRupiah, formatNumber } from '@/lib/format'
 import {
-  fetchOverview, fetchDailyRevenue, fetchPerCs, fetchPerAdvertiser, fetchPerChannel,
+  fetchOverview, fetchOverviewWithForecast,
+  fetchDailyRevenue, fetchPerCs, fetchPerAdvertiser, fetchPerChannel,
   fetchRoasPerCampaign, fetchFunnelPerProduct,
-  type AnalyticsOverview, type DailyRevenuePoint,
+  type AnalyticsOverview, type AnalyticsOverviewForecast, type DailyRevenuePoint,
   type PerCsRow, type PerAdvertiserRow, type PerChannelRow,
   type RoasPerCampaignRow, type FunnelPerProductRow,
 } from '@/lib/supabase/queries/analytics'
@@ -84,6 +85,7 @@ function AnalyticsPageInner() {
 
   const [range, setRange] = useState<DateRange>(thisMonth)
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
+  const [forecast, setForecast] = useState<AnalyticsOverviewForecast | null>(null)
   const [daily, setDaily] = useState<DailyRevenuePoint[]>([])
   const [perCs, setPerCs] = useState<PerCsRow[]>([])
   const [perAdv, setPerAdv] = useState<PerAdvertiserRow[]>([])
@@ -107,8 +109,9 @@ function AnalyticsPageInner() {
       // Phase 6 redesign: PerProdukSection pakai funnelRows langsung
       // (analytics_funnel_per_product sudah include revenue + CS + roas).
       // analytics_profit_per_product_v2 dipakai di detail page kalau perlu drill-down.
-      const [ov, dr, cs, adv, chan, roas, funnel] = await Promise.all([
+      const [ov, fc, dr, cs, adv, chan, roas, funnel] = await Promise.all([
         fetchOverview(supabase, range.from, range.to),
+        fetchOverviewWithForecast(supabase, range.from, range.to),
         fetchDailyRevenue(supabase, range.from, range.to),
         fetchPerCs(supabase, range.from, range.to),
         fetchPerAdvertiser(supabase, range.from, range.to),
@@ -117,6 +120,7 @@ function AnalyticsPageInner() {
         fetchFunnelPerProduct(supabase, range.from, range.to),
       ])
       setOverview(ov)
+      setForecast(fc)
       setDaily(dr)
       setPerCs(cs)
       setPerAdv(adv)
@@ -275,6 +279,55 @@ function AnalyticsPageInner() {
                 color={(overview?.net_margin_pct ?? 0) >= 10 ? 'emerald' : (overview?.net_margin_pct ?? 0) >= 0 ? 'amber' : 'red'}
               />
             </div>
+
+            {/* Phase 5B v4 — Forecast row (realized + pipeline × success rate) */}
+            {forecast && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    🔮 Forecast (Estimasi termasuk pipeline)
+                    <Badge variant="outline" className="text-[10px] bg-violet-500/10 text-violet-500">
+                      SR {Number(forecast.success_rate_pct).toFixed(1)}%
+                    </Badge>
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground">
+                    Realized + (DIKIRIM {Number(forecast.pipeline_in_transit_count)} order × success rate)
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <StatCard
+                    label="Pipeline (DIKIRIM)"
+                    value={formatRupiah(Number(forecast.pipeline_in_transit_revenue))}
+                    sub={`${Number(forecast.pipeline_in_transit_count)} order in-transit`}
+                    color="blue"
+                  />
+                  <StatCard
+                    label="Expected DITERIMA"
+                    value={String(Number(forecast.expected_diterima))}
+                    sub={`realized ${forecast.diterima_count} + pipeline × SR`}
+                    color="violet"
+                  />
+                  <StatCard
+                    label="Forecast Revenue"
+                    value={formatRupiah(Number(forecast.forecast_revenue))}
+                    sub="kalau pipeline settle"
+                    color="emerald"
+                  />
+                  <StatCard
+                    label="Net Profit Realized"
+                    value={formatRupiah(Number(forecast.net_profit_realized))}
+                    sub="cash basis (DITERIMA only)"
+                    color={Number(forecast.net_profit_realized) >= 0 ? 'emerald' : 'red'}
+                  />
+                  <StatCard
+                    label="Net Profit Forecast"
+                    value={formatRupiah(Number(forecast.forecast_net_profit_after_ads))}
+                    sub="incl. pipeline × SR"
+                    color={Number(forecast.forecast_net_profit_after_ads) >= 0 ? 'emerald' : 'red'}
+                  />
+                </div>
+              </div>
+            )}
 
             <Card>
               <CardContent className="pt-4 pb-4">

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -8,135 +8,116 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { MessageSquare, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { MessageSquare, Loader2, CheckCircle2, AlertTriangle, ArrowRight, RotateCcw } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
-import { canCreateOrders, canApproveOrders } from '@/lib/auth/permissions'
-import { previewParse, type PreviewResult } from '@/lib/converter/preview'
-import { ingestInbound, type IngestResult } from '@/lib/converter/engine'
-import { TARGET_TABLE_BADGE_COLOR } from '@/lib/schemas/settings'
-import type {
-  ConverterProfile,
-  ConverterFieldMapping,
-  ConverterValueMapping,
-} from '@/lib/types'
+import { canCreateOrders } from '@/lib/auth/permissions'
+import { parseWaPasteV3 } from '@/lib/converter/wa-paste-v3'
+import { adaptOrders, insertAdaptedOrders, type AdaptedOrder } from '@/lib/converter/wa-paste-adapter'
+import type { CourierChannel } from '@/lib/types'
 
 const supabase = createClient()
+
+type StepKey = 'paste' | 'preview' | 'submitting' | 'done'
+
+const SAMPLE_TEXT = `[21.12, 20/5/2026] Bojo Pertama: (10) CS : Lisa
+KODE ADV : Umo
+Produk : 1 Jaring Paranet (1pcs)
+
+Nama penerima : Andi Darmawan
+No HP : +6281234567890
+Alamat Lengkap : Jl. Merdeka No. 10, RT 02/RW 03
+Kelurahan : Sukamaju
+Kecamatan : Sukmajaya
+Kota/Kab : Depok
+Provinsi : Jawa Barat
+
+Ongkir : Rp 15.000
+Total Bayar : Rp 140.000
+Pembayaran : COD
+
+Keterangan : Coklat 40`
 
 export default function WaPastePage() {
   const router = useRouter()
   const { profile: userProfile, role, user } = useAuth()
   const canCreate = canCreateOrders(role)
-  const canApprove = canApproveOrders(role)
 
-  const [profiles, setProfiles] = useState<ConverterProfile[]>([])
-  const [selectedProfileId, setSelectedProfileId] = useState('')
-  const [profileDetail, setProfileDetail] = useState<{
-    profile: ConverterProfile
-    fieldMappings: ConverterFieldMapping[]
-    valueMappings: ConverterValueMapping[]
-  } | null>(null)
+  const [step, setStep] = useState<StepKey>('paste')
   const [text, setText] = useState('')
-  const [preview, setPreview] = useState<PreviewResult | null>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
-  const [skipReview, setSkipReview] = useState(true)
-  const [running, setRunning] = useState(false)
-  const [result, setResult] = useState<IngestResult | null>(null)
+  const [channels, setChannels] = useState<CourierChannel[]>([])
+  const [channelId, setChannelId] = useState<string>('')
+  const [parseWarnings, setParseWarnings] = useState<string[]>([])
+  const [adapted, setAdapted] = useState<AdaptedOrder[]>([])
+  const [insertResult, setInsertResult] = useState<{ inserted: number; failed: number; errors: Array<{ index: number; message: string }> } | null>(null)
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from('converter_profiles')
-        .select('*')
-        .eq('active', true)
-        .eq('direction', 'WA_PASTE')
-        .order('code')
-      setProfiles((data || []) as ConverterProfile[])
+      const { data } = await supabase.from('courier_channels').select('*').eq('active', true).order('code')
+      const list = (data || []) as CourierChannel[]
+      setChannels(list)
+      const spx = list.find(c => c.code === 'SPX_DIRECT')
+      if (spx) setChannelId(String(spx.id))
+      else if (list[0]) setChannelId(String(list[0].id))
     }
     load()
   }, [])
 
-  useEffect(() => {
-    if (!selectedProfileId) { setProfileDetail(null); return }
-    const id = Number(selectedProfileId)
-    const load = async () => {
-      const [{ data: p }, { data: fms }, { data: vms }] = await Promise.all([
-        supabase.from('converter_profiles').select('*').eq('id', id).single(),
-        supabase.from('converter_field_mappings').select('*').eq('profile_id', id).order('display_order'),
-        supabase.from('converter_value_mappings').select('*').eq('profile_id', id),
-      ])
-      if (p) {
-        setProfileDetail({
-          profile: p as ConverterProfile,
-          fieldMappings: (fms || []) as ConverterFieldMapping[],
-          valueMappings: (vms || []) as ConverterValueMapping[],
-        })
-      }
-    }
-    load()
-  }, [selectedProfileId])
+  const orgId = userProfile?.organization_id ?? 1
 
-  const runPreview = async () => {
-    if (!profileDetail || !text.trim()) {
-      toast.error('Pilih profile dan paste text dulu')
+  const stats = useMemo(() => {
+    const matched = adapted.filter(a => a.productId).length
+    const validPhone = adapted.filter(a => a.phoneValid).length
+    const csMatched = adapted.filter(a => a.csMatched).length
+    return { matched, validPhone, csMatched, total: adapted.length }
+  }, [adapted])
+
+  async function handleParse() {
+    if (!text.trim()) return toast.error('Paste teks WA dulu')
+    if (!channelId) return toast.error('Pilih channel dulu')
+    const result = parseWaPasteV3(text)
+    if (result.orders.length === 0) {
+      toast.error('Gak ada order yang kebaca', { description: result.warnings.join('; ') })
       return
     }
-    setPreviewLoading(true)
-    try {
-      const r = await previewParse(
-        profileDetail.profile,
-        profileDetail.fieldMappings,
-        profileDetail.valueMappings,
-        text,
-        20
-      )
-      setPreview(r)
-    } catch (err: any) {
-      toast.error('Gagal preview', { description: err.message })
-    } finally {
-      setPreviewLoading(false)
-    }
+    setParseWarnings(result.warnings)
+    const ad = await adaptOrders(result.orders, {
+      supabase,
+      organizationId: orgId,
+      channelId: Number(channelId),
+      createdBy: user?.id ?? null,
+      initialStatus: 'BARU',
+    })
+    setAdapted(ad)
+    setStep('preview')
   }
 
-  const submit = async () => {
-    if (!profileDetail || !user || !text.trim()) return
-    setRunning(true)
-    try {
-      const initialStatus = canApprove && skipReview ? 'SIAP_KIRIM' : 'BARU'
-      const orgId = userProfile?.organization_id || 1
-      const r = await ingestInbound({
-        profile: profileDetail.profile,
-        fieldMappings: profileDetail.fieldMappings,
-        valueMappings: profileDetail.valueMappings,
-        fileOrText: text,
-        initialStatus,
-        organizationId: orgId,
-        createdBy: user.id,
-        supabase,
-        // Phase 8H — WA paste never has resi → workspace pre-resi
-        targetDraft: true,
-      })
-      setResult(r)
-      if (r.errors.length === 0 && r.inserted > 0) {
-        toast.success(`Berhasil import ${r.inserted} order`)
-      } else if (r.errors.length > 0) {
-        toast.error(`Selesai dengan ${r.errors.length} error`)
-      }
-    } catch (err: any) {
-      toast.error('Gagal import', { description: err.message })
-    } finally {
-      setRunning(false)
-    }
+  async function handleSubmit() {
+    if (adapted.length === 0) return
+    setStep('submitting')
+    const result = await insertAdaptedOrders(supabase, orgId, adapted)
+    setInsertResult({ inserted: result.inserted, failed: result.failed, errors: result.errors })
+    setStep('done')
+    if (result.inserted > 0) toast.success(`${result.inserted} order masuk Antrian Kerja (status BARU)`)
+    if (result.failed > 0) toast.error(`${result.failed} order gagal masuk`)
+  }
+
+  function reset() {
+    setStep('paste')
+    setText('')
+    setParseWarnings([])
+    setAdapted([])
+    setInsertResult(null)
   }
 
   if (!canCreate) {
     return (
       <div className="space-y-6">
-        <PageHeader icon={MessageSquare} title="WA Paste Order" />
+        <PageHeader icon={MessageSquare} title="WA Paste" />
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
-          Role kamu tidak diizinkan input order.
+          Hanya owner/admin/cs yang bisa input order via WA Paste.
         </CardContent></Card>
       </div>
     )
@@ -146,229 +127,216 @@ export default function WaPastePage() {
     <div className="space-y-6">
       <PageHeader
         icon={MessageSquare}
-        title="WA Paste Order"
-        description="Paste teks WA chat → engine ekstrak data customer pakai regex profile → batch insert."
+        title="WA Paste"
+        description="Paste teks order dari WhatsApp → parser ekstrak otomatis nama, alamat, produk, dst. Bisa multi-order sekaligus."
+        actions={step !== 'paste' ? (
+          <Button variant="outline" size="sm" onClick={reset}>
+            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Mulai Ulang
+          </Button>
+        ) : null}
       />
 
-      {result ? (
+      {step === 'paste' && (
+        <Card>
+          <CardContent className="pt-4 pb-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Channel Ekspedisi *</Label>
+                <Select value={channelId} onValueChange={(v) => v && setChannelId(v)}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Pilih channel">
+                    {(value: string | null) => {
+                      if (!value) return 'Pilih channel'
+                      return channels.find(c => String(c.id) === value)?.code ?? value
+                    }}
+                  </SelectValue></SelectTrigger>
+                  <SelectContent>
+                    {channels.map(c => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.code}{c.aggregator ? ` · ${c.aggregator}` : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">Semua order di paste session ini pakai channel ini.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Initial Status</Label>
+                <div className="h-9 px-3 flex items-center rounded-md border bg-muted/30 text-sm">
+                  BARU <Badge variant="outline" className="ml-2 text-[10px]">Perlu approval admin</Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Paste teks WA di bawah (bisa multi-order)</Label>
+              <Textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Paste chat WA langsung di sini..."
+                className="font-mono text-xs min-h-[280px]"
+              />
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>{text.split('\n').length} baris · {text.length} karakter</span>
+                <button type="button" onClick={() => setText(SAMPLE_TEXT)} className="text-violet-500 hover:underline">
+                  Isi sample
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={handleParse} disabled={!text.trim() || !channelId} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+                Parse & Preview <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 'preview' && (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="pt-4 pb-4 space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <Stat label="Order terbaca" value={String(stats.total)} color="violet" />
+                <Stat label="Produk match" value={`${stats.matched}/${stats.total}`} color={stats.matched === stats.total ? 'emerald' : 'amber'} />
+                <Stat label="HP valid" value={`${stats.validPhone}/${stats.total}`} color={stats.validPhone === stats.total ? 'emerald' : 'amber'} />
+                <Stat label="CS resolved" value={`${stats.csMatched}/${stats.total}`} color={stats.csMatched === stats.total ? 'emerald' : 'amber'} />
+              </div>
+
+              {parseWarnings.length > 0 && (
+                <div className="text-xs space-y-1 p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                  <div className="font-semibold flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Parser warnings</div>
+                  {parseWarnings.map((w, i) => <div key={i}>• {w}</div>)}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">#</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>HP</TableHead>
+                      <TableHead>Alamat</TableHead>
+                      <TableHead>Produk → Match</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>CS</TableHead>
+                      <TableHead>Issues</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {adapted.map((a, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell>
+                          <div className="text-xs font-medium">{a.parsed.nama || <span className="text-red-500">(kosong)</span>}</div>
+                          <div className="text-[10px] text-muted-foreground">{a.parsed.kota ?? ''}{a.parsed.provinsi ? `, ${a.parsed.provinsi}` : ''}</div>
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">
+                          {a.phoneValid ? a.parsed.hp : <span className="text-red-500">{a.parsed.hp} ⚠</span>}
+                        </TableCell>
+                        <TableCell className="text-[10px] max-w-[200px] truncate" title={a.parsed.alamat}>{a.parsed.alamat}</TableCell>
+                        <TableCell className="text-xs">
+                          <div className="text-[10px] text-muted-foreground italic">{a.parsed.produk}</div>
+                          {a.productMatchedName ? (
+                            <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600">→ {a.productMatchedName}</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-500">Tidak match</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-xs">{a.parsed.qty}</TableCell>
+                        <TableCell className="text-right text-xs whitespace-nowrap">
+                          {a.parsed.hargaTotal != null ? `Rp ${a.parsed.hargaTotal.toLocaleString('id-ID')}` : '—'}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {a.csMatched ? (
+                            <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600">{a.parsed.csName}</Badge>
+                          ) : a.parsed.csName ? (
+                            <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600">{a.parsed.csName} (?)</Badge>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-[10px]">
+                          {a.warnings.length > 0 ? (
+                            <span className="text-amber-600">{a.warnings.length} warn</span>
+                          ) : <span className="text-emerald-600">✓</span>}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-between items-center">
+            <p className="text-xs text-muted-foreground">
+              ✓ Order akan masuk ke <strong>Antrian Kerja</strong> dengan status <strong>BARU</strong>.
+              Admin perlu approve di Inbox Pending Review sebelum bisa di-export.
+            </p>
+            <Button onClick={handleSubmit} disabled={adapted.length === 0} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Submit {adapted.length} Order
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 'submitting' && (
+        <Card>
+          <CardContent className="pt-8 pb-8 text-center space-y-3">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-violet-500" />
+            <div className="text-sm">Memasukkan {adapted.length} order ke database...</div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 'done' && insertResult && (
         <Card>
           <CardContent className="pt-4 pb-4 space-y-3">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-6 h-6 text-emerald-500" />
               <h3 className="text-lg font-bold">Selesai</h3>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-3 rounded bg-emerald-500/10 border border-emerald-500/30">
-                <div className="text-2xl font-bold text-emerald-600">{result.inserted}</div>
-                <div className="text-xs text-muted-foreground">berhasil</div>
-              </div>
-              <div className="p-3 rounded bg-blue-500/10 border border-blue-500/30">
-                <div className="text-2xl font-bold text-blue-600">{result.skipped_duplicates}</div>
-                <div className="text-xs text-muted-foreground">duplicate</div>
-              </div>
-              <div className="p-3 rounded bg-red-500/10 border border-red-500/30">
-                <div className="text-2xl font-bold text-red-600">{result.errors.length}</div>
-                <div className="text-xs text-muted-foreground">error</div>
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Stat label="Berhasil" value={String(insertResult.inserted)} color="emerald" />
+              <Stat label="Gagal" value={String(insertResult.failed)} color={insertResult.failed > 0 ? 'red' : 'emerald'} />
             </div>
-            {result.errors.length > 0 && (
+            {insertResult.errors.length > 0 && (
               <details className="text-xs">
-                <summary className="cursor-pointer text-red-600 font-medium">Detail error</summary>
-                <div className="mt-2 space-y-1">
-                  {result.errors.map((e, i) => <div key={i}>Row {e.rowIndex}: {e.reason}</div>)}
+                <summary className="cursor-pointer text-red-600 font-medium">Detail {insertResult.errors.length} error</summary>
+                <div className="mt-2 space-y-1 max-h-40 overflow-y-auto border rounded p-2">
+                  {insertResult.errors.map((e, i) => (
+                    <div key={i} className="text-muted-foreground">Row {e.index + 1}: {e.message}</div>
+                  ))}
                 </div>
               </details>
             )}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => router.push(canApprove && skipReview ? '/orders/list' : '/inbox/pending-review')}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
-              >
-                Lihat Order
+            <div className="flex gap-2 pt-1">
+              <Button onClick={() => router.push('/orders/draft')} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+                Buka Antrian Kerja
               </Button>
-              <Button variant="outline" onClick={() => { setResult(null); setPreview(null); setText('') }}>
-                Paste Lagi
-              </Button>
+              <Button variant="outline" onClick={reset}>Paste Lagi</Button>
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <>
-          <Card>
-            <CardContent className="pt-4 pb-4 space-y-3">
-              <div className="space-y-2">
-                <Label className="text-sm">Profile WA Paste *</Label>
-                <Select value={selectedProfileId} onValueChange={(v) => v && setSelectedProfileId(v)}>
-                  <SelectTrigger className="w-full max-w-md">
-                    <SelectValue placeholder="Pilih profile WA Paste">
-                      {(value: string | null) => {
-                        if (!value) return 'Pilih profile WA Paste'
-                        const p = profiles.find((x) => String(x.id) === value)
-                        return p ? `${p.name} (${p.code})` : value
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="w-[420px]">
-                    {profiles.length === 0 ? (
-                      <SelectItem value="none" disabled>Belum ada profile WA Paste</SelectItem>
-                    ) : profiles.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.name} ({p.code})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {profiles.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Bikin profile dengan direction=WA_PASTE di Settings → Converter Profiles dulu.
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Teks WA Chat</Label>
-                <Textarea
-                  value={text}
-                  onChange={(e) => { setText(e.target.value); setPreview(null) }}
-                  rows={14}
-                  placeholder={`Bisa paste 1 atau lebih order sekaligus (WA Web copy format ke-detect otomatis):
-
-[21.12, 20/5/2026] Grup Order: (10) CS : Fiaro
-KODE ADV : Umo
-Produk : 1 Sandal GD F (1pcs)
-
-Nama penerima : Andi Darmawan
-No HP : +6281234567890
-Alamat Lengkap : Jl. Merdeka No. 10
-Kecamatan : Sukmajaya
-Kota/Kab : Depok
-Provinsi : Jawa Barat
-
-Ongkir : Rp 15.000
-Total Bayar : Rp 140.000
-Pembayaran : COD
-
-Keterangan : Coklat 40`}
-                  className="font-mono text-xs"
-                />
-                <div className="rounded-md bg-violet-500/5 border border-violet-500/20 p-3 text-xs space-y-1.5">
-                  <div className="font-semibold text-violet-600">Format yang ke-recognize (profile wa_paste_keyvalue):</div>
-                  <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-                    <div>
-                      <div className="text-red-500 font-semibold mb-0.5">Wajib (4)</div>
-                      <ul className="list-disc list-inside space-y-0.5">
-                        <li><code>Nama penerima :</code></li>
-                        <li><code>No HP :</code></li>
-                        <li><code>Alamat Lengkap :</code></li>
-                        <li><code>Produk :</code> &lt;qty&gt; &lt;nama&gt;</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <div className="text-emerald-500 font-semibold mb-0.5">Opsional (9)</div>
-                      <ul className="list-disc list-inside space-y-0.5">
-                        <li><code>(NN) CS :</code> → cs_name</li>
-                        <li><code>KODE ADV :</code> → meta</li>
-                        <li><code>Kecamatan / Kota/Kab / Provinsi</code></li>
-                        <li><code>Ongkir / Total Bayar</code> (Rp 140.000 → 140000)</li>
-                        <li><code>Pembayaran :</code> COD / Transfer</li>
-                        <li><code>Keterangan :</code></li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div className="text-muted-foreground pt-1.5 border-t border-violet-500/20 space-y-0.5">
-                    <div>• <strong>Multi-order</strong>: paste WA Web copy dengan multiple <code>[HH.MM, dd/mm/yyyy] Sender:</code> prefix akan ke-split otomatis per order.</div>
-                    <div>• <strong>Qty</strong>: leading digit di <code>Produk : 2 Sandal Hitam</code> → qty=2. Default 1.</div>
-                    <div>• Urutan field bebas. Masuk ke <strong>Antrian Kerja</strong> setelah import.</div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={runPreview}
-                  disabled={!profileDetail || !text.trim() || previewLoading}
-                  variant="outline"
-                >
-                  {previewLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
-                  Preview Block
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {preview && (
-            <Card>
-              <CardContent className="pt-4 pb-4 space-y-3">
-                <div className="text-sm font-medium">
-                  {preview.totalRowsDetected} block(s) terdeteksi
-                </div>
-                {preview.errors.length > 0 && (
-                  <div className="text-xs space-y-1 p-3 rounded bg-red-500/10 border border-red-500/20 text-red-600">
-                    <div className="font-semibold flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Errors
-                    </div>
-                    {preview.errors.map((e, i) => <div key={i}>• {e}</div>)}
-                  </div>
-                )}
-                {preview.warnings.length > 0 && (
-                  <details className="text-xs">
-                    <summary className="cursor-pointer text-amber-600 font-medium">{preview.warnings.length} warnings</summary>
-                    <div className="mt-2 space-y-0.5 pl-4 max-h-40 overflow-y-auto">
-                      {preview.warnings.map((w, i) => <div key={i} className="text-muted-foreground">• {w}</div>)}
-                    </div>
-                  </details>
-                )}
-                {preview.rows.map((row, i) => (
-                  <div key={i} className="border rounded p-3 space-y-2 text-xs">
-                    <div className="font-semibold text-muted-foreground">Block {i + 1}</div>
-                    {(['orders', 'order_items', 'meta'] as const).map((bucket) => {
-                      const data = row[bucket]
-                      const keys = Object.keys(data || {})
-                      if (keys.length === 0) return null
-                      return (
-                        <div key={bucket} className="space-y-1">
-                          <Badge variant="outline" className={TARGET_TABLE_BADGE_COLOR[bucket]}>{bucket}</Badge>
-                          <div className="pl-3 space-y-0.5 font-mono">
-                            {keys.map((k) => (
-                              <div key={k} className="flex gap-2">
-                                <span className="text-muted-foreground">{k}:</span>
-                                <span className="break-all">{formatVal(data[k])}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
-                {canApprove && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox checked={skipReview} onCheckedChange={(v) => setSkipReview(v === true)} />
-                    <span className="text-sm">
-                      Skip review (insert sebagai SIAP_KIRIM)
-                    </span>
-                  </label>
-                )}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={submit}
-                    disabled={running || preview.totalRowsDetected === 0 || preview.errors.length > 0}
-                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
-                  >
-                    {running && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
-                    Import {preview.totalRowsDetected} order
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
       )}
     </div>
   )
 }
 
-function formatVal(v: unknown): string {
-  if (v === null || v === undefined) return 'null'
-  if (typeof v === 'string') return `"${v}"`
-  if (typeof v === 'object') {
-    try { return JSON.stringify(v) } catch { return String(v) }
+function Stat({ label, value, color }: { label: string; value: string; color: 'emerald' | 'red' | 'amber' | 'violet' }) {
+  const colorMap: Record<string, string> = {
+    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
+    red: 'bg-red-500/10 border-red-500/30 text-red-600',
+    amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
+    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
   }
-  return String(v)
+  return (
+    <div className={`p-3 rounded border ${colorMap[color]}`}>
+      <div className="text-xl font-bold">{value}</div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+    </div>
+  )
 }

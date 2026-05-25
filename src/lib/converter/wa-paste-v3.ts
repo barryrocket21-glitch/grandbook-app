@@ -22,6 +22,7 @@ export interface ParsedWaOrder {
   // Item
   produk: string
   produkKode: string | null  // kode produk kalau ada
+  variation: string | null   // "Ukuran 6 X 3", "38-39 Cream", dst.
   qty: number
   beratGram: number
   // Money
@@ -43,7 +44,7 @@ export interface WaParseResult {
 type WaField =
   | 'nama' | 'hp' | 'alamat'
   | 'kelurahan' | 'kecamatan' | 'kota' | 'provinsi' | 'kodePos'
-  | 'produk' | 'produkKode' | 'qty' | 'beratGram'
+  | 'produk' | 'produkKode' | 'variation' | 'qty' | 'beratGram'
   | 'hargaTotal' | 'ongkir' | 'metodeBayar'
   | 'csName' | 'advKode' | 'catatan'
 
@@ -64,6 +65,7 @@ const LABELS: Record<string, WaField> = {
   // Item
   'produk': 'produk', 'pesanan': 'produk', 'order': 'produk', 'orderan': 'produk',
   'kode produk': 'produkKode', 'sku': 'produkKode',
+  'ukuran': 'variation', 'varian': 'variation', 'variant': 'variation', 'warna': 'variation',
   'jumlah': 'qty', 'jml': 'qty', 'qty': 'qty',
   'berat': 'beratGram', 'berat paket': 'beratGram', 'weight': 'beratGram',
   // Money
@@ -85,6 +87,13 @@ const TRANSFER_HINT = /\b(transfer|tf|lunas|sudah\s*bayar|sdh\s*bayar|paid)\b/i
 const TS_LINE = /^\[\d{1,2}[.:]\d{2}[^\]]*\]/
 const TS_PREFIX = /^\[\d{1,2}[.:]\d{2}[^\]]*\][^:]*:\s*/
 const NAME_LINE = /^\s*(nama\s+penerima|nama|atas\s+nama|pemesan|penerima)\s*:/i
+/**
+ * Header dropship Indonesia: "SALE AIS (20)" / "SALE LISA (22)" / "SALE SITI (13)"
+ * — tiap line yg match jadi start of new block. Priority paling tinggi karena
+ * pattern ini explicit (vs name-label boundary yg muncul DI TENGAH block kalau
+ * order pakai format "Produk dulu, Nama di akhir"). Group 1 = CS name.
+ */
+const SALE_LINE = /^\s*SALE\s+([A-Z][A-Z0-9]*(?:\s+[A-Z0-9]+)?)\s*\((\d+)\)\s*$/i
 
 // ----- Indonesian provinces (lowercased, longest-first) -----
 const PROVINCES = [
@@ -173,11 +182,13 @@ function splitAddress(raw: string) {
     if (m && field) fill(field, clean(seg.slice(m[0].length)))
   }
 
-  // Province scan fallback
+  // Province scan fallback — word-boundary biar gak false-positive "bali" → "Balikpapan"
   if (!parts.provinsi) {
     const lower = text.toLowerCase()
     for (const p of PROVINCES) {
-      if (lower.includes(p)) { parts.provinsi = titleCase(p); break }
+      const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const re = new RegExp(`\\b${escaped}\\b`, 'i')
+      if (re.test(lower)) { parts.provinsi = titleCase(p); break }
     }
   }
   return parts
@@ -186,6 +197,24 @@ function splitAddress(raw: string) {
 // ----- Split paste into blocks per order -----
 function splitBlocks(text: string): string[] {
   const lines = text.replace(/\r\n/g, '\n').split('\n')
+
+  // Strategi 0: SALE marker (dropship Indonesia "SALE AIS (20)"). Priority paling
+  // tinggi karena explicit per-order header — kalau gak dipake, Strategy 2
+  // name-label boundary akan split di TENGAH block (Nama: di posisi tengah),
+  // hasilnya data bocor antar order.
+  if (lines.some(l => SALE_LINE.test(l))) {
+    const blocks: string[] = []
+    let current: string[] = []
+    for (const line of lines) {
+      if (SALE_LINE.test(line) && current.length > 0) {
+        blocks.push(current.join('\n'))
+        current = []
+      }
+      current.push(line)
+    }
+    if (current.length > 0) blocks.push(current.join('\n'))
+    return blocks
+  }
 
   // Strategi 1: WA chat-export timestamp
   if (lines.some(l => TS_LINE.test(l))) {
@@ -228,6 +257,13 @@ function parseBlock(block: string, idx: number, warnings: string[]): ParsedWaOrd
     let line = rawLine
     if (TS_PREFIX.test(line)) line = line.replace(TS_PREFIX, '')
     if (!line.trim()) { lastField = null; continue }
+
+    // SALE header — extract CS name dari "SALE AIS (20)" → csName = AIS
+    const saleMatch = line.match(SALE_LINE)
+    if (saleMatch) {
+      if (!fields.csName) fields.csName = saleMatch[1].trim()
+      continue
+    }
 
     const colon = line.indexOf(':')
     const label = colon >= 0 ? line.slice(0, colon).trim().toLowerCase() : ''
@@ -275,6 +311,7 @@ function parseBlock(block: string, idx: number, warnings: string[]): ParsedWaOrd
     kodePos: opt(fields.kodePos),
     produk: (fields.produk ?? '').trim(),
     produkKode: opt(fields.produkKode),
+    variation: opt(fields.variation),
     qty: parseQty(fields.qty),
     beratGram: parseWeight(fields.beratGram),
     hargaTotal: parseRupiah(fields.hargaTotal ?? ''),

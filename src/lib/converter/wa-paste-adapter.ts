@@ -60,6 +60,7 @@ export interface OrderDraftPayload {
     organization_id: number
     product_id: number | null
     product_name_raw: string  // selalu simpan raw untuk reference
+    variation: string | null  // "Ukuran 6 X 3", "38-39 Cream"
     qty: number
     price: number  // = hargaTotal kalau ada (per-unit nanti compute)
     weight_per_unit: number
@@ -181,6 +182,7 @@ export function adaptOrder(
       organization_id: ctx.organizationId,
       product_id: productId,
       product_name_raw: parsed.produk,
+      variation: parsed.variation,
       qty: parsed.qty,
       price: total ?? 0,
       weight_per_unit: parsed.beratGram / 1000,  // ke kg

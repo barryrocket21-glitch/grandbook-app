@@ -22,23 +22,37 @@ const supabase = createClient()
 
 type StepKey = 'paste' | 'preview' | 'submitting' | 'done'
 
-const SAMPLE_TEXT = `[21.12, 20/5/2026] Bojo Pertama: (10) CS : Lisa
-KODE ADV : Umo
-Produk : 1 Jaring Paranet (1pcs)
+const SAMPLE_TEXT = `SALE LISA (22)
 
-Nama penerima : Andi Darmawan
-No HP : +6281234567890
-Alamat Lengkap : Jl. Merdeka No. 10, RT 02/RW 03
-Kelurahan : Sukamaju
-Kecamatan : Sukmajaya
-Kota/Kab : Depok
-Provinsi : Jawa Barat
+Produk: Jaring Paranet
+Harga: Rp125.000
+Ukuran: Ukuran 2 X 3
+Ongkir: 10.000
 
-Ongkir : Rp 15.000
-Total Bayar : Rp 140.000
-Pembayaran : COD
+Total: Rp 135.000
 
-Keterangan : Coklat 40`
+Dikirim ke:
+Nama: Riko
+No HP: +6282123567609
+Alamat:
+Villa gading harapan
+Jln nakula 2 blok bd 10 no 9 rt 06/46 kelurahan bahagia kec babelan
+Bekasi
+SALE AIS (23)
+
+Produk: MJO Luna
+Harga: Rp99.000
+Ukuran: 38-39, Warna: Biru
+Ongkir: 76.000
+
+Total: Rp173.000
+
+Dikirim ke:
+Nama: Suri
+No HP: +628218732323
+Alamat: Desa Mambu Dusun Pepalan
+Kecamatan : Luyo
+Kab : Polewali Mandar`
 
 export default function WaPastePage() {
   const router = useRouter()
@@ -241,6 +255,9 @@ export default function WaPastePage() {
                         <TableCell className="text-[10px] max-w-[200px] truncate" title={a.parsed.alamat}>{a.parsed.alamat}</TableCell>
                         <TableCell className="text-xs">
                           <div className="text-[10px] text-muted-foreground italic">{a.parsed.produk}</div>
+                          {a.parsed.variation && (
+                            <div className="text-[9px] text-muted-foreground">↳ {a.parsed.variation}</div>
+                          )}
                           {a.productMatchedName ? (
                             <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600">→ {a.productMatchedName}</Badge>
                           ) : (

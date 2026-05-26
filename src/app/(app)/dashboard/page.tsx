@@ -259,7 +259,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <div className="text-xs uppercase tracking-wider text-muted-foreground">Laba Bersih — Bulan Ini</div>
-                    <div className="text-[10px] text-muted-foreground">Aktual, dari order Diterima</div>
+                    <div className="text-[10px] text-muted-foreground">Realisasi — dari order Diterima</div>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />

@@ -2,8 +2,14 @@
 // =============================================================
 // Laporan Laba Rugi bulanan (Step 3 pembukuan).
 // P&L cascade: Total Penjualan → Omset → Gross Profit → Laba Bersih.
-// Dua kolom: Estimasi (proyeksi semua order) vs Aktual (status-aware).
-// Data: RPC laba_rugi_summary.
+// Dua kolom:
+//   - REALISASI = laporan resmi accrual basis (untuk pajak/audit).
+//     Hanya hitung yang terwujud: Diterima penuh, Retur = rugi ongkir,
+//     Cancel/Fake = 0, masih jalan = belum dihitung.
+//   - PROYEKSI = forecast kalau semua order sukses. Buat planning,
+//     BUKAN laporan formal.
+// Internal field names (est_*, act_*) di-keep untuk backward compat dengan
+// RPC laba_rugi_summary — cuma label UI yang di-rename.
 // =============================================================
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -12,7 +18,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
-import { Loader2, RefreshCw, Scale, AlertTriangle } from 'lucide-react'
+import { Loader2, RefreshCw, Scale, AlertTriangle, Info } from 'lucide-react'
 import { formatRupiah } from '@/lib/format'
 
 const supabase = createClient()
@@ -121,22 +127,31 @@ export default function LabaRugiPage() {
         <Card><CardContent className="p-12 text-center text-sm text-muted-foreground">Gagal memuat data.</CardContent></Card>
       ) : (
         <>
+          {/* Info banner — Realisasi vs Proyeksi (penting biar nggak ke-tukar konsepnya) */}
+          <div className="text-xs bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 flex gap-2 items-start">
+            <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+            <div className="space-y-1 text-muted-foreground">
+              <div><strong className="text-foreground">Realisasi</strong> = laporan resmi (accrual basis, untuk pajak/audit). Cuma hitung yang udah terwujud: order Diterima penuh, Retur = rugi ongkir, lainnya 0.</div>
+              <div><strong className="text-foreground">Proyeksi</strong> = forecast kalau semua order sukses. Buat planning &mdash; <em>BUKAN</em> laporan keuangan formal.</div>
+            </div>
+          </div>
+
           {/* Headline — Laba Bersih */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className={`rounded-xl p-5 ring-1 ${labaPositive ? 'bg-emerald-500/10 ring-emerald-500/30' : 'bg-red-500/10 ring-red-500/30'}`}>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Laba Bersih — Aktual</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Laba Bersih — Realisasi</div>
               <div className={`text-3xl font-bold mt-1 ${labaPositive ? 'text-emerald-600' : 'text-red-600'}`}>
                 {formatRupiah(labaAct)}
               </div>
               <div className="text-[11px] text-muted-foreground mt-1">
-                Realisasi dari {data.diterima_count} order Diterima
+                Dari {data.diterima_count} order Diterima (yang udah sampai)
               </div>
             </div>
             <div className="rounded-xl p-5 ring-1 bg-blue-500/10 ring-blue-500/30">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Laba Bersih — Estimasi</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Laba Bersih — Proyeksi</div>
               <div className="text-3xl font-bold mt-1 text-blue-600">{formatRupiah(n(data.laba_bersih_est))}</div>
               <div className="text-[11px] text-muted-foreground mt-1">
-                Proyeksi {data.order_count} order (kalau semua sukses)
+                Forecast {data.order_count} order (kalau semua sukses sampai)
               </div>
             </div>
           </div>
@@ -157,8 +172,8 @@ export default function LabaRugiPage() {
                 <thead>
                   <tr className="border-b text-xs text-muted-foreground">
                     <th className="text-left font-medium px-4 py-2.5">Komponen</th>
-                    <th className="text-right font-medium px-4 py-2.5 w-44">Estimasi</th>
-                    <th className="text-right font-medium px-4 py-2.5 w-44">Aktual</th>
+                    <th className="text-right font-medium px-4 py-2.5 w-44">Proyeksi</th>
+                    <th className="text-right font-medium px-4 py-2.5 w-44">Realisasi</th>
                   </tr>
                 </thead>
                 <tbody className="tabular-nums">
@@ -178,9 +193,9 @@ export default function LabaRugiPage() {
 
           <div className="text-[11px] text-muted-foreground space-y-1">
             <p>
-              <strong>Estimasi</strong> = proyeksi semua {data.order_count} order (seolah semua sukses).{' '}
-              <strong>Aktual</strong> = yang sudah realized: order Diterima dihitung penuh, Retur = rugi ongkir,
-              Cancel/Fake = 0, order yang masih jalan belum dihitung.
+              <strong>Proyeksi</strong> = forecast semua {data.order_count} order (seolah semua sukses sampai). Buat planning, bukan laporan resmi.{' '}
+              <strong>Realisasi</strong> = laporan accrual basis: order Diterima dihitung penuh, Retur = rugi ongkir,
+              Cancel/Fake = 0, order yang masih jalan belum dihitung. Inilah yang sah jadi Laporan Laba Rugi formal.
             </p>
             {noPeriodCost && (
               <p className="text-amber-600">

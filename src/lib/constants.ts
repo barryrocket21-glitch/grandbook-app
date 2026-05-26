@@ -164,6 +164,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Komisi Saya', href: '/commissions/my' },
       { title: 'Kelola Komisi', href: '/commissions/manage', roles: ['owner', 'admin'] },
+      { title: 'Aturan Komisi', href: '/settings/commission-rules', roles: ['owner'] },
     ],
   },
   {

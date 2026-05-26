@@ -159,7 +159,7 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'act_hpp',           label: 'HPP',           category: 'bookkeeping_act', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
   { id: 'act_omset',         label: 'Omset',         category: 'bookkeeping_act', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
   { id: 'act_margin',        label: 'Margin',        category: 'bookkeeping_act', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
-  { id: 'act_fee_cs',        label: 'Fee CS',        category: 'bookkeeping_act', default_visible: false, default_width: 120, align: 'right', format: 'rupiah' },
+  { id: 'act_fee_cs',        label: 'Komisi CS',     category: 'bookkeeping_act', default_visible: true,  default_width: 110, align: 'right', format: 'rupiah' },
   { id: 'act_gross_profit',  label: 'Gross Profit',  category: 'bookkeeping_act', default_visible: false, default_width: 140, align: 'right', format: 'rupiah' },
   { id: 'dicairkan',         label: 'Dicairkan',     category: 'bookkeeping_act', default_visible: false, default_width: 130, align: 'right', format: 'rupiah' },
 

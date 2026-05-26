@@ -78,10 +78,10 @@ export default function MyCommissionsPage() {
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Estimated" value={formatRupiah(stats.estimatedTotal)} sub={`${stats.estimatedCount} order`} color="blue" />
-        <StatCard label="Pending Pencairan (Earned)" value={formatRupiah(stats.earnedTotal)} sub={`${stats.earnedCount} order`} color="amber" />
-        <StatCard label="Sudah Dicairkan" value={formatRupiah(stats.paidTotal)} sub={`${stats.paidCount} order`} color="emerald" />
-        <StatCard label="Cancelled" value={String(stats.cancelledCount)} sub="order" color="zinc" />
+        <StatCard label="Forecast (masih jalan)" value={formatRupiah(stats.estimatedTotal)} sub={`${stats.estimatedCount} order`} color="blue" />
+        <StatCard label="Belum Dibayar" value={formatRupiah(stats.earnedTotal)} sub={`${stats.earnedCount} order`} color="amber" />
+        <StatCard label="Sudah Dibayar" value={formatRupiah(stats.paidTotal)} sub={`${stats.paidCount} order`} color="emerald" />
+        <StatCard label="Hangus" value={String(stats.cancelledCount)} sub="order (Retur/Cancel/Fake)" color="zinc" />
       </div>
 
       <Card>
@@ -220,7 +220,7 @@ export default function MyCommissionsPage() {
       </Card>
 
       <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-        <ChevronRight className="w-3 h-3" /> Untuk pertanyaan tentang pencairan, hubungi owner. Status PAID muncul setelah owner mark komisi sebagai dibayar di /commissions/manage.
+        <ChevronRight className="w-3 h-3" /> <strong>Forecast</strong> = order belum sampai (mungkin berubah). <strong>Belum Dibayar</strong> = udah Diterima, owner belum transfer. <strong>Sudah Dibayar</strong> = udah masuk rekening. <strong>Hangus</strong> = Retur/Cancel/Fake.
       </p>
     </div>
   )

@@ -196,6 +196,16 @@ export default function ManageCommissionsPage() {
     )
   }
 
+  // Defer the full render until mounted — DateRangePicker reads from a lazy
+  // useState(thisMonth) which produced a hydration text mismatch (React #418).
+  if (!rangeReady) {
+    return (
+      <div className="p-12 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader

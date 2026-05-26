@@ -106,6 +106,19 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     )
   }
 
+  // Gate the whole render until mounted (rangeReady flips to true in the
+  // initial useEffect). The header has a DateRangePicker that reads from a
+  // lazy useState(thisMonth) initializer, which produced a hydration text
+  // mismatch (#418) on this specific page; deferring lets SSR render a stable
+  // loader and the real header only appears after mount.
+  if (!rangeReady) {
+    return (
+      <div className="p-12 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+      </div>
+    )
+  }
+
   const productName = funnel?.product_name || `Produk #${productId}`
   const spend = Number(funnel?.total_spend ?? 0)
   const revenue = Number(funnel?.system_revenue ?? 0)

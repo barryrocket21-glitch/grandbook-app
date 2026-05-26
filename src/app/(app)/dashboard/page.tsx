@@ -120,7 +120,11 @@ export default function DashboardPage() {
       const totalOrdersMonth = ordersMonth.length
       const returCount = ordersByStatus['RETUR'] || 0
       const fakeCount = ordersByStatus['FAKE'] || 0
-      const returPercentage = totalOrdersMonth > 0 ? (returCount / totalOrdersMonth) * 100 : 0
+      // Retur Rate: % dari order yang udah selesai (diterima+retur), match
+      // formula di Laba Rugi RPC — bukan retur / total (yang ke-dilute order
+      // in-transit dan bikin angkanya beda sama Laba Rugi).
+      const finishedCount = (ordersByStatus['DITERIMA'] || 0) + returCount
+      const returPercentage = finishedCount > 0 ? (returCount / finishedCount) * 100 : 0
       const fakePercentage = totalOrdersMonth > 0 ? (fakeCount / totalOrdersMonth) * 100 : 0
 
       // Top products

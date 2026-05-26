@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Combobox } from '@/components/ui/combobox'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Plus, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Loader2, AlertTriangle } from 'lucide-react'
 import {
   loadProvinces, loadCities, loadSubdistricts, loadVillages, findWilayahId,
 } from '@/lib/wilayah/cascade'
@@ -107,6 +107,9 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
   const [wilayahId, setWilayahId] = useState<number | null>(d.wilayah_id || null)
   const [addressDetail, setAddressDetail] = useState(d.customer_address_detail || '')
 
+  // Phase 8H — input-time SPX coverage check (warn at city pick)
+  const [cityCoverage, setCityCoverage] = useState<string | null>(null)
+
   // Items
   const [items, setItems] = useState<ItemRow[]>(
     d.items && d.items.length > 0
@@ -182,6 +185,20 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
     if (!province || !city || !subdistrict) { setVillages([]); return }
     loadVillages(supabase, province, city, subdistrict).then(setVillages).catch(() => setVillages([]))
   }, [province, city, subdistrict])
+
+  // Phase 8H — fire spx_city_coverage RPC after province+city picked. Result
+  // drives the inline warning badge under the city Combobox.
+  useEffect(() => {
+    if (!province || !city) { setCityCoverage(null); return }
+    let cancelled = false
+    supabase.rpc('spx_city_coverage', { p_province: province, p_city: city })
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) { setCityCoverage(null); return }
+        setCityCoverage(typeof data === 'string' ? data : null)
+      })
+    return () => { cancelled = true }
+  }, [province, city])
 
   // Auto-fill zip when village picked
   useEffect(() => {
@@ -349,6 +366,18 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
                 placeholder={province ? 'Pilih kota' : 'Pilih provinsi dulu'}
                 disabled={!province}
               />
+              {cityCoverage === 'NOT_COVERED' && (
+                <p className="text-[11px] text-red-600 dark:text-red-400 flex items-start gap-1.5">
+                  <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                  <span>SPX tidak melayani wilayah ini — pakai kurir lain.</span>
+                </p>
+              )}
+              {cityCoverage === 'PARTIAL' && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
+                  <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                  <span>SPX cuma sebagian wilayah (Kab vs Kota beda coverage) — cek kecamatan.</span>
+                </p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

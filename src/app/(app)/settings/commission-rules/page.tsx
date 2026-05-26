@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Coins, ShieldOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, Coins, ShieldOff, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -26,11 +26,15 @@ import type { CommissionRule, CommissionRateType, Product } from '@/lib/types'
 
 const supabase = createClient()
 
+type ProductMode = 'default' | 'specific'
+
 interface FormState {
   id: number | null
   role: 'cs' | 'advertiser'
   user_id: string | null
-  product_id: number | null
+  /** 'default' = 1 catch-all rule (product_id NULL). 'specific' = 1+ rules (one per checked product). */
+  product_mode: ProductMode
+  product_ids: number[]
   rate_type: CommissionRateType
   rate_value: number
   effective_from: string
@@ -42,7 +46,8 @@ const emptyForm: FormState = {
   id: null,
   role: 'cs',
   user_id: null,
-  product_id: null,
+  product_mode: 'default',
+  product_ids: [],
   rate_type: 'FLAT_PER_ORDER',
   rate_value: 0,
   effective_from: '',
@@ -103,7 +108,24 @@ export default function CommissionRulesPage() {
       id: r.id,
       role: r.role,
       user_id: r.user_id,
-      product_id: r.product_id,
+      product_mode: r.product_id === null ? 'default' : 'specific',
+      product_ids: r.product_id === null ? [] : [r.product_id],
+      rate_type: r.rate_type,
+      rate_value: Number(r.rate_value ?? 0),
+      effective_from: r.effective_from || '',
+      effective_to: r.effective_to || '',
+      active: r.active,
+    })
+    setDialogOpen(true)
+  }
+  function openDuplicateDialog(r: typeof rules[number]) {
+    // Same data as edit but id=null → save creates new row.
+    setForm({
+      id: null,
+      role: r.role,
+      user_id: r.user_id,
+      product_mode: r.product_id === null ? 'default' : 'specific',
+      product_ids: r.product_id === null ? [] : [r.product_id],
       rate_type: r.rate_type,
       rate_value: Number(r.rate_value ?? 0),
       effective_from: r.effective_from || '',
@@ -123,32 +145,66 @@ export default function CommissionRulesPage() {
       toast.error('Tanggal mulai tidak boleh setelah tanggal selesai')
       return
     }
+
+    // Resolve target product IDs.
+    // - 'default' → [null]: 1 rule with product_id=NULL (catch-all).
+    // - 'specific' → array of checked product IDs (1+ rules).
+    const targetProductIds: (number | null)[] = form.product_mode === 'default'
+      ? [null]
+      : form.product_ids
+    if (targetProductIds.length === 0) {
+      toast.error('Pilih minimal 1 produk, atau pilih mode "Semua Produk".')
+      return
+    }
+    if (form.id !== null && targetProductIds.length > 1) {
+      toast.error('Edit rule hanya bisa 1 produk. Gunakan tombol Duplicate untuk apply ke produk lain.')
+      return
+    }
+
     setSaving(true)
-    try {
-      await saveCommissionRule(supabase, {
-        id: form.id,
-        orgId,
-        role: form.role,
-        user_id: form.user_id,
-        product_id: form.product_id,
-        rate_type: form.rate_type,
-        rate_value: form.rate_type === 'NONE' ? null : form.rate_value,
-        effective_from: form.effective_from || null,
-        effective_to: form.effective_to || null,
-        active: form.active,
+    const commonArgs = {
+      orgId,
+      role: form.role,
+      user_id: form.user_id,
+      rate_type: form.rate_type,
+      rate_value: form.rate_type === 'NONE' ? null : form.rate_value,
+      effective_from: form.effective_from || null,
+      effective_to: form.effective_to || null,
+      active: form.active,
+    }
+    let okCount = 0
+    const errs: string[] = []
+    for (const pid of targetProductIds) {
+      try {
+        await saveCommissionRule(supabase, { ...commonArgs, id: form.id, product_id: pid })
+        okCount++
+      } catch (err) {
+        const productLabel = pid === null ? 'Default' : (products.find(p => p.id === pid)?.name || `Produk #${pid}`)
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg.includes('duplicate') || msg.includes('unique')) {
+          errs.push(`${productLabel} — sudah ada rule (skip)`)
+        } else {
+          errs.push(`${productLabel} — ${msg}`)
+        }
+      }
+    }
+    setSaving(false)
+
+    if (okCount > 0) {
+      if (form.id !== null) {
+        toast.success('Rule diupdate')
+      } else {
+        toast.success(okCount === 1 ? 'Rule dibuat' : `${okCount} rule dibuat sekaligus`)
+      }
+    }
+    if (errs.length > 0) {
+      toast.error(`${errs.length} produk dilewati`, {
+        description: errs.slice(0, 4).join('\n') + (errs.length > 4 ? `\n…dan ${errs.length - 4} lagi` : ''),
       })
-      toast.success(form.id ? 'Rule diupdate' : 'Rule dibuat')
+    }
+    if (okCount > 0) {
       setDialogOpen(false)
       load()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('duplicate') || msg.includes('unique')) {
-        toast.error('Sudah ada rule untuk kombinasi role + produk yang sama', { description: 'Edit existing atau pilih produk lain.' })
-      } else {
-        toast.error('Gagal simpan', { description: msg })
-      }
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -260,8 +316,9 @@ export default function CommissionRulesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => openEditDialog(r)}><Pencil className="size-3.5"/></Button>
-                        <Button size="sm" variant="ghost" className="text-red-500" onClick={() => setDeleteTarget(r)}><Trash2 className="size-3.5"/></Button>
+                        <Button size="sm" variant="ghost" onClick={() => openEditDialog(r)} title="Edit"><Pencil className="size-3.5"/></Button>
+                        <Button size="sm" variant="ghost" onClick={() => openDuplicateDialog(r)} title="Duplicate" className="text-violet-500"><Copy className="size-3.5"/></Button>
+                        <Button size="sm" variant="ghost" className="text-red-500" onClick={() => setDeleteTarget(r)} title="Hapus"><Trash2 className="size-3.5"/></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -278,7 +335,7 @@ export default function CommissionRulesPage() {
           <DialogHeader>
             <DialogTitle>{form.id ? 'Edit aturan komisi' : 'Tambah aturan komisi'}</DialogTitle>
             <DialogDescription>
-              Set rule per role × produk. Rule product-specific override default. Tipe NONE = role itu tidak dapat komisi untuk produk tsb.
+              Set rule komisi: pilih 1 / banyak produk sekaligus, atau "Semua Produk" sebagai catch-all default. Rule product-specific override default. Tipe NONE = role itu tidak dapat komisi untuk produk tsb.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -319,20 +376,79 @@ export default function CommissionRulesPage() {
               </Select>
               <p className="text-[10px] text-muted-foreground">Pilih user spesifik untuk override default — e.g. Lisa beda dari Miranda.</p>
             </div>
-            <div className="space-y-1">
-              <Label>Produk</Label>
-              <Select
-                value={form.product_id ? String(form.product_id) : 'default'}
-                onValueChange={v => setForm({ ...form, product_id: v === 'default' ? null : Number(v) })}
-              >
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">— Default (semua produk) —</SelectItem>
-                  {products.map(p => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-2">
+              <Label>Berlaku Untuk Produk</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, product_mode: 'default', product_ids: [] }))}
+                  className={`text-xs py-2 px-3 rounded border transition text-left ${form.product_mode === 'default' ? 'border-violet-500 bg-violet-500/10 text-violet-600' : 'border-input hover:bg-muted/40'}`}
+                >
+                  <div className="font-medium">Semua Produk</div>
+                  <div className="text-[10px] text-muted-foreground">Catch-all default</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, product_mode: 'specific' }))}
+                  className={`text-xs py-2 px-3 rounded border transition text-left ${form.product_mode === 'specific' ? 'border-violet-500 bg-violet-500/10 text-violet-600' : 'border-input hover:bg-muted/40'}`}
+                >
+                  <div className="font-medium">Produk Spesifik</div>
+                  <div className="text-[10px] text-muted-foreground">Pilih 1 atau banyak sekaligus</div>
+                </button>
+              </div>
+              {form.product_mode === 'specific' && (
+                <div className="space-y-1.5 border rounded p-2.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">
+                      {form.product_ids.length}/{products.length} produk dipilih
+                    </span>
+                    {form.id === null && products.length > 0 && (
+                      <div className="flex gap-1.5 text-[10px]">
+                        <button type="button" onClick={() => setForm(f => ({ ...f, product_ids: products.map(p => p.id) }))} className="text-violet-500 hover:underline">
+                          Pilih semua
+                        </button>
+                        <span className="text-muted-foreground">·</span>
+                        <button type="button" onClick={() => setForm(f => ({ ...f, product_ids: [] }))} className="text-violet-500 hover:underline">
+                          Reset
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="max-h-36 overflow-y-auto space-y-0.5 pr-1">
+                    {products.map(p => {
+                      const isChecked = form.product_ids.includes(p.id)
+                      const lockedSingle = form.id !== null && !isChecked && form.product_ids.length === 1
+                      return (
+                        <label key={p.id} className={`flex items-center gap-2 cursor-pointer text-sm rounded px-1 py-0.5 ${lockedSingle ? 'opacity-40 cursor-not-allowed' : 'hover:bg-muted/30'}`}>
+                          <Checkbox
+                            checked={isChecked}
+                            disabled={lockedSingle}
+                            onCheckedChange={(v) => {
+                              setForm(f => ({
+                                ...f,
+                                product_ids: v === true
+                                  ? (f.id !== null ? [p.id] : [...f.product_ids, p.id])
+                                  : f.product_ids.filter(id => id !== p.id),
+                              }))
+                            }}
+                          />
+                          <span>{p.name}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {form.id === null && form.product_ids.length > 1 && (
+                    <p className="text-[10px] text-amber-600">
+                      {form.product_ids.length} rule akan dibuat — 1 per produk, dengan rate yang sama.
+                    </p>
+                  )}
+                  {form.id !== null && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Edit rule cuma 1 produk. Untuk apply ke produk lain, pakai tombol Duplicate di tabel.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Tipe Rate</Label>

@@ -222,7 +222,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin'],
     children: [
       { title: 'Users & Roles', href: '/settings/users' },
-      { title: 'Aturan Komisi', href: '/settings/commission-rules', roles: ['owner'] },
+      // Aturan Komisi moved to Komisi group (sebelumnya duplicate di sini).
       { title: 'Audit Log', href: '/settings/audit-log' },
       { title: 'Reset Data', href: '/settings/reset-data', roles: ['owner'] },
     ],

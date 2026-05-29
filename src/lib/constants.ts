@@ -10,6 +10,7 @@ import {
   LineChart,
   Scale,
   Inbox,
+  UserRound,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -126,6 +127,14 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Export ke Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
       { title: 'Arsip Semua Order', href: '/orders/list', roles: ['owner', 'admin', 'akunting'] },
     ],
+  },
+  {
+    // Brief #1 — Pelanggan: reputasi per nomor HP + blacklist.
+    // owner/admin manage; akunting read-only. CS dapet warning di form (bukan menu).
+    title: 'Pelanggan',
+    href: '/customers',
+    icon: UserRound,
+    roles: ['owner', 'admin', 'akunting'],
   },
   {
     // Inbox — item yang nyangkut di pipeline, perlu resolusi manual.

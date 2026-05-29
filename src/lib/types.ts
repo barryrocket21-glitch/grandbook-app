@@ -1449,3 +1449,94 @@ export interface AdvertiserDetailResponse {
   // Phase 8 v2
   product_breakdown: ProductBreakdownRow[]
 }
+
+// =============================================================
+// Brief #1 — Customer Reputation + Blacklist (migration 077)
+// =============================================================
+export type CustomerRiskTier = 'NEW' | 'GOOD' | 'WATCH' | 'HIGH_RISK'
+
+/** Row dari list_customers_enriched (halaman /customers). */
+export interface CustomerEnriched {
+  id: number
+  phone_normalized: string
+  phone_raw_sample: string | null
+  name_latest: string | null
+  total_orders: number
+  delivered_count: number
+  returned_count: number
+  fake_count: number
+  cancel_count: number
+  delivery_rate: number
+  return_rate: number
+  ltv_omset: number
+  ltv_profit: number
+  risk_tier: CustomerRiskTier
+  is_blacklisted: boolean
+  is_vip: boolean
+  last_order_at: string | null
+  total_count: number
+}
+
+/** Full customer row (detail page). */
+export interface Customer {
+  id: number
+  organization_id: number
+  phone_normalized: string
+  phone_raw_sample: string | null
+  name_latest: string | null
+  total_orders: number
+  delivered_count: number
+  returned_count: number
+  fake_count: number
+  cancel_count: number
+  delivery_rate: number
+  return_rate: number
+  ltv_omset: number
+  ltv_profit: number
+  first_order_at: string | null
+  last_order_at: string | null
+  risk_tier: CustomerRiskTier
+  is_blacklisted: boolean
+  blacklist_reason: string | null
+  blacklisted_by: string | null
+  blacklisted_at: string | null
+  is_vip: boolean
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Return dari RPC get_customer_reputation (warning saat input). */
+export interface CustomerReputation {
+  found: boolean
+  phone_normalized: string | null
+  name_latest: string | null
+  risk_tier: CustomerRiskTier
+  is_blacklisted: boolean
+  blacklist_reason: string | null
+  is_vip: boolean
+  total_orders: number
+  delivered_count: number
+  returned_count: number
+  fake_count: number
+  cancel_count: number
+  delivery_rate: number
+  return_rate: number
+  last_order_at: string | null
+  /** 'block' = blacklist soft-block dengan override; 'warn' = warning saja. */
+  blacklist_mode: 'block' | 'warn'
+}
+
+export const CUSTOMER_RISK_TIER_LABEL: Record<CustomerRiskTier, string> = {
+  NEW: 'Baru',
+  GOOD: 'Bagus',
+  WATCH: 'Perhatian',
+  HIGH_RISK: 'Risiko Tinggi',
+}
+
+export const CUSTOMER_RISK_TIER_COLOR: Record<CustomerRiskTier, string> = {
+  NEW: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
+  GOOD: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  WATCH: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  HIGH_RISK: 'bg-red-500/15 text-red-700 dark:text-red-400',
+}

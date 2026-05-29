@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
 import { Badge } from '@/components/ui/badge'
+import { CustomerReputationWarning } from '@/components/orders/customer-reputation-warning'
 import { toast } from 'sonner'
 import { Plus, Trash2, Loader2, AlertTriangle } from 'lucide-react'
 import {
@@ -92,6 +93,8 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
   // Customer
   const [customerName, setCustomerName] = useState(d.customer_name || '')
   const [customerPhone, setCustomerPhone] = useState(d.customer_phone || '')
+  // Brief #1 — soft-block kalau nomor blacklisted (mode 'block') & belum di-override
+  const [repBlocked, setRepBlocked] = useState(false)
 
   // Wilayah cascade
   const [provinces, setProvinces] = useState<string[]>([])
@@ -345,6 +348,7 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
                 onBlur={(e) => setCustomerPhone(normalizePhoneId(e.target.value))}
                 placeholder="08xxxxxxxxxx"
               />
+              <CustomerReputationWarning phone={customerPhone} onBlockChange={setRepBlocked} />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -638,11 +642,11 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
       <div className="sticky bottom-0 bg-background/80 backdrop-blur py-3 border-t -mx-4 px-4">
         <Button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || repBlocked}
           className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
         >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {submitLabel}
+          {repBlocked ? 'Nomor diblacklist — centang override dulu' : submitLabel}
         </Button>
       </div>
     </form>

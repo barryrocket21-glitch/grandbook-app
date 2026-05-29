@@ -28,6 +28,8 @@ import { formatRupiah, formatDate } from '@/lib/format'
 import type {
   OrderDraftEnriched, DraftOrderStatus, DraftStatusStat, OrderStatus,
 } from '@/lib/types'
+import { fetchRiskByPhones, toCanonicalPhone } from '@/lib/supabase/queries/customers'
+import type { CustomerRiskTier } from '@/lib/types'
 import { DraftStatusStatsBar } from './_components/draft-status-stats-bar'
 import { ResiInputDialog } from './_components/resi-input-dialog'
 import { DraftRowActions } from './_components/draft-row-actions'
@@ -59,6 +61,8 @@ function OrdersDraftInner() {
   const [page, setPage] = useState(0)
 
   const [rows, setRows] = useState<OrderDraftEnriched[]>([])
+  // Brief #1 — reputasi per nomor (canonical "8xxx") utk quality flag "Customer Risk"
+  const [riskByPhone, setRiskByPhone] = useState<Map<string, { tier: CustomerRiskTier; blacklisted: boolean }>>(new Map())
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -101,6 +105,8 @@ function OrdersDraftInner() {
       const rs = (listResp.data || []) as OrderDraftEnriched[]
       setRows(rs)
       setTotalCount(rs[0]?.total_count ? Number(rs[0].total_count) : 0)
+      // Enrich reputasi (fire-and-forget; gagal = map kosong, flag tidak muncul)
+      fetchRiskByPhones(supabase, rs.map((r) => r.customer_phone)).then(setRiskByPhone)
 
       if (statsResp.error) {
         console.warn('get_draft_status_stats failed:', statsResp.error)
@@ -146,6 +152,12 @@ function OrdersDraftInner() {
     if (!r.customer_city) issues.push('Kota kosong')
     if (!r.customer_name || r.customer_name.trim().length < 3) issues.push('Nama terlalu pendek')
     if (Number(r.total) === 0) issues.push('Total Rp 0')
+    // Brief #1 — Customer Risk berdasarkan reputasi nomor HP
+    const canon = toCanonicalPhone(r.customer_phone)
+    const risk = canon ? riskByPhone.get(canon) : undefined
+    if (risk?.blacklisted) issues.push('Customer Risk: BLACKLIST')
+    else if (risk?.tier === 'HIGH_RISK') issues.push('Customer Risk: risiko tinggi')
+    else if (risk?.tier === 'WATCH') issues.push('Customer Risk: perhatian')
     return issues
   }
   const issuesPerRow = useMemo(() => {
@@ -155,7 +167,8 @@ function OrdersDraftInner() {
       if (issues.length > 0) map.set(r.id, issues)
     })
     return map
-  }, [rows])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, riskByPhone])
 
   // Filter chip: show only rows with issues
   const [showIssuesOnly, setShowIssuesOnly] = useState(false)

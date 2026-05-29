@@ -130,7 +130,8 @@ export default function WaPastePage() {
         !a.parsed.alamat ||
         !a.parsed.produk ||
         a.parsed.hargaTotal == null ||
-        !a.phoneValid,
+        !a.phoneValid ||
+        !a.productId, // produk harus match master — kalau cuma teks tanpa match, status incomplete
     ).length
     return { total, matched, validPhone, csMatched, incomplete }
   }, [adapted])
@@ -396,12 +397,15 @@ export default function WaPastePage() {
                 </div>
               </details>
             )}
-            <div className="flex gap-2 pt-1">
+            <div className="flex flex-wrap gap-2 pt-1">
               <Button
-                onClick={() => router.push('/orders/draft')}
+                onClick={() => router.push('/orders/export-resi')}
                 className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
               >
-                Buka Antrian Kerja
+                Langsung Export ke Ekspedisi <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/orders/draft')}>
+                Lihat Antrian Kerja
               </Button>
               <Button variant="outline" onClick={reset}>
                 Paste Lagi

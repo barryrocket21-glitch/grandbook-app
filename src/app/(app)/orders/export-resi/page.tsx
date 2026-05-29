@@ -144,10 +144,12 @@ export default function OrdersExportResiPage() {
     // Phase 8I-Followup — kalau product filter aktif, pre-fetch order_id yang punya
     // produk itu (SPX dashboard 1 alamat pengirim per batch upload — operator perlu
     // split per supplier produk).
+    // Phase 8H — source table = orders_draft (orders yang BELUM dapet resi). Yang
+    // udah dapet resi otomatis pindah ke `orders` lewat promote trigger.
     let restrictToOrderIds: number[] | null = null
     if (productFilter !== 'ALL') {
       const { data: oiRows } = await supabase
-        .from('order_items')
+        .from('order_items_draft')
         .select('order_id')
         .eq('product_id', Number(productFilter))
       restrictToOrderIds = Array.from(new Set((oiRows || []).map((r) => r.order_id as number)))
@@ -159,9 +161,9 @@ export default function OrdersExportResiPage() {
     }
 
     let q = supabase
-      .from('orders')
+      .from('orders_draft')
       .select(
-        'id, order_number, status, customer_name, customer_city, channel_id, total, order_date, created_at, channel:courier_channels(id, code), items:order_items(id)'
+        'id, order_number, status, customer_name, customer_city, channel_id, total, order_date, created_at, channel:courier_channels(id, code), items:order_items_draft(id)'
       )
       .order('order_date', { ascending: false })
       .limit(500)
@@ -247,7 +249,8 @@ export default function OrdersExportResiPage() {
         b.fieldMappings,
         b.valueMappings,
         ids,
-        5
+        5,
+        'orders_draft',
       )
       setPreview(r)
       // Phase 8H — cek coverage SPX (hanya untuk profile channel SPX)
@@ -322,6 +325,7 @@ export default function OrdersExportResiPage() {
         organizationId: orgId,
         performedBy: user.id,
         supabase,
+        sourceTable: 'orders_draft',
         onProgress: (done, total) => setProgress({ done, total }),
       })
       setResult(r)
@@ -347,14 +351,16 @@ export default function OrdersExportResiPage() {
       const successIds = Array.from(selectedIds).filter(
         (id) => !result.errors.find((e) => e.orderId === id)
       )
-      const note = `Outbound export via ${profileBundle.profile.code} (${result.fileName})${batchNote.trim() ? ` — ${batchNote.trim()}` : ''}`
-      const { updated, error: rpcErr } = await markOrdersExported(
-        supabase,
-        successIds,
-        'DIKIRIM',
-        profileBundle.profile.id,
-        note
-      )
+      // Phase 8H — order ada di orders_draft, jadi update inline (tidak pakai
+      // RPC mark_orders_exported yg targetnya `orders`). Status SIAP_KIRIM
+      // nandain "file udah generate, lagi nunggu resi balik dari kurir."
+      const { error: updErr, count } = await supabase
+        .from('orders_draft')
+        .update({ status: 'SIAP_KIRIM' }, { count: 'exact' })
+        .in('id', successIds)
+        .neq('status', 'SIAP_KIRIM')
+      const rpcErr = updErr?.message ?? null
+      const updated = count ?? 0
       if (rpcErr) {
         toast.error('Gagal update status order', { description: rpcErr })
         setMarkedCount(0)

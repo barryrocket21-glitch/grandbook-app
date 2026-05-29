@@ -310,7 +310,8 @@ export async function previewOutbound(
   fieldMappings: ConverterFieldMapping[],
   valueMappings: ConverterValueMapping[],
   orderIds: number[],
-  maxOrders = 5
+  maxOrders = 5,
+  sourceTable: 'orders' | 'orders_draft' = 'orders',
 ): Promise<OutboundPreviewResult> {
   const slice = orderIds.slice(0, maxOrders)
   const r = await buildOutboundRows({
@@ -320,6 +321,7 @@ export async function previewOutbound(
     orderIds: slice,
     organizationId,
     supabase,
+    sourceTable,
   })
   return { ...r, totalOrdersRequested: orderIds.length }
 }

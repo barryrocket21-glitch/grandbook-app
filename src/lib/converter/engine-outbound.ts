@@ -59,6 +59,14 @@ export interface OutboundOptions {
   performedBy: string
   supabase: SupabaseClient
   onProgress?: (done: number, total: number) => void
+  /**
+   * Source table for the orders being exported.
+   * - 'orders' (default): the archive table — orders with resi already.
+   * - 'orders_draft' (Phase 8H): pre-resi staging — orders dari WA paste /
+   *   manual input / bulk-upload yang belum dapet resi. Items diambil dari
+   *   `order_items_draft` (bukan `order_items`).
+   */
+  sourceTable?: 'orders' | 'orders_draft'
 }
 
 /** Same as OutboundOptions but performedBy is optional (preview is read-only). */
@@ -131,7 +139,7 @@ export async function buildOutboundRows(opts: OutboundRowsOptions): Promise<Outb
   }
 
   const valueMapIndex = indexValueMappings(opts.valueMappings)
-  const orders = await loadOrders(opts.supabase, opts.organizationId, opts.orderIds)
+  const orders = await loadOrders(opts.supabase, opts.organizationId, opts.orderIds, opts.sourceTable ?? 'orders')
   const orderMap = new Map(orders.map((o) => [o.id, o]))
 
   // Phase 8G: cache SPX wilayah lookup per-order (4 fields share 1 RPC).
@@ -215,7 +223,8 @@ export async function markOrdersExported(
 async function loadOrders(
   supabase: SupabaseClient,
   organizationId: number,
-  orderIds: number[]
+  orderIds: number[],
+  sourceTable: 'orders' | 'orders_draft' = 'orders',
 ): Promise<OrderForOutbound[]> {
   // Chunk to avoid PostgREST URL-length limits on large IN lists.
   const chunks: number[][] = []
@@ -224,12 +233,14 @@ async function loadOrders(
     chunks.push(orderIds.slice(i, i + CHUNK))
   }
 
+  const itemsTable = sourceTable === 'orders_draft' ? 'order_items_draft' : 'order_items'
+
   const all: OrderForOutbound[] = []
   for (const ids of chunks) {
     const { data, error } = await supabase
-      .from('orders')
+      .from(sourceTable)
       .select(
-        `${ORDER_COLUMNS}, items:order_items(id, product_name_raw, variation, qty, weight_per_unit, price), channel:courier_channels(id, code, name, aggregator)`
+        `${ORDER_COLUMNS}, items:${itemsTable}(id, product_name_raw, variation, qty, weight_per_unit, price), channel:courier_channels(id, code, name, aggregator)`
       )
       .eq('organization_id', organizationId)
       .in('id', ids)

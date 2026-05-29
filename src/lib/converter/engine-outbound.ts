@@ -72,7 +72,7 @@ export interface OutboundOptions {
 /** Same as OutboundOptions but performedBy is optional (preview is read-only). */
 export type OutboundRowsOptions = Omit<OutboundOptions, 'performedBy'> & { performedBy?: string }
 
-const ORDER_COLUMNS = [
+const ORDER_COLUMNS_BASE = [
   'id',
   'organization_id',
   'order_number',
@@ -90,11 +90,9 @@ const ORDER_COLUMNS = [
   'customer_address',
   'subtotal',
   'shipping_cost',
-  'shipping_cost_actual',
   'discount',
   'total',
   'cod_amount',
-  'payout_amount',
   'payment_method',
   'status',
   'cs_name',
@@ -102,7 +100,13 @@ const ORDER_COLUMNS = [
   'meta',
   'order_date',
   'created_at',
-].join(', ')
+]
+// Phase 8H — orders_draft skips actuals/settlement cols (shipping_cost_actual,
+// payout_amount, picked_up_at, delivered_at, returned_at, cod_settled_at).
+// Only add these when reading from `orders`.
+const ORDER_COLUMNS_ARCHIVE_EXTRA = ['shipping_cost_actual', 'payout_amount']
+const ORDER_COLUMNS = ORDER_COLUMNS_BASE.concat(ORDER_COLUMNS_ARCHIVE_EXTRA).join(', ')
+const ORDER_COLUMNS_DRAFT = ORDER_COLUMNS_BASE.join(', ')
 
 // =============================================================
 // Public: build rows only (no Blob). Used by preview + full generate.
@@ -234,13 +238,14 @@ async function loadOrders(
   }
 
   const itemsTable = sourceTable === 'orders_draft' ? 'order_items_draft' : 'order_items'
+  const cols = sourceTable === 'orders_draft' ? ORDER_COLUMNS_DRAFT : ORDER_COLUMNS
 
   const all: OrderForOutbound[] = []
   for (const ids of chunks) {
     const { data, error } = await supabase
       .from(sourceTable)
       .select(
-        `${ORDER_COLUMNS}, items:${itemsTable}(id, product_name_raw, variation, qty, weight_per_unit, price), channel:courier_channels(id, code, name, aggregator)`
+        `${cols}, items:${itemsTable}(id, product_name_raw, variation, qty, weight_per_unit, price), channel:courier_channels(id, code, name, aggregator)`
       )
       .eq('organization_id', organizationId)
       .in('id', ids)

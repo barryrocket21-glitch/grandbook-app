@@ -85,7 +85,10 @@ export default function OrdersExportResiPage() {
   const [channels, setChannels] = useState<CourierChannel[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [channelFilter, setChannelFilter] = useState<string>('ALL')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('SIAP_KIRIM')
+  // Default 'ELIGIBLE' = BARU + SIAP_KIRIM. WA paste / input baru insert
+  // status BARU; kalau default-nya cuma SIAP_KIRIM, halaman keliatan kosong
+  // setelah submit dari WA Paste.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ELIGIBLE')
   const [productFilter, setProductFilter] = useState<string>('ALL')
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')

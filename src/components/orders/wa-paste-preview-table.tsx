@@ -12,10 +12,17 @@
 // - Per-row tombol × utk hapus
 // - Sticky thead + tfoot grand total
 // =============================================================
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { X } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { X, ChevronDown, Check } from 'lucide-react'
 import type { AdaptedOrder } from '@/lib/converter/wa-paste-adapter'
 import type { ParsedWaOrder } from '@/lib/converter/wa-paste-v3'
+
+export interface ProductOption {
+  id: number
+  name: string
+}
 
 type Kind = 'text' | 'number'
 type StatusTone = 'ok' | 'warn' | 'bad' | null
@@ -48,11 +55,13 @@ const COLUMNS: ColumnSpec[] = [
 
 export interface WaPastePreviewTableProps {
   orders: AdaptedOrder[]
+  /** Master product list — kalau di-pass, kolom Produk dapet dropdown override picker. */
+  products?: ProductOption[]
   onUpdate: (index: number, field: keyof ParsedWaOrder, value: string | number | null) => void
   onRemove: (index: number) => void
 }
 
-export function WaPastePreviewTable({ orders, onUpdate, onRemove }: WaPastePreviewTableProps) {
+export function WaPastePreviewTable({ orders, products, onUpdate, onRemove }: WaPastePreviewTableProps) {
   const grandTotal = orders.reduce((sum, o) => sum + (o.parsed.hargaTotal ?? 0), 0)
 
   return (
@@ -123,15 +132,27 @@ export function WaPastePreviewTable({ orders, onUpdate, onRemove }: WaPastePrevi
 
                     return (
                       <td key={c.field} className={`px-0.5 py-0.5 ${c.width}`}>
-                        <CellEditor
-                          value={raw}
-                          kind={c.kind}
-                          align={c.align ?? 'left'}
-                          flagRequired={flagRequired}
-                          statusTone={statusTone}
-                          tooltip={tooltip}
-                          onChange={(v) => onUpdate(i, c.field, v)}
-                        />
+                        {c.field === 'produk' && products && products.length > 0 ? (
+                          <ProductCell
+                            value={raw == null ? '' : String(raw)}
+                            products={products}
+                            matchedName={o.productMatchedName}
+                            statusTone={statusTone}
+                            flagRequired={flagRequired}
+                            tooltip={tooltip}
+                            onChange={(v) => onUpdate(i, 'produk', v)}
+                          />
+                        ) : (
+                          <CellEditor
+                            value={raw}
+                            kind={c.kind}
+                            align={c.align ?? 'left'}
+                            flagRequired={flagRequired}
+                            statusTone={statusTone}
+                            tooltip={tooltip}
+                            onChange={(v) => onUpdate(i, c.field, v)}
+                          />
+                        )}
                       </td>
                     )
                   })}
@@ -171,6 +192,97 @@ export function WaPastePreviewTable({ orders, onUpdate, onRemove }: WaPastePrevi
           )}
         </table>
       </div>
+    </div>
+  )
+}
+
+// Product cell — like CellEditor tapi ada dropdown override picker.
+// User bisa: (a) ketik manual (text di-re-match ke master), atau
+// (b) klik chevron → pick dari master list → otomatis match green.
+function ProductCell({
+  value,
+  products,
+  matchedName,
+  statusTone,
+  flagRequired,
+  tooltip,
+  onChange,
+}: {
+  value: string
+  products: ProductOption[]
+  matchedName: string | null
+  statusTone: StatusTone
+  flagRequired: boolean
+  tooltip?: string
+  onChange: (v: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  // Same border tone resolution sebagai CellEditor — biar konsisten.
+  let borderClass = 'border-transparent hover:border-border focus:border-violet-500'
+  if (flagRequired) {
+    borderClass = 'border-red-500/60 bg-red-500/5 focus:border-red-500'
+  } else if (statusTone === 'ok') {
+    borderClass = 'border-emerald-500/30 bg-emerald-500/5 focus:border-emerald-500'
+  } else if (statusTone === 'warn') {
+    borderClass = 'border-amber-500/40 bg-amber-500/5 focus:border-amber-500'
+  } else if (statusTone === 'bad') {
+    borderClass = 'border-red-500/40 bg-red-500/5 focus:border-red-500'
+  }
+
+  const titleAttr = tooltip ?? (value.length > 20 ? value : undefined)
+
+  return (
+    <div className="relative flex items-center">
+      <input
+        type="text"
+        value={value}
+        placeholder={flagRequired ? 'wajib' : ''}
+        title={titleAttr}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full pl-1.5 pr-6 py-1 text-[11px] rounded border bg-transparent placeholder:text-red-500/70 focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${borderClass}`}
+      />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          title="Pilih dari master produk"
+          className={`absolute right-0.5 h-5 w-5 flex items-center justify-center rounded transition ${
+            statusTone === 'bad' || flagRequired
+              ? 'text-red-600 hover:bg-red-500/20'
+              : 'text-muted-foreground hover:bg-muted-foreground/10'
+          }`}
+        >
+          <ChevronDown className="w-3 h-3" />
+        </PopoverTrigger>
+        <PopoverContent align="end" className="p-1 w-[220px] max-h-72 overflow-y-auto">
+          <div className="text-[10px] text-muted-foreground px-2 py-1 border-b mb-1">
+            Pilih dari master produk
+          </div>
+          {products.map((p) => {
+            const isMatch = matchedName === p.name
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  onChange(p.name)
+                  setOpen(false)
+                }}
+                className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted/60 flex items-center gap-2 ${
+                  isMatch ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : ''
+                }`}
+              >
+                {isMatch && <Check className="w-3 h-3 shrink-0" />}
+                <span className={isMatch ? '' : 'ml-5'}>{p.name}</span>
+              </button>
+            )
+          })}
+          {products.length === 0 && (
+            <div className="text-xs text-muted-foreground px-2 py-3 text-center">
+              Belum ada produk di master.
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }

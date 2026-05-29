@@ -353,7 +353,7 @@ export default function WaPastePage() {
               </CardContent>
             </Card>
           ) : (
-            <WaPastePreviewTable orders={adapted} onUpdate={handleUpdate} onRemove={handleRemove} />
+            <WaPastePreviewTable orders={adapted} products={refData?.products ?? []} onUpdate={handleUpdate} onRemove={handleRemove} />
           )}
         </div>
       )}

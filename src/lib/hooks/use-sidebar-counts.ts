@@ -16,6 +16,8 @@ export interface SidebarCounts {
   inbox_phone_review: number
   commissions_earned: number
   attribution_required: number
+  crm_my_cases: number
+  crm_overdue: number
 }
 
 const EMPTY_COUNTS: SidebarCounts = {
@@ -30,6 +32,8 @@ const EMPTY_COUNTS: SidebarCounts = {
   inbox_phone_review: 0,
   commissions_earned: 0,
   attribution_required: 0,
+  crm_my_cases: 0,
+  crm_overdue: 0,
 }
 
 const POLL_INTERVAL_MS = 60_000
@@ -66,6 +70,8 @@ export function useSidebarCounts(userId: string | null): SidebarCounts {
           inbox_phone_review: Number(row.inbox_phone_review) || 0,
           commissions_earned: Number(row.commissions_earned) || 0,
           attribution_required: Number(row.attribution_required) || 0,
+          crm_my_cases: Number(row.crm_my_cases) || 0,
+          crm_overdue: Number(row.crm_overdue) || 0,
         })
       }
     } catch (err) {
@@ -111,6 +117,7 @@ export function getCountForHref(href: string, counts: SidebarCounts): number {
     case '/inbox/phone-review':      return counts.inbox_phone_review
     case '/commissions/manage':      return counts.commissions_earned
     case '/inbox/atribusi-required':  return counts.attribution_required
+    case '/crm':                      return counts.crm_my_cases
     default: return 0
   }
 }

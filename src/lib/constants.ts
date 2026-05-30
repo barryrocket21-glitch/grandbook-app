@@ -11,6 +11,7 @@ import {
   Scale,
   Inbox,
   UserRound,
+  Headset,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -135,6 +136,14 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/customers',
     icon: UserRound,
     roles: ['owner', 'admin', 'akunting'],
+  },
+  {
+    // Brief #2 — CRM: follow-up order PROBLEM. owner/admin semua kasus,
+    // cs kasus order-nya sendiri (PEMBELI aksi, EKSPEDISI read-only).
+    title: 'Follow Up',
+    href: '/crm',
+    icon: Headset,
+    roles: ['owner', 'admin', 'cs'],
   },
   {
     // Inbox — item yang nyangkut di pipeline, perlu resolusi manual.

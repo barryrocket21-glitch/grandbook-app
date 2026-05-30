@@ -1542,6 +1542,79 @@ export const CUSTOMER_RISK_TIER_COLOR: Record<CustomerRiskTier, string> = {
 }
 
 // =============================================================
+// Brief #2 — Modul CRM (migration 080)
+// =============================================================
+export type CrmProblemType = 'PEMBELI' | 'EKSPEDISI'
+export type CrmStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED'
+export type CrmActivityChannel = 'WA' | 'TELEPON' | 'EKSPEDISI' | 'LAIN'
+export type CrmResolveOutcome = 'DIKIRIM' | 'DITERIMA' | 'RETUR' | 'CANCEL'
+
+/** Row dari list_crm_cases (antrian /crm). */
+export interface CrmCase {
+  id: number
+  order_number: string
+  order_date: string | null
+  customer_name: string | null
+  customer_phone: string | null
+  status: OrderStatus
+  problem_type: CrmProblemType | null
+  crm_status: CrmStatus | null
+  reject_reason: string | null
+  priority: OrderPriority | null
+  cs_id: string | null
+  cs_name: string | null
+  assigned_to: string | null
+  sla_due_at: string | null
+  problem_opened_at: string | null
+  last_contact_at: string | null
+  cs_attempts: number | null
+  days_in_problem: number
+  is_overdue: boolean
+  can_act: boolean
+  total_count: number
+}
+
+export interface CrmActivity {
+  id: number
+  organization_id: number
+  order_id: number
+  channel: CrmActivityChannel
+  result: string | null
+  note: string | null
+  next_action: string | null
+  next_due_at: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export const CRM_PROBLEM_TYPE_LABEL: Record<CrmProblemType, string> = {
+  PEMBELI: 'Pembeli',
+  EKSPEDISI: 'Ekspedisi',
+}
+export const CRM_PROBLEM_TYPE_COLOR: Record<CrmProblemType, string> = {
+  PEMBELI: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  EKSPEDISI: 'bg-purple-500/15 text-purple-700 dark:text-purple-400',
+}
+export const CRM_STATUS_LABEL: Record<CrmStatus, string> = {
+  OPEN: 'Open',
+  IN_PROGRESS: 'Dikerjakan',
+  RESOLVED: 'Selesai',
+  ESCALATED: 'Eskalasi',
+}
+export const CRM_STATUS_COLOR: Record<CrmStatus, string> = {
+  OPEN: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  IN_PROGRESS: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  RESOLVED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  ESCALATED: 'bg-red-500/15 text-red-700 dark:text-red-400',
+}
+export const CRM_RESOLVE_OUTCOMES: { value: CrmResolveOutcome; label: string }[] = [
+  { value: 'DIKIRIM', label: 'Reschedule berhasil / pembeli OK → lanjut kirim (DIKIRIM)' },
+  { value: 'DITERIMA', label: 'Sampai / diterima (DITERIMA)' },
+  { value: 'RETUR', label: 'Barang balik / RTS (RETUR)' },
+  { value: 'CANCEL', label: 'Cancel / nego gagal / fake (CANCEL)' },
+]
+
+// =============================================================
 // Brief #3 — Gate Atribusi (migration 078). Row dari list_attribution_required.
 // =============================================================
 export interface AttributionRequiredRow {

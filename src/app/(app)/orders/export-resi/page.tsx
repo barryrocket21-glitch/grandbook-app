@@ -551,7 +551,9 @@ export default function OrdersExportResiPage() {
                 <div className="space-y-1">
                   <Label className="text-xs">Status</Label>
                   <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v as StatusFilter)}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue>
+                      {(value: string | null) => STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value ?? '—'}
+                    </SelectValue></SelectTrigger>
                     <SelectContent>
                       {STATUS_OPTIONS.map((o) => (
                         <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>

@@ -1,0 +1,16 @@
+-- 081 — Advisor cleanup: resolve_crm_case → SECURITY INVOKER.
+-- ============================================================================
+-- Brief #2 nambah 1 warning `authenticated_security_definer_function_executable`
+-- pada resolve_crm_case (bukan kategori anon — anon udah ke-revoke di mig 080,
+-- jadi REVOKE FROM PUBLIC TIDAK ngefix warning ini).
+--
+-- Fungsi ini WAJIB authenticated-executable (cs/admin/owner panggil dari UI),
+-- jadi gak bisa di-REVOKE dari authenticated tanpa break fitur. Fix yang bener:
+-- ubah ke SECURITY INVOKER. Aman karena:
+--   - UPDATE orders.status → di-cover orders_org_policy (org scope, semua role).
+--   - INSERT audit_log → policy audit_log_insert WITH CHECK (true).
+--   - Trigger status-change (compute_commissions dll) tetap SECURITY DEFINER,
+--     jadi tetap jalan apapun privilege caller.
+--   - Cek authz internal (org + role + cs-ownership) tetap utuh.
+-- Hasil: warning hilang → 0 new advisor warning. Idempotent.
+ALTER FUNCTION public.resolve_crm_case(bigint, text, text) SECURITY INVOKER;

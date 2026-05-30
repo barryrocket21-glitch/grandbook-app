@@ -5,7 +5,7 @@
 // sidebar duplikat dengan app shell sidebar. Pakai horizontal pill,
 // sticky di top content area.
 // =============================================================
-import { BarChart3, Truck, Package, Headphones, Megaphone, Target } from 'lucide-react'
+import { BarChart3, Truck, Package, Headphones, Megaphone, Target, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type AnalyticsSection =
@@ -15,6 +15,7 @@ export type AnalyticsSection =
   | 'cs'
   | 'adv'
   | 'campaign'
+  | 'retur'
 
 interface NavItem {
   key: AnalyticsSection
@@ -29,6 +30,7 @@ const ITEMS: NavItem[] = [
   { key: 'cs', label: 'Per CS', icon: Headphones },
   { key: 'adv', label: 'Per Advertiser', icon: Megaphone },
   { key: 'campaign', label: 'ROAS Campaign', icon: Target },
+  { key: 'retur', label: 'Retur', icon: Undo2 },
 ]
 
 export const ANALYTICS_SECTIONS: AnalyticsSection[] = ITEMS.map(i => i.key)

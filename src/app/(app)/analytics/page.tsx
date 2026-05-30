@@ -33,6 +33,7 @@ import {
   type AnalyticsSection,
 } from '@/components/analytics/analytics-nav'
 import { PerProdukSection } from '@/components/analytics/per-produk-section'
+import { ReturSection } from '@/components/analytics/retur-section'
 
 const supabase = createClient()
 
@@ -136,6 +137,18 @@ function AnalyticsPageInner() {
     if (!authLoading && canViewAnalytics && rangeReady) void load()
   }, [authLoading, canViewAnalytics, load, rangeReady])
 
+  // Brief #4 — CS gak lihat full analytics, TAPI boleh lihat retur ORDER-NYA
+  // SENDIRI (RPC role-aware auto-filter cs_id). Render Retur-only view.
+  if (!authLoading && !canViewAnalytics && role === 'cs') {
+    return (
+      <div className="space-y-6">
+        <PageHeader icon={LineChartIcon} title="Retur Saya"
+          description="Analisa retur untuk order yang kamu tangani. Performa lengkap lain di /cs-dashboard."
+          actions={<DateRangePicker value={range} onChange={setRange} />} />
+        {rangeReady && <ReturSection from={range.from} to={range.to} />}
+      </div>
+    )
+  }
   if (!authLoading && !canViewAnalytics) {
     return (
       <div className="space-y-6">
@@ -476,6 +489,8 @@ function AnalyticsPageInner() {
                 Tabel ringkas per produk. Klik <strong>Detail →</strong> untuk lihat funnel breakdown, performa CS, dan campaign per produk. Revenue + CS + ROAS dari <code>analytics_funnel_per_product</code> RPC.
               </p>
             </div>}
+
+            {section === 'retur' && <ReturSection from={range.from} to={range.to} />}
 
             {section === 'campaign' && <div className="space-y-4">
               <RoasPerCampaignTable rows={roasPerCampaign} loading={loading} />

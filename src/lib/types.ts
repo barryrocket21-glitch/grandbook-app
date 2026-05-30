@@ -1542,6 +1542,30 @@ export const CUSTOMER_RISK_TIER_COLOR: Record<CustomerRiskTier, string> = {
 }
 
 // =============================================================
+// Brief #4 — Retur Root-Cause Analytics (migration 082)
+// =============================================================
+interface ReturBase {
+  total_final: number
+  diterima: number
+  retur: number
+  fake: number
+  return_rate: number | null
+  small_sample: boolean
+}
+export interface ReturPerCs extends ReturBase {
+  cs_id: string; cs_name: string | null
+  lead_in: number; closing: number; closing_rate: number | null
+}
+export interface ReturPerProduk extends ReturBase { product_id: number; product_name: string }
+export interface ReturPerCampaign extends ReturBase {
+  campaign_id: number; campaign_name: string; platform: string | null
+  spend: number; meta_leads: number; cpr: number | null; cpa: number | null; net_profit_after_ads: number
+}
+export interface ReturPerWilayah extends ReturBase { city: string; province: string | null }
+export interface ReturPerKurir extends ReturBase { channel_id: number; channel_code: string | null; channel_name: string | null }
+export interface ReturReason { reject_reason: string; n: number }
+
+// =============================================================
 // Brief #2 — Modul CRM (migration 080)
 // =============================================================
 export type CrmProblemType = 'PEMBELI' | 'EKSPEDISI'

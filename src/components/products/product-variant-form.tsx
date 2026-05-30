@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2, Save, ChevronLeft, Warehouse } from 'lucide-react'
+import { Plus, X, Loader2, Save, ChevronLeft, Warehouse, Package } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -83,6 +83,9 @@ export function ProductVariantForm({ productId }: Props) {
   const [supplierId, setSupplierId] = useState<number | null>(null)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
 
+  // Brief #3 — fee packing per produk (masuk HPP, per pcs). Default 0.
+  const [packingFee, setPackingFee] = useState<number>(0)
+
   // Loading existing product
   useEffect(() => {
     if (!productId) return
@@ -95,6 +98,7 @@ export function ProductVariantForm({ productId }: Props) {
         setActive(product.active)
         setHasVariants(!!product.has_variants)
         setSupplierId(product.supplier_id ?? null)
+        setPackingFee(Number((product as { packing_fee?: number }).packing_fee ?? 0))
         if (!product.has_variants) {
           const v = product.variants[0]
           setSimplePrice(Number(v?.price ?? product.price_default ?? 0))
@@ -321,6 +325,7 @@ export function ProductVariantForm({ productId }: Props) {
         active,
         hasVariants,
         supplierId,
+        packingFee,
         simplePrice,
         simpleHpp,
         attributeIds: attributesUsed.map(a => a.id),
@@ -415,6 +420,26 @@ export function ProductVariantForm({ productId }: Props) {
               <Link href="/settings/suppliers" className="text-violet-500 hover:underline">
                 Kelola supplier →
               </Link>
+            </p>
+          </div>
+
+          {/* Brief #3 — Fee Packing per produk (masuk HPP per order) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="packing_fee" className="flex items-center gap-1.5">
+              <Package className="size-3.5" /> Fee Packing (per pcs)
+            </Label>
+            <Input
+              id="packing_fee"
+              type="number"
+              min={0}
+              value={packingFee}
+              onChange={e => setPackingFee(Number(e.target.value) || 0)}
+              className="max-w-xs"
+              placeholder="0"
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Biaya bungkus per pcs. Masuk HPP saat order → profit per order otomatis dipotong (fee × qty).
+              Order lama tidak terpengaruh (snapshot).
             </p>
           </div>
 

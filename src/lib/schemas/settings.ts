@@ -424,6 +424,7 @@ export const productSchema = z.object({
   variation: z.string().max(120).nullable().optional(),
   price_default: z.number().min(0, 'Harga harus >= 0'),
   hpp: z.number().min(0, 'HPP harus >= 0'),
+  packing_fee: z.number().min(0, 'Fee packing harus >= 0').default(0),
   notes: z.string().max(1000).nullable().optional(),
   active: z.boolean().default(true),
 })

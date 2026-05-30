@@ -722,6 +722,8 @@ function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomput
   const [bundle, setBundle] = useState<ChannelCostBundle | null>(null)
   const [bundleLoading, setBundleLoading] = useState(false)
   const [recomputing, setRecomputing] = useState(false)
+  // Brief #3 — HPP + Packing total per order (dari snapshot per item)
+  const [itemCosts, setItemCosts] = useState<{ hpp: number; packing: number }>({ hpp: 0, packing: 0 })
 
   useEffect(() => {
     const loadBundle = async () => {
@@ -736,6 +738,17 @@ function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomput
     }
     void loadBundle()
   }, [order.channel_id, order.order_date])
+
+  useEffect(() => {
+    supabase.from('order_items').select('qty, hpp_snapshot, packing_fee_snapshot').eq('order_id', order.id)
+      .then(({ data }) => {
+        const rows = (data || []) as Array<{ qty: number; hpp_snapshot: number | null; packing_fee_snapshot: number | null }>
+        setItemCosts({
+          hpp: rows.reduce((s, r) => s + Number(r.qty || 0) * Number(r.hpp_snapshot || 0), 0),
+          packing: rows.reduce((s, r) => s + Number(r.qty || 0) * Number(r.packing_fee_snapshot || 0), 0),
+        })
+      })
+  }, [order.id, order.cost_computed_at])
 
   const recompute = async () => {
     setRecomputing(true)
@@ -847,12 +860,21 @@ function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomput
                 {billingModel === 'DIRECT_TRANSFER' && 'Customer transfer langsung'}
                 {billingModel === 'NO_RECONCILIATION' && 'Tidak ada rekonsil cost'}
               </p>
+              <div className="border-t my-1" />
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">HPP (modal barang)</span>
+                <span className="font-mono">−{formatRupiah(itemCosts.hpp)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Packing</span>
+                <span className="font-mono">−{formatRupiah(itemCosts.packing)}</span>
+              </div>
               <div className={`flex justify-between border-t pt-1 ${Number(order.estimated_profit ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                 <span className="font-bold">Estimated Profit</span>
                 <span className="font-mono font-bold text-base">{formatRupiah(Number(order.estimated_profit ?? 0))}</span>
               </div>
               <p className="text-[10px] text-muted-foreground">
-                = Cash In − HPP − Komisi
+                = Cash In − HPP − Packing − Komisi
                 {billingModel === 'MONTHLY_INVOICE' ? ' − Total Cost (untuk MONTHLY_INVOICE, cost akan ditagih bulan depan)' : ''}
               </p>
             </div>

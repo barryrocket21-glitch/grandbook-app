@@ -144,6 +144,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'cs'],
     children: [
       { title: 'Pending Review', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
+      { title: 'Atribusi Required', href: '/inbox/atribusi-required', roles: ['owner', 'admin'] },
       { title: 'Unmatched Resi', href: '/inbox/unmatched-resi', roles: ['owner', 'admin'] },
       { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses', roles: ['owner', 'admin'] },
       { title: 'Address Review', href: '/inbox/address-review' },

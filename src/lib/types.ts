@@ -1540,3 +1540,22 @@ export const CUSTOMER_RISK_TIER_COLOR: Record<CustomerRiskTier, string> = {
   WATCH: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   HIGH_RISK: 'bg-red-500/15 text-red-700 dark:text-red-400',
 }
+
+// =============================================================
+// Brief #3 — Gate Atribusi (migration 078). Row dari list_attribution_required.
+// =============================================================
+export interface AttributionRequiredRow {
+  id: number
+  order_number: string
+  order_date: string | null
+  status: OrderStatus
+  customer_name: string | null
+  cs_id: string | null
+  cs_name: string | null
+  advertiser_id: string | null
+  campaign_id: number | null
+  total: number
+  missing_cs: boolean
+  missing_adv: boolean
+  total_count: number
+}

@@ -15,6 +15,7 @@ export interface SidebarCounts {
   inbox_address_review: number
   inbox_phone_review: number
   commissions_earned: number
+  attribution_required: number
 }
 
 const EMPTY_COUNTS: SidebarCounts = {
@@ -28,6 +29,7 @@ const EMPTY_COUNTS: SidebarCounts = {
   inbox_address_review: 0,
   inbox_phone_review: 0,
   commissions_earned: 0,
+  attribution_required: 0,
 }
 
 const POLL_INTERVAL_MS = 60_000
@@ -63,6 +65,7 @@ export function useSidebarCounts(userId: string | null): SidebarCounts {
           inbox_address_review: Number(row.inbox_address_review) || 0,
           inbox_phone_review: Number(row.inbox_phone_review) || 0,
           commissions_earned: Number(row.commissions_earned) || 0,
+          attribution_required: Number(row.attribution_required) || 0,
         })
       }
     } catch (err) {
@@ -107,6 +110,7 @@ export function getCountForHref(href: string, counts: SidebarCounts): number {
     case '/inbox/address-review':    return counts.inbox_address_review
     case '/inbox/phone-review':      return counts.inbox_phone_review
     case '/commissions/manage':      return counts.commissions_earned
+    case '/inbox/atribusi-required':  return counts.attribution_required
     default: return 0
   }
 }

@@ -30,6 +30,7 @@ export async function POST(request: Request) {
     'campaigns',
     'commission_rules',
     'products',         // also cascades order_items if not already gone
+    'customers',        // Brief #1 reputasi — cascade dgn orders (anti ghost data)
   ])
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -46,6 +47,11 @@ export async function POST(request: Request) {
   //
   // Pre-flight: hitung baris yang AKAN dihapus per table untuk include di payload.
   const tablesRequested: string[] = body.tables.filter((t: string) => ALLOWED.has(t))
+  // Anti ghost data — reset orders WAJIB ikut reset customers (reputasi di-derive
+  // dari orders; tanpa ini customers nyangkut tanpa order). Auto-cascade.
+  if (tablesRequested.includes('orders') && !tablesRequested.includes('customers')) {
+    tablesRequested.push('customers')
+  }
   const preCounts: Record<string, number | null> = {}
   for (const t of tablesRequested) {
     const { count } = await admin.from(t).select('*', { head: true, count: 'exact' })
@@ -74,10 +80,12 @@ export async function POST(request: Request) {
   }
 
   const results: Record<string, number | string> = {}
-  // Order matters: kill orders first so commissions cascade, lalu yang lain
-  const order = ['orders', 'cs_daily_leads', 'ad_spend', 'expenses', 'ad_reconciliation', 'campaigns', 'commission_rules', 'products']
+  // Order matters: customers DULUAN (sebelum orders) supaya trigger order-DELETE
+  // early-exit (gak full-scan recompute per row) → bulk delete tetap cepat.
+  // Lalu orders (commissions cascade), baru sisanya.
+  const order = ['customers', 'orders', 'cs_daily_leads', 'ad_spend', 'expenses', 'ad_reconciliation', 'campaigns', 'commission_rules', 'products']
   for (const t of order) {
-    if (!body.tables.includes(t)) continue
+    if (!tablesRequested.includes(t)) continue
     if (!ALLOWED.has(t)) {
       results[t] = 'skipped (not allowed)'
       continue

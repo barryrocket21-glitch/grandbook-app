@@ -31,6 +31,7 @@ const TABLES: TableInfo[] = [
   { key: 'campaigns', title: 'Campaigns', description: 'Daftar campaign. Hapus ini akan break ad_spend yang reference (fail).', cascades: [] },
   { key: 'commission_rules', title: 'Commission Rules', description: 'Aturan komisi per role/produk.' },
   { key: 'products', title: 'Master Produk', description: 'Daftar produk. Akan cascade ke order_items, cs_daily_leads. commission_rules akan SET NULL.', cascades: ['order_items', 'cs_daily_leads'] },
+  { key: 'customers', title: 'Pelanggan (Reputasi)', description: 'Reputasi pelanggan per nomor HP (blacklist/VIP/counters). OTOMATIS ikut terhapus saat reset Orders — datanya di-derive dari orders, biar gak jadi ghost data.' },
 ]
 
 const CONFIRM_TOKEN = 'RESET'

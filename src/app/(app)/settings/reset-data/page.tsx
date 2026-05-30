@@ -189,7 +189,10 @@ export default function ResetDataPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <Label className="font-medium cursor-pointer">{t.title}</Label>
-                      {cnt !== null && (
+                      {/* cnt bisa undefined selama counts belum ke-load (race) —
+                          pakai != null (loose) supaya undefined ikut ke-skip, gak
+                          crash di undefined.toLocaleString(). */}
+                      {cnt != null && (
                         <Badge variant="outline" className={`text-[10px] tabular-nums ${cnt > 0 ? 'border-red-500/30 text-red-600' : ''}`}>
                           {cnt.toLocaleString('id-ID')} baris
                         </Badge>

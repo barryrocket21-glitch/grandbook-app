@@ -27,10 +27,11 @@ export async function POST(request: Request) {
     'cs_daily_leads',
     'expenses',
     'ad_reconciliation',
-    'campaigns',
-    'commission_rules',
-    'products',         // also cascades order_items if not already gone
     'customers',        // Brief #1 reputasi — cascade dgn orders (anti ghost data)
+    // EXCLUDED (master/config — JANGAN wipe): products, campaigns, commission_rules,
+    // suppliers, couriers, courier_channels/rates/statuses, converter_profiles +
+    // mappings, master_wilayah(_spx), channel_billing_config, product_*, profiles.
+    // Reset cuma boleh transaksional. Master data di-manage di Settings masing2.
   ])
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
   // Order matters: customers DULUAN (sebelum orders) supaya trigger order-DELETE
   // early-exit (gak full-scan recompute per row) → bulk delete tetap cepat.
   // Lalu orders (commissions cascade), baru sisanya.
-  const order = ['customers', 'orders', 'cs_daily_leads', 'ad_spend', 'expenses', 'ad_reconciliation', 'campaigns', 'commission_rules', 'products']
+  const order = ['customers', 'orders', 'cs_daily_leads', 'ad_spend', 'expenses', 'ad_reconciliation']
   for (const t of order) {
     if (!tablesRequested.includes(t)) continue
     if (!ALLOWED.has(t)) {

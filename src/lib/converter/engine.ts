@@ -159,6 +159,9 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
   // Phase 8F: address parser cuma trigger untuk profile orderonline_inbound.
   // Profile lain (WA paste, dst) skip — address handling beda format.
   const ENABLE_ADDRESS_PARSER = opts.profile.code === 'orderonline_inbound'
+  // Brief #5 A1 — draft path = batch. Kumpulin row, insert via 1 RPC server-side
+  // setelah loop (ganti per-row generate_order_number + insert + parseAddress fuzzy).
+  const draftRows: Array<Record<string, unknown>> = []
 
   for (let idx = 0; idx < rawRows.length; idx++) {
     const raw = rawRows[idx]
@@ -193,7 +196,9 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
       // kalau hanya address detail (free-text) → call RPC search_wilayah_fuzzy
       // untuk auto-match. Gagal parse → tetap insert order, lalu queue ke inbox.
       let addressParseFailure: AddressParseFailureForInbox | null = null
-      if (ENABLE_ADDRESS_PARSER) {
+      // Brief #5 — draft path skip parseAddress per-row (fuzzy mahal). Resolve
+      // dilakukan set-based via resolve_draft_wilayah di dalam bulk RPC.
+      if (ENABLE_ADDRESS_PARSER && !opts.targetDraft) {
         const detailFromMapping = String(
           ordersData.customer_address_detail ?? ordersData.customer_address ?? ''
         ).trim()
@@ -259,7 +264,7 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         ordersData.external_order_id != null && String(ordersData.external_order_id).trim() !== ''
           ? String(ordersData.external_order_id)
           : null
-      if (extId) {
+      if (extId && !opts.targetDraft) {
         const [archiveResp, draftResp] = await Promise.all([
           opts.supabase
             .from('orders')
@@ -293,6 +298,65 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
       const csName = ordersData.cs_name ? String(ordersData.cs_name).trim() : null
       const csId = csName ? csNameToId.get(csName.toLowerCase()) || null : null
 
+      // === Brief #5 A1 — DRAFT path: kumpulin row, batch-insert via RPC after
+      // loop (skip generate_order_number/insert per-row). ===
+      if (opts.targetDraft) {
+        const dr: Record<string, unknown> = {
+          external_order_id: extId,
+          payment_method: ordersData.payment_method || 'COD',
+          customer_name: String(ordersData.customer_name).trim(),
+          customer_phone: nullableStr(ordersData.customer_phone),
+          customer_province: nullableStr(ordersData.customer_province),
+          customer_city: nullableStr(ordersData.customer_city),
+          customer_subdistrict: nullableStr(ordersData.customer_subdistrict),
+          customer_village: nullableStr(ordersData.customer_village),
+          customer_zip: nullableStr(ordersData.customer_zip),
+          customer_address_detail: nullableStr(ordersData.customer_address_detail),
+          customer_address: nullableStr(ordersData.customer_address),
+          subtotal: toNumber(ordersData.subtotal),
+          shipping_cost: toNumber(ordersData.shipping_cost),
+          discount: toNumber(ordersData.discount),
+          total: toNumber(ordersData.total),
+          cod_amount: ordersData.cod_amount != null ? toNumber(ordersData.cod_amount) : null,
+          cs_name: csName,
+          cs_id: csId,
+          notes: nullableStr(ordersData.notes),
+          customer_note: nullableStr(ordersData.customer_note),
+          tags: Array.isArray(ordersData.tags) ? ordersData.tags : (ordersData.tags ? [String(ordersData.tags)] : []),
+          priority: ['LOW', 'NORMAL', 'URGENT'].includes(String(ordersData.priority)) ? ordersData.priority : 'NORMAL',
+          meta: Object.keys(metaData).length ? metaData : null,
+          raw_data: raw,
+        }
+        if (ordersData.order_date) {
+          const od = parseOrderDate(ordersData.order_date)
+          if (od) dr.order_date = od
+        }
+        if (toNumber(dr.total) === 0 && toNumber(dr.subtotal) > 0) {
+          dr.total = toNumber(dr.subtotal) + toNumber(dr.shipping_cost) - toNumber(dr.discount)
+        }
+        const itemForDraft = buildItemPayload(itemData, ordersData, opts.organizationId, 0, productMatcher, opts.supabase, batchId)
+        if (itemForDraft) {
+          dr._item = {
+            product_id: itemForDraft.product_id ?? null,
+            variant_id: itemForDraft.variant_id ?? null,
+            product_name_raw: itemForDraft.product_name_raw ?? '',
+            variation: itemForDraft.variation ?? null,
+            product_code_raw: itemForDraft.product_code_raw ?? null,
+            qty: itemForDraft.qty ?? 1,
+            weight_per_unit: itemForDraft.weight_per_unit ?? null,
+            price: itemForDraft.price ?? 0,
+            hpp_snapshot: itemForDraft.hpp_snapshot ?? null,
+            notes: itemForDraft.notes ?? null,
+          }
+        }
+        draftRows.push(dr)
+        if (phoneFailure) {
+          result.warnings.push({ rowIndex, message: `Phone "${phoneFailure.raw_phone}" invalid (${phoneFailure.reason}) — perbaiki di Antrian Kerja.` })
+        }
+        continue
+      }
+
+      // === ARCHIVE path (non-draft, legacy/rekonsil) — per-row ===
       // Generate order_number via RPC
       const { data: orderNumber, error: numErr } = await opts.supabase.rpc(
         'generate_order_number',
@@ -484,6 +548,32 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
       })
     }
     opts.onProgress?.(idx + 1, rawRows.length)
+  }
+
+  // Brief #5 A1 — batch-insert semua draft rows dalam 1 RPC server-side (dedup +
+  // generate order_number batch + insert + resolve alamat set-based). Ini yang
+  // bikin import 124 order dari "lama banget" → detik (no per-row round-trip).
+  if (opts.targetDraft && draftRows.length > 0) {
+    const channelIdForBatch =
+      opts.channelIdOverride != null
+        ? opts.channelIdOverride
+        : opts.profile.channel_id || opts.profile.default_channel_id || null
+    const { data: bulkRes, error: bulkErr } = await opts.supabase.rpc('bulk_insert_orders_draft', {
+      p_rows: draftRows,
+      p_org: opts.organizationId,
+      p_initial_status: opts.initialStatus,
+      p_created_by: opts.createdBy ?? null,
+      p_source_profile_id: opts.profile.id,
+      p_channel_id: channelIdForBatch,
+    })
+    if (bulkErr) {
+      result.errors.push({ rowIndex: -1, reason: `Bulk insert draft gagal: ${bulkErr.message}`, raw: {} })
+    } else if (bulkRes) {
+      const br = bulkRes as { inserted?: number; skipped_duplicates?: number; inserted_ids?: number[] }
+      result.inserted += br.inserted ?? 0
+      result.skipped_duplicates += br.skipped_duplicates ?? 0
+      if (Array.isArray(br.inserted_ids)) result.inserted_order_ids.push(...br.inserted_ids)
+    }
   }
 
   return result

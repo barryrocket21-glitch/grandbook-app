@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -9,10 +9,62 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, Pencil } from 'lucide-react'
+import { Loader2, Pencil, MapPin, Search } from 'lucide-react'
 import type { OrderDraftEnriched } from '@/lib/types'
 
 const supabase = createClient()
+
+interface WilayahHit { id: number; province: string; city: string; subdistrict: string; zip: string | null; score: number }
+
+/**
+ * Brief #5 — autocomplete wilayah toleran-typo. Tiap suggestion nampilin
+ * konteks LENGKAP (Kecamatan, Kota, Provinsi) biar gak salah pilih antar daerah
+ * mirip. Pilih → isi province/city/subdistrict/zip dari SATU entitas wilayah
+ * yang valid (bukan tebak field terpisah).
+ */
+function WilayahPicker({ onPick }: { onPick: (h: WilayahHit) => void }) {
+  const [q, setQ] = useState('')
+  const [hits, setHits] = useState<WilayahHit[]>([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const tRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (tRef.current) clearTimeout(tRef.current)
+    if (q.trim().length < 2) { setHits([]); return }
+    tRef.current = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const { data } = await supabase.rpc('wilayah_autocomplete', { p_query: q, p_limit: 8 })
+        setHits((data || []) as WilayahHit[])
+        setOpen(true)
+      } finally { setLoading(false) }
+    }, 300)
+  }, [q])
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+        <Input value={q} onChange={e => setQ(e.target.value)} onFocus={() => hits.length && setOpen(true)}
+          placeholder="Ketik kecamatan/kota (mis. cakung, jaktim)..." className="pl-8" />
+        {loading && <Loader2 className="absolute right-2.5 top-2.5 w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+      </div>
+      {open && hits.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-56 overflow-y-auto">
+          {hits.map(h => (
+            <button key={h.id} type="button"
+              onClick={() => { onPick(h); setQ(`${h.subdistrict}, ${h.city}`); setOpen(false) }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/60 flex items-start gap-1.5">
+              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-violet-500" />
+              <span><span className="font-medium">{h.subdistrict}</span>, {h.city}, <span className="text-muted-foreground">{h.province}</span>{h.zip ? ` · ${h.zip}` : ''}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface Props {
   open: boolean
@@ -34,6 +86,7 @@ export function DraftQuickEditDialog({ open, onOpenChange, draft, onSaved }: Pro
     customer_subdistrict: '',
     customer_city: '',
     customer_province: '',
+    customer_zip: '',
     customer_address_detail: '',
     total: 0,
     shipping_cost: 0,
@@ -56,6 +109,7 @@ export function DraftQuickEditDialog({ open, onOpenChange, draft, onSaved }: Pro
       customer_subdistrict: '',
       customer_city: draft.customer_city || '',
       customer_province: draft.customer_province || '',
+      customer_zip: '',
       customer_address_detail: '',
       total: Number(draft.total) || 0,
       shipping_cost: 0,
@@ -65,13 +119,14 @@ export function DraftQuickEditDialog({ open, onOpenChange, draft, onSaved }: Pro
     ;(async () => {
       // Fetch full draft row + first item
       const [{ data: full }, { data: items }] = await Promise.all([
-        supabase.from('orders_draft').select('customer_subdistrict, customer_address_detail, shipping_cost, internal_note').eq('id', draft.id).single(),
+        supabase.from('orders_draft').select('customer_subdistrict, customer_zip, customer_address_detail, shipping_cost, internal_note').eq('id', draft.id).single(),
         supabase.from('order_items_draft').select('id, product_name_raw, qty').eq('order_id', draft.id).order('id').limit(1),
       ])
       if (full) {
         setForm(prev => ({
           ...prev,
           customer_subdistrict: (full as { customer_subdistrict: string | null }).customer_subdistrict || '',
+          customer_zip: (full as { customer_zip: string | null }).customer_zip || '',
           customer_address_detail: (full as { customer_address_detail: string | null }).customer_address_detail || '',
           shipping_cost: Number((full as { shipping_cost: number | null }).shipping_cost) || 0,
           internal_note: (full as { internal_note: string | null }).internal_note || '',
@@ -97,6 +152,7 @@ export function DraftQuickEditDialog({ open, onOpenChange, draft, onSaved }: Pro
           customer_subdistrict: form.customer_subdistrict.trim() || null,
           customer_city: form.customer_city.trim() || null,
           customer_province: form.customer_province.trim() || null,
+          customer_zip: form.customer_zip.trim() || null,
           customer_address_detail: form.customer_address_detail.trim() || null,
           total: form.total,
           shipping_cost: form.shipping_cost,
@@ -158,6 +214,17 @@ export function DraftQuickEditDialog({ open, onOpenChange, draft, onSaved }: Pro
           <div className="col-span-2 space-y-1">
             <Label htmlFor="customer_address_detail" className="text-xs">Alamat Lengkap</Label>
             <Textarea id="customer_address_detail" value={form.customer_address_detail} onChange={e => setForm({ ...form, customer_address_detail: e.target.value })} rows={2} />
+          </div>
+          <div className="col-span-2 space-y-1">
+            <Label className="text-xs flex items-center gap-1"><MapPin className="w-3 h-3" /> Cari Wilayah (auto-isi provinsi/kota/kecamatan)</Label>
+            <WilayahPicker onPick={(h) => setForm(prev => ({
+              ...prev,
+              customer_province: h.province,
+              customer_city: h.city,
+              customer_subdistrict: h.subdistrict,
+              customer_zip: h.zip || prev.customer_zip,
+            }))} />
+            <p className="text-[10px] text-muted-foreground">Pilih dari sini biar provinsi/kota/kecamatan konsisten (1 entitas wilayah valid). Bisa juga edit manual di bawah.</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="customer_subdistrict" className="text-xs">Kecamatan</Label>

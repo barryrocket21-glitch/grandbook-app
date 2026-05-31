@@ -172,10 +172,17 @@ function OrdersDraftInner() {
 
   // Filter chip: show only rows with issues
   const [showIssuesOnly, setShowIssuesOnly] = useState(false)
-  useEffect(() => { setShowIssuesOnly(false) }, [statusFilter, search])
+  // Brief #5 A3 — alamat status: provinsi+kota keisi = Siap Export, else Alamat Kurang.
+  const [alamatKurangOnly, setAlamatKurangOnly] = useState(false)
+  const alamatKurang = (r: OrderDraftEnriched) => !(r.customer_province && r.customer_city)
+  const alamatKurangCount = useMemo(() => rows.filter(alamatKurang).length, [rows])
+  useEffect(() => { setShowIssuesOnly(false); setAlamatKurangOnly(false) }, [statusFilter, search])
   const visibleRows = useMemo(() => {
-    return showIssuesOnly ? rows.filter(r => issuesPerRow.has(r.id)) : rows
-  }, [rows, showIssuesOnly, issuesPerRow])
+    let rs = rows
+    if (showIssuesOnly) rs = rs.filter(r => issuesPerRow.has(r.id))
+    if (alamatKurangOnly) rs = rs.filter(alamatKurang)
+    return rs
+  }, [rows, showIssuesOnly, alamatKurangOnly, issuesPerRow])
 
   // Bulk select helpers
   const allOnPageSelected = rows.length > 0 && rows.every(r => selectedIds.has(r.id))
@@ -358,6 +365,22 @@ function OrdersDraftInner() {
                 Hanya draft dengan no HP, kota, atau total kosong.
               </span>
             )}
+            {/* Brief #5 A3 — Alamat Kurang chip (provinsi/kota kosong → gak bisa export) */}
+            <Button
+              type="button"
+              variant={alamatKurangOnly ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setAlamatKurangOnly(v => !v)}
+              className={`h-7 text-xs gap-1.5 ${
+                alamatKurangOnly
+                  ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
+                  : alamatKurangCount > 0 ? 'border-orange-500/50 text-orange-600 hover:bg-orange-500/10' : ''
+              }`}
+              disabled={alamatKurangCount === 0 && !alamatKurangOnly}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Alamat Kurang ({alamatKurangCount})
+            </Button>
             <span className="ml-auto text-muted-foreground">
               {totalCount.toLocaleString('id-ID')} order · halaman {page + 1}/{totalPages}
             </span>
@@ -588,7 +611,12 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
           <span className="truncate">{row.customer_name}</span>
         </div>
       </TableCell>
-      <TableCell className="text-xs">{row.customer_city || <span className="text-muted-foreground italic">—</span>}</TableCell>
+      <TableCell className="text-xs">
+        {row.customer_city || <span className="text-muted-foreground italic">—</span>}
+        {!(row.customer_province && row.customer_city)
+          ? <span title="Alamat kurang — provinsi/kota belum lengkap"><AlertTriangle className="inline w-3 h-3 ml-1 text-orange-500" /></span>
+          : <span title="Alamat lengkap — siap export" className="ml-1 text-emerald-500">✓</span>}
+      </TableCell>
       <TableCell className="text-xs text-right tabular-nums whitespace-nowrap">{formatRupiah(Number(row.total))}</TableCell>
       <TableCell className="text-center">
         <Badge variant="outline" className={`${statusColor} text-[10px]`}>{statusLabel}</Badge>

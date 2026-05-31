@@ -43,7 +43,7 @@ DROP FUNCTION IF EXISTS public.resolve_draft_wilayah(bigint, bigint[]);
 CREATE OR REPLACE FUNCTION public.resolve_draft_wilayah(p_org bigint, p_draft_ids bigint[])
 RETURNS int
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER   -- RLS orders_draft UPDATE allow owner/admin/cs (org-scoped) → cukup
 SET search_path TO 'public'
 AS $function$
 DECLARE v_n1 int; v_n2 int;
@@ -82,7 +82,8 @@ BEGIN
 END;
 $function$;
 
-REVOKE EXECUTE ON FUNCTION public.resolve_draft_wilayah(bigint, bigint[]) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.resolve_draft_wilayah(bigint, bigint[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.resolve_draft_wilayah(bigint, bigint[]) TO authenticated;
 
 -- ----------------------------------------------------------------------------
 -- wilayah_autocomplete — fuzzy suggest (inline-edit). Distinct per kecamatan.

@@ -23,10 +23,10 @@ interface TableInfo {
 }
 
 const TABLES: TableInfo[] = [
-  { key: 'orders', title: 'Orders', description: 'Semua order. Akan cascade ke: order_items, commissions, cs_daily_leads (closing count snapshot).', cascades: ['order_items', 'commissions'] },
-  { key: 'cs_daily_leads', title: 'Laporan Harian CS', description: 'Lead/closing/reject report harian per produk. Tidak terkait dengan orders, jadi safe dihapus terpisah.' },
+  { key: 'orders', title: 'Orders', description: 'Semua order. Akan cascade ke: order_items, commissions.', cascades: ['order_items', 'commissions'] },
+  { key: 'daily_cs_report', title: 'Laporan Harian CS', description: 'Lead/closing/reject report harian per produk (daily_cs_report, Phase 6 aktif).' },
   { key: 'ad_spend', title: 'Ad Spend', description: 'Pengeluaran iklan per campaign per hari (yang advertiser input).' },
-  { key: 'expenses', title: 'Biaya Operasional', description: 'Biaya operasional bulanan.' },
+  { key: 'operational_expenses', title: 'Biaya Operasional', description: 'Biaya operasional bulanan (operational_expenses, Phase 5A aktif).' },
   { key: 'ad_reconciliation', title: 'Reconciliation', description: 'Rekon tagihan bulanan Meta/TT/Google.' },
   { key: 'customers', title: 'Pelanggan (Reputasi)', description: 'Reputasi pelanggan per nomor HP (blacklist/VIP/counters). OTOMATIS ikut terhapus saat reset Orders — datanya di-derive dari orders, biar gak jadi ghost data.' },
   // CATATAN: Master/config (produk, campaign, commission rules, supplier, courier,

@@ -458,10 +458,10 @@ export default function BulkUploadPage() {
 
             <div className="flex flex-wrap gap-2 pt-2">
               <Button
-                onClick={() => router.push(canApprove && skipReview ? '/orders/list' : '/inbox/pending-review')}
+                onClick={() => router.push('/orders/draft')}
                 className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
               >
-                Lihat Order
+                Lihat Antrian Kerja
               </Button>
               <Button variant="outline" onClick={reset}>
                 Upload Lagi

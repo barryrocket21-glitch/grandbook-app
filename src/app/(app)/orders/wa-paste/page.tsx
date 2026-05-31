@@ -399,13 +399,13 @@ export default function WaPastePage() {
             )}
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
-                onClick={() => router.push('/orders/export-resi')}
+                onClick={() => router.push('/orders/draft')}
                 className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
               >
-                Langsung Export ke Ekspedisi <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                Lihat Antrian Kerja <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
-              <Button variant="outline" onClick={() => router.push('/orders/draft')}>
-                Lihat Antrian Kerja
+              <Button variant="outline" onClick={() => router.push('/orders/export-resi')}>
+                Export ke Ekspedisi
               </Button>
               <Button variant="outline" onClick={reset}>
                 Paste Lagi

@@ -613,6 +613,14 @@ export interface OrderDraftEnriched {
   customer_phone: string | null
   customer_city: string | null
   customer_province: string | null
+  customer_subdistrict: string | null
+  customer_zip: string | null
+  /**
+   * Brief #7 — SUMBER TUNGGAL kesiapan alamat. wilayah_id IS NOT NULL =
+   * alamat ke-resolve ke 1 entitas master_wilayah valid = "Siap Export".
+   * NULL = ⚠️ "Perlu Dibenerin". Chip/badge/filter/fix-mode baca ini.
+   */
+  wilayah_id: number | null
   status: DraftOrderStatus
   priority: OrderPriority
   payment_method: PaymentMethod

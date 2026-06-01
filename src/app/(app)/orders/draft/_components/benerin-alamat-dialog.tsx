@@ -188,23 +188,28 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (open) loadQueue() }, [open])
 
-  // Reset per-order + ambil saran resolver tiap pindah order
+  // Reset per-order + ambil saran resolver HANYA pas order BENERAN ganti (key by
+  // id, BUKAN object ref). Kalau parent re-render & queue ke-rebuild dengan objek
+  // baru utk order yang SAMA, ini gak re-fire → pilihan user (chosen) + input
+  // search gak ke-reset sendiri. Itu akar "refresh sendiri" pas ngetik/milih.
+  const currentId = current?.id ?? null
   useEffect(() => {
-    if (!open || !current) { setSuggestions([]); setChosen(null); return }
+    if (!open || currentId == null) { setSuggestions([]); setChosen(null); return }
     setChosen(null)
-    setAddrDetail(current.customer_address_detail || current.customer_address || '')
+    setAddrDetail(current?.customer_address_detail || current?.customer_address || '')
     setSugLoading(true)
     let cancelled = false
     ;(async () => {
       try {
-        const { data } = await supabase.rpc('suggest_draft_wilayah', { p_draft_id: current.id, p_limit: 6 })
+        const { data } = await supabase.rpc('suggest_draft_wilayah', { p_draft_id: currentId, p_limit: 6 })
         if (!cancelled) setSuggestions((data || []) as WilayahHit[])
       } finally {
         if (!cancelled) setSugLoading(false)
       }
     })()
     return () => { cancelled = true }
-  }, [open, current])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentId])
 
   const applyPick = (h: WilayahHit) => setChosen({
     wilayah_id: h.id, province: h.province, city: h.city, subdistrict: h.subdistrict, zip: h.zip,
@@ -262,21 +267,23 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
     <Dialog open={open} onOpenChange={(v) => { if (!v) close() }}>
       <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto" onKeyDown={onKeyDown}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="w-4 h-4 text-violet-500" />
+          {/* pr-8 → judul gak ketabrak tombol X di pojok kanan */}
+          <DialogTitle className="flex items-center gap-2 pr-8">
+            <Wand2 className="w-4 h-4 text-violet-500 shrink-0" />
             Benerin Alamat
-            {total > 0 && !done && (
-              <span className="ml-auto text-xs font-normal text-muted-foreground tabular-nums">
-                {Math.min(idx + 1, total)} / {total}
-              </span>
-            )}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Progress bar */}
-        {total > 0 && (
-          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden -mt-1">
-            <div className="h-full bg-violet-500 transition-all" style={{ width: `${Math.min(100, (idx / total) * 100)}%` }} />
+        {/* Progress — counter punya baris sendiri (gak nabrak X) + bar tipis */}
+        {total > 0 && !done && (
+          <div className="space-y-1 -mt-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Order ⚠️ yang lagi dibenerin</span>
+              <span className="tabular-nums font-medium text-foreground">{Math.min(idx + 1, total)} / {total}</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+              <div className="h-full bg-violet-500 transition-all" style={{ width: `${Math.min(100, (idx / total) * 100)}%` }} />
+            </div>
           </div>
         )}
 

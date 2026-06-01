@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Input } from '@/components/ui/input'
@@ -53,7 +53,9 @@ export default function OrdersDraftPage() {
 function OrdersDraftInner() {
   const { user, profile, role } = useAuth()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const initialStatus = (searchParams.get('status') || 'ALL') as 'ALL' | DraftOrderStatus
+  const canExport = role === 'owner' || role === 'admin'
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'ALL' | DraftOrderStatus>(initialStatus)
@@ -255,6 +257,18 @@ function OrdersDraftInner() {
     setResiDialogOpen(true)
   }
 
+  // Brief #9 — ke Export ke Ekspedisi dengan filter aktif kebawa + auto-ceklis ✅.
+  const goExportReady = () => {
+    const params = new URLSearchParams()
+    const st = statusFilter === 'SIAP_KIRIM' || statusFilter === 'BARU' ? statusFilter : 'ELIGIBLE'
+    params.set('status', st)
+    if (dateFrom) params.set('from', dateFrom)
+    if (dateTo) params.set('to', dateTo)
+    if (search.trim()) params.set('q', search.trim())
+    params.set('ready', '1')
+    router.push(`/orders/export-resi?${params.toString()}`)
+  }
+
   const visibleColumns: { id: string; label: string; align?: 'right' | 'center'; width?: string }[] = useMemo(() => [
     { id: 'created_at', label: 'Input', width: 'w-24' },
     { id: 'order_number', label: 'Order#', width: 'w-40' },
@@ -289,6 +303,16 @@ function OrdersDraftInner() {
               >
                 <Wand2 className="w-3.5 h-3.5" />
                 Benerin Alamat ({readiness.not_ready})
+              </Button>
+            )}
+            {canExport && readiness.ready > 0 && (
+              <Button
+                size="sm"
+                onClick={goExportReady}
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <Truck className="w-3.5 h-3.5" />
+                Export yang Siap ({readiness.ready})
               </Button>
             )}
             {canSetResi && (
@@ -329,9 +353,16 @@ function OrdersDraftInner() {
       {readiness.total > 0 && (
         <div className="flex items-center gap-2 flex-wrap text-sm rounded-lg border bg-card px-3 py-2">
           <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Kesiapan Export</span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => canExport && readiness.ready > 0 && goExportReady()}
+            disabled={!canExport || readiness.ready === 0}
+            className={`inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-xs font-medium ${
+              canExport && readiness.ready > 0 ? 'hover:bg-emerald-500/20 cursor-pointer' : ''}`}
+            title={canExport && readiness.ready > 0 ? 'Klik: Export yang Siap' : undefined}
+          >
             <CheckCircle2 className="w-3.5 h-3.5" /> Siap Export {readiness.ready.toLocaleString('id-ID')}
-          </span>
+          </button>
           {/* Klik = SARING list ke order ⚠️ (alamat belum ke-resolve). Buat
               BENERIN-nya pakai tombol "Benerin Alamat" di header (fix-mode). */}
           <button

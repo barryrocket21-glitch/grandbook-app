@@ -1,7 +1,7 @@
 'use client'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -47,6 +47,8 @@ interface OrderRow {
   status: OrderStatus
   customer_name: string
   customer_city: string | null
+  customer_province: string | null
+  wilayah_id: number | null  // Brief #9 — SUMBER TUNGGAL kesiapan export
   channel_id: number | null
   total: number
   order_date: string
@@ -73,7 +75,16 @@ const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
 ]
 
 export default function OrdersExportResiPage() {
+  return (
+    <Suspense fallback={<div className="space-y-6"><PageHeader icon={Truck} title="Export ke Ekspedisi" /></div>}>
+      <OrdersExportResiInner />
+    </Suspense>
+  )
+}
+
+function OrdersExportResiInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { profile: userProfile, role, user } = useAuth()
   const canExport = canApproveOrders(role)
 
@@ -88,11 +99,16 @@ export default function OrdersExportResiPage() {
   // Default 'ELIGIBLE' = BARU + SIAP_KIRIM. WA paste / input baru insert
   // status BARU; kalau default-nya cuma SIAP_KIRIM, halaman keliatan kosong
   // setelah submit dari WA Paste.
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ELIGIBLE')
+  // Brief #9 — terima filter dari Antrian Kerja via URL (status/from/to/q),
+  // biar "Export yang Siap" ngikut filter yang lagi aktif di sana.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
+    const s = searchParams.get('status')
+    return (s && ['SIAP_KIRIM', 'BARU', 'ELIGIBLE', 'DIKIRIM'].includes(s) ? s : 'ELIGIBLE') as StatusFilter
+  })
   const [productFilter, setProductFilter] = useState<string>('ALL')
-  const [dateFrom, setDateFrom] = useState<string>('')
-  const [dateTo, setDateTo] = useState<string>('')
-  const [search, setSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState<string>(() => searchParams.get('from') || '')
+  const [dateTo, setDateTo] = useState<string>(() => searchParams.get('to') || '')
+  const [search, setSearch] = useState(() => searchParams.get('q') || '')
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   // Step 2: Profile picker
@@ -166,7 +182,7 @@ export default function OrdersExportResiPage() {
     let q = supabase
       .from('orders_draft')
       .select(
-        'id, order_number, status, customer_name, customer_city, channel_id, total, order_date, created_at, channel:courier_channels(id, code), items:order_items_draft(id)'
+        'id, order_number, status, customer_name, customer_city, customer_province, wilayah_id, channel_id, total, order_date, created_at, channel:courier_channels(id, code), items:order_items_draft(id)'
       )
       .order('order_date', { ascending: false })
       .limit(500)
@@ -276,42 +292,19 @@ export default function OrdersExportResiPage() {
   const startGenerate = async () => {
     if (!profileBundle || !user) return
 
-    // Phase 8F — Export gate: cek tiap order siap export (alamat lengkap + channel)
-    // Block kalau ada yang gagal. Konsisten dengan keputusan owner: STRICT mode.
+    // Brief #9 — SUMBER TUNGGAL: cuma order ✅ (wilayah_id terisi) boleh export.
+    // Sama definisi kaya Antrian Kerja → SPX gak nolak lagi gara-gara alamat kurang.
     const ids = Array.from(selectedIds)
-    const notReady: Array<{ id: number; order_number: string; missing: string[] }> = []
-    for (const id of ids) {
-      try {
-        const { data, error } = await supabase.rpc('check_order_export_ready', { p_order_id: id })
-        if (error) continue
-        const row = Array.isArray(data) ? data[0] : data
-        if (row && !row.is_ready) {
-          notReady.push({
-            id,
-            order_number: String(id),
-            missing: row.missing_fields || [],
-          })
-        }
-      } catch {
-        // ignore — kalau RPC error, skip check (jangan block generate karena infra issue)
-      }
-    }
+    const notReady = ids.filter((id) => !readyIds.includes(id))
     if (notReady.length > 0) {
-      const sample = notReady.slice(0, 5).map(o =>
-        `• ${o.order_number} (missing: ${o.missing.join(', ')})`
-      ).join('\n')
-      const more = notReady.length > 5 ? `\n…dan ${notReady.length - 5} order lain` : ''
-      toast.error(
-        `${notReady.length} order belum siap export`,
-        {
-          description: `Lengkapi alamat/channel dulu sebelum generate:\n${sample}${more}`,
-          duration: 12000,
-          action: {
-            label: 'Buka Inbox Address Review',
-            onClick: () => { window.location.href = '/inbox/address-review' },
-          },
+      toast.error(`${notReady.length} order belum siap (alamat ⚠️)`, {
+        description: 'Order dengan alamat belum ke-resolve gak boleh di-export. Benerin dulu di Antrian Kerja.',
+        duration: 10000,
+        action: {
+          label: 'Buka Antrian Kerja',
+          onClick: () => { window.location.href = '/orders/draft' },
         },
-      )
+      })
       return
     }
 
@@ -400,19 +393,34 @@ export default function OrdersExportResiPage() {
     )
   }, [orders, search])
 
-  const allFilteredSelected =
-    filteredOrders.length > 0 && filteredOrders.every((o) => selectedIds.has(o.id))
+  // Brief #9 — SUMBER TUNGGAL: cuma order ✅ (wilayah_id) yang boleh ke-export.
+  const isReady = (o: OrderRow) => o.wilayah_id != null
+  const readyIds = useMemo(() => orders.filter(isReady).map((o) => o.id), [orders])
+  const readyCount = readyIds.length
+  const warnCount = orders.length - readyCount
 
-  const toggleAllFiltered = (checked: boolean) => {
+  // Auto-ceklis SEMUA ✅ tiap daftar order ke-load (default). ⚠️ gak ke-pilih.
+  // Ratusan order → ke-pilih sekaligus, admin tinggal un-ceklis yang mau ditahan.
+  useEffect(() => {
+    setSelectedIds(new Set(readyIds))
+  }, [readyIds])
+
+  const readyFiltered = useMemo(() => filteredOrders.filter(isReady), [filteredOrders])
+  const allReadySelected =
+    readyFiltered.length > 0 && readyFiltered.every((o) => selectedIds.has(o.id))
+
+  const toggleAllReady = (checked: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      if (checked) for (const o of filteredOrders) next.add(o.id)
-      else for (const o of filteredOrders) next.delete(o.id)
+      if (checked) for (const o of readyFiltered) next.add(o.id)
+      else for (const o of readyFiltered) next.delete(o.id)
       return next
     })
   }
 
   const toggleOne = (id: number, checked: boolean) => {
+    // ⚠️ (wilayah_id NULL) gak boleh ke-pilih — tahan sampe dibenerin.
+    if (checked && !readyIds.includes(id)) return
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (checked) next.add(id)
@@ -601,15 +609,26 @@ export default function OrdersExportResiPage() {
 
           <Card>
             <CardContent className="pt-4 pb-4 space-y-3">
-              <div className="text-xs text-muted-foreground flex items-center gap-3">
-                <span>{selectedIds.size} dipilih dari {filteredOrders.length} order tampil</span>
-                {selectedIds.size > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedIds(new Set())}
-                    className="text-violet-500 hover:underline"
-                  >Clear pilihan</button>
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {readyCount} siap export
+                </span>
+                {warnCount > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300 px-2 py-0.5 font-medium" title="Alamat belum ke-resolve — dibenerin dulu di Antrian Kerja">
+                    <AlertTriangle className="w-3.5 h-3.5" /> {warnCount} belum (ditahan)
+                  </span>
                 )}
+                <span className="text-muted-foreground ml-1">{selectedIds.size} ke-ceklis</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <button type="button" onClick={() => toggleAllReady(true)} className="text-violet-500 hover:underline" disabled={readyFiltered.length === 0}>
+                    Pilih semua ✅ ({readyFiltered.length})
+                  </button>
+                  {selectedIds.size > 0 && (
+                    <button type="button" onClick={() => setSelectedIds(new Set())} className="text-muted-foreground hover:underline">
+                      Kosongin
+                    </button>
+                  )}
+                </div>
               </div>
 
               {ordersLoading ? (
@@ -626,8 +645,9 @@ export default function OrdersExportResiPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10">
-                          <Checkbox checked={allFilteredSelected} onCheckedChange={(v) => toggleAllFiltered(!!v)} />
+                          <Checkbox checked={allReadySelected} onCheckedChange={(v) => toggleAllReady(!!v)} title="Pilih semua yang ✅ siap" />
                         </TableHead>
+                        <TableHead>Alamat</TableHead>
                         <TableHead>Order#</TableHead>
                         <TableHead>Customer</TableHead>
                         <TableHead>Channel</TableHead>
@@ -638,10 +658,28 @@ export default function OrdersExportResiPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredOrders.map((o) => (
-                        <TableRow key={o.id} className="cursor-pointer" onClick={() => toggleOne(o.id, !selectedIds.has(o.id))}>
+                      {filteredOrders.map((o) => {
+                        const ready = isReady(o)
+                        return (
+                        <TableRow
+                          key={o.id}
+                          className={ready ? 'cursor-pointer' : 'opacity-55'}
+                          onClick={() => { if (ready) toggleOne(o.id, !selectedIds.has(o.id)) }}
+                        >
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Checkbox checked={selectedIds.has(o.id)} onCheckedChange={(v) => toggleOne(o.id, !!v)} />
+                            <Checkbox
+                              checked={selectedIds.has(o.id)}
+                              disabled={!ready}
+                              onCheckedChange={(v) => toggleOne(o.id, !!v)}
+                              title={ready ? undefined : 'Alamat belum siap — benerin dulu di Antrian Kerja'}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {ready ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" /> Siap</span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-orange-600 text-xs" title="Alamat belum ke-resolve"><AlertTriangle className="w-3.5 h-3.5" /> Belum</span>
+                            )}
                           </TableCell>
                           <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
                           <TableCell>
@@ -654,7 +692,8 @@ export default function OrdersExportResiPage() {
                           <TableCell className="text-xs">{o.order_date?.slice(0, 10)}</TableCell>
                           <TableCell><Badge variant="outline" className="text-[10px]">{o.status}</Badge></TableCell>
                         </TableRow>
-                      ))}
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>

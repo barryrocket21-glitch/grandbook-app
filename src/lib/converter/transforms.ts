@@ -213,11 +213,13 @@ export function normalize_phone_id_safe(raw: unknown): PhoneNormalizeResult {
  * Canonicalize digit-only string ke 8xxxxxxxxx (strip 62 / 0 prefix).
  * "08123456789" → "8123456789"
  * "628123456789" → "8123456789"
+ * Brief #8: strip iteratif — double-prefix "62085..." → "85..." (bukan "085...").
  */
 function normalizeIndonesianPhone(digits: string): string {
-  if (digits.startsWith('62')) return digits.slice(2)
-  if (digits.startsWith('0')) return digits.slice(1)
-  return digits
+  let d = digits
+  if (d.startsWith('62')) d = d.slice(2)
+  d = d.replace(/^0+/, '')
+  return d
 }
 
 // =============================================================

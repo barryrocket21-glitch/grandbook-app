@@ -14,10 +14,12 @@ import type { CustomerEnriched, CustomerReputation, CustomerRiskTier } from '@/l
  */
 export function toCanonicalPhone(raw: string | null | undefined): string | null {
   if (!raw) return null
-  const digits = raw.replace(/\D/g, '')
+  let digits = raw.replace(/\D/g, '')
+  // Brief #8: strip iteratif — handle double-prefix "+62085..." → "85...".
+  // Buang country code 62 dulu, baru semua trunk-zero di depan.
+  if (digits.startsWith('62')) digits = digits.slice(2)
+  digits = digits.replace(/^0+/, '')
   if (digits.length < 8) return null
-  if (digits.startsWith('62')) return digits.slice(2)
-  if (digits.startsWith('0')) return digits.slice(1)
   return digits
 }
 

@@ -125,6 +125,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
   const [suggestions, setSuggestions] = useState<WilayahHit[]>([])
   const [sugLoading, setSugLoading] = useState(false)
   const [chosen, setChosen] = useState<Chosen | null>(null)
+  const [autoPicked, setAutoPicked] = useState(false)  // ★ dominan ke-pilih otomatis
   const [addrDetail, setAddrDetail] = useState('')
   const [saving, setSaving] = useState(false)
   const [fixedCount, setFixedCount] = useState(0)
@@ -194,15 +195,27 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
   // search gak ke-reset sendiri. Itu akar "refresh sendiri" pas ngetik/milih.
   const currentId = current?.id ?? null
   useEffect(() => {
-    if (!open || currentId == null) { setSuggestions([]); setChosen(null); return }
+    if (!open || currentId == null) { setSuggestions([]); setChosen(null); setAutoPicked(false); return }
     setChosen(null)
+    setAutoPicked(false)
     setAddrDetail(current?.customer_address_detail || current?.customer_address || '')
     setSugLoading(true)
     let cancelled = false
     ;(async () => {
       try {
         const { data } = await supabase.rpc('suggest_draft_wilayah', { p_draft_id: currentId, p_limit: 6 })
-        if (!cancelled) setSuggestions((data || []) as WilayahHit[])
+        if (cancelled) return
+        const hits = (data || []) as WilayahHit[]
+        setSuggestions(hits)
+        // PRE-SELECT ★ HANYA kalau dominan: skor top tinggi (≥90 = ter-korroborasi)
+        // DAN jauh di atas kandidat kedua (gap ≥15). Ambigu (mis. Kapuas Hulu vs
+        // Kapuas, skornya mepet) → JANGAN pre-select → admin milih sadar.
+        const top = hits[0]
+        const dominant = !!top && top.score >= 90 && (hits.length === 1 || top.score - (hits[1]?.score ?? 0) >= 15)
+        if (dominant) {
+          setChosen({ wilayah_id: top.id, province: top.province, city: top.city, subdistrict: top.subdistrict, zip: top.zip })
+          setAutoPicked(true)
+        }
       } finally {
         if (!cancelled) setSugLoading(false)
       }
@@ -211,9 +224,10 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, currentId])
 
-  const applyPick = (h: WilayahHit) => setChosen({
-    wilayah_id: h.id, province: h.province, city: h.city, subdistrict: h.subdistrict, zip: h.zip,
-  })
+  const applyPick = (h: WilayahHit) => {
+    setChosen({ wilayah_id: h.id, province: h.province, city: h.city, subdistrict: h.subdistrict, zip: h.zip })
+    setAutoPicked(false)  // pilihan manual menggantikan auto-select
+  }
 
   const advance = () => {
     if (idx + 1 >= total) { setIdx(total) } // → layar selesai
@@ -342,6 +356,11 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
                 <Wand2 className="w-3 h-3" /> Saran wilayah {sugLoading && <Loader2 className="w-3 h-3 animate-spin" />}
               </p>
+              {autoPicked && (
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> ★ teratas dipilih otomatis (yakin) — tekan <kbd className="px-1 rounded bg-muted text-[10px]">Enter</kbd> buat konfirmasi, atau ganti di bawah.
+                </p>
+              )}
               {!sugLoading && suggestions.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">Gak ada saran otomatis — pakai pencarian manual di bawah.</p>
               ) : (
@@ -374,10 +393,19 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
               <WilayahPicker onPick={applyPick} />
             </div>
 
-            {/* Alamat detail editable */}
+            {/* Alamat detail editable — SIMPAN patokan/landmark, jangan dihapus */}
             <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Alamat detail (jalan/RT/RW)</p>
-              <Input value={addrDetail} onChange={e => setAddrDetail(e.target.value)} placeholder="Jl. ... RT/RW ..." />
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Alamat detail (jalan/RT/RW + patokan)
+              </p>
+              <textarea
+                value={addrDetail}
+                onChange={e => setAddrDetail(e.target.value)}
+                rows={2}
+                placeholder="Jl. ... RT/RW ... (+ patokan, mis. 'depan warung Bu Siti')"
+                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-violet-500"
+              />
+              <p className="text-[10px] text-muted-foreground">Detail mentah + patokan disimpan apa adanya buat driver — gak kehapus pas wilayah di-set.</p>
             </div>
 
             {/* Actions */}

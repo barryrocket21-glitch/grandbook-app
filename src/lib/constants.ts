@@ -127,6 +127,7 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Antrian Kerja', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },
       { title: 'Export ke Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
       { title: 'Post-Export (Nunggu Resi)', href: '/orders/post-export', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Sync Status SPX', href: '/reconciliation/spx-status', roles: ['owner', 'admin'] },
       { title: 'Arsip Semua Order', href: '/orders/list', roles: ['owner', 'admin', 'akunting'] },
     ],
   },

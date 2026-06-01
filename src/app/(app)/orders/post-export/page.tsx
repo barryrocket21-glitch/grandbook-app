@@ -143,9 +143,17 @@ export default function PostExportPage() {
                     <TableCell className="text-xs whitespace-nowrap">{r.exported_at ? formatDate(r.exported_at) : '—'}</TableCell>
                     <TableCell className="font-mono text-xs whitespace-nowrap">{r.order_number}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-[10px] whitespace-nowrap">
-                        Sudah Diexport
-                      </Badge>
+                      {(() => {
+                        // Brief #13 — status seragam dari sync. Sebelum sync = Sudah Diexport.
+                        const map: Record<string, { label: string; cls: string }> = {
+                          DITERIMA: { label: 'Terkirim', cls: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' },
+                          RETUR: { label: 'Retur', cls: 'bg-orange-500/10 text-orange-600 border-orange-500/30' },
+                          DIKIRIM: { label: 'Dikirim', cls: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
+                          PROBLEM: { label: 'Problem', cls: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
+                        }
+                        const m = map[r.status] || { label: 'Sudah Diexport', cls: 'bg-blue-500/10 text-blue-600 border-blue-500/30' }
+                        return <Badge variant="outline" className={`${m.cls} text-[10px] whitespace-nowrap`}>{m.label}</Badge>
+                      })()}
                     </TableCell>
                     <TableCell className="text-xs">{r.customer_name}</TableCell>
                     <TableCell className="text-xs">{r.customer_city || '—'}</TableCell>

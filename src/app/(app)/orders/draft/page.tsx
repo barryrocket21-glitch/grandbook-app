@@ -166,7 +166,8 @@ function OrdersDraftInner() {
   const computeQualityIssues = (r: OrderDraftEnriched): string[] => {
     const issues: string[] = []
     if (!r.customer_phone || String(r.customer_phone).trim().length < 8) issues.push('No HP missing/invalid')
-    if (!r.customer_city) issues.push('Kota kosong')
+    // Kota/alamat TIDAK dihitung di sini — itu urusan "Perlu Dibenerin" (wilayah_id).
+    // Chip ini khusus masalah SELAIN alamat biar gak tumpang-tindih angkanya.
     if (!r.customer_name || r.customer_name.trim().length < 3) issues.push('Nama terlalu pendek')
     if (Number(r.total) === 0) issues.push('Total Rp 0')
     // Brief #1 — Customer Risk berdasarkan reputasi nomor HP
@@ -193,7 +194,6 @@ function OrdersDraftInner() {
   // (bukan lagi proxy provinsi+kota dari #5). Chip/badge/filter/fix-mode samaaa.
   const [alamatKurangOnly, setAlamatKurangOnly] = useState(false)
   const alamatKurang = (r: OrderDraftEnriched) => !r.wilayah_id
-  const alamatKurangCount = useMemo(() => rows.filter(alamatKurang).length, [rows])
   useEffect(() => { setShowIssuesOnly(false); setAlamatKurangOnly(false) }, [statusFilter, search])
   const visibleRows = useMemo(() => {
     let rs = rows
@@ -320,6 +320,7 @@ function OrdersDraftInner() {
           activeStatus={statusFilter}
           onStatusClick={(s) => setStatusFilter(s)}
           loading={statsLoading}
+          notReady={readiness.not_ready}
         />
       </div>
 
@@ -331,15 +332,19 @@ function OrdersDraftInner() {
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-xs font-medium">
             <CheckCircle2 className="w-3.5 h-3.5" /> Siap Export {readiness.ready.toLocaleString('id-ID')}
           </span>
+          {/* Klik = SARING list ke order ⚠️ (alamat belum ke-resolve). Buat
+              BENERIN-nya pakai tombol "Benerin Alamat" di header (fix-mode). */}
           <button
             type="button"
-            onClick={() => readiness.not_ready > 0 && setBenerinOpen(true)}
+            onClick={() => readiness.not_ready > 0 && setAlamatKurangOnly(v => !v)}
             disabled={readiness.not_ready === 0}
             className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
-              readiness.not_ready > 0
-                ? 'border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20 cursor-pointer'
-                : 'border-border bg-muted text-muted-foreground'}`}
-            title={readiness.not_ready > 0 ? 'Klik untuk Benerin Alamat' : undefined}
+              readiness.not_ready === 0
+                ? 'border-border bg-muted text-muted-foreground'
+                : alamatKurangOnly
+                  ? 'border-orange-500 bg-orange-500 text-white'
+                  : 'border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20 cursor-pointer'}`}
+            title={readiness.not_ready > 0 ? (alamatKurangOnly ? 'Klik: tampilkan semua lagi' : 'Klik: saring tampilkan cuma yang perlu dibenerin') : undefined}
           >
             <AlertTriangle className="w-3.5 h-3.5" /> Perlu Dibenerin {readiness.not_ready.toLocaleString('id-ID')}
           </button>
@@ -399,7 +404,21 @@ function OrdersDraftInner() {
             )}
           </div>
           <div className="flex items-center gap-2 text-xs flex-wrap">
-            {/* Quality filter chip */}
+            {/* Saring alamat ⚠️ — kalau lagi aktif dari banner "Perlu Dibenerin",
+                kasih tau + tombol matiin. Alamat-readiness cuma 1 angka (banner). */}
+            {alamatKurangOnly && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setAlamatKurangOnly(false)}
+                className="h-7 text-xs gap-1.5 bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+              >
+                <AlertTriangle className="w-3 h-3" />
+                Saring: alamat perlu dibenerin
+                <X className="w-3 h-3" />
+              </Button>
+            )}
+            {/* Quality filter chip — issue NON-alamat (no HP / nama / total / reputasi) */}
             <Button
               type="button"
               variant={showIssuesOnly ? 'default' : 'outline'}
@@ -413,31 +432,16 @@ function OrdersDraftInner() {
                     : ''
               }`}
               disabled={issuesPerRow.size === 0 && !showIssuesOnly}
+              title="Order dengan masalah SELAIN alamat: no HP, nama, total Rp 0, atau reputasi customer"
             >
               <AlertTriangle className="w-3 h-3" />
-              Data tidak lengkap ({issuesPerRow.size})
+              Data lain bermasalah ({issuesPerRow.size})
             </Button>
             {showIssuesOnly && (
               <span className="text-xs text-muted-foreground">
-                Hanya draft dengan no HP, kota, atau total kosong.
+                No HP / nama / total Rp 0 / reputasi (di halaman ini). Alamat dibenerin lewat tombol di atas.
               </span>
             )}
-            {/* Brief #5 A3 — Alamat Kurang chip (provinsi/kota kosong → gak bisa export) */}
-            <Button
-              type="button"
-              variant={alamatKurangOnly ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setAlamatKurangOnly(v => !v)}
-              className={`h-7 text-xs gap-1.5 ${
-                alamatKurangOnly
-                  ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
-                  : alamatKurangCount > 0 ? 'border-orange-500/50 text-orange-600 hover:bg-orange-500/10' : ''
-              }`}
-              disabled={alamatKurangCount === 0 && !alamatKurangOnly}
-            >
-              <AlertTriangle className="w-3 h-3" />
-              Alamat Kurang ({alamatKurangCount})
-            </Button>
             <span className="ml-auto text-muted-foreground">
               {totalCount.toLocaleString('id-ID')} order · halaman {page + 1}/{totalPages}
             </span>

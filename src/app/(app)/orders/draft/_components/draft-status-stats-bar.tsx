@@ -17,6 +17,12 @@ interface DraftStatusStatsBarProps {
   activeStatus: DraftStatus | 'ALL' | null
   onStatusClick: (status: DraftStatus | 'ALL') => void
   loading?: boolean
+  /**
+   * Brief #7 — jumlah order yang alamatnya belum ke-resolve (wilayah_id NULL).
+   * Dipajang di kartu SIAP_KIRIM biar gak kebaca "100% beres" padahal sebagian
+   * belum siap export. Status = tahap kerja; ini = kesiapan export (beda hal).
+   */
+  notReady?: number
 }
 
 const DRAFT_STATUSES: DraftStatus[] = ['BARU', 'SIAP_KIRIM', 'PROBLEM', 'CANCEL']
@@ -27,6 +33,7 @@ export function DraftStatusStatsBar({
   activeStatus,
   onStatusClick,
   loading,
+  notReady = 0,
 }: DraftStatusStatsBarProps) {
   const totalActive = !activeStatus || activeStatus === 'ALL'
   const statsByStatus = new Map(stats.map((s) => [s.status, s]))
@@ -56,6 +63,7 @@ export function DraftStatusStatsBar({
             active={!totalActive && activeStatus === st}
             loading={loading}
             onClick={() => onStatusClick(st)}
+            warn={st === 'SIAP_KIRIM' && notReady > 0 ? notReady : undefined}
           />
         )
       })}
@@ -64,7 +72,7 @@ export function DraftStatusStatsBar({
 }
 
 function StatCard({
-  label, cnt, pct, color, active, loading, onClick,
+  label, cnt, pct, color, active, loading, onClick, warn,
 }: {
   label: string
   cnt: number
@@ -73,6 +81,7 @@ function StatCard({
   active: boolean
   loading?: boolean
   onClick: () => void
+  warn?: number
 }) {
   return (
     <button
@@ -86,11 +95,17 @@ function StatCard({
     >
       <div className="flex items-baseline gap-1.5 w-full">
         <span className="text-xl font-bold tabular-nums leading-none">{cnt.toLocaleString('id-ID')}</span>
-        {pct !== null && cnt > 0 && (
+        {/* pct disembunyiin kalau ada warn — biar gak kebaca "100% beres" */}
+        {pct !== null && cnt > 0 && warn === undefined && (
           <span className="text-[10px] text-current/70 tabular-nums">({pct.toFixed(1)}%)</span>
         )}
       </div>
       <div className="text-[10px] mt-1 uppercase tracking-wide font-medium text-current/80">{label}</div>
+      {warn !== undefined && (
+        <div className="mt-1 inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] font-semibold bg-orange-500/15 text-orange-700 dark:text-orange-300 normal-case tracking-normal">
+          ⚠️ {warn.toLocaleString('id-ID')} belum siap export
+        </div>
+      )}
     </button>
   )
 }

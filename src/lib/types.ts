@@ -645,6 +645,8 @@ export interface OrderDraftEnriched {
   /** Brief #11 — NULL = zona Antrian Kerja (kerjaan); NOT NULL = zona Post-Export */
   exported_at: string | null
   exported_channel_name: string | null
+  /** Brief #13 — resi dari sync SPX (read-only di list) */
+  tracking_no: string | null
   total_count: number
 }
 

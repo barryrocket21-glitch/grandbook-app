@@ -118,6 +118,7 @@ export default function PostExportPage() {
                 <SortHead k="exported_at" label="Diexport" />
                 <SortHead k="order_number" label="Order#" />
                 <TableHead>Status</TableHead>
+                <TableHead>Resi</TableHead>
                 <SortHead k="customer_name" label="Customer" />
                 <SortHead k="customer_city" label="Kota" />
                 <TableHead>Produk</TableHead>
@@ -129,11 +130,11 @@ export default function PostExportPage() {
             <TableBody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}><TableCell colSpan={9}><div className="h-4 bg-muted animate-pulse rounded" /></TableCell></TableRow>
+                  <TableRow key={i}><TableCell colSpan={10}><div className="h-4 bg-muted animate-pulse rounded" /></TableCell></TableRow>
                 ))
               ) : sorted.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="p-0">
+                  <TableCell colSpan={10} className="p-0">
                     <EmptyState icon={Inbox} title="Belum ada order diexport" description="Order yang udah di-generate ke file ekspedisi bakal muncul di sini." />
                   </TableCell>
                 </TableRow>
@@ -154,6 +155,9 @@ export default function PostExportPage() {
                         const m = map[r.status] || { label: 'Sudah Diexport', cls: 'bg-blue-500/10 text-blue-600 border-blue-500/30' }
                         return <Badge variant="outline" className={`${m.cls} text-[10px] whitespace-nowrap`}>{m.label}</Badge>
                       })()}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs whitespace-nowrap">
+                      {r.tracking_no || <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell className="text-xs">{r.customer_name}</TableCell>
                     <TableCell className="text-xs">{r.customer_city || '—'}</TableCell>

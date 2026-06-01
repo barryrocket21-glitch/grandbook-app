@@ -246,7 +246,15 @@ BEGIN
     WHERE w.w <> '' AND length(w.w) >= 3
   ),
   grams AS (
-    SELECT w AS g FROM words WHERE length(w) >= 4
+    -- 1-kata: buang kata arah/generik (barat/timur/raya/desa/dst) yang sering
+    -- false-match ke subdistrict bernama sama di daerah lain (mis. "barat" →
+    -- Kec. Barat, Magetan untuk alamat Manado). Multi-kata tetap dipakai.
+    SELECT w AS g FROM words
+    WHERE length(w) >= 4 AND w NOT IN (
+      'barat','timur','utara','selatan','tengah','pusat','raya','baru','jaya',
+      'kota','desa','dusun','jalan','blok','lingkungan','kelurahan','kecamatan',
+      'kabupaten','provinsi','perumahan','komplek','kompleks','gang','nomor'
+    )
     UNION ALL SELECT a.w || ' ' || b.w FROM words a JOIN words b ON b.ord = a.ord + 1
     UNION ALL SELECT a.w || ' ' || b.w || ' ' || c.w FROM words a JOIN words b ON b.ord = a.ord + 1 JOIN words c ON c.ord = a.ord + 2
   ),

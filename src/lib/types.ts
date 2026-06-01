@@ -392,7 +392,9 @@ export interface Product {
   id: number
   organization_id?: number
   sku: string | null
-  name: string
+  name: string  // internal match key (yang diketik CS) — Brief #10
+  display_name?: string | null  // Brief #10 — nama bersih utk resi/SPX
+  weight_kg?: number | null     // Brief #10 — berat flat per produk (kg); NULL = belum diisi
   price_default: number
   hpp: number
   // Legacy text column — preserved for read compat, new writes use category_id

@@ -154,6 +154,9 @@ export interface SaveProductPayload {
   supplierId?: number | null
   // Brief #3 — fee packing per produk (masuk HPP)
   packingFee?: number
+  // Brief #10 — nama bersih (resi/SPX) + berat flat (kg)
+  displayName?: string | null
+  weightKg?: number | null
   // Simple product fields
   simplePrice?: number
   simpleHpp?: number
@@ -193,6 +196,9 @@ export async function saveProduct(
     ...(payload.supplierId !== undefined ? { supplier_id: payload.supplierId } : {}),
     // Brief #3 — packing_fee (per produk, masuk HPP per order)
     ...(payload.packingFee !== undefined ? { packing_fee: payload.packingFee } : {}),
+    // Brief #10 — display_name (resi bersih) + weight_kg (flat, kg)
+    ...(payload.displayName !== undefined ? { display_name: payload.displayName } : {}),
+    ...(payload.weightKg !== undefined ? { weight_kg: payload.weightKg } : {}),
   }
 
   let productId: number

@@ -286,7 +286,10 @@ export function computeTotalWeight(
 export function formatProductSummary(items: OrderItem[]): string {
   return items
     .map((it) => {
-      const name = it.product_name_raw ?? '(unknown)'
+      // Brief #10 — nama BERSIH (display_name) ke resi/SPX, BUKAN internal_name
+      // (product_name_raw yg diketik CS, bocor kode). Fallback ke raw kalau
+      // produk gak ke-match / display_name kosong.
+      const name = it.product?.display_name?.trim() || it.product_name_raw || '(unknown)'
       const variation = it.variation ? ` ${it.variation}` : ''
       return `${it.qty}x ${name}${variation}`
     })
@@ -302,15 +305,39 @@ export function resolveOrderTotalWeightKg(order: OrderForOutbound): string {
   const items = order.items ?? []
   if (items.length === 0) return '0.5'
 
-  const totalGrams = items.reduce((sum, it) => {
-    const w = Number(it.weight_per_unit ?? 0)
+  // Brief #10 — SUMBER TUNGGAL berat = products.weight_kg (flat, KG) × qty.
+  // Fallback ke weight_per_unit legacy (GRAM, dari Orderonline) /1000 kalau
+  // produk gak punya weight_kg. Kalau dua-duanya kosong → 0 (di-flag, lihat
+  // hasOrderWeightGap) — JANGAN diam-diam jadi 0.5.
+  let totalKg = 0
+  for (const it of items) {
     const q = Number(it.qty ?? 1)
-    if (!Number.isFinite(w) || !Number.isFinite(q)) return sum
-    return sum + w * q
-  }, 0)
+    if (!Number.isFinite(q)) continue
+    const wk = it.product?.weight_kg
+    if (wk != null && Number(wk) > 0) {
+      totalKg += Number(wk) * q
+    } else {
+      const legacyGram = Number(it.weight_per_unit ?? 0)
+      if (Number.isFinite(legacyGram) && legacyGram > 0) totalKg += (legacyGram / 1000) * q
+    }
+  }
 
-  if (totalGrams <= 0) return '0.5'
-  return (totalGrams / 1000).toFixed(1)
+  if (totalKg <= 0) return '0.5'  // last-resort; order ini ke-flag via hasOrderWeightGap
+  return totalKg.toFixed(1)
+}
+
+/**
+ * Brief #10 — true kalau ada item yang produk-nya BELUM diisi weight_kg (dan gak
+ * ada legacy weight). Dipakai buat flag "berat belum diisi" di preview/export —
+ * jangan kirim berat asal-asalan diam-diam.
+ */
+export function hasOrderWeightGap(order: OrderForOutbound): boolean {
+  const items = order.items ?? []
+  return items.some((it) => {
+    const wk = it.product?.weight_kg
+    const legacy = Number(it.weight_per_unit ?? 0)
+    return !(wk != null && Number(wk) > 0) && !(Number.isFinite(legacy) && legacy > 0)
+  })
 }
 
 export function concatFullAddress(order: OrderForOutbound): string {

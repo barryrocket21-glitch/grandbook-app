@@ -420,6 +420,8 @@ export type ProductCategoryFormData = z.infer<typeof productCategorySchema>
 export const productSchema = z.object({
   sku: z.string().max(40).nullable().optional(),
   name: z.string().min(1, 'Nama wajib diisi').max(200),
+  display_name: z.string().max(200).nullable().optional(),  // Brief #10 — nama bersih resi/SPX
+  weight_kg: z.number().min(0).max(1000).nullable().optional(),  // Brief #10 — berat flat (kg)
   category_id: z.number().int().positive().nullable().optional(),
   variation: z.string().max(120).nullable().optional(),
   price_default: z.number().min(0, 'Harga harus >= 0'),

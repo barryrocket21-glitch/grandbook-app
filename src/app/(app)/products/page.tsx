@@ -161,6 +161,12 @@ export default function ProductsListPage() {
                       <Link href={`/products/${r.id}/edit`} className="hover:underline">
                         {r.name}
                       </Link>
+                      {/* Brief #10 — flag berat belum diisi (jangan export 0 diam-diam) */}
+                      {(r.weight_kg == null) && (
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded border border-orange-500/40 bg-orange-500/10 px-1 py-0.5 text-[9px] text-orange-600 align-middle" title="Berat (kg) belum diisi — export SPX bisa salah berat">
+                          <AlertTriangle className="w-2.5 h-2.5" /> berat?
+                        </span>
+                      )}
                       {r.sku && <div className="text-[10px] font-mono text-muted-foreground">{r.sku}</div>}
                     </TableCell>
                     <TableCell className="text-center">

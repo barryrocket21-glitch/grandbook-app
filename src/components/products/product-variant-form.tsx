@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2, Save, ChevronLeft, Warehouse, Package } from 'lucide-react'
+import { Plus, X, Loader2, Save, ChevronLeft, Warehouse, Package, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -85,6 +85,9 @@ export function ProductVariantForm({ productId }: Props) {
 
   // Brief #3 — fee packing per produk (masuk HPP, per pcs). Default 0.
   const [packingFee, setPackingFee] = useState<number>(0)
+  // Brief #10 — nama bersih (resi/SPX) + berat flat (kg). weightKg null = belum diisi.
+  const [displayName, setDisplayName] = useState<string>('')
+  const [weightKg, setWeightKg] = useState<number | null>(null)
 
   // Loading existing product
   useEffect(() => {
@@ -99,6 +102,11 @@ export function ProductVariantForm({ productId }: Props) {
         setHasVariants(!!product.has_variants)
         setSupplierId(product.supplier_id ?? null)
         setPackingFee(Number((product as { packing_fee?: number }).packing_fee ?? 0))
+        setDisplayName(String((product as { display_name?: string | null }).display_name ?? product.name ?? ''))
+        {
+          const wk = (product as { weight_kg?: number | null }).weight_kg
+          setWeightKg(wk == null ? null : Number(wk))
+        }
         if (!product.has_variants) {
           const v = product.variants[0]
           setSimplePrice(Number(v?.price ?? product.price_default ?? 0))
@@ -326,6 +334,8 @@ export function ProductVariantForm({ productId }: Props) {
         hasVariants,
         supplierId,
         packingFee,
+        displayName: displayName.trim() || name,
+        weightKg,
         simplePrice,
         simpleHpp,
         attributeIds: attributesUsed.map(a => a.id),
@@ -384,8 +394,33 @@ export function ProductVariantForm({ productId }: Props) {
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
-            <Label htmlFor="name">Nama Produk *</Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} maxLength={120} placeholder="Sepatu Slip-on, Jaring Paranet, dll" />
+            <Label htmlFor="name">Nama Produk (internal / match) *</Label>
+            <Input id="name" value={name} onChange={e => setName(e.target.value)} maxLength={120} placeholder="TM Jaring Paranet G — yang DIKETIK CS di WA" />
+            <p className="text-[10px] text-muted-foreground">Yang diketik CS buat nyocokin order. Boleh ada kode internal.</p>
+          </div>
+
+          {/* Brief #10 — Nama bersih (resi/SPX) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="display_name">Nama Tampil (resi/SPX — bersih)</Label>
+            <Input id="display_name" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={200} placeholder="Jaring Paranet — yang muncul ke kurir/pembeli" />
+            <p className="text-[10px] text-muted-foreground">Ini yang masuk ke file SPX (item name). Kode internal gak bocor ke pembeli. Kosong → pakai nama internal.</p>
+          </div>
+
+          {/* Brief #10 — Berat flat per produk (kg) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="weight_kg" className="flex items-center gap-1.5">
+              <Package className="size-3.5" /> Berat (kg) per pcs
+            </Label>
+            <Input
+              id="weight_kg" type="number" min={0} step="0.1"
+              value={weightKg ?? ''}
+              onChange={e => setWeightKg(e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="mis. 0.5"
+              className="max-w-[160px]"
+            />
+            {weightKg == null
+              ? <p className="text-[10px] text-orange-600 flex items-center gap-1"><AlertTriangle className="size-3" /> Berat belum diisi — SPX bakal nimbang 0/asal. Isi biar berat export bener.</p>
+              : <p className="text-[10px] text-muted-foreground">Berat flat (estimasi). Berat order = Σ(berat × qty). SPX nimbang ulang pas pickup.</p>}
           </div>
 
           <div className="flex items-center gap-2">

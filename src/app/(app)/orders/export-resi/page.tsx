@@ -49,6 +49,7 @@ interface OrderRow {
   customer_city: string | null
   customer_province: string | null
   wilayah_id: number | null  // Brief #9 — SUMBER TUNGGAL kesiapan export
+  exported_at: string | null  // Brief #11 — anti dobel-export
   channel_id: number | null
   total: number
   order_date: string
@@ -110,6 +111,8 @@ function OrdersExportResiInner() {
   const [dateTo, setDateTo] = useState<string>(() => searchParams.get('to') || '')
   const [search, setSearch] = useState(() => searchParams.get('q') || '')
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  // Brief #11 — default sembunyiin yang udah diexport (anti dobel). Toggle = re-export.
+  const [includeExported, setIncludeExported] = useState(false)
 
   // Step 2: Profile picker
   const [profiles, setProfiles] = useState<ConverterProfile[]>([])
@@ -182,10 +185,12 @@ function OrdersExportResiInner() {
     let q = supabase
       .from('orders_draft')
       .select(
-        'id, order_number, status, customer_name, customer_city, customer_province, wilayah_id, channel_id, total, order_date, created_at, channel:courier_channels(id, code), items:order_items_draft(id)'
+        'id, order_number, status, customer_name, customer_city, customer_province, wilayah_id, exported_at, channel_id, total, order_date, created_at, channel:courier_channels(id, code), items:order_items_draft(id)'
       )
       .order('order_date', { ascending: false })
       .limit(500)
+    // Brief #11 — default cuma yang BELUM diexport (anti dobel). Re-export → toggle.
+    if (!includeExported) q = q.is('exported_at', null)
     if (channelFilter !== 'ALL') {
       // Phase 8K — aggregator filter (e.g. "AGG:LINCAH") expands to all channels
       // under that aggregator. Lincah/Mengantar pakai 1 profile untuk semua
@@ -217,7 +222,7 @@ function OrdersExportResiInner() {
     })) as OrderRow[]
     setOrders(rows)
     setOrdersLoading(false)
-  }, [channelFilter, statusFilter, productFilter, dateFrom, dateTo, channels])
+  }, [channelFilter, statusFilter, productFilter, dateFrom, dateTo, channels, includeExported])
 
   useEffect(() => {
     if (step !== 'filter') return
@@ -295,7 +300,7 @@ function OrdersExportResiInner() {
     // Brief #9 — SUMBER TUNGGAL: cuma order ✅ (wilayah_id terisi) boleh export.
     // Sama definisi kaya Antrian Kerja → SPX gak nolak lagi gara-gara alamat kurang.
     const ids = Array.from(selectedIds)
-    const notReady = ids.filter((id) => !readyIds.includes(id))
+    const notReady = ids.filter((id) => { const o = orders.find((x) => x.id === id); return !o || o.wilayah_id == null })
     if (notReady.length > 0) {
       toast.error(`${notReady.length} order belum siap (alamat ⚠️)`, {
         description: 'Order dengan alamat belum ke-resolve gak boleh di-export. Benerin dulu di Antrian Kerja.',
@@ -327,6 +332,17 @@ function OrdersExportResiInner() {
       setResult(r)
       if (r.rows.length > 0) {
         downloadBlob(r.fileBlob, r.fileName)
+      }
+      // Brief #11 — tandai exported_at otomatis (anti dobel + pindah ke Post-Export).
+      // File udah ke-generate → order keluar dari Antrian Kerja.
+      const successIds = ids.filter((id) => !r.errors.find((e) => e.orderId === id))
+      if (successIds.length > 0) {
+        const { error: markErr } = await supabase.rpc('mark_drafts_exported', {
+          p_ids: successIds,
+          p_channel_id: profileBundle.profile.channel_id ?? null,
+          p_force: includeExported,
+        })
+        if (markErr) toast.error('Gagal menandai exported', { description: markErr.message })
       }
       setStep('done')
       if (r.errors.length === 0) toast.success(`File ${r.fileName} terunduh (${r.rowsGenerated} baris)`)
@@ -393,34 +409,37 @@ function OrdersExportResiInner() {
     )
   }, [orders, search])
 
-  // Brief #9 — SUMBER TUNGGAL: cuma order ✅ (wilayah_id) yang boleh ke-export.
+  // Brief #9 — alamat ✅ (wilayah_id) = boleh export. Brief #11 — anti dobel:
+  // auto-ceklis cuma yang BELUM diexport. Yang udah → boleh re-export MANUAL.
   const isReady = (o: OrderRow) => o.wilayah_id != null
-  const readyIds = useMemo(() => orders.filter(isReady).map((o) => o.id), [orders])
-  const readyCount = readyIds.length
+  const isExported = (o: OrderRow) => o.exported_at != null
+  const autoIds = useMemo(() => orders.filter((o) => isReady(o) && !isExported(o)).map((o) => o.id), [orders])
+  const readyCount = orders.filter(isReady).length
   const warnCount = orders.length - readyCount
+  const exportedCount = orders.filter(isExported).length
 
-  // Auto-ceklis SEMUA ✅ tiap daftar order ke-load (default). ⚠️ gak ke-pilih.
-  // Ratusan order → ke-pilih sekaligus, admin tinggal un-ceklis yang mau ditahan.
+  // Auto-ceklis SEMUA ✅ yang belum diexport tiap daftar ke-load. ⚠️ & exported gak.
   useEffect(() => {
-    setSelectedIds(new Set(readyIds))
-  }, [readyIds])
+    setSelectedIds(new Set(autoIds))
+  }, [autoIds])
 
-  const readyFiltered = useMemo(() => filteredOrders.filter(isReady), [filteredOrders])
+  const autoFiltered = useMemo(() => filteredOrders.filter((o) => isReady(o) && !isExported(o)), [filteredOrders])
   const allReadySelected =
-    readyFiltered.length > 0 && readyFiltered.every((o) => selectedIds.has(o.id))
+    autoFiltered.length > 0 && autoFiltered.every((o) => selectedIds.has(o.id))
 
   const toggleAllReady = (checked: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      if (checked) for (const o of readyFiltered) next.add(o.id)
-      else for (const o of readyFiltered) next.delete(o.id)
+      if (checked) for (const o of autoFiltered) next.add(o.id)
+      else for (const o of autoFiltered) next.delete(o.id)
       return next
     })
   }
 
   const toggleOne = (id: number, checked: boolean) => {
-    // ⚠️ (wilayah_id NULL) gak boleh ke-pilih — tahan sampe dibenerin.
-    if (checked && !readyIds.includes(id)) return
+    // ⚠️ (wilayah_id NULL) gak boleh ke-pilih. Exported boleh (re-export manual).
+    const o = orders.find((x) => x.id === id)
+    if (checked && (!o || !isReady(o))) return
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (checked) next.add(id)
@@ -618,10 +637,19 @@ function OrdersExportResiInner() {
                     <AlertTriangle className="w-3.5 h-3.5" /> {warnCount} belum (ditahan)
                   </span>
                 )}
+                {includeExported && exportedCount > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-0.5 font-medium" title="Udah pernah diexport — re-export manual">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> {exportedCount} udah diexport
+                  </span>
+                )}
                 <span className="text-muted-foreground ml-1">{selectedIds.size} ke-ceklis</span>
-                <div className="ml-auto flex items-center gap-2">
-                  <button type="button" onClick={() => toggleAllReady(true)} className="text-violet-500 hover:underline" disabled={readyFiltered.length === 0}>
-                    Pilih semua ✅ ({readyFiltered.length})
+                <div className="ml-auto flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-muted-foreground">
+                    <Checkbox checked={includeExported} onCheckedChange={(v) => setIncludeExported(!!v)} />
+                    Tampilkan yang udah diexport (re-export)
+                  </label>
+                  <button type="button" onClick={() => toggleAllReady(true)} className="text-violet-500 hover:underline" disabled={autoFiltered.length === 0}>
+                    Pilih semua ✅ ({autoFiltered.length})
                   </button>
                   {selectedIds.size > 0 && (
                     <button type="button" onClick={() => setSelectedIds(new Set())} className="text-muted-foreground hover:underline">
@@ -679,6 +707,9 @@ function OrdersExportResiInner() {
                               <span className="inline-flex items-center gap-1 text-emerald-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" /> Siap</span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-orange-600 text-xs" title="Alamat belum ke-resolve"><AlertTriangle className="w-3.5 h-3.5" /> Belum</span>
+                            )}
+                            {isExported(o) && (
+                              <span className="ml-1 inline-flex items-center gap-0.5 rounded border border-blue-500/40 bg-blue-500/10 px-1 text-[9px] text-blue-600" title={`Udah diexport ${o.exported_at?.slice(0,10)}`}>diexport</span>
                             )}
                           </TableCell>
                           <TableCell className="font-mono text-xs">{o.order_number}</TableCell>

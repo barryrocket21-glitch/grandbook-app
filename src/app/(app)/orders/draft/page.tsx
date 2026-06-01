@@ -100,6 +100,7 @@ function OrdersDraftInner() {
           p_search: search.trim() || null,
           p_limit: PAGE_SIZE,
           p_offset: page * PAGE_SIZE,
+          p_exported: false,  // Brief #11 — Antrian Kerja = zona KERJAAN (belum diexport)
         }),
         supabase.rpc('get_draft_status_stats', {
           p_from: dateFrom || null,

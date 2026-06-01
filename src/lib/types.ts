@@ -642,6 +642,9 @@ export interface OrderDraftEnriched {
   order_date: string
   created_at: string
   updated_at: string
+  /** Brief #11 — NULL = zona Antrian Kerja (kerjaan); NOT NULL = zona Post-Export */
+  exported_at: string | null
+  exported_channel_name: string | null
   total_count: number
 }
 

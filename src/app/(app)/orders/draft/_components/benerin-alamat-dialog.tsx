@@ -181,7 +181,12 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
     }
   }, [filters])
 
-  useEffect(() => { if (open) loadQueue() }, [open, loadQueue])
+  // Muat antrian SEKALI saat dialog dibuka. JANGAN re-run pas loadQueue identity
+  // berubah (parent re-render dari polling 30s) — itu yang bikin progress reset
+  // ke order 1 tiap 30 detik. filters di-snapshot saat buka (modal, user gak
+  // ubah filter di bawahnya).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) loadQueue() }, [open])
 
   // Reset per-order + ambil saran resolver tiap pindah order
   useEffect(() => {

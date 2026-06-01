@@ -148,18 +148,19 @@ function OrdersDraftInner() {
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | null = null
     const tick = () => {
-      if (document.visibilityState === 'visible') loadDrafts(true)
+      // Brief #7 — jangan refresh pas fix-mode kebuka (re-render reset progress)
+      if (document.visibilityState === 'visible' && !benerinOpen) loadDrafts(true)
     }
     intervalId = setInterval(tick, 30000)
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') loadDrafts(true)
+      if (document.visibilityState === 'visible' && !benerinOpen) loadDrafts(true)
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => {
       if (intervalId) clearInterval(intervalId)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [loadDrafts])
+  }, [loadDrafts, benerinOpen])
 
   // Quality issues — compute per row
   const computeQualityIssues = (r: OrderDraftEnriched): string[] => {

@@ -245,7 +245,7 @@ async function loadOrders(
     const { data, error } = await supabase
       .from(sourceTable)
       .select(
-        `${cols}, items:${itemsTable}(id, product_name_raw, variation, qty, weight_per_unit, price, product:products(display_name, weight_kg, name)), channel:courier_channels(id, code, name, aggregator)`
+        `${cols}, items:${itemsTable}(id, product_name_raw, variation, qty, weight_per_unit, price, product:products(display_name, weight_kg, name)), channel:courier_channels!channel_id(id, code, name, aggregator)`
       )
       .eq('organization_id', organizationId)
       .in('id', ids)

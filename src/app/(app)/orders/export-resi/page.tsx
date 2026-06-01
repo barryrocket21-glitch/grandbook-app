@@ -185,7 +185,10 @@ function OrdersExportResiInner() {
     let q = supabase
       .from('orders_draft')
       .select(
-        'id, order_number, status, customer_name, customer_city, customer_province, wilayah_id, exported_at, channel_id, total, order_date, created_at, channel:courier_channels(id, code), items:order_items_draft(id)'
+        // Brief #11 fix — orders_draft punya 2 FK ke courier_channels (channel_id +
+        // exported_channel_id) → embed jadi ambigu (PostgREST 300). Disambiguasi
+        // pakai hint kolom FK !channel_id (valid utk orders_draft & orders).
+        'id, order_number, status, customer_name, customer_city, customer_province, wilayah_id, exported_at, channel_id, total, order_date, created_at, channel:courier_channels!channel_id(id, code), items:order_items_draft(id)'
       )
       .order('order_date', { ascending: false })
       .limit(500)

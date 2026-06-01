@@ -205,33 +205,42 @@ BEGIN
     WHERE w.w <> ''
   ),
   grams AS (
-    -- 1-kata: buang stopword arah/generik (false-match ke kec bernama sama)
-    SELECT id, w AS g, 1 AS glen FROM words
+    -- 1-kata: buang stopword arah/generik (false-match ke kec bernama sama).
+    -- sord = posisi kata pertama gram (buat deteksi penanda "kecamatan" di depan).
+    SELECT id, w AS g, 1 AS glen, ord AS sord FROM words
       WHERE length(w) >= 4 AND w NOT IN (
         'barat','timur','utara','selatan','tengah','pusat','raya','baru','jaya',
         'kota','desa','dusun','jalan','blok','lingkungan','kelurahan','kecamatan',
         'kabupaten','provinsi','perumahan','komplek','kompleks','gang','nomor')
-    UNION ALL SELECT a.id, a.w || ' ' || b.w, 2 FROM words a JOIN words b ON b.id = a.id AND b.ord = a.ord + 1
-    UNION ALL SELECT a.id, a.w || ' ' || b.w || ' ' || c.w, 3 FROM words a JOIN words b ON b.id = a.id AND b.ord = a.ord + 1 JOIN words c ON c.id = a.id AND c.ord = a.ord + 2
+    UNION ALL SELECT a.id, a.w || ' ' || b.w, 2, a.ord FROM words a JOIN words b ON b.id = a.id AND b.ord = a.ord + 1
+    UNION ALL SELECT a.id, a.w || ' ' || b.w || ' ' || c.w, 3, a.ord FROM words a JOIN words b ON b.id = a.id AND b.ord = a.ord + 1 JOIN words c ON c.id = a.id AND c.ord = a.ord + 2
   ),
-  gram_set AS (SELECT id, g, max(glen) AS glen FROM grams GROUP BY id, g),
+  -- penanda eksplisit: gram yang persis didahului "kecamatan/kec/kcmtn" → boost
+  gram_marked AS (
+    SELECT g.id, g.g, g.glen,
+      EXISTS (SELECT 1 FROM words wm WHERE wm.id = g.id AND wm.ord = g.sord - 1
+              AND wm.w IN ('kecamatan','kec','kcmtn','kcmtn','kcamatan','kacamatan','kecmtn')) AS after_kec
+    FROM grams g
+  ),
+  gram_set AS (SELECT id, g, max(glen) AS glen, bool_or(after_kec) AS after_kec FROM gram_marked GROUP BY id, g),
   cand AS (
     SELECT gs.id, mw.province, mw.city, mw.subdistrict, mw.zip, mw.id AS wid,
-      mw.city_normalized, mw.province_normalized, gs.glen AS sub_len
+      mw.city_normalized, mw.province_normalized, gs.glen AS sub_len, gs.after_kec
     FROM gram_set gs JOIN public.master_wilayah mw ON mw.subdistrict_normalized = gs.g
   ),
   scored AS (
-    SELECT c.id, c.province, c.city, c.subdistrict, c.zip, c.wid, c.city_normalized, c.sub_len,
+    SELECT c.id, c.province, c.city, c.subdistrict, c.zip, c.wid, c.city_normalized, c.sub_len, c.after_kec,
       c.sub_len
       + COALESCE((SELECT (length(c.city_normalized) - length(replace(c.city_normalized, ' ', '')) + 1)
                   FROM gram_set g WHERE g.id = c.id AND g.g = c.city_normalized LIMIT 1), 0)
       + COALESCE((SELECT (length(c.province_normalized) - length(replace(c.province_normalized, ' ', '')) + 1)
                   FROM gram_set g WHERE g.id = c.id AND g.g = c.province_normalized LIMIT 1), 0)
+      + CASE WHEN c.after_kec THEN 5 ELSE 0 END   -- penanda "Kecamatan: X" eksplisit
       AS score
     FROM cand c
   ),
-  -- cuma kandidat yang TER-KORROBORASI (city/provinsi muncul) → score > sub_len
-  corrob AS (SELECT * FROM scored WHERE score > sub_len),
+  -- lolos kalau ter-korroborasi (city/provinsi muncul) ATAU ada penanda kecamatan
+  corrob AS (SELECT * FROM scored WHERE score > sub_len OR after_kec),
   maxsc AS (SELECT id, max(score) AS ms FROM corrob GROUP BY id),
   top AS (SELECT c.* FROM corrob c JOIN maxsc m ON m.id = c.id AND c.score = m.ms),
   best AS (

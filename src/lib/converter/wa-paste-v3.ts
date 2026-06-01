@@ -26,7 +26,8 @@ export interface ParsedWaOrder {
   qty: number
   beratGram: number
   // Money
-  hargaTotal: number | null
+  hargaProduk: number | null  // dari "Harga:" (harga produk, exclude ongkir)
+  hargaTotal: number | null   // dari "Total:" (yang ditagih ke customer, incl ongkir)
   ongkir: number | null
   metodeBayar: 'COD' | 'TRANSFER'
   // Meta
@@ -45,7 +46,7 @@ type WaField =
   | 'nama' | 'hp' | 'alamat'
   | 'kelurahan' | 'kecamatan' | 'kota' | 'provinsi' | 'kodePos'
   | 'produk' | 'produkKode' | 'variation' | 'qty' | 'beratGram'
-  | 'hargaTotal' | 'ongkir' | 'metodeBayar'
+  | 'hargaProduk' | 'hargaTotal' | 'ongkir' | 'metodeBayar'
   | 'csName' | 'advKode' | 'catatan'
 
 const LABELS: Record<string, WaField> = {
@@ -69,8 +70,9 @@ const LABELS: Record<string, WaField> = {
   'jumlah': 'qty', 'jml': 'qty', 'qty': 'qty',
   'berat': 'beratGram', 'berat paket': 'beratGram', 'weight': 'beratGram',
   // Money
-  'ongkir': 'ongkir', 'ongkos kirim': 'ongkir',
-  'total bayar': 'hargaTotal', 'total harga': 'hargaTotal', 'total': 'hargaTotal', 'harga': 'hargaTotal',
+  'ongkir': 'ongkir', 'ongkos kirim': 'ongkir', 'pengiriman': 'ongkir',
+  'total bayar': 'hargaTotal', 'total harga': 'hargaTotal', 'total': 'hargaTotal',
+  'harga': 'hargaProduk', 'harga produk': 'hargaProduk', 'harga satuan': 'hargaProduk', 'subtotal': 'hargaProduk',
   'pembayaran': 'metodeBayar', 'metode bayar': 'metodeBayar', 'metode pembayaran': 'metodeBayar',
   // GrandBook extensions
   'cs': 'csName', 'cs name': 'csName', 'handled by': 'csName',
@@ -81,7 +83,7 @@ const LABELS: Record<string, WaField> = {
 const CONTINUABLE = new Set<WaField>([
   'nama', 'alamat', 'kelurahan', 'kecamatan', 'kota', 'provinsi', 'produk', 'catatan',
 ])
-const NUMERIC = new Set<WaField>(['hargaTotal', 'ongkir', 'qty', 'beratGram'])
+const NUMERIC = new Set<WaField>(['hargaProduk', 'hargaTotal', 'ongkir', 'qty', 'beratGram'])
 
 const TRANSFER_HINT = /\b(transfer|tf|lunas|sudah\s*bayar|sdh\s*bayar|paid)\b/i
 const TS_LINE = /^\[\d{1,2}[.:]\d{2}[^\]]*\]/
@@ -119,14 +121,18 @@ function titleCase(text: string): string {
   return text.replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-/** Normalize phone ke format Indonesia 0-prefixed (e.g. "081234567890"). */
+/**
+ * Normalize phone ke format Indonesia 0-prefixed (e.g. "081234567890").
+ * Brief #8: tahan double-prefix "+62085..." → strip "62" lalu semua leading "0",
+ * baru kasih satu "0". "+62085367271433" → "085367271433" (BUKAN "0085...").
+ */
 function normalizePhoneId(raw: string): string {
-  const digits = (raw ?? '').replace(/\D/g, '')
-  if (!digits) return ''
-  if (digits.startsWith('62') && digits.length > 10) return '0' + digits.slice(2)
-  if (digits.startsWith('8') && digits.length >= 9) return '0' + digits
-  if (digits.startsWith('0')) return digits
-  return digits
+  let d = (raw ?? '').replace(/\D/g, '')
+  if (!d) return ''
+  if (d.startsWith('62')) d = d.slice(2)   // country code
+  d = d.replace(/^0+/, '')                  // semua trunk-zero di depan
+  if (!d) return ''
+  return d.startsWith('8') ? '0' + d : d
 }
 
 /** "Rp 15.000" / "15000" / "Rp140.000,-" → number. Null kalau gak ada digit. */
@@ -287,6 +293,15 @@ function parseBlock(block: string, idx: number, warnings: string[]): ParsedWaOrd
     return t.length > 0 ? t : null
   }
 
+  // Brief #8: buang echo label yang kebawa ke value CS ("Nama: Nama, zainal
+  // abidin" → "zainal abidin"; "Alamat: alamat jala ..." → "jala ...").
+  if (fields.nama) {
+    fields.nama = fields.nama.replace(/^\s*(nama(\s+penerima)?|atas\s+nama|penerima|pemesan)\s*[,:]?\s+/i, '').trim()
+  }
+  if (fields.alamat) {
+    fields.alamat = fields.alamat.replace(/^\s*(alamat(\s+lengkap)?)\s*[,:]?\s+/i, '').trim()
+  }
+
   const hp = normalizePhoneId(fields.hp ?? '')
   if (!hp) warnings.push(`Order #${idx + 1}: nomor HP gak kebaca.`)
 
@@ -314,6 +329,7 @@ function parseBlock(block: string, idx: number, warnings: string[]): ParsedWaOrd
     variation: opt(fields.variation),
     qty: parseQty(fields.qty),
     beratGram: parseWeight(fields.beratGram),
+    hargaProduk: parseRupiah(fields.hargaProduk ?? ''),
     hargaTotal: parseRupiah(fields.hargaTotal ?? ''),
     ongkir: parseRupiah(fields.ongkir ?? ''),
     metodeBayar,

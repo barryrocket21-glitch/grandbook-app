@@ -146,12 +146,14 @@ export function adaptOrder(
   if (!parsed.nama) warnings.push('Nama customer kosong')
   if (!parsed.alamat) warnings.push('Alamat lengkap kosong')
 
-  // Total: hargaTotal dari "Total Bayar" sudah include ongkir biasanya
-  // Cod_amount = hargaTotal (yang ditagih ke customer)
-  // Total (revenue produk) = hargaTotal - ongkir (kalau ongkir ada)
-  const total = parsed.hargaTotal != null
-    ? (parsed.ongkir != null ? Math.max(0, parsed.hargaTotal - parsed.ongkir) : parsed.hargaTotal)
-    : null
+  // Brief #8 — field masing-masing:
+  //  "Total:" (hargaTotal) = yang ditagih ke customer (incl ongkir) → cod_amount.
+  //  "Harga:" (hargaProduk) = harga produk (excl ongkir) → total/revenue + item price.
+  //  Fallback: kalau Harga gak ada, derive dari Total - ongkir.
+  const codAmount = parsed.hargaTotal
+    ?? (parsed.hargaProduk != null ? parsed.hargaProduk + (parsed.ongkir ?? 0) : null)
+  const total = parsed.hargaProduk
+    ?? (parsed.hargaTotal != null ? Math.max(0, parsed.hargaTotal - (parsed.ongkir ?? 0)) : null)
 
   const meta: Record<string, unknown> = {}
   if (parsed.advKode) meta.adv_code = parsed.advKode
@@ -170,7 +172,7 @@ export function adaptOrder(
     customer_province: parsed.provinsi,
     customer_zip: parsed.kodePos,
     payment_method: parsed.metodeBayar,
-    cod_amount: parsed.metodeBayar === 'COD' ? parsed.hargaTotal : null,
+    cod_amount: parsed.metodeBayar === 'COD' ? codAmount : null,
     total,
     shipping_cost: parsed.ongkir,
     cs_id: csId,

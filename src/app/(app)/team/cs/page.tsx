@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 
 const supabase = createClient()
 
-type SortKey = 'full_name' | 'total_orders' | 'closing_count' | 'conv_rate' | 'revenue_handled' | 'commission_unpaid'
+type SortKey = 'full_name' | 'total_orders' | 'closing_count' | 'conv_rate' | 'retur_rate' | 'revenue_handled' | 'commission_unpaid'
 type SortDir = 'asc' | 'desc'
 
 export default function CsTeamListPage() {
@@ -135,7 +135,9 @@ export default function CsTeamListPage() {
                   <TableHead>Top Produk</TableHead>
                   <SortableHead label="Orders"   col="total_orders"      sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
                   <SortableHead label="Closing"  col="closing_count"     sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <TableHead className="text-right">Closing (lapor)</TableHead>
                   <SortableHead label="Conv %"   col="conv_rate"         sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Retur %"  col="retur_rate"        sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
                   <SortableHead label="Revenue"  col="revenue_handled"   sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
                   <SortableHead label="Unpaid"   col="commission_unpaid" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
                   <TableHead className="w-8" />
@@ -162,8 +164,12 @@ export default function CsTeamListPage() {
                     <TableCell><TopProductPill name={r.top_product_name} count={r.top_product_orders} /></TableCell>
                     <TableCell className="text-right tabular-nums">{r.total_orders.toLocaleString('id-ID')}</TableCell>
                     <TableCell className="text-right tabular-nums">{r.closing_count.toLocaleString('id-ID')}</TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">{(r.closing_reported ?? 0).toLocaleString('id-ID')}</TableCell>
                     <TableCell className={cn('text-right tabular-nums', r.conv_rate >= 50 ? 'text-emerald-500' : r.conv_rate >= 30 ? 'text-amber-500' : 'text-muted-foreground')}>
                       {r.conv_rate.toFixed(1)}%
+                    </TableCell>
+                    <TableCell className={cn('text-right tabular-nums', (r.retur_rate ?? 0) >= 30 ? 'text-rose-500' : (r.retur_rate ?? 0) >= 15 ? 'text-amber-500' : 'text-emerald-600')}>
+                      {(r.retur_rate ?? 0).toFixed(1)}%
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatRupiah(r.revenue_handled)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatRupiah(r.commission_unpaid)}</TableCell>

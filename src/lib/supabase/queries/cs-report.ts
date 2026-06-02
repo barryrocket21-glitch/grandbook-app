@@ -17,17 +17,22 @@ export async function listReportForDay(
   supabase: SupabaseClient,
   args: { csId: string; date: string }
 ): Promise<DailyCsReportWithProduct[]> {
+  // Brief #18 — sumber resmi cs_daily_leads. Alias kolom (leads_count→lead_in,
+  // closing_count→closing) biar shape kompatibel dgn page Phase 6.
+  const SELECT = `
+      id, cs_id, product_id, report_date,
+      lead_in:leads_count, closing:closing_count, rejected:rejected_count,
+      reject_reasons, notes, submitted_at,
+      product:products!cs_daily_leads_product_id_fkey(id, name, sku, active)
+    `
   const { data, error } = await supabase
-    .from('daily_cs_report')
-    .select(`
-      *,
-      product:products!daily_cs_report_product_id_fkey(id, name, sku, active)
-    `)
+    .from('cs_daily_leads')
+    .select(SELECT)
     .eq('cs_id', args.csId)
     .eq('report_date', args.date)
     .order('product_id', { ascending: true })
   if (error) throw new Error(`listReportForDay: ${error.message}`)
-  return (data || []) as DailyCsReportWithProduct[]
+  return (data || []) as unknown as DailyCsReportWithProduct[]
 }
 
 export async function listReportForRange(
@@ -35,10 +40,12 @@ export async function listReportForRange(
   args: { csId?: string; from: string; to: string }
 ): Promise<DailyCsReportWithProduct[]> {
   let q = supabase
-    .from('daily_cs_report')
+    .from('cs_daily_leads')
     .select(`
-      *,
-      product:products!daily_cs_report_product_id_fkey(id, name, sku, active)
+      id, cs_id, product_id, report_date,
+      lead_in:leads_count, closing:closing_count, rejected:rejected_count,
+      reject_reasons, notes, submitted_at,
+      product:products!cs_daily_leads_product_id_fkey(id, name, sku, active)
     `)
     .gte('report_date', args.from)
     .lte('report_date', args.to)
@@ -47,13 +54,15 @@ export async function listReportForRange(
   if (args.csId) q = q.eq('cs_id', args.csId)
   const { data, error } = await q
   if (error) throw new Error(`listReportForRange: ${error.message}`)
-  return (data || []) as DailyCsReportWithProduct[]
+  return (data || []) as unknown as DailyCsReportWithProduct[]
 }
 
 export interface UpsertRowPayload {
   product_id: number
   lead_in: number
   closing: number
+  rejected?: number
+  reject_reasons?: string[] | null
   notes: string | null
 }
 
@@ -74,21 +83,22 @@ export async function upsertReportBatch(
   }
 ): Promise<{ upserted: number }> {
   if (args.rows.length === 0) return { upserted: 0 }
+  // Brief #18 — tulis ke cs_daily_leads (sumber resmi). unique (cs,product,date).
+  const nowIso = new Date().toISOString()
   const payload = args.rows.map(r => ({
-    organization_id: args.orgId,
     cs_id: args.csId,
     report_date: args.reportDate,
     product_id: r.product_id,
-    lead_in: r.lead_in,
-    closing: r.closing,
+    leads_count: r.lead_in,
+    closing_count: r.closing,
+    rejected_count: r.rejected ?? 0,
+    reject_reasons: r.reject_reasons ?? null,
     notes: r.notes,
-    created_by: args.createdBy,
+    submitted_at: nowIso,
   }))
   const { data, error } = await supabase
-    .from('daily_cs_report')
-    .upsert(payload, {
-      onConflict: 'organization_id,report_date,cs_id,product_id',
-    })
+    .from('cs_daily_leads')
+    .upsert(payload, { onConflict: 'cs_id,product_id,report_date' })
     .select('id')
   if (error) throw new Error(`upsertReportBatch: ${error.message}`)
   return { upserted: (data || []).length }
@@ -98,7 +108,7 @@ export async function deleteReportRow(
   supabase: SupabaseClient,
   id: number
 ): Promise<void> {
-  const { error } = await supabase.from('daily_cs_report').delete().eq('id', id)
+  const { error } = await supabase.from('cs_daily_leads').delete().eq('id', id)
   if (error) throw new Error(`deleteReportRow: ${error.message}`)
 }
 

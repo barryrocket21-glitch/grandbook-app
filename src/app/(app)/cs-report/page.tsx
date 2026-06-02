@@ -40,6 +40,8 @@ interface Row {
   product_sku: string | null
   lead_in: number
   closing: number
+  rejected: number
+  reject_reasons: string
   notes: string
   isNew: boolean
 }
@@ -113,6 +115,9 @@ export default function CsReportPage() {
         product_sku: r.product?.sku ?? null,
         lead_in: Number(r.lead_in),
         closing: Number(r.closing),
+        rejected: Number((r as { rejected?: number }).rejected) || 0,
+        reject_reasons: Array.isArray((r as { reject_reasons?: string[] }).reject_reasons)
+          ? ((r as { reject_reasons?: string[] }).reject_reasons || []).join(', ') : '',
         notes: r.notes ?? '',
         isNew: false,
       }))
@@ -176,6 +181,8 @@ export default function CsReportPage() {
       product_sku: p.sku,
       lead_in: 0,
       closing: 0,
+      rejected: 0,
+      reject_reasons: '',
       notes: '',
       isNew: true,
     }])
@@ -221,6 +228,9 @@ export default function CsReportPage() {
           product_id: r.product_id,
           lead_in: r.lead_in,
           closing: r.closing,
+          rejected: r.rejected,
+          reject_reasons: r.reject_reasons.trim()
+            ? r.reject_reasons.split(',').map(s => s.trim()).filter(Boolean) : null,
           notes: r.notes.trim() || generalNotes.trim() || null,
         })),
         createdBy: profile?.id ?? null,
@@ -255,6 +265,8 @@ export default function CsReportPage() {
           product_sku: r.product?.sku ?? null,
           lead_in: Number(r.lead_in),
           closing: Number(r.closing),
+          rejected: 0,
+          reject_reasons: '',
           notes: r.notes ?? '',
           isNew: true,
         }))
@@ -418,7 +430,9 @@ export default function CsReportPage() {
                   <TableHead>Produk</TableHead>
                   <TableHead className="text-right w-32">Lead Masuk</TableHead>
                   <TableHead className="text-right w-32">Closing</TableHead>
+                  <TableHead className="text-right w-24">Reject</TableHead>
                   <TableHead className="text-center w-24">Rate</TableHead>
+                  <TableHead className="w-44">Alasan Reject</TableHead>
                   <TableHead>Catatan</TableHead>
                   <TableHead className="text-right w-12"></TableHead>
                 </TableRow>
@@ -429,7 +443,7 @@ export default function CsReportPage() {
                     <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                   </TableCell></TableRow>
                 ) : rows.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="p-0">
+                  <TableRow><TableCell colSpan={8} className="p-0">
                     <EmptyState
                       icon={MessageCircle}
                       title="Belum ada produk untuk hari ini"
@@ -472,10 +486,27 @@ export default function CsReportPage() {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={r.rejected}
+                          onChange={e => handleRowChange(idx, { rejected: Math.max(0, Number(e.target.value)) })}
+                          className="text-right h-8 w-20 ml-auto"
+                        />
+                      </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className={`text-[10px] ${rate >= 25 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : rate >= 10 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30'}`}>
                           {rate.toFixed(1)}%
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={r.reject_reasons}
+                          onChange={e => handleRowChange(idx, { reject_reasons: e.target.value })}
+                          placeholder="mahal, stok habis…"
+                          className="h-8 text-xs"
+                        />
                       </TableCell>
                       <TableCell>
                         <Input

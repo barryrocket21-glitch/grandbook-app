@@ -1392,6 +1392,12 @@ export interface CsPerformance {
   // Phase 8 v2 — top product within periode
   top_product_name: string | null
   top_product_orders: number
+  // Brief #18 — lapor (cs_daily_leads) vs real + retur rate
+  leads_reported?: number
+  closing_reported?: number
+  rejected_reported?: number
+  retur_count?: number
+  retur_rate?: number
 }
 
 export interface AdvertiserPerformance {

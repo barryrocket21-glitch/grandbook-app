@@ -205,9 +205,11 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Megaphone,
     roles: ['owner', 'admin', 'advertiser'],
     children: [
-      // Brief #24 — Performa dilebur ke Input Harian (filter per periode di sana).
+      // Brief #25 — alur: Setup (config) → Input Harian (input spend+lead, ada quick
+      // perf) → Performa (analisis: campaign + advertiser + dashboard, filter tanggal).
       { title: 'Setup Iklan', href: '/marketing/ad-setup' },
       { title: 'Input Harian', href: '/ad-spend' },
+      { title: 'Performa & Analisis', href: '/marketing/performa' },
       { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
     ],
   },

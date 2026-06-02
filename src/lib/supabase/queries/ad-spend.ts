@@ -48,6 +48,7 @@ export interface AdSpendPayload {
   impressions: number | null
   reach: number | null
   clicks: number | null
+  meta_lead_count?: number | null  // Brief #25 — LEADS (sumber CPR = spend ÷ lead)
   conversions: number | null
   revenue_reported: number | null
   notes: string | null

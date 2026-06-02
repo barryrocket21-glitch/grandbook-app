@@ -56,6 +56,7 @@ interface SpendForm {
   impressions: number
   reach: number
   clicks: number
+  leads: number
   conversions: number
   revenue_reported: number
   notes: string
@@ -69,6 +70,7 @@ const emptyForm: SpendForm = {
   impressions: 0,
   reach: 0,
   clicks: 0,
+  leads: 0,
   conversions: 0,
   revenue_reported: 0,
   notes: '',
@@ -148,6 +150,7 @@ export default function AdSpendPage() {
       impressions: r.impressions ?? 0,
       reach: r.reach ?? 0,
       clicks: r.clicks ?? 0,
+      leads: (r as { meta_lead_count?: number | null }).meta_lead_count ?? 0,
       conversions: r.conversions ?? 0,
       revenue_reported: r.revenue_reported ?? 0,
       notes: r.notes ?? '',
@@ -171,6 +174,7 @@ export default function AdSpendPage() {
         impressions: form.impressions || null,
         reach: form.reach || null,
         clicks: form.clicks || null,
+        meta_lead_count: form.leads || null,
         conversions: form.conversions || null,
         revenue_reported: form.revenue_reported || null,
         notes: form.notes.trim() || null,
@@ -560,6 +564,12 @@ export default function AdSpendPage() {
                 <Label>Clicks</Label>
                 <Input type="number" value={form.clicks} onChange={e => setForm({ ...form, clicks: Number(e.target.value) })} />
               </div>
+              <div className="space-y-2">
+                <Label>Leads <span className="text-[10px] text-violet-600 font-normal">← buat CPR (spend ÷ lead)</span></Label>
+                <Input type="number" value={form.leads} onChange={e => setForm({ ...form, leads: Number(e.target.value) })} placeholder="mis. 10" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Conversions (purchases)</Label>
                 <Input type="number" value={form.conversions} onChange={e => setForm({ ...form, conversions: Number(e.target.value) })} />

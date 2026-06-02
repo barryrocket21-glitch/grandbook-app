@@ -7,8 +7,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { BarChart3, Loader2, RefreshCw, Users, ArrowRight } from 'lucide-react'
+import { BarChart3, Loader2, RefreshCw, Users, Megaphone } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
 import { getErrorMessage } from '@/lib/errors'
 import { toast } from 'sonner'
 
@@ -28,17 +29,23 @@ export default function PerformaPage() {
   const isOwnerAdmin = role === 'owner' || role === 'admin'
   const [perf, setPerf] = useState<Perf[]>([])
   const [loading, setLoading] = useState(true)
+  const [range, setRange] = useState<DateRange>(thisMonth())
+  const [rangeReady, setRangeReady] = useState(false)
+
+  useEffect(() => { setRange(thisMonth()); setRangeReady(true) }, [])
 
   const load = useCallback(async () => {
+    if (!rangeReady) return
     setLoading(true)
     try {
-      const { data, error } = await supabase.rpc('campaign_performance', { p_from: null, p_to: null })
+      // Brief #25 — filter per tanggal/periode.
+      const { data, error } = await supabase.rpc('campaign_performance', { p_from: range.from, p_to: range.to })
       if (error) throw error
       setPerf((data || []) as Perf[])
     } catch (err) { toast.error('Gagal load performa', { description: getErrorMessage(err) }) }
     finally { setLoading(false) }
-  }, [])
-  useEffect(() => { load() }, [load])
+  }, [range.from, range.to, rangeReady])
+  useEffect(() => { void load() }, [load])
 
   const tot = perf.reduce((a, p) => ({ spend: a.spend + Number(p.spend_total || 0), leads: a.leads + Number(p.leads || 0), deliv: a.deliv + Number(p.delivered_orders || 0) }), { spend: 0, leads: 0, deliv: 0 })
 
@@ -47,7 +54,9 @@ export default function PerformaPage() {
       <PageHeader icon={BarChart3} title="Performa Iklan"
         description="Per campaign: Spend · Lead · CPR (spend÷lead) · CPA (spend÷closing) · CPA Final (spend÷delivered)."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <DateRangePicker value={range} onChange={setRange} />
+            <Link href="/adv-dashboard" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-sm hover:bg-muted"><Megaphone className="w-3.5 h-3.5" /> Dashboard ADV</Link>
             {isOwnerAdmin && (
               <Link href="/team/advertisers" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-sm hover:bg-muted"><Users className="w-3.5 h-3.5" /> Per Advertiser</Link>
             )}

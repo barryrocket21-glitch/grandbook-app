@@ -215,6 +215,7 @@ export default function AdSetupPage() {
       <Card>
         <CardContent className="pt-4 pb-4 space-y-3">
           <div className="text-sm font-semibold">Master Akun Iklan</div>
+          <p className="text-[11px] text-muted-foreground">Daftar akun iklan tiap advertiser. <b>Kode Akun</b> = huruf identitas akun yang masuk ke kode atribusi (mis. <b>A</b> di <span className="font-mono">Luna F.<b>A</b>.1</span>), unik per platform. <b>Nama</b> = label bebas (gak masuk kode). Nomor campaign (1,2,3) di-isi di bagian <b>Campaign → Marker</b>, bukan di sini.</p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
             <div className="space-y-1">
               <Label className="text-xs">Platform</Label>
@@ -224,12 +225,12 @@ export default function AdSetupPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Kode Akun (&quot;A&quot;)</Label>
-              <Input value={naf.account_code} onChange={e => setNaf({ ...naf, account_code: e.target.value })} placeholder="A" className="h-9" />
+              <Label className="text-xs">Kode Akun (huruf di kode atribusi)</Label>
+              <Input value={naf.account_code} onChange={e => setNaf({ ...naf, account_code: e.target.value })} placeholder="A" className="h-9" title="Huruf pendek yang masuk ke kode atribusi (segmen .A.). 1 akun iklan = 1 kode, unik per platform." />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Nama</Label>
-              <Input value={naf.name} onChange={e => setNaf({ ...naf, name: e.target.value })} placeholder="Akun Candra 1" className="h-9" />
+              <Label className="text-xs">Nama akun (bebas)</Label>
+              <Input value={naf.name} onChange={e => setNaf({ ...naf, name: e.target.value })} placeholder="Akun Meta Candra" className="h-9" title="Label buat manusia — gak masuk kode atribusi." />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Advertiser</Label>

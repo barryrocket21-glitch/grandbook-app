@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +30,8 @@ export default function PostExportPage() {
   const [dateTo, setDateTo] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('exported_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  // Brief #13 — "Arsip/Selesai" = filter status Terkirim di sini (bukan view pisah).
+  const [zoneFilter, setZoneFilter] = useState<'ALL' | 'EXPORTED' | 'DIKIRIM' | 'TERKIRIM' | 'RETUR'>('ALL')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -53,8 +56,12 @@ export default function PostExportPage() {
 
   useEffect(() => { load() }, [load])
 
+  // Map status enum → zona seragam (sesuai badge + #13)
+  const zoneOf = (s: string): 'EXPORTED' | 'DIKIRIM' | 'TERKIRIM' | 'RETUR' =>
+    s === 'DITERIMA' ? 'TERKIRIM' : s === 'RETUR' ? 'RETUR' : s === 'DIKIRIM' ? 'DIKIRIM' : 'EXPORTED'
+
   const sorted = useMemo(() => {
-    const arr = [...rows]
+    const arr = rows.filter((r) => zoneFilter === 'ALL' || zoneOf(r.status) === zoneFilter)
     arr.sort((a, b) => {
       let av: string | number = '', bv: string | number = ''
       switch (sortKey) {
@@ -69,7 +76,8 @@ export default function PostExportPage() {
       return sortDir === 'asc' ? cmp : -cmp
     })
     return arr
-  }, [rows, sortKey, sortDir])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, sortKey, sortDir, zoneFilter])
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -104,9 +112,19 @@ export default function PostExportPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari order# / customer / HP..." className="pl-9" />
           </div>
+          <Select value={zoneFilter} onValueChange={(v) => v && setZoneFilter(v as typeof zoneFilter)}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Semua status</SelectItem>
+              <SelectItem value="EXPORTED">Sudah Diexport (nunggu jemput)</SelectItem>
+              <SelectItem value="DIKIRIM">Dikirim (in transit)</SelectItem>
+              <SelectItem value="TERKIRIM">Terkirim / Selesai</SelectItem>
+              <SelectItem value="RETUR">Retur</SelectItem>
+            </SelectContent>
+          </Select>
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-36 text-xs" title="Tanggal dari" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-36 text-xs" title="Tanggal sampai" />
-          <span className="text-xs text-muted-foreground self-center ml-auto">{rows.length} order</span>
+          <span className="text-xs text-muted-foreground self-center ml-auto">{sorted.length} / {rows.length} order</span>
         </CardContent>
       </Card>
 

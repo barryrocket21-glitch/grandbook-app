@@ -20,8 +20,15 @@ export interface ParsedWaOrder {
   provinsi: string | null
   kodePos: string | null
   // Item
-  produk: string
+  produk: string            // nama produk BERSIH (kode atribusi udah dibuang)
+  produkRaw: string         // "Produk:" mentah utuh (incl kode, buat audit)
   produkKode: string | null  // kode produk kalau ada
+  // Brief #14 — atribusi dari kode "Produk Platform.Akun.Campaign" (Blade K45 F.A.1)
+  atribusiCodeRaw: string | null  // "Blade K45 F.A.1" utuh (audit/decode-mundur)
+  platform: string | null         // F→Facebook, G→Google, S→Snack, T→Tiktok
+  atribusiAccount: string | null  // segmen 2 (mentah, parkir)
+  atribusiCampaign: string | null // segmen 3 (mentah, parkir)
+  atribusiPending: boolean        // true kalau ada kode akun/campaign yg belum di-resolve
   variation: string | null   // "Ukuran 6 X 3", "38-39 Cream", dst.
   qty: number
   beratGram: number
@@ -139,6 +146,27 @@ function normalizePhoneId(raw: string): string {
 function parseRupiah(raw: string): number | null {
   const digits = (raw ?? '').replace(/\D/g, '')
   return digits ? Number(digits) : null
+}
+
+// Brief #14 — kode atribusi nempel di akhir "Produk:" → "Nama Produk P.A.C".
+// Ambil TOKEN TERAKHIR berpola titik (3 segmen) = kode; sisanya di depan = nama.
+// Nama produk boleh multi-kata ("Blade K45 F.A.1" → nama "Blade K45", kode "F.A.1").
+const ATTR_CODE_RE = /\s+([A-Za-z0-9]+)\.([A-Za-z0-9]+)\.([A-Za-z0-9]+)\s*$/
+const PLATFORM_MAP: Record<string, string> = { F: 'Facebook', G: 'Google', S: 'Snack', T: 'Tiktok' }
+
+interface ProdukDecoded {
+  cleanName: string; atribusiCodeRaw: string | null; platform: string | null
+  account: string | null; campaign: string | null; atribusiPending: boolean
+}
+function decodeProduk(produkRaw: string): ProdukDecoded {
+  const raw = (produkRaw ?? '').trim()
+  const m = raw.match(ATTR_CODE_RE)
+  if (!m || m.index == null) {
+    return { cleanName: raw, atribusiCodeRaw: null, platform: null, account: null, campaign: null, atribusiPending: false }
+  }
+  const cleanName = raw.slice(0, m.index).trim() || raw
+  const platform = PLATFORM_MAP[m[1].toUpperCase()] ?? null
+  return { cleanName, atribusiCodeRaw: raw, platform, account: m[2], campaign: m[3], atribusiPending: true }
 }
 
 function parseQty(raw: string | undefined): number {
@@ -304,6 +332,8 @@ function parseBlock(block: string, idx: number, warnings: string[]): ParsedWaOrd
 
   const hp = normalizePhoneId(fields.hp ?? '')
   if (!hp) warnings.push(`Order #${idx + 1}: nomor HP gak kebaca.`)
+  // Brief #14 — decode kode atribusi dari "Produk:" (nama bersih + platform + parkir akun/campaign)
+  const dec = decodeProduk(fields.produk ?? '')
 
   const alamat = (fields.alamat ?? '').trim()
   // Backfill struktural dari alamat lengkap kalau label tidak eksplisit
@@ -324,7 +354,13 @@ function parseBlock(block: string, idx: number, warnings: string[]): ParsedWaOrd
     kota: opt(fields.kota) ?? fromAddr.kota,
     provinsi: opt(fields.provinsi) ?? fromAddr.provinsi,
     kodePos: opt(fields.kodePos),
-    produk: (fields.produk ?? '').trim(),
+    produk: dec.cleanName,
+    produkRaw: (fields.produk ?? '').trim(),
+    atribusiCodeRaw: dec.atribusiCodeRaw,
+    platform: dec.platform,
+    atribusiAccount: dec.account,
+    atribusiCampaign: dec.campaign,
+    atribusiPending: dec.atribusiPending,
     produkKode: opt(fields.produkKode),
     variation: opt(fields.variation),
     qty: parseQty(fields.qty),

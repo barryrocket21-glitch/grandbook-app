@@ -158,6 +158,16 @@ export function adaptOrder(
   const meta: Record<string, unknown> = {}
   if (parsed.advKode) meta.adv_code = parsed.advKode
   if (parsed.produkKode) meta.product_code_raw = parsed.produkKode
+  // Brief #14 — atribusi dari kode "Produk Platform.Akun.Campaign". Platform
+  // auto-resolve; akun+campaign DIPARKIR mentah (resolve nanti pas menu ADV).
+  if (parsed.platform) meta.platform = parsed.platform
+  if (parsed.atribusiCodeRaw) meta.product_code_full = parsed.atribusiCodeRaw
+  if (parsed.atribusiAccount) meta.atribusi_account = parsed.atribusiAccount
+  if (parsed.atribusiCampaign) meta.atribusi_campaign = parsed.atribusiCampaign
+  if (parsed.atribusiPending) {
+    meta.atribusi_pending = true
+    warnings.push(`Atribusi parkir: platform=${parsed.platform ?? '?'}, akun=${parsed.atribusiAccount}, campaign=${parsed.atribusiCampaign} (resolve di menu ADV)`)
+  }
 
   const payload: OrderDraftPayload = {
     organization_id: ctx.organizationId,

@@ -121,6 +121,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ShoppingCart,
     roles: ['owner', 'admin', 'cs', 'akunting'],
     children: [
+      { title: 'Pembukuan (Satu Tampilan)', href: '/orders/pembukuan', roles: ['owner', 'admin', 'cs', 'akunting'] },
       { title: 'Input Order Baru', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
       { title: 'Upload Massal', href: '/orders/bulk-upload', roles: ['owner', 'admin'] },
       { title: 'WA Paste', href: '/orders/wa-paste', roles: ['owner', 'admin', 'cs'] },

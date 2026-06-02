@@ -33,6 +33,7 @@ export default function AdSetupPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [advs, setAdvs] = useState<Prof[]>([])
   const [products, setProducts] = useState<Prod[]>([])
+  const [campProd, setCampProd] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(true)
   const [resolving, setResolving] = useState(false)
   // new account form
@@ -50,16 +51,24 @@ export default function AdSetupPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [{ data: acc }, { data: camp }, { data: pr }, { data: prod }] = await Promise.all([
+      const [{ data: acc }, { data: camp }, { data: pr }, { data: prod }, { data: cprod }] = await Promise.all([
         supabase.from('ad_accounts').select('id, platform, account_code, name, advertiser_id, active').order('platform').order('account_code'),
         supabase.from('campaigns').select('id, campaign_name, platform, account_id, campaign_marker, active').order('campaign_name'),
         supabase.from('profiles').select('id, full_name').in('role', ['advertiser', 'admin', 'owner']),
         supabase.from('products').select('id, name').eq('active', true).order('name'),
+        supabase.from('campaign_products').select('campaign_id, products(name)'),
       ])
       setAccounts((acc || []) as Account[])
       setCampaigns((camp || []) as Campaign[])
       setAdvs((pr || []) as Prof[])
       setProducts((prod || []) as Prod[])
+      // campaign_id → nama produk (buat tampilin "Luna F.A.1")
+      const cpMap: Record<number, string> = {}
+      for (const r of (cprod || []) as unknown as { campaign_id: number; products: { name: string } | { name: string }[] | null }[]) {
+        const pn = Array.isArray(r.products) ? r.products[0]?.name : r.products?.name
+        if (pn && !cpMap[r.campaign_id]) cpMap[r.campaign_id] = pn
+      }
+      setCampProd(cpMap)
     } catch (err) { console.warn('ad-setup load:', err) } finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
@@ -83,18 +92,29 @@ export default function AdSetupPage() {
 
   // Brief #23 — singkatan platform (Meta=F dst) buat tampilan
   const platLabel = (pf: string) => `${pf} (${PLATFORM_LETTER[pf] ?? '?'})`
+  // Brief #26 — marker berikutnya buat akun (campaign ke-N otomatis).
+  const nextMarker = (accountId: number) => {
+    const used = campaigns.filter(c => c.account_id === accountId)
+      .map(c => parseInt(c.campaign_marker || '0', 10)).filter(n => !isNaN(n))
+    return String((used.length ? Math.max(...used) : 0) + 1)
+  }
+  // kode atribusi penuh ala model Barry: "Luna F.A.1" (produk + platform.akun.marker)
+  const codeFor = (prodName: string | undefined, acc: Account, marker: string) =>
+    `${prodName ? prodName + ' ' : ''}${PLATFORM_LETTER[acc.platform] ?? '?'}.${acc.account_code}.${marker}`
 
   const createCampaign = async () => {
     const acc = accounts.find(a => String(a.id) === ncf.account_id)
     if (!acc) { toast.error('Pilih akun dulu'); return }
-    if (!ncf.marker.trim()) { toast.error('Marker wajib (mis "1")'); return }
-    if (!ncf.name.trim()) { toast.error('Nama campaign wajib'); return }
+    const marker = (ncf.marker.trim() || nextMarker(acc.id))
+    const prod = products.find(x => String(x.id) === ncf.product_id)
+    // nama auto kalau kosong (biar unik per-marker, gak bentrok constraint nama)
+    const name = ncf.name.trim() || codeFor(prod?.name, acc, marker)
     setSavingNew(true)
     try {
       const orgId = profile?.organization_id ?? 1
       const { data: camp, error } = await supabase.from('campaigns')
-        .insert({ organization_id: orgId, campaign_name: ncf.name.trim(), platform: acc.platform,
-          account_id: acc.id, campaign_marker: ncf.marker.trim(), status: 'ACTIVE', active: true })
+        .insert({ organization_id: orgId, campaign_name: name, platform: acc.platform,
+          account_id: acc.id, campaign_marker: marker, status: 'ACTIVE', active: true })
         .select('id').single()
       if (error) throw error
       if (ncf.product_id && camp) {
@@ -102,7 +122,7 @@ export default function AdSetupPage() {
           .insert({ organization_id: orgId, campaign_id: camp.id, product_id: Number(ncf.product_id), allocation_pct: 100 })
         if (pe) throw pe
       }
-      toast.success(`Campaign "${ncf.name.trim()}" dibuat`)
+      toast.success(`Campaign dibuat — kode: ${codeFor(prod?.name, acc, marker)}`)
       setNcf({ account_id: '', marker: '', product_id: '', name: '' })
       await load()
     } catch (err) { toast.error('Gagal buat campaign', { description: getErrorMessage(err) }) }
@@ -311,11 +331,11 @@ export default function AdSetupPage() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
               <div className="space-y-1">
                 <Label className="text-[10px]">Nama</Label>
-                <Input value={ncf.name} onChange={e => setNcf({ ...ncf, name: e.target.value })} placeholder="Campaign 1" className="h-9 text-xs" />
+                <Input value={ncf.name} onChange={e => setNcf({ ...ncf, name: e.target.value })} placeholder="auto: produk + kode" className="h-9 text-xs" />
               </div>
               <div className="space-y-1">
                 <Label className="text-[10px]">Akun (platform)</Label>
-                <Select value={ncf.account_id || 'none'} onValueChange={v => setNcf({ ...ncf, account_id: (!v || v === 'none') ? '' : v })}>
+                <Select value={ncf.account_id || 'none'} onValueChange={v => { const id = (!v || v === 'none') ? '' : v; setNcf({ ...ncf, account_id: id, marker: ncf.marker.trim() || (id ? nextMarker(Number(id)) : '') }) }}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="pilih akun">{(() => { const a = accounts.find(x => String(x.id) === ncf.account_id); return a ? `${platLabel(a.platform)} · ${a.account_code}` : 'pilih akun' })()}</SelectValue></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— pilih akun —</SelectItem>
@@ -343,8 +363,7 @@ export default function AdSetupPage() {
               const a = accounts.find(x => String(x.id) === ncf.account_id)
               const pp = products.find(x => String(x.id) === ncf.product_id)
               if (a && ncf.marker.trim()) {
-                const code = `${pp ? pp.name + ' ' : ''}${PLATFORM_LETTER[a.platform] ?? '?'}.${a.account_code}.${ncf.marker.trim()}`
-                return <div className="text-[11px]">Kode atribusi CS: <span className="font-mono bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{code}</span></div>
+                return <div className="text-[11px]">Kode atribusi CS: <span className="font-mono bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{codeFor(pp?.name, a, ncf.marker.trim())}</span></div>
               }
               return null
             })()}
@@ -356,7 +375,7 @@ export default function AdSetupPage() {
               <TableBody>
                 {campaigns.map(c => {
                   const acc = accounts.find(a => a.id === c.account_id)
-                  const code = acc && c.campaign_marker ? `${PLATFORM_LETTER[acc.platform] ?? '?'}.${acc.account_code}.${c.campaign_marker}` : null
+                  const code = acc && c.campaign_marker ? codeFor(campProd[c.id], acc, c.campaign_marker) : null
                   return (
                   <TableRow key={c.id} className={c.active ? '' : 'opacity-50'}>
                     <TableCell><Input value={c.campaign_name} onChange={e => setCamp(c.id, { campaign_name: e.target.value })} className="h-8 w-48 text-xs" /></TableCell>

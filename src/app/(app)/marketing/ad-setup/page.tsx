@@ -13,8 +13,8 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
 
 const supabase = createClient()
-// Konvensi platform #14 (meta.platform) — ad_accounts simpan ini biar resolusi match.
-const PLATFORMS = ['Facebook', 'Google', 'Snack', 'Tiktok']
+// Brief #19 — vocab KANONIK (samain parser #14 + campaigns + resolver). "F" = Meta.
+const PLATFORMS = ['META', 'GOOGLE', 'SNACK', 'TIKTOK']
 
 interface Account { id: number; platform: string; account_code: string; name: string | null; advertiser_id: string | null; active: boolean }
 interface Campaign { id: number; campaign_name: string; platform: string; account_id: number | null; campaign_marker: string | null }
@@ -31,7 +31,7 @@ export default function AdSetupPage() {
   const [loading, setLoading] = useState(true)
   const [resolving, setResolving] = useState(false)
   // new account form
-  const [naf, setNaf] = useState({ platform: 'Facebook', account_code: '', name: '', advertiser_id: '' })
+  const [naf, setNaf] = useState({ platform: 'META', account_code: '', name: '', advertiser_id: '' })
   const [savingAcc, setSavingAcc] = useState(false)
   const [savingCamp, setSavingCamp] = useState<number | null>(null)
 
@@ -62,7 +62,7 @@ export default function AdSetupPage() {
       })
       if (error) throw error
       toast.success('Akun ditambah')
-      setNaf({ platform: 'Facebook', account_code: '', name: '', advertiser_id: '' })
+      setNaf({ platform: 'META', account_code: '', name: '', advertiser_id: '' })
       await load()
     } catch (err) { toast.error('Gagal tambah akun', { description: err instanceof Error ? err.message : String(err) }) }
     finally { setSavingAcc(false) }
@@ -147,7 +147,7 @@ export default function AdSetupPage() {
             </Button>
           </div>
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : accounts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Belum ada akun. Tambah di atas (mis. Facebook · kode A).</p>
+            <p className="text-xs text-muted-foreground">Belum ada akun. Tambah di atas (mis. META · kode A).</p>
           ) : (
             <div className="border rounded-md overflow-x-auto">
               <Table>

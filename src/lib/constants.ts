@@ -55,6 +55,14 @@ export const AD_PLATFORMS = [
   { value: 'OTHER', label: 'Lainnya' },
 ]
 
+// Brief #19 — SINGLE SOURCE kosakata platform: kode huruf (token atribusi #14)
+// → platform KANONIK (samain dgn campaigns.platform/ad_accounts.platform/AdPlatform).
+// Huruf "F" = Facebook = platform Meta → nilai tersimpan "META". Dipakai parser
+// #14 + form ad-setup + resolver biar gak melenceng lagi.
+export const PLATFORM_CODE_MAP: Record<string, string> = {
+  F: 'META', G: 'GOOGLE', S: 'SNACK', T: 'TIKTOK',
+}
+
 export const PAYMENT_METHODS = [
   { value: 'COD', label: 'COD (Cash on Delivery)' },
   { value: 'TRANSFER', label: 'Transfer Bank' },

@@ -8,6 +8,7 @@
 // Smart parsing: kg/gram detection, qty extraction, transfer hint.
 // GrandBook-specific extensions: CS, KODE ADV, kode produk.
 // =============================================================
+import { PLATFORM_CODE_MAP } from '@/lib/constants'
 
 export interface ParsedWaOrder {
   // Recipient
@@ -25,7 +26,7 @@ export interface ParsedWaOrder {
   produkKode: string | null  // kode produk kalau ada
   // Brief #14 — atribusi dari kode "Produk Platform.Akun.Campaign" (Blade K45 F.A.1)
   atribusiCodeRaw: string | null  // "Blade K45 F.A.1" utuh (audit/decode-mundur)
-  platform: string | null         // F→Facebook, G→Google, S→Snack, T→Tiktok
+  platform: string | null         // KANONIK: F→META, G→GOOGLE, S→SNACK, T→TIKTOK (#19)
   atribusiAccount: string | null  // segmen 2 (mentah, parkir)
   atribusiCampaign: string | null // segmen 3 (mentah, parkir)
   atribusiPending: boolean        // true kalau ada kode akun/campaign yg belum di-resolve
@@ -152,7 +153,7 @@ function parseRupiah(raw: string): number | null {
 // Ambil TOKEN TERAKHIR berpola titik (3 segmen) = kode; sisanya di depan = nama.
 // Nama produk boleh multi-kata ("Blade K45 F.A.1" → nama "Blade K45", kode "F.A.1").
 const ATTR_CODE_RE = /\s+([A-Za-z0-9]+)\.([A-Za-z0-9]+)\.([A-Za-z0-9]+)\s*$/
-const PLATFORM_MAP: Record<string, string> = { F: 'Facebook', G: 'Google', S: 'Snack', T: 'Tiktok' }
+// Brief #19 — vocab KANONIK (F→META dst), single source di constants.PLATFORM_CODE_MAP.
 
 interface ProdukDecoded {
   cleanName: string; atribusiCodeRaw: string | null; platform: string | null
@@ -165,7 +166,7 @@ function decodeProduk(produkRaw: string): ProdukDecoded {
     return { cleanName: raw, atribusiCodeRaw: null, platform: null, account: null, campaign: null, atribusiPending: false }
   }
   const cleanName = raw.slice(0, m.index).trim() || raw
-  const platform = PLATFORM_MAP[m[1].toUpperCase()] ?? null
+  const platform = PLATFORM_CODE_MAP[m[1].toUpperCase()] ?? null
   return { cleanName, atribusiCodeRaw: raw, platform, account: m[2], campaign: m[3], atribusiPending: true }
 }
 

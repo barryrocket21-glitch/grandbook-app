@@ -654,7 +654,7 @@ export interface OrderDraftEnriched {
 export interface AdAccount {
   id: number
   organization_id?: number
-  platform: string          // Facebook / Google / Snack / Tiktok (konvensi #14)
+  platform: string          // KANONIK: META / GOOGLE / SNACK / TIKTOK (#19)
   account_code: string      // segmen "A"
   name: string | null
   advertiser_id: string | null  // uuid → profiles (nullable)

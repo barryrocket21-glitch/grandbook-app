@@ -205,9 +205,9 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Megaphone,
     roles: ['owner', 'admin', 'advertiser'],
     children: [
+      // Brief #24 — Performa dilebur ke Input Harian (filter per periode di sana).
       { title: 'Setup Iklan', href: '/marketing/ad-setup' },
       { title: 'Input Harian', href: '/ad-spend' },
-      { title: 'Performa', href: '/marketing/performa' },
       { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
     ],
   },

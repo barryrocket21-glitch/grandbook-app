@@ -74,6 +74,13 @@ const emptyForm: SpendForm = {
   notes: '',
 }
 
+// Brief #24 — performa campaign (CPR/CPA/CPA Final) di Input Harian.
+interface Perf {
+  campaign_id: number; campaign_name: string; platform: string
+  spend_total: number; leads: number; attributed_orders: number; delivered_orders: number
+  cpr: number | null; cpa: number | null; cpa_final: number | null
+}
+
 export default function AdSpendPage() {
   const { profile, role } = useAuth()
   const isOwner = role === 'owner'
@@ -82,6 +89,7 @@ export default function AdSpendPage() {
   const [rows, setRows] = useState<AdSpendWithCampaign[]>([])
   const [campaigns, setCampaigns] = useState<CampaignWithRelations[]>([])
   const [summary, setSummary] = useState<AdSpendSummary | null>(null)
+  const [perf, setPerf] = useState<Perf[]>([])
   const [loading, setLoading] = useState(true)
 
   const [open, setOpen] = useState(false)
@@ -105,7 +113,7 @@ export default function AdSpendPage() {
     if (!rangeReady) return
     setLoading(true)
     try {
-      const [r, c, s] = await Promise.all([
+      const [r, c, s, pf] = await Promise.all([
         listAdSpend(supabase, {
           from: range.from, to: range.to,
           platform: platformFilter !== 'ALL' ? platformFilter : undefined,
@@ -113,10 +121,13 @@ export default function AdSpendPage() {
         }),
         listCampaigns(supabase),
         fetchAdSpendSummary(supabase, range.from, range.to),
+        // Brief #24 — performa per periode (filter ikut DateRangePicker di atas).
+        supabase.rpc('campaign_performance', { p_from: range.from, p_to: range.to }),
       ])
       setRows(r)
       setCampaigns(c)
       setSummary(s)
+      setPerf((pf.data || []) as Perf[])
     } catch (err) {
       toast.error('Gagal load ad_spend', { description: getErrorMessage(err) })
     } finally {
@@ -426,6 +437,41 @@ export default function AdSpendPage() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      {/* Brief #24 — Performa Campaign (ikut filter periode di atas) */}
+      <Card>
+        <CardContent className="pt-4 pb-4 space-y-2">
+          <div className="text-sm font-semibold">Performa Campaign — periode {range.from} s/d {range.to}</div>
+          <p className="text-[11px] text-muted-foreground">CPR = spend ÷ lead · CPA = spend ÷ order ter-atribusi · <b>CPA Final</b> = spend ÷ delivered (DITERIMA).</p>
+          {perf.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-2">Belum ada spend/atribusi di periode ini.</p>
+          ) : (
+            <div className="border rounded-md overflow-x-auto">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Campaign</TableHead><TableHead className="text-right">Spend</TableHead><TableHead className="text-right">Lead</TableHead>
+                  <TableHead className="text-right">Closing</TableHead><TableHead className="text-right">Delivered</TableHead>
+                  <TableHead className="text-right">CPR</TableHead><TableHead className="text-right">CPA</TableHead><TableHead className="text-right">CPA Final</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {perf.map(p => (
+                    <TableRow key={p.campaign_id}>
+                      <TableCell className="text-xs">{p.campaign_name} <span className="text-muted-foreground">({p.platform})</span></TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">Rp {Number(p.spend_total).toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.leads}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.attributed_orders}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.delivered_orders}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.cpr != null ? 'Rp ' + Number(p.cpr).toLocaleString('id-ID') : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.cpa != null ? 'Rp ' + Number(p.cpa).toLocaleString('id-ID') : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums font-medium text-emerald-600">{p.cpa_final != null ? 'Rp ' + Number(p.cpa_final).toLocaleString('id-ID') : '—'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 

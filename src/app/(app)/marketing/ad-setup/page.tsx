@@ -21,9 +21,8 @@ const PLATFORMS = ['META', 'GOOGLE', 'SNACK', 'TIKTOK']
 const PLATFORM_LETTER: Record<string, string> = { META: 'F', GOOGLE: 'G', SNACK: 'S', TIKTOK: 'T' }
 
 interface Account { id: number; platform: string; account_code: string; name: string | null; advertiser_id: string | null; active: boolean }
-interface Campaign { id: number; campaign_name: string; platform: string; account_id: number | null; campaign_marker: string | null }
+interface Campaign { id: number; campaign_name: string; platform: string; account_id: number | null; campaign_marker: string | null; active: boolean }
 interface Prof { id: string; full_name: string | null }
-interface Perf { campaign_id: number; campaign_name: string; platform: string; spend_total: number; leads: number; attributed_orders: number; delivered_orders: number; cpr: number | null; cpa: number | null; cpa_final: number | null }
 
 interface Prod { id: number; name: string }
 
@@ -33,7 +32,6 @@ export default function AdSetupPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [advs, setAdvs] = useState<Prof[]>([])
-  const [perf, setPerf] = useState<Perf[]>([])
   const [products, setProducts] = useState<Prod[]>([])
   const [loading, setLoading] = useState(true)
   const [resolving, setResolving] = useState(false)
@@ -52,17 +50,15 @@ export default function AdSetupPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [{ data: acc }, { data: camp }, { data: pr }, { data: pf }, { data: prod }] = await Promise.all([
+      const [{ data: acc }, { data: camp }, { data: pr }, { data: prod }] = await Promise.all([
         supabase.from('ad_accounts').select('id, platform, account_code, name, advertiser_id, active').order('platform').order('account_code'),
-        supabase.from('campaigns').select('id, campaign_name, platform, account_id, campaign_marker').order('campaign_name'),
+        supabase.from('campaigns').select('id, campaign_name, platform, account_id, campaign_marker, active').order('campaign_name'),
         supabase.from('profiles').select('id, full_name').in('role', ['advertiser', 'admin', 'owner']),
-        supabase.rpc('campaign_performance', { p_from: null, p_to: null }),
         supabase.from('products').select('id, name').eq('active', true).order('name'),
       ])
       setAccounts((acc || []) as Account[])
       setCampaigns((camp || []) as Campaign[])
       setAdvs((pr || []) as Prof[])
-      setPerf((pf || []) as Perf[])
       setProducts((prod || []) as Prod[])
     } catch (err) { console.warn('ad-setup load:', err) } finally { setLoading(false) }
   }, [])
@@ -154,14 +150,35 @@ export default function AdSetupPage() {
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
 
   const saveCampaign = async (c: Campaign) => {
+    if (!c.campaign_name.trim()) { toast.error('Nama campaign wajib'); return }
     setSavingCamp(c.id)
     try {
+      // Brief #24 — simpan nama + akun + marker (edit penuh per baris).
       const { error } = await supabase.from('campaigns')
-        .update({ account_id: c.account_id, campaign_marker: c.campaign_marker?.trim() || null })
+        .update({ campaign_name: c.campaign_name.trim(), account_id: c.account_id, campaign_marker: c.campaign_marker?.trim() || null })
         .eq('id', c.id)
       if (error) throw error
-      toast.success(`Campaign "${c.campaign_name}" disimpen`)
+      toast.success(`Campaign "${c.campaign_name}" disimpen`); await load()
     } catch (err) { toast.error('Gagal simpan campaign', { description: getErrorMessage(err) }) }
+    finally { setSavingCamp(null) }
+  }
+  const toggleCampaign = async (c: Campaign) => {
+    setSavingCamp(c.id)
+    try {
+      const { error } = await supabase.from('campaigns').update({ active: !c.active }).eq('id', c.id)
+      if (error) throw error
+      toast.success(!c.active ? 'Campaign diaktifkan' : 'Campaign dinonaktifkan'); await load()
+    } catch (err) { toast.error('Gagal toggle', { description: getErrorMessage(err) }) }
+    finally { setSavingCamp(null) }
+  }
+  const deleteCampaignRow = async (c: Campaign) => {
+    if (!confirm(`Hapus campaign "${c.campaign_name}"? Diblok kalau ada order/spend ke-link — nonaktifin aja kalau gitu.`)) return
+    setSavingCamp(c.id)
+    try {
+      const { error } = await supabase.rpc('delete_campaign', { p_id: c.id })
+      if (error) throw error
+      toast.success('Campaign dihapus'); await load()
+    } catch (err) { toast.error('Gagal hapus campaign', { description: getErrorMessage(err) }) }
     finally { setSavingCamp(null) }
   }
 
@@ -334,65 +351,36 @@ export default function AdSetupPage() {
 
           <div className="border rounded-md overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Campaign</TableHead><TableHead>Akun</TableHead><TableHead>Marker</TableHead><TableHead>Kode Atribusi</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Campaign</TableHead><TableHead>Akun</TableHead><TableHead>Marker</TableHead><TableHead>Kode Atribusi</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
               <TableBody>
                 {campaigns.map(c => {
                   const acc = accounts.find(a => a.id === c.account_id)
                   const code = acc && c.campaign_marker ? `${PLATFORM_LETTER[acc.platform] ?? '?'}.${acc.account_code}.${c.campaign_marker}` : null
                   return (
-                  <TableRow key={c.id}>
-                    <TableCell className="text-xs">{c.campaign_name} <span className="text-muted-foreground">({c.platform})</span></TableCell>
+                  <TableRow key={c.id} className={c.active ? '' : 'opacity-50'}>
+                    <TableCell><Input value={c.campaign_name} onChange={e => setCamp(c.id, { campaign_name: e.target.value })} className="h-8 w-48 text-xs" /></TableCell>
                     <TableCell>
                       <Select value={c.account_id ? String(c.account_id) : 'none'} onValueChange={v => setCamp(c.id, { account_id: (!v || v === 'none') ? null : Number(v) })}>
-                        <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                        <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="—">{acc ? `${platLabel(acc.platform)} · ${acc.account_code}` : '—'}</SelectValue></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">— belum —</SelectItem>
-                          {accounts.map(a => <SelectItem key={a.id} value={String(a.id)}>{a.platform} · {a.account_code}</SelectItem>)}
+                          {accounts.filter(a => a.active).map(a => <SelectItem key={a.id} value={String(a.id)}>{platLabel(a.platform)} · {a.account_code}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell><Input value={c.campaign_marker ?? ''} onChange={e => setCamp(c.id, { campaign_marker: e.target.value })} placeholder="1" className="h-8 w-20 text-xs" /></TableCell>
+                    <TableCell><Input value={c.campaign_marker ?? ''} onChange={e => setCamp(c.id, { campaign_marker: e.target.value })} placeholder="1" className="h-8 w-16 text-xs" /></TableCell>
                     <TableCell>{code ? <span className="font-mono text-xs bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{code}</span> : <span className="text-[10px] text-muted-foreground">akun+marker dulu</span>}</TableCell>
-                    <TableCell><Button size="sm" variant="outline" onClick={() => saveCampaign(c)} disabled={savingCamp === c.id} className="h-8 gap-1.5">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}</Button></TableCell>
+                    <TableCell><Badge variant="outline" className={c.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{c.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => saveCampaign(c)} disabled={savingCamp === c.id} title="Simpan">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}</Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleCampaign(c)} disabled={savingCamp === c.id} title={c.active ? 'Nonaktifkan' : 'Aktifkan'}><Power className={`w-3.5 h-3.5 ${c.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteCampaignRow(c)} disabled={savingCamp === c.id} title="Hapus"><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </TableCell>
                   </TableRow>
                 )})}
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* PART 4 — Performa CPR/CPA per campaign */}
-      <Card>
-        <CardContent className="pt-4 pb-4 space-y-2">
-          <div className="text-sm font-semibold">Performa Campaign (CPR / CPA)</div>
-          <p className="text-[11px] text-muted-foreground">CPR = spend ÷ leads · CPA = spend ÷ order ter-atribusi (gross) · <b>CPA final</b> = spend ÷ order <b>delivered</b> (DITERIMA, real dari sync SPX).</p>
-          {perf.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Belum ada spend/atribusi. Input di <a href="/ad-spend" className="text-violet-500 hover:underline">Ad Spend</a> + resolve atribusi dulu.</p>
-          ) : (
-            <div className="border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Campaign</TableHead><TableHead className="text-right">Spend</TableHead><TableHead className="text-right">Leads</TableHead>
-                  <TableHead className="text-right">Order</TableHead><TableHead className="text-right">Delivered</TableHead><TableHead className="text-right">CPR</TableHead><TableHead className="text-right">CPA</TableHead><TableHead className="text-right">CPA final</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {perf.map(p => (
-                    <TableRow key={p.campaign_id}>
-                      <TableCell className="text-xs">{p.campaign_name} <span className="text-muted-foreground">({p.platform})</span></TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">Rp {Number(p.spend_total).toLocaleString('id-ID')}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.leads}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.attributed_orders}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.delivered_orders}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.cpr != null ? 'Rp ' + Number(p.cpr).toLocaleString('id-ID') : '—'}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.cpa != null ? 'Rp ' + Number(p.cpa).toLocaleString('id-ID') : '—'}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums font-medium text-emerald-600">{p.cpa_final != null ? 'Rp ' + Number(p.cpa_final).toLocaleString('id-ID') : '—'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

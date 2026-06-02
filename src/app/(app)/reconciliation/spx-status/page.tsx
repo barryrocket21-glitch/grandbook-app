@@ -23,7 +23,7 @@ interface SyncRow {
   delivered_at: string | null
   retur_reason: string | null
 }
-interface ParseResult { rows: SyncRow[]; total: number; withGb: number; noGb: number; fileName: string }
+interface ParseResult { rows: SyncRow[]; total: number; withGb: number; noGb: number; fileName: string; fileSize: number }
 interface ApplyResult { matched: number; updated: number; skipped_no_ref: number; skipped_no_match: number }
 
 function num(v: unknown): number | null {
@@ -46,7 +46,7 @@ function parseDate(v: unknown): string | null {
   return Number.isNaN(dt.getTime()) ? null : dt.toISOString()
 }
 
-function parseSpxFile(data: ArrayBuffer, fileName: string): ParseResult {
+function parseSpxFile(data: ArrayBuffer, fileName: string, fileSize: number): ParseResult {
   const wb = XLSX.read(data, { type: 'array' })
   const ws = wb.Sheets[wb.SheetNames[0]]
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null })
@@ -85,7 +85,7 @@ function parseSpxFile(data: ArrayBuffer, fileName: string): ParseResult {
       retur_reason: ((iFail >= 0 ? String(r[iFail] ?? '').trim() : '') || (iHold >= 0 ? String(r[iHold] ?? '').trim() : '')) || null,
     })
   }
-  return { rows, total: rows.length, withGb, noGb, fileName }
+  return { rows, total: rows.length, withGb, noGb, fileName, fileSize }
 }
 
 export default function SpxStatusSyncPage() {
@@ -100,7 +100,7 @@ export default function SpxStatusSyncPage() {
     setParsing(true); setResult(null); setParsed(null)
     try {
       const buf = await file.arrayBuffer()
-      setParsed(parseSpxFile(buf, file.name))
+      setParsed(parseSpxFile(buf, file.name, file.size))
     } catch (err) {
       toast.error('Gagal baca file', { description: err instanceof Error ? err.message : String(err) })
     } finally { setParsing(false) }
@@ -121,6 +121,14 @@ export default function SpxStatusSyncPage() {
         acc.skipped_no_ref += d.skipped_no_ref || 0; acc.skipped_no_match += d.skipped_no_match || 0
       }
       setResult(acc)
+      // PART 2: catat riwayat batch (best-effort, gak gagalin sync)
+      try {
+        const shippingSum = parsed.rows.reduce((s, r) => s + (r.ref.startsWith('GB-') && r.actual_fee ? r.actual_fee : 0), 0)
+        await supabase.rpc('record_spx_status_batch', {
+          p_file_name: parsed.fileName, p_file_size: parsed.fileSize, p_total: parsed.total,
+          p_matched: acc.matched, p_unmatched: acc.skipped_no_ref + acc.skipped_no_match, p_shipping: shippingSum,
+        })
+      } catch (e) { console.warn('record batch:', e) }
       toast.success(`Sync selesai: ${acc.updated} order ke-update, ${acc.skipped_no_ref + acc.skipped_no_match} di-skip`)
     } catch (err) {
       toast.error('Gagal sync', { description: err instanceof Error ? err.message : String(err) })

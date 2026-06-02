@@ -19,7 +19,7 @@ const PLATFORMS = ['Facebook', 'Google', 'Snack', 'Tiktok']
 interface Account { id: number; platform: string; account_code: string; name: string | null; advertiser_id: string | null; active: boolean }
 interface Campaign { id: number; campaign_name: string; platform: string; account_id: number | null; campaign_marker: string | null }
 interface Prof { id: string; full_name: string | null }
-interface Perf { campaign_id: number; campaign_name: string; platform: string; spend_total: number; leads: number; attributed_orders: number; cpr: number | null; cpa: number | null }
+interface Perf { campaign_id: number; campaign_name: string; platform: string; spend_total: number; leads: number; attributed_orders: number; delivered_orders: number; cpr: number | null; cpa: number | null; cpa_final: number | null }
 
 export default function AdSetupPage() {
   const { role } = useAuth()
@@ -203,7 +203,7 @@ export default function AdSetupPage() {
       <Card>
         <CardContent className="pt-4 pb-4 space-y-2">
           <div className="text-sm font-semibold">Performa Campaign (CPR / CPA)</div>
-          <p className="text-[11px] text-muted-foreground">CPR = spend ÷ leads · CPA = spend ÷ order ter-atribusi (gross). <b>CPA final</b> (per order delivered) nunggu sync SPX (#13).</p>
+          <p className="text-[11px] text-muted-foreground">CPR = spend ÷ leads · CPA = spend ÷ order ter-atribusi (gross) · <b>CPA final</b> = spend ÷ order <b>delivered</b> (DITERIMA, real dari sync SPX).</p>
           {perf.length === 0 ? (
             <p className="text-xs text-muted-foreground">Belum ada spend/atribusi. Input di <a href="/ad-spend" className="text-violet-500 hover:underline">Ad Spend</a> + resolve atribusi dulu.</p>
           ) : (
@@ -211,7 +211,7 @@ export default function AdSetupPage() {
               <Table>
                 <TableHeader><TableRow>
                   <TableHead>Campaign</TableHead><TableHead className="text-right">Spend</TableHead><TableHead className="text-right">Leads</TableHead>
-                  <TableHead className="text-right">Order</TableHead><TableHead className="text-right">CPR</TableHead><TableHead className="text-right">CPA</TableHead><TableHead className="text-right">CPA final</TableHead>
+                  <TableHead className="text-right">Order</TableHead><TableHead className="text-right">Delivered</TableHead><TableHead className="text-right">CPR</TableHead><TableHead className="text-right">CPA</TableHead><TableHead className="text-right">CPA final</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {perf.map(p => (
@@ -220,9 +220,10 @@ export default function AdSetupPage() {
                       <TableCell className="text-right text-xs tabular-nums">Rp {Number(p.spend_total).toLocaleString('id-ID')}</TableCell>
                       <TableCell className="text-right text-xs tabular-nums">{p.leads}</TableCell>
                       <TableCell className="text-right text-xs tabular-nums">{p.attributed_orders}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.delivered_orders}</TableCell>
                       <TableCell className="text-right text-xs tabular-nums">{p.cpr != null ? 'Rp ' + Number(p.cpr).toLocaleString('id-ID') : '—'}</TableCell>
                       <TableCell className="text-right text-xs tabular-nums">{p.cpa != null ? 'Rp ' + Number(p.cpa).toLocaleString('id-ID') : '—'}</TableCell>
-                      <TableCell className="text-right text-[10px] text-muted-foreground italic">pending #13</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums font-medium text-emerald-600">{p.cpa_final != null ? 'Rp ' + Number(p.cpa_final).toLocaleString('id-ID') : '—'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

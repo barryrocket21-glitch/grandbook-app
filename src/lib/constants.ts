@@ -198,18 +198,17 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    // Brief #22 — rapiin 7→4: Setup Iklan (akun+campaign) · Input Harian
+    // (spend+lead) · Performa (CPR/CPA/CPA Final) · Margin Simulator.
     title: 'Marketing',
-    href: '/adv-dashboard',
+    href: '/marketing/ad-setup',
     icon: Megaphone,
     roles: ['owner', 'admin', 'advertiser'],
     children: [
-      { title: 'Dashboard ADV', href: '/adv-dashboard' },
-      { title: 'Akun & Atribusi', href: '/marketing/ad-setup' },
-      { title: 'Distribusi Atribusi', href: '/marketing/distribusi' },
-      { title: 'Campaigns', href: '/campaigns' },
-      { title: 'Ad Spend', href: '/ad-spend' },
+      { title: 'Setup Iklan', href: '/marketing/ad-setup' },
+      { title: 'Input Harian', href: '/ad-spend' },
+      { title: 'Performa', href: '/marketing/performa' },
       { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
-      { title: 'Performa Advertiser', href: '/team/advertisers', roles: ['owner', 'admin'] },
     ],
   },
   {

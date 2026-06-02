@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { BookOpen, Loader2, Search, RefreshCw, ArrowUpDown } from 'lucide-react'
+import { BookOpen, Loader2, Search, RefreshCw, ArrowUpDown, Wand2 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah, formatDate } from '@/lib/format'
 
@@ -83,7 +83,10 @@ export default function PembukuanPage() {
   return (
     <div className="space-y-4">
       <PageHeader icon={BookOpen} title="Pembukuan (Satu Tampilan)"
-        description="Semua order — apapun statusnya — dalam satu tabel. Sort & filter by status/tanggal/CS/produk. Order yang udah delivered/retur/batal tetap di sini (pindah status, bukan ilang)." />
+        description="Semua order — apapun statusnya — dalam satu tabel. Sort & filter by status/tanggal/CS/produk. Order yang udah delivered/retur/batal tetap di sini (pindah status, bukan ilang)."
+        actions={
+          <a href="/marketing/distribusi" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-sm hover:bg-muted"><Wand2 className="w-3.5 h-3.5" /> Distribusi Atribusi (assign manual)</a>
+        } />
 
       <Card>
         <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">

@@ -17,6 +17,8 @@ import { getErrorMessage } from '@/lib/errors'
 const supabase = createClient()
 // Brief #19 — vocab KANONIK (samain parser #14 + campaigns + resolver). "F" = Meta.
 const PLATFORMS = ['META', 'GOOGLE', 'SNACK', 'TIKTOK']
+// Brief #22 — kebalikan PLATFORM_CODE_MAP (buat tampilin kode atribusi "Luna F.A.1")
+const PLATFORM_LETTER: Record<string, string> = { META: 'F', GOOGLE: 'G', SNACK: 'S', TIKTOK: 'T' }
 
 interface Account { id: number; platform: string; account_code: string; name: string | null; advertiser_id: string | null; active: boolean }
 interface Campaign { id: number; campaign_name: string; platform: string; account_id: number | null; campaign_marker: string | null }
@@ -243,13 +245,19 @@ export default function AdSetupPage() {
       {/* Campaign account + marker */}
       <Card>
         <CardContent className="pt-4 pb-4 space-y-3">
-          <div className="text-sm font-semibold">Tandai Campaign (Akun + Marker)</div>
-          <p className="text-xs text-muted-foreground">Kunci resolusi = (platform akun, kode akun, marker campaign). Mis. kode <b>F.A.1</b> → akun <b>A</b> + marker <b>1</b>.</p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-semibold">Tandai Campaign (Akun + Marker)</div>
+            <a href="/campaigns" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-xs hover:bg-muted"><Plus className="w-3.5 h-3.5" /> Kelola Campaign + Produk</a>
+          </div>
+          <p className="text-xs text-muted-foreground">Kunci resolusi = (platform akun, kode akun, marker campaign). Kode atribusi yang dipakai CS = <b>Produk Platform.Akun.Marker</b> (mis. <b>Luna F.A.1</b>).</p>
           <div className="border rounded-md overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Campaign</TableHead><TableHead>Akun</TableHead><TableHead>Marker</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Campaign</TableHead><TableHead>Akun</TableHead><TableHead>Marker</TableHead><TableHead>Kode Atribusi</TableHead><TableHead></TableHead></TableRow></TableHeader>
               <TableBody>
-                {campaigns.map(c => (
+                {campaigns.map(c => {
+                  const acc = accounts.find(a => a.id === c.account_id)
+                  const code = acc && c.campaign_marker ? `${PLATFORM_LETTER[acc.platform] ?? '?'}.${acc.account_code}.${c.campaign_marker}` : null
+                  return (
                   <TableRow key={c.id}>
                     <TableCell className="text-xs">{c.campaign_name} <span className="text-muted-foreground">({c.platform})</span></TableCell>
                     <TableCell>
@@ -262,9 +270,10 @@ export default function AdSetupPage() {
                       </Select>
                     </TableCell>
                     <TableCell><Input value={c.campaign_marker ?? ''} onChange={e => setCamp(c.id, { campaign_marker: e.target.value })} placeholder="1" className="h-8 w-20 text-xs" /></TableCell>
+                    <TableCell>{code ? <span className="font-mono text-xs bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{code}</span> : <span className="text-[10px] text-muted-foreground">akun+marker dulu</span>}</TableCell>
                     <TableCell><Button size="sm" variant="outline" onClick={() => saveCampaign(c)} disabled={savingCamp === c.id} className="h-8 gap-1.5">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}</Button></TableCell>
                   </TableRow>
-                ))}
+                )})}
               </TableBody>
             </Table>
           </div>

@@ -230,7 +230,7 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Supplier', href: '/settings/suppliers', roles: ['owner', 'admin', 'akunting'] },
       // Brief #12 — 4 menu master kurir digabung jadi 1 "Master Kurir". Halaman
       // lama tetap routable (fallback advanced) tapi gak di sidebar.
-      { title: 'Master Kurir', href: '/settings/master-kurir', roles: ['owner', 'admin'] },
+      { title: 'Setup Kurir', href: '/settings/master-kurir', roles: ['owner', 'admin'] },
       { title: 'Converter Profiles', href: '/settings/converter-profiles', roles: ['owner', 'admin'] },
       { title: 'Master Wilayah', href: '/settings/wilayah', roles: ['owner', 'admin', 'akunting'] },
     ],

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Megaphone, Loader2, Plus, Save, Wand2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
+import { getErrorMessage } from '@/lib/errors'
 
 const supabase = createClient()
 // Brief #19 — vocab KANONIK (samain parser #14 + campaigns + resolver). "F" = Meta.
@@ -56,15 +57,16 @@ export default function AdSetupPage() {
     if (!naf.account_code.trim()) { toast.error('Kode akun wajib (segmen "A")'); return }
     setSavingAcc(true)
     try {
-      const { error } = await supabase.from('ad_accounts').insert({
-        platform: naf.platform, account_code: naf.account_code.trim(), name: naf.name.trim() || null,
-        advertiser_id: naf.advertiser_id || null, active: true,
+      // Brief #20 — via RPC (set organization_id=current_org_id() server-side → match RLS).
+      const { error } = await supabase.rpc('create_ad_account', {
+        p_platform: naf.platform, p_account_code: naf.account_code.trim(),
+        p_name: naf.name.trim() || null, p_advertiser_id: naf.advertiser_id || null,
       })
       if (error) throw error
-      toast.success('Akun ditambah')
+      toast.success(`Akun "${naf.account_code.trim()}" (${naf.platform}) ditambah`)
       setNaf({ platform: 'META', account_code: '', name: '', advertiser_id: '' })
       await load()
-    } catch (err) { toast.error('Gagal tambah akun', { description: err instanceof Error ? err.message : String(err) }) }
+    } catch (err) { toast.error('Gagal tambah akun', { description: getErrorMessage(err) }) }
     finally { setSavingAcc(false) }
   }
 
@@ -79,7 +81,7 @@ export default function AdSetupPage() {
         .eq('id', c.id)
       if (error) throw error
       toast.success(`Campaign "${c.campaign_name}" disimpen`)
-    } catch (err) { toast.error('Gagal simpan campaign', { description: err instanceof Error ? err.message : String(err) }) }
+    } catch (err) { toast.error('Gagal simpan campaign', { description: getErrorMessage(err) }) }
     finally { setSavingCamp(null) }
   }
 
@@ -92,7 +94,7 @@ export default function AdSetupPage() {
       toast.success(`Resolusi atribusi: ${d.resolved ?? 0} order ke-resolve, ${d.still_pending ?? 0} masih pending`, {
         description: 'Order ber-token yang akun+campaign-nya udah terdaftar → ke-set campaign_id.',
       })
-    } catch (err) { toast.error('Gagal resolve', { description: err instanceof Error ? err.message : String(err) }) }
+    } catch (err) { toast.error('Gagal resolve', { description: getErrorMessage(err) }) }
     finally { setResolving(false) }
   }
 
@@ -135,7 +137,7 @@ export default function AdSetupPage() {
             <div className="space-y-1">
               <Label className="text-xs">Advertiser</Label>
               <Select value={naf.advertiser_id || 'none'} onValueChange={v => setNaf({ ...naf, advertiser_id: (!v || v === 'none') ? '' : v })}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger className="h-9"><SelectValue placeholder="—">{naf.advertiser_id ? advName(naf.advertiser_id) : '—'}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— belum —</SelectItem>
                   {advs.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name || a.id.slice(0, 8)}</SelectItem>)}

@@ -19,6 +19,7 @@ import {
 import { Combobox } from '@/components/ui/combobox'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
 import {
   Plus, Pencil, Loader2, DollarSign, Trash2, Upload, FileText,
   CheckCircle2, AlertTriangle, ArrowRight, ArrowLeft, X, Coins, MousePointer, Eye,
@@ -117,7 +118,7 @@ export default function AdSpendPage() {
       setCampaigns(c)
       setSummary(s)
     } catch (err) {
-      toast.error('Gagal load ad_spend', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load ad_spend', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -178,7 +179,7 @@ export default function AdSpendPage() {
       reset()
       void load()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal simpan', { description: msg.includes('duplicate') ? 'Sudah ada spend untuk tanggal + campaign ini. Edit row existing.' : msg })
     } finally {
       setSaving(false)
@@ -192,7 +193,7 @@ export default function AdSpendPage() {
       toast.success('Spend dihapus')
       void load()
     } catch (err) {
-      toast.error('Gagal hapus', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal hapus', { description: getErrorMessage(err) })
     }
   }
 
@@ -611,7 +612,7 @@ function CsvUploadDialog({
       setMatchResult(matches)
       setStep('preview')
     } catch (err) {
-      toast.error('Gagal parse CSV', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal parse CSV', { description: getErrorMessage(err) })
     } finally {
       setParsing(false)
     }
@@ -646,7 +647,7 @@ function CsvUploadDialog({
       })
       setStep('done')
     } catch (err) {
-      toast.error('Gagal import', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal import', { description: getErrorMessage(err) })
       setStep('preview')
     }
   }

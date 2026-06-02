@@ -14,6 +14,7 @@ import {
 import { Combobox } from '@/components/ui/combobox'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
 import {
   Plus, Loader2, Users, Save, CopyPlus, Trash2, RotateCcw,
   TrendingUp, MessageCircle, CheckCircle2, AlertTriangle,
@@ -124,7 +125,7 @@ export default function CsReportPage() {
       setRows(mapped)
       setSummary(sum)
     } catch (err) {
-      toast.error('Gagal load laporan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load laporan', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -206,7 +207,7 @@ export default function CsReportPage() {
         toast.success('Row dihapus')
         void loadReport()
       } catch (err) {
-        toast.error('Gagal hapus', { description: err instanceof Error ? err.message : String(err) })
+        toast.error('Gagal hapus', { description: getErrorMessage(err) })
       }
       return
     }
@@ -238,7 +239,7 @@ export default function CsReportPage() {
       toast.success(`${result.upserted} laporan disimpan`)
       void loadReport()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal save', { description: msg.includes('closing_lte_lead') ? 'Closing > lead di salah satu row (DB constraint)' : msg })
     } finally {
       setSaving(false)
@@ -273,7 +274,7 @@ export default function CsReportPage() {
       setRows(prev => [...prev, ...yMapped])
       toast.success(`${yMapped.length} produk ditambahkan dari ${yday} (angka di-prefill, adjust sebelum save)`)
     } catch (err) {
-      toast.error('Gagal copy', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal copy', { description: getErrorMessage(err) })
     } finally {
       setCopying(false)
     }

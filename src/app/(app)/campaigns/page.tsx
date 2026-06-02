@@ -20,6 +20,7 @@ import {
 import { Combobox } from '@/components/ui/combobox'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
 import {
   Plus, Pencil, Loader2, Megaphone, Trash2, Search, Link2, Power,
 } from 'lucide-react'
@@ -100,7 +101,7 @@ export default function CampaignsPage() {
       setProducts(p)
       setAdvertisers(advs)
     } catch (err) {
-      toast.error('Gagal load campaigns', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load campaigns', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -157,7 +158,7 @@ export default function CampaignsPage() {
       reset()
       void load()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal simpan', { description: msg.includes('duplicate') ? 'Nama campaign sudah dipakai per platform.' : msg })
     } finally {
       setSaving(false)
@@ -170,7 +171,7 @@ export default function CampaignsPage() {
       toast.success(!c.active ? `${c.campaign_name} diaktifkan` : `${c.campaign_name} dinonaktifkan`)
       void load()
     } catch (err) {
-      toast.error('Gagal toggle', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal toggle', { description: getErrorMessage(err) })
     }
   }
 
@@ -186,7 +187,7 @@ export default function CampaignsPage() {
       toast.success('Campaign dihapus')
       void load()
     } catch (err) {
-      toast.error('Gagal hapus', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal hapus', { description: getErrorMessage(err) })
     }
   }
 
@@ -286,7 +287,7 @@ export default function CampaignsPage() {
       resetAlloc()
       void load()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal simpan', { description: msg.includes('22023') ? 'Total allocation > 100% (trigger guard)' : msg })
     }
   }
@@ -298,7 +299,7 @@ export default function CampaignsPage() {
       toast.success('Link dihapus')
       void load()
     } catch (err) {
-      toast.error('Gagal hapus', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal hapus', { description: getErrorMessage(err) })
     }
   }
 

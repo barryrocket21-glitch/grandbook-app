@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { UserCog, Loader2, Search, RefreshCw, Wand2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah, formatDate } from '@/lib/format'
 
@@ -72,7 +73,7 @@ export default function DistribusiPage() {
       if (error) throw error
       toast.success(`${data ?? 0} order di-assign ke campaign`)
       await load()
-    } catch (err) { toast.error('Gagal assign', { description: err instanceof Error ? err.message : String(err) }) }
+    } catch (err) { toast.error('Gagal assign', { description: getErrorMessage(err) }) }
     finally { setAssigning(false) }
   }
 
@@ -84,7 +85,7 @@ export default function DistribusiPage() {
       const d = (data || {}) as { resolved?: number }
       toast.success(`Auto-resolve: ${d.resolved ?? 0} order ke-resolve dari token`)
       await load()
-    } catch (err) { toast.error('Gagal resolve', { description: err instanceof Error ? err.message : String(err) }) }
+    } catch (err) { toast.error('Gagal resolve', { description: getErrorMessage(err) }) }
     finally { setResolving(false) }
   }
 

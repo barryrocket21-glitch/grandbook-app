@@ -3,9 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Banknote, RefreshCw, Wallet, TrendingDown, TrendingUp, AlertCircle } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
-import { id as localeId } from 'date-fns/locale'
+import { RefreshCw, Wallet, AlertCircle } from 'lucide-react'
 import { formatRupiah } from '@/lib/format'
 import type { CashflowSummary } from '@/lib/types'
 
@@ -50,7 +48,10 @@ export function CashflowSummaryWidget() {
       </Card>
     )
   }
-  if (!data) return null
+  // Brief #16 PART 3 — angka cair/payout belum bisa dihitung sampai sub-brief
+  // rekonsiliasi payout SPX jalan. JANGAN nampilin 0 misleading seakan udah cair.
+  // Saldo real (bank_withdrawals) tetap ditampilin kalau ada; sisanya placeholder.
+  const hasSaldo = !!data && data.saldo_terakhir != null
 
   return (
     <Card className="bg-gradient-to-br from-violet-500/5 to-blue-500/5 border-violet-500/20">
@@ -58,64 +59,27 @@ export function CashflowSummaryWidget() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-violet-500" />
-            <h3 className="text-sm font-semibold">Saldo SPX &amp; Cashflow Bulan Ini</h3>
+            <h3 className="text-sm font-semibold">Saldo SPX &amp; Cashflow</h3>
           </div>
           <Button variant="ghost" size="sm" onClick={() => void load(true)} disabled={refreshing} className="h-7 px-2">
             <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        {hasSaldo && (
           <Metric
             icon={<Wallet className="w-3.5 h-3.5 text-violet-500" />}
-            label="Saldo terakhir"
-            value={data.saldo_terakhir != null ? formatRupiah(Number(data.saldo_terakhir)) : '—'}
+            label="Saldo terakhir (bank_withdrawals)"
+            value={formatRupiah(Number(data!.saldo_terakhir))}
             valueClass="text-violet-600"
           />
-          <Metric
-            icon={<TrendingUp className="w-3.5 h-3.5 text-emerald-500" />}
-            label="COD masuk bln ini"
-            value={formatRupiah(Number(data.total_cod_bulan_ini))}
-            valueClass="text-emerald-600"
-          />
-          <Metric
-            icon={<TrendingDown className="w-3.5 h-3.5 text-blue-500" />}
-            label="Ditarik bln ini"
-            value={formatRupiah(Number(data.total_penarikan_bulan_ini))}
-            valueClass="text-blue-600"
-          />
-        </div>
+        )}
 
-        <div className="border-t pt-2 space-y-1.5 text-xs">
-          {data.last_withdrawal_date && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Banknote className="w-3 h-3" />
-                <span>Penarikan terakhir</span>
-              </div>
-              <div className="font-medium tabular-nums">
-                {(() => {
-                  try { return format(parseISO(data.last_withdrawal_date), 'dd MMM', { locale: localeId }) }
-                  catch { return data.last_withdrawal_date }
-                })()}
-                <span className="text-muted-foreground ml-1">·</span>
-                <span className="ml-1">{formatRupiah(Number(data.last_withdrawal_amount || 0))}</span>
-              </div>
-            </div>
-          )}
-          {data.unsettled_count > 0 && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-amber-600">
-                <AlertCircle className="w-3 h-3" />
-                <span>Order belum cair</span>
-              </div>
-              <div className="font-medium tabular-nums">
-                <span className="text-amber-600">{data.unsettled_count}</span>
-                <span className="text-muted-foreground ml-1">order ·</span>
-                <span className="ml-1">{formatRupiah(Number(data.unsettled_amount))}</span>
-              </div>
-            </div>
-          )}
+        <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-2.5 flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+          <div className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
+            <b>Cashflow cair belum tersedia.</b> COD masuk / ditarik / belum cair nunggu <b>rekonsiliasi payout SPX</b> (sub-brief). Angka cair gak ditampilin dulu biar gak misleading.
+          </div>
         </div>
       </CardContent>
     </Card>

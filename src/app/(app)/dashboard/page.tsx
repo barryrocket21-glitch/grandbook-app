@@ -36,14 +36,14 @@ interface DashboardData {
   ordersByStatus: Record<string, number>
   totalAdSpendBulanIni: number
   blendedROAS: number
-  // P&L resmi (RPC laba_rugi_summary)
-  labaBersihAct: number
-  labaBersihEst: number
-  diterimaCount: number
-  // Posisi keuangan (RPC get_financial_position)
-  posisiBersih: number
-  totalAset: number
-  totalUtang: number
+  // Brief #16 — EST (order berjalan/draft) vs AKTUAL (delivered). Sumber UNION
+  // orders_draft + orders (akar masalah: orders kosong, order hidup di draft).
+  estProfit: number
+  estBiaya: number
+  estFeeCod: number
+  estPpn: number
+  aktualProfit: number
+  deliveredCount: number
   returPercentage: number
   fakePercentage: number
   dailyChart: Array<{ date: string; omzet: number; spend: number; profit: number }>
@@ -64,33 +64,39 @@ export default function DashboardPage() {
       const today = getToday()
       const startOfMonth = getStartOfMonth()
 
+      // Brief #16 — sumber UNION: order berjalan ada di orders_draft, terminal
+      // (delivered/retur/batal) di orders. Agregasi keuangan dari KEDUANYA.
+      const SEL = 'total, status, order_date, estimated_profit, estimated_total_cost, estimated_cod_fee, estimated_ppn'
       const [
+        { data: draftAllMonth },
         { data: ordersAllMonth },
         { data: adSpendMonth },
+        { data: draftItems },
         { data: orderItems },
-        { data: labaRows },
-        { data: posisiRows },
       ] = await Promise.all([
-        supabase.from('orders').select('total, status, order_date').gte('order_date', startOfMonth),
+        supabase.from('orders_draft').select(SEL).gte('order_date', startOfMonth),
+        supabase.from('orders').select(SEL).gte('order_date', startOfMonth),
         supabase.from('ad_spend').select('spend, spend_date').gte('spend_date', startOfMonth),
+        supabase.from('order_items_draft').select('qty, price, products(name), orders_draft!inner(order_date, status)').gte('orders_draft.order_date', startOfMonth),
         supabase.from('order_items').select('qty, price, products(name), orders!inner(order_date, status)').gte('orders.order_date', startOfMonth),
-        supabase.rpc('laba_rugi_summary', { p_from: startOfMonth, p_to: today }),
-        supabase.rpc('get_financial_position'),
       ])
-
-      const ordersMonth = ordersAllMonth || []
-      const ordersToday = ordersMonth.filter((o: any) => o.order_date === today)
       const safeArr = (arr: any[] | null) => arr || []
+
+      const TERMINAL = ['DITERIMA', 'RETUR', 'CANCEL', 'FAKE']
+      const draftMonth = safeArr(draftAllMonth)   // order berjalan (EST)
+      const ordersMonth = safeArr(ordersAllMonth) // order terminal (AKTUAL)
+      const allMonth = [...draftMonth, ...ordersMonth]
+      const allToday = allMonth.filter((o: any) => o.order_date === today)
 
       const sumOmzet = (arr: any[]) => arr
         .filter((o) => !['CANCEL', 'FAKE'].includes(o.status))
         .reduce((sum: number, o: any) => sum + Number(o.total), 0)
-      const omzetHariIni = sumOmzet(ordersToday)
-      const omzetBulanIni = sumOmzet(ordersMonth)
+      const omzetHariIni = sumOmzet(allToday)
+      const omzetBulanIni = sumOmzet(allMonth)
 
-      // Orders by status
+      // Orders by status (union)
       const ordersByStatus: Record<string, number> = {}
-      ordersMonth.forEach((o: any) => {
+      allMonth.forEach((o: any) => {
         ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1
       })
 
@@ -100,24 +106,19 @@ export default function DashboardPage() {
       )
       const blendedROAS = totalAdSpendBulanIni > 0 ? omzetBulanIni / totalAdSpendBulanIni : 0
 
-      // Laba Rugi — angka P&L resmi (cascade lengkap, status-aware)
-      const laba: any = Array.isArray(labaRows) ? labaRows[0] : null
-      const labaBersihAct = Number(laba?.laba_bersih_act) || 0
-      const labaBersihEst = Number(laba?.laba_bersih_est) || 0
-      const diterimaCount = Number(laba?.diterima_count) || 0
-
-      // Posisi Keuangan — peta cashflow COD
-      const pos: any = Array.isArray(posisiRows) ? posisiRows[0] : null
-      const totalAset = pos
-        ? (Number(pos.in_transit_cod) || 0) + (Number(pos.cod_at_spx) || 0)
-        : 0
-      const totalUtang = pos
-        ? (Number(pos.hpp_supplier_owed) || 0) + (Number(pos.ongkir_spx_owed) || 0) + (Number(pos.komisi_owed) || 0)
-        : 0
-      const posisiBersih = totalAset - totalUtang
+      // EST (order berjalan, belum terminal) vs AKTUAL (delivered)
+      const sumF = (arr: any[], k: string) => arr.reduce((s: number, o: any) => s + (Number(o[k]) || 0), 0)
+      const running = allMonth.filter((o: any) => !TERMINAL.includes(o.status))
+      const estProfit = sumF(running, 'estimated_profit')
+      const estBiaya = sumF(running, 'estimated_total_cost')
+      const estFeeCod = sumF(running, 'estimated_cod_fee')
+      const estPpn = sumF(running, 'estimated_ppn')
+      const delivered = ordersMonth.filter((o: any) => o.status === 'DITERIMA')
+      const aktualProfit = sumF(delivered, 'estimated_profit') // post-promote estimated_* = pakai ongkir aktual
+      const deliveredCount = delivered.length
 
       // Retur & Fake %
-      const totalOrdersMonth = ordersMonth.length
+      const totalOrdersMonth = allMonth.length
       const returCount = ordersByStatus['RETUR'] || 0
       const fakeCount = ordersByStatus['FAKE'] || 0
       // Retur Rate: % dari order yang udah selesai (diterima+retur), match
@@ -127,10 +128,14 @@ export default function DashboardPage() {
       const returPercentage = finishedCount > 0 ? (returCount / finishedCount) * 100 : 0
       const fakePercentage = totalOrdersMonth > 0 ? (fakeCount / totalOrdersMonth) * 100 : 0
 
-      // Top products
+      // Top products — union order_items_draft + order_items
+      const allItems = [
+        ...safeArr(draftItems).map((i: any) => ({ ...i, _status: i.orders_draft?.status })),
+        ...safeArr(orderItems).map((i: any) => ({ ...i, _status: i.orders?.status })),
+      ]
       const productMap = new Map<string, { qty: number; revenue: number }>()
-      safeArr(orderItems)
-        .filter((i: any) => !['CANCEL', 'FAKE'].includes(i.orders?.status))
+      allItems
+        .filter((i: any) => !['CANCEL', 'FAKE'].includes(i._status))
         .forEach((i: any) => {
           const name = i.products?.name || 'Unknown'
           const existing = productMap.get(name) || { qty: 0, revenue: 0 }
@@ -151,7 +156,7 @@ export default function DashboardPage() {
         d.setDate(d.getDate() - i)
         dailyMap.set(d.toISOString().split('T')[0], { omzet: 0, spend: 0 })
       }
-      ordersMonth
+      allMonth
         .filter((o: any) => !['CANCEL', 'FAKE'].includes(o.status))
         .forEach((o: any) => {
           const day = dailyMap.get(o.order_date)
@@ -171,17 +176,17 @@ export default function DashboardPage() {
       setData({
         omzetHariIni,
         omzetBulanIni,
-        totalOrdersHariIni: ordersToday.length,
+        totalOrdersHariIni: allToday.length,
         totalOrdersBulanIni: totalOrdersMonth,
         ordersByStatus,
         totalAdSpendBulanIni,
         blendedROAS,
-        labaBersihAct,
-        labaBersihEst,
-        diterimaCount,
-        posisiBersih,
-        totalAset,
-        totalUtang,
+        estProfit,
+        estBiaya,
+        estFeeCod,
+        estPpn,
+        aktualProfit,
+        deliveredCount,
         returPercentage,
         fakePercentage,
         dailyChart,
@@ -230,8 +235,7 @@ export default function DashboardPage() {
     name: status,
     value: count,
   })) : []
-  const labaPositive = (data?.labaBersihAct || 0) >= 0
-  const posisiPositive = (data?.posisiBersih || 0) >= 0
+  const profitPositive = (data?.estProfit || 0) >= 0
 
   return (
     <div className="space-y-6">
@@ -250,25 +254,30 @@ export default function DashboardPage() {
       {/* Hero — Laba Bersih & Posisi Bersih (link ke halaman detail) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Link href="/laba-rugi" className="group block">
-          <Card className={`h-full transition-all hover:shadow-md ${labaPositive ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+          <Card className={`h-full transition-all hover:shadow-md ${profitPositive ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
             <CardContent className="pt-5 pb-5">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-lg ${labaPositive ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
-                    <Scale className={`w-4 h-4 ${labaPositive ? 'text-emerald-600' : 'text-red-600'}`} />
+                  <div className={`p-2 rounded-lg ${profitPositive ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                    <Scale className={`w-4 h-4 ${profitPositive ? 'text-emerald-600' : 'text-red-600'}`} />
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground">Laba Bersih — Bulan Ini</div>
-                    <div className="text-[10px] text-muted-foreground">Realisasi — dari order Diterima</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">Profit Estimasi — Bulan Ini</div>
+                    <div className="text-[10px] text-muted-foreground">Order berjalan (belum delivered)</div>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </div>
-              <div className={`text-3xl font-bold tabular-nums mt-3 ${labaPositive ? 'text-emerald-600' : 'text-red-600'}`}>
-                {formatRupiah(data?.labaBersihAct || 0)}
+              <div className={`text-3xl font-bold tabular-nums mt-3 ${profitPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                {formatRupiah(data?.estProfit || 0)}
               </div>
               <div className="text-[11px] text-muted-foreground mt-1">
-                Estimasi {formatRupiah(data?.labaBersihEst || 0)} · {data?.diterimaCount || 0} order Diterima
+                Est. biaya {formatRupiah(data?.estBiaya || 0)} · fee COD {formatRupiah(data?.estFeeCod || 0)} · PPN {formatRupiah(data?.estPpn || 0)}
+              </div>
+              <div className="text-[11px] mt-1">
+                <span className="text-muted-foreground">Aktual (delivered): </span>
+                <span className="font-semibold tabular-nums text-emerald-600">{formatRupiah(data?.aktualProfit || 0)}</span>
+                <span className="text-muted-foreground"> · {data?.deliveredCount || 0} order Diterima</span>
               </div>
             </CardContent>
           </Card>
@@ -283,17 +292,15 @@ export default function DashboardPage() {
                     <Wallet className="w-4 h-4 text-violet-600" />
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground">Posisi Bersih</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">Posisi Kas COD</div>
                     <div className="text-[10px] text-muted-foreground">Aset COD − utang</div>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </div>
-              <div className={`text-3xl font-bold tabular-nums mt-3 ${posisiPositive ? 'text-emerald-600' : 'text-red-600'}`}>
-                {formatRupiah(data?.posisiBersih || 0)}
-              </div>
+              <div className="text-lg font-semibold mt-3 text-amber-600">Belum tersedia</div>
               <div className="text-[11px] text-muted-foreground mt-1">
-                Aset {formatRupiah(data?.totalAset || 0)} · Utang {formatRupiah(data?.totalUtang || 0)}
+                Nunggu rekonsiliasi payout SPX (sub-brief cair). Angka cair belum bisa dihitung sampai data settlement masuk.
               </div>
             </CardContent>
           </Card>

@@ -650,6 +650,19 @@ export interface OrderDraftEnriched {
   total_count: number
 }
 
+/** Brief #15 — master Akun iklan (rumah segmen "Akun" dari kode atribusi) */
+export interface AdAccount {
+  id: number
+  organization_id?: number
+  platform: string          // Facebook / Google / Snack / Tiktok (konvensi #14)
+  account_code: string      // segmen "A"
+  name: string | null
+  advertiser_id: string | null  // uuid → profiles (nullable)
+  active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 export interface DraftStatusStat {
   status: DraftOrderStatus
   cnt: number

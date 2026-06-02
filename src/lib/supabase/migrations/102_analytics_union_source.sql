@@ -33,7 +33,11 @@ SELECT
   o.campaign_id, o.channel_id, o.wilayah_id, o.customer_city, o.customer_province,
   o.delivered_at, o.returned_at, o.created_at, o.order_number, o.priority, o.payment_method
 FROM public.orders o;
-REVOKE ALL ON public.v_orders_union FROM PUBLIC, anon, authenticated;
+-- laba_rugi_summary = SECURITY INVOKER → query view sbg user authenticated.
+-- GRANT SELECT (security_invoker=on → RLS underlying orders/orders_draft tetap
+-- nge-scope per-org). REVOKE anon.
+REVOKE ALL ON public.v_orders_union FROM PUBLIC, anon;
+GRANT SELECT ON public.v_orders_union TO authenticated;
 
 -- ── VIEW 2: line-item (union) ───────────────────────────────────────────────
 CREATE OR REPLACE VIEW public.v_order_items_union WITH (security_invoker = on) AS
@@ -46,7 +50,8 @@ SELECT i.order_id, i.organization_id, i.product_id, i.variant_id,
   i.qty, i.price, i.hpp_snapshot, i.packing_fee_snapshot,
   i.product_name_raw, i.variation, i.product_code_raw
 FROM public.order_items i;
-REVOKE ALL ON public.v_order_items_union FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.v_order_items_union FROM PUBLIC, anon;
+GRANT SELECT ON public.v_order_items_union TO authenticated;
 
 -- ── Repoint RPC keuangan ke view union (regex word-boundary, idempotent) ─────
 -- `\morders\M` → match 'orders' sbg kata utuh (kena 'public.orders' & 'FROM orders'

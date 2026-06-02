@@ -10,6 +10,7 @@ import {
   Lock, Sparkles,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { PayoutReconSection } from '@/components/reconciliation/payout-recon-section'
 
 interface FlowLink {
   title: string
@@ -100,6 +101,9 @@ export default function ReconEkspedisiLandingPage() {
         title="Rekonsiliasi Ekspedisi"
         description="Match laporan ekspedisi/agregator dengan order di GrandBook — update biaya aktual, payout, saldo, dan cashflow."
       />
+
+      {/* Sub-brief #17 — payout/pencairan: set CAIR + flip komisi PAID (flow aktif utama) */}
+      <PayoutReconSection />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {AGGREGATORS.map((agg) => (

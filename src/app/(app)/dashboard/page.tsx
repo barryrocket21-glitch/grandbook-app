@@ -44,6 +44,10 @@ interface DashboardData {
   estPpn: number
   aktualProfit: number
   deliveredCount: number
+  // Sub-brief #17 — pencairan COD (real, ganti placeholder #16)
+  codCair: number
+  codUncair: number
+  uncairCount: number
   returPercentage: number
   fakePercentage: number
   dailyChart: Array<{ date: string; omzet: number; spend: number; profit: number }>
@@ -73,13 +77,19 @@ export default function DashboardPage() {
         { data: adSpendMonth },
         { data: draftItems },
         { data: orderItems },
+        { data: payoutPos },
       ] = await Promise.all([
         supabase.from('orders_draft').select(SEL).gte('order_date', startOfMonth),
         supabase.from('orders').select(SEL).gte('order_date', startOfMonth),
         supabase.from('ad_spend').select('spend, spend_date').gte('spend_date', startOfMonth),
         supabase.from('order_items_draft').select('qty, price, products(name), orders_draft!inner(order_date, status)').gte('orders_draft.order_date', startOfMonth),
         supabase.from('order_items').select('qty, price, products(name), orders!inner(order_date, status)').gte('orders.order_date', startOfMonth),
+        supabase.rpc('get_payout_position'),
       ])
+      const pay: any = Array.isArray(payoutPos) ? payoutPos[0] : null
+      const codCair = Number(pay?.cair_total) || 0
+      const codUncair = Number(pay?.uncair_total) || 0
+      const uncairCount = Number(pay?.uncair_count) || 0
       const safeArr = (arr: any[] | null) => arr || []
 
       const TERMINAL = ['DITERIMA', 'RETUR', 'CANCEL', 'FAKE']
@@ -187,6 +197,9 @@ export default function DashboardPage() {
         estPpn,
         aktualProfit,
         deliveredCount,
+        codCair,
+        codUncair,
+        uncairCount,
         returPercentage,
         fakePercentage,
         dailyChart,
@@ -292,15 +305,17 @@ export default function DashboardPage() {
                     <Wallet className="w-4 h-4 text-violet-600" />
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground">Posisi Kas COD</div>
-                    <div className="text-[10px] text-muted-foreground">Aset COD − utang</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">COD Sudah Cair</div>
+                    <div className="text-[10px] text-muted-foreground">Payout SPX masuk</div>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </div>
-              <div className="text-lg font-semibold mt-3 text-amber-600">Belum tersedia</div>
+              <div className="text-3xl font-bold tabular-nums mt-3 text-emerald-600">
+                {formatRupiah(data?.codCair || 0)}
+              </div>
               <div className="text-[11px] text-muted-foreground mt-1">
-                Nunggu rekonsiliasi payout SPX (sub-brief cair). Angka cair belum bisa dihitung sampai data settlement masuk.
+                Belum cair {formatRupiah(data?.codUncair || 0)} · {data?.uncairCount || 0} order delivered nunggu payout
               </div>
             </CardContent>
           </Card>

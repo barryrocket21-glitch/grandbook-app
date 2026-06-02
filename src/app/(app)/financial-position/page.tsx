@@ -40,6 +40,25 @@ interface FinancialPosition {
 
 const n = (v: unknown) => Number(v) || 0
 
+// Sub-brief #17 — posisi cair/belum-cair + aging (RPC get_payout_position).
+interface PayoutPosition {
+  cair_total: number; cair_count: number; uncair_total: number; uncair_count: number
+  aging_0_7_count: number; aging_0_7_amount: number
+  aging_8_14_count: number; aging_8_14_amount: number
+  aging_15plus_count: number; aging_15plus_amount: number
+  komisi_paid: number; komisi_earned: number
+}
+
+function AgingBucket({ label, tone, count, amount }: { label: string; tone: string; count: number; amount: number }) {
+  return (
+    <div className="rounded border bg-card p-2">
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className={`text-sm font-bold tabular-nums ${tone}`}>{formatRupiah(amount)}</div>
+      <div className="text-[10px] text-muted-foreground">{count} order</div>
+    </div>
+  )
+}
+
 type Tone = 'blue' | 'emerald' | 'orange' | 'amber' | 'rose'
 
 const TONE: Record<Tone, { border: string; iconBg: string; icon: string; amount: string }> = {
@@ -53,6 +72,7 @@ const TONE: Record<Tone, { border: string; iconBg: string; icon: string; amount:
 export default function FinancialPositionPage() {
   const { role } = useAuth()
   const [position, setPosition] = useState<FinancialPosition | null>(null)
+  const [payout, setPayout] = useState<PayoutPosition | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [supplierSheetOpen, setSupplierSheetOpen] = useState(false)
@@ -61,9 +81,13 @@ export default function FinancialPositionPage() {
     if (silent) setRefreshing(true)
     else setLoading(true)
     try {
-      const { data, error } = await supabase.rpc('get_financial_position')
+      const [{ data, error }, { data: pay }] = await Promise.all([
+        supabase.rpc('get_financial_position'),
+        supabase.rpc('get_payout_position'),
+      ])
       if (error) throw error
       setPosition((data?.[0] ?? null) as FinancialPosition | null)
+      setPayout((pay?.[0] ?? null) as PayoutPosition | null)
     } catch (err) {
       console.warn('get_financial_position failed:', err)
       setPosition(null)
@@ -119,6 +143,43 @@ export default function FinancialPositionPage() {
         <Card><CardContent className="p-12 text-center text-sm text-muted-foreground">Gagal memuat posisi keuangan.</CardContent></Card>
       ) : (
         <>
+          {/* Sub-brief #17 — Pencairan COD (cair vs belum cair) + aging */}
+          <Card className="border-emerald-500/30 bg-emerald-500/5">
+            <CardContent className="pt-5 pb-5 space-y-3">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Pencairan COD (dari payout SPX)</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <div className="text-[10px] text-muted-foreground">Sudah Cair</div>
+                  <div className="text-xl font-bold tabular-nums text-emerald-600">{formatRupiah(n(payout?.cair_total))}</div>
+                  <div className="text-[10px] text-muted-foreground">{n(payout?.cair_count)} order</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">Belum Cair (delivered)</div>
+                  <div className="text-xl font-bold tabular-nums text-amber-600">{formatRupiah(n(payout?.uncair_total))}</div>
+                  <div className="text-[10px] text-muted-foreground">{n(payout?.uncair_count)} order</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">Komisi Dibayar (PAID)</div>
+                  <div className="text-xl font-bold tabular-nums text-emerald-600">{formatRupiah(n(payout?.komisi_paid))}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">Komisi Terutang (EARNED)</div>
+                  <div className="text-xl font-bold tabular-nums text-orange-600">{formatRupiah(n(payout?.komisi_earned))}</div>
+                </div>
+              </div>
+              {/* Aging belum-cair */}
+              <div className="border-t pt-2">
+                <div className="text-[11px] text-muted-foreground mb-1.5">Aging belum cair (umur sejak delivered) — duit nyangkut/berisiko</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <AgingBucket label="0–7 hari" tone="text-emerald-600" count={n(payout?.aging_0_7_count)} amount={n(payout?.aging_0_7_amount)} />
+                  <AgingBucket label="8–14 hari" tone="text-amber-600" count={n(payout?.aging_8_14_count)} amount={n(payout?.aging_8_14_amount)} />
+                  <AgingBucket label="15+ hari" tone="text-rose-600" count={n(payout?.aging_15plus_count)} amount={n(payout?.aging_15plus_amount)} />
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Upload payout di <a href="/reconciliation/ekspedisi" className="text-violet-500 hover:underline">Rekonsiliasi Ekspedisi</a> buat update pencairan.</p>
+            </CardContent>
+          </Card>
+
           {/* Headline — Posisi Bersih */}
           <Card className="border-violet-500/30 bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-violet-500/10">
             <CardContent className="pt-5 pb-5">

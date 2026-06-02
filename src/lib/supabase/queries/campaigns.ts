@@ -73,8 +73,9 @@ export async function updateCampaign(
 }
 
 export async function deleteCampaign(supabase: SupabaseClient, id: number): Promise<void> {
-  const { error } = await supabase.from('campaigns').delete().eq('id', id)
-  if (error) throw new Error(`deleteCampaign: ${error.message}`)
+  // Brief #21 — guard dependent server-side (order ter-atribusi / ad_spend → blok).
+  const { error } = await supabase.rpc('delete_campaign', { p_id: id })
+  if (error) throw error
 }
 
 // ----- Linked products -----

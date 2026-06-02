@@ -176,11 +176,9 @@ export default function CampaignsPage() {
   }
 
   const handleDelete = async (c: CampaignWithRelations) => {
-    const linked = (c.linked_products || []).length
-    let msg = `Hapus campaign "${c.campaign_name}"?`
-    if (linked > 0) {
-      msg = `⚠️ Campaign "${c.campaign_name}" punya ${linked} linked products + ad_spend history yang akan IKUT TERHAPUS (CASCADE). Lanjut?`
-    }
+    // Brief #21 — hard delete DIBLOK server-side kalau ada order/ad_spend ke-link
+    // (RPC delete_campaign → pesan jelas). Kalau bersih: campaign_products ikut kehapus.
+    const msg = `Hapus campaign "${c.campaign_name}"? Diblok kalau ada order/spend ke-link — nonaktifin aja kalau gitu.`
     if (!confirm(msg)) return
     try {
       await deleteCampaign(supabase, c.id)

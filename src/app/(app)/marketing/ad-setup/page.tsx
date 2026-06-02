@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Megaphone, Loader2, Plus, Save, Wand2 } from 'lucide-react'
+import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
 import { getErrorMessage } from '@/lib/errors'
@@ -35,6 +36,10 @@ export default function AdSetupPage() {
   const [naf, setNaf] = useState({ platform: 'META', account_code: '', name: '', advertiser_id: '' })
   const [savingAcc, setSavingAcc] = useState(false)
   const [savingCamp, setSavingCamp] = useState<number | null>(null)
+  // Brief #21 — edit/hapus/toggle akun
+  const [editAccId, setEditAccId] = useState<number | null>(null)
+  const [eaf, setEaf] = useState({ platform: 'META', account_code: '', name: '', advertiser_id: '' })
+  const [accBusy, setAccBusy] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -68,6 +73,43 @@ export default function AdSetupPage() {
       await load()
     } catch (err) { toast.error('Gagal tambah akun', { description: getErrorMessage(err) }) }
     finally { setSavingAcc(false) }
+  }
+
+  const startEditAcc = (a: Account) => {
+    setEditAccId(a.id)
+    setEaf({ platform: a.platform, account_code: a.account_code, name: a.name || '', advertiser_id: a.advertiser_id || '' })
+  }
+  const saveEditAcc = async () => {
+    if (!editAccId || !eaf.account_code.trim()) { toast.error('Kode akun wajib'); return }
+    setAccBusy(true)
+    try {
+      const { error } = await supabase.rpc('update_ad_account', {
+        p_id: editAccId, p_platform: eaf.platform, p_account_code: eaf.account_code.trim(),
+        p_name: eaf.name.trim() || null, p_advertiser_id: eaf.advertiser_id || null,
+      })
+      if (error) throw error
+      toast.success('Akun diupdate'); setEditAccId(null); await load()
+    } catch (err) { toast.error('Gagal update akun', { description: getErrorMessage(err) }) }
+    finally { setAccBusy(false) }
+  }
+  const toggleAcc = async (a: Account) => {
+    setAccBusy(true)
+    try {
+      const { error } = await supabase.rpc('set_ad_account_active', { p_id: a.id, p_active: !a.active })
+      if (error) throw error
+      toast.success(!a.active ? 'Akun diaktifkan' : 'Akun dinonaktifkan'); await load()
+    } catch (err) { toast.error('Gagal toggle', { description: getErrorMessage(err) }) }
+    finally { setAccBusy(false) }
+  }
+  const deleteAcc = async (a: Account) => {
+    if (!confirm(`Hapus akun "${a.account_code}" (${a.platform})? Diblok kalau ada campaign pakai akun ini — nonaktifin aja kalau gitu.`)) return
+    setAccBusy(true)
+    try {
+      const { error } = await supabase.rpc('delete_ad_account', { p_id: a.id })
+      if (error) throw error
+      toast.success('Akun dihapus'); await load()
+    } catch (err) { toast.error('Gagal hapus akun', { description: getErrorMessage(err) }) }
+    finally { setAccBusy(false) }
   }
 
   const setCamp = (id: number, patch: Partial<Campaign>) =>
@@ -153,14 +195,42 @@ export default function AdSetupPage() {
           ) : (
             <div className="border rounded-md overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Platform</TableHead><TableHead>Kode</TableHead><TableHead>Nama</TableHead><TableHead>Advertiser</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Platform</TableHead><TableHead>Kode</TableHead><TableHead>Nama</TableHead><TableHead>Advertiser</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {accounts.map(a => (
-                    <TableRow key={a.id}>
+                  {accounts.map(a => editAccId === a.id ? (
+                    <TableRow key={a.id} className="bg-violet-500/5">
+                      <TableCell>
+                        <Select value={eaf.platform} onValueChange={v => v && setEaf({ ...eaf, platform: v })}>
+                          <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>{PLATFORMS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell><Input value={eaf.account_code} onChange={e => setEaf({ ...eaf, account_code: e.target.value })} className="h-8 w-20 text-xs font-mono" /></TableCell>
+                      <TableCell><Input value={eaf.name} onChange={e => setEaf({ ...eaf, name: e.target.value })} className="h-8 text-xs" /></TableCell>
+                      <TableCell>
+                        <Select value={eaf.advertiser_id || 'none'} onValueChange={v => setEaf({ ...eaf, advertiser_id: (!v || v === 'none') ? '' : v })}>
+                          <SelectTrigger className="h-8 w-36 text-xs"><SelectValue placeholder="—">{eaf.advertiser_id ? advName(eaf.advertiser_id) : '—'}</SelectValue></SelectTrigger>
+                          <SelectContent><SelectItem value="none">— belum —</SelectItem>{advs.map(x => <SelectItem key={x.id} value={x.id}>{x.full_name || x.id.slice(0, 8)}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell />
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" disabled={accBusy} onClick={saveEditAcc} title="Simpan"><Check className="w-4 h-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditAccId(null)} title="Batal"><X className="w-4 h-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    <TableRow key={a.id} className={a.active ? '' : 'opacity-50'}>
                       <TableCell className="text-xs">{a.platform}</TableCell>
                       <TableCell className="font-mono text-xs">{a.account_code}</TableCell>
                       <TableCell className="text-xs">{a.name || '—'}</TableCell>
                       <TableCell className="text-xs">{advName(a.advertiser_id)}</TableCell>
+                      <TableCell><Badge variant="outline" className={a.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{a.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => startEditAcc(a)} title="Edit"><Pencil className="w-3.5 h-3.5" /></Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => toggleAcc(a)} title={a.active ? 'Nonaktifkan' : 'Aktifkan'}><Power className={`w-3.5 h-3.5 ${a.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" disabled={accBusy} onClick={() => deleteAcc(a)} title="Hapus"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

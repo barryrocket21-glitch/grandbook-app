@@ -19,6 +19,7 @@ const PLATFORMS = ['Facebook', 'Google', 'Snack', 'Tiktok']
 interface Account { id: number; platform: string; account_code: string; name: string | null; advertiser_id: string | null; active: boolean }
 interface Campaign { id: number; campaign_name: string; platform: string; account_id: number | null; campaign_marker: string | null }
 interface Prof { id: string; full_name: string | null }
+interface Perf { campaign_id: number; campaign_name: string; platform: string; spend_total: number; leads: number; attributed_orders: number; cpr: number | null; cpa: number | null }
 
 export default function AdSetupPage() {
   const { role } = useAuth()
@@ -26,6 +27,7 @@ export default function AdSetupPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [advs, setAdvs] = useState<Prof[]>([])
+  const [perf, setPerf] = useState<Perf[]>([])
   const [loading, setLoading] = useState(true)
   const [resolving, setResolving] = useState(false)
   // new account form
@@ -36,14 +38,16 @@ export default function AdSetupPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [{ data: acc }, { data: camp }, { data: pr }] = await Promise.all([
+      const [{ data: acc }, { data: camp }, { data: pr }, { data: pf }] = await Promise.all([
         supabase.from('ad_accounts').select('id, platform, account_code, name, advertiser_id, active').order('platform').order('account_code'),
         supabase.from('campaigns').select('id, campaign_name, platform, account_id, campaign_marker').order('campaign_name'),
         supabase.from('profiles').select('id, full_name').in('role', ['advertiser', 'admin', 'owner']),
+        supabase.rpc('campaign_performance', { p_from: null, p_to: null }),
       ])
       setAccounts((acc || []) as Account[])
       setCampaigns((camp || []) as Campaign[])
       setAdvs((pr || []) as Prof[])
+      setPerf((pf || []) as Perf[])
     } catch (err) { console.warn('ad-setup load:', err) } finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
@@ -192,6 +196,39 @@ export default function AdSetupPage() {
               </TableBody>
             </Table>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* PART 4 — Performa CPR/CPA per campaign */}
+      <Card>
+        <CardContent className="pt-4 pb-4 space-y-2">
+          <div className="text-sm font-semibold">Performa Campaign (CPR / CPA)</div>
+          <p className="text-[11px] text-muted-foreground">CPR = spend ÷ leads · CPA = spend ÷ order ter-atribusi (gross). <b>CPA final</b> (per order delivered) nunggu sync SPX (#13).</p>
+          {perf.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Belum ada spend/atribusi. Input di <a href="/ad-spend" className="text-violet-500 hover:underline">Ad Spend</a> + resolve atribusi dulu.</p>
+          ) : (
+            <div className="border rounded-md overflow-x-auto">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Campaign</TableHead><TableHead className="text-right">Spend</TableHead><TableHead className="text-right">Leads</TableHead>
+                  <TableHead className="text-right">Order</TableHead><TableHead className="text-right">CPR</TableHead><TableHead className="text-right">CPA</TableHead><TableHead className="text-right">CPA final</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {perf.map(p => (
+                    <TableRow key={p.campaign_id}>
+                      <TableCell className="text-xs">{p.campaign_name} <span className="text-muted-foreground">({p.platform})</span></TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">Rp {Number(p.spend_total).toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.leads}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.attributed_orders}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.cpr != null ? 'Rp ' + Number(p.cpr).toLocaleString('id-ID') : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.cpa != null ? 'Rp ' + Number(p.cpa).toLocaleString('id-ID') : '—'}</TableCell>
+                      <TableCell className="text-right text-[10px] text-muted-foreground italic">pending #13</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

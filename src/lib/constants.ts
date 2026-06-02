@@ -195,6 +195,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'advertiser'],
     children: [
       { title: 'Dashboard ADV', href: '/adv-dashboard' },
+      { title: 'Akun & Atribusi', href: '/marketing/ad-setup' },
       { title: 'Campaigns', href: '/campaigns' },
       { title: 'Ad Spend', href: '/ad-spend' },
       { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },

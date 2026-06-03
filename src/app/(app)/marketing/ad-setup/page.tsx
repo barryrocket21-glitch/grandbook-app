@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
@@ -116,6 +116,20 @@ export default function AdSetupPage() {
   const codeFor = (prodName: string | undefined, acc: Account, marker: string) =>
     `${prodName ? prodName + ' ' : ''}${PLATFORM_LETTER[acc.platform] ?? '?'}.${acc.account_code}.${marker}`
 
+  // Kode atribusi per campaign (produk.platform.akun.marker) — null kalau belum lengkap
+  const campCode = useCallback((c: Campaign): string | null => {
+    const acc = accounts.find(a => a.id === c.account_id)
+    return acc && c.campaign_marker ? codeFor(campProd[c.id], acc, c.campaign_marker) : null
+  }, [accounts, campProd])
+  // Deteksi campaign DOBEL: identitas (akun+produk+marker) sama → kode atribusi tabrakan,
+  // bikin resolusi order ke-ambigu. Constraint unik udah dilepas (marker per-produk),
+  // jadi deteksi pindah ke sini (warn, gak block — biar bisa dibenerin).
+  const dupCodes = useMemo(() => {
+    const cnt: Record<string, number[]> = {}
+    for (const c of campaigns) { const k = campCode(c); if (k) (cnt[k] ||= []).push(c.id) }
+    return new Map(Object.entries(cnt).filter(([, ids]) => ids.length > 1))
+  }, [campaigns, campCode])
+
   const createCampaign = async () => {
     const acc = accounts.find(a => String(a.id) === ncf.account_id)
     if (!acc) { toast.error('Pilih akun dulu'); return }
@@ -190,6 +204,12 @@ export default function AdSetupPage() {
 
   const saveCampaign = async (c: Campaign) => {
     if (!c.campaign_name.trim()) { toast.error('Nama campaign wajib'); return }
+    // Guard dobel: identitas (akun+produk+marker) gak boleh nabrak campaign lain
+    if (c.account_id != null && c.campaign_marker?.trim()) {
+      const collide = campaigns.some(o => o.id !== c.id && o.account_id === c.account_id
+        && campProdId[o.id] === campProdId[c.id] && (o.campaign_marker || '') === (c.campaign_marker || ''))
+      if (collide) { toast.error('Identitas campaign nabrak campaign lain (akun+produk+marker sama). Ganti marker.'); return }
+    }
     setSavingCamp(c.id)
     try {
       // Brief #24 — simpan nama + akun + marker (edit penuh per baris).
@@ -346,6 +366,18 @@ export default function AdSetupPage() {
           </div>
           <p className="text-xs text-muted-foreground">Kode atribusi yang dipakai CS = <b>Produk Platform.Akun.Marker</b> (mis. <b>Luna F.A.1</b>). Singkatan platform: META=F · GOOGLE=G · SNACK=S · TIKTOK=T.</p>
 
+          {dupCodes.size > 0 && (
+            <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-xs space-y-1">
+              <div className="font-semibold text-rose-600 flex items-center gap-1.5"><X className="w-3.5 h-3.5" /> {dupCodes.size} kode campaign DOBEL terdeteksi</div>
+              <div className="text-rose-700/80">Kode atribusi sama (produk+platform+akun+marker) → resolusi order bisa ketuker. Ganti marker / hapus salah satu:</div>
+              <div className="flex flex-wrap gap-1.5">
+                {[...dupCodes.entries()].map(([code, ids]) => (
+                  <span key={code} className="font-mono bg-rose-500/15 text-rose-700 px-1.5 py-0.5 rounded">{code} <b>×{ids.length}</b></span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Brief #23 — Buat Campaign SIMPEL (akun + marker + produk + nama; tanpa budget) */}
           <div className="rounded-md border bg-violet-500/5 p-3 space-y-2">
             <div className="text-xs font-medium">+ Buat Campaign Baru</div>
@@ -397,8 +429,9 @@ export default function AdSetupPage() {
                 {campaigns.map(c => {
                   const acc = accounts.find(a => a.id === c.account_id)
                   const code = acc && c.campaign_marker ? codeFor(campProd[c.id], acc, c.campaign_marker) : null
+                  const isDup = code != null && dupCodes.has(code)
                   return (
-                  <TableRow key={c.id} className={c.active ? '' : 'opacity-50'}>
+                  <TableRow key={c.id} className={`${c.active ? '' : 'opacity-50'} ${isDup ? 'bg-rose-500/10' : ''}`}>
                     <TableCell><Input value={c.campaign_name} onChange={e => setCamp(c.id, { campaign_name: e.target.value })} className="h-8 w-48 text-xs" /></TableCell>
                     <TableCell>
                       <Select value={c.account_id ? String(c.account_id) : 'none'} onValueChange={v => setCamp(c.id, { account_id: (!v || v === 'none') ? null : Number(v) })}>
@@ -410,7 +443,7 @@ export default function AdSetupPage() {
                       </Select>
                     </TableCell>
                     <TableCell><Input value={c.campaign_marker ?? ''} onChange={e => setCamp(c.id, { campaign_marker: e.target.value })} placeholder="1" className="h-8 w-16 text-xs" /></TableCell>
-                    <TableCell>{code ? <span className="font-mono text-xs bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{code}</span> : <span className="text-[10px] text-muted-foreground">akun+marker dulu</span>}</TableCell>
+                    <TableCell>{code ? <span className="font-mono text-xs bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{code}</span> : <span className="text-[10px] text-muted-foreground">akun+marker dulu</span>}{isDup && <Badge variant="outline" className="ml-1 bg-rose-500/15 text-rose-600 text-[9px] border-rose-500/30">DOBEL</Badge>}</TableCell>
                     <TableCell><Badge variant="outline" className={c.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{c.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => saveCampaign(c)} disabled={savingCamp === c.id} title="Simpan">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}</Button>

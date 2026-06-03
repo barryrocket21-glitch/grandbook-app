@@ -137,7 +137,8 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Export ke Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
       { title: 'Post-Export (Nunggu Resi)', href: '/orders/post-export', roles: ['owner', 'admin', 'cs'] },
       { title: 'Sync Status SPX', href: '/reconciliation/spx-status', roles: ['owner', 'admin'] },
-      { title: 'Arsip Semua Order', href: '/orders/list', roles: ['owner', 'admin', 'akunting'] },
+      // 'Arsip Semua Order' (/orders/list) dibuang dari nav — Pembukuan udah
+      // nampilin SEMUA order termasuk terminal (filter zona). Halaman tetap routable.
     ],
   },
   {
@@ -181,9 +182,10 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Posisi Keuangan', href: '/financial-position' },
       { title: 'Laporan Laba Rugi', href: '/laba-rugi', badge: 'BARU' },
       { title: 'Rekonsiliasi Ekspedisi', href: '/reconciliation/ekspedisi' },
-      { title: 'Cross-check Platform Iklan', href: '/reconciliation' },
-      { title: 'Selisih Ongkir', href: '/shipping-diff', roles: ['owner', 'admin'] },
       { title: 'Biaya Operasional', href: '/expenses' },
+      // Dibuang dari nav (halaman tetap routable):
+      // - 'Cross-check Platform Iklan' (/reconciliation) — peninggalan lama, fungsi udah di Marketing.
+      // - 'Selisih Ongkir' (/shipping-diff) — selisih ongkir aktual-vs-est udah keliatan di ledger Pembukuan.
     ],
   },
   {

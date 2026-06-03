@@ -371,7 +371,7 @@ export default function AdSetupPage() {
               <div className="space-y-1">
                 <Label className="text-[10px]">Produk (wajib)</Label>
                 <Select value={ncf.product_id || 'none'} onValueChange={v => { const pid = (!v || v === 'none') ? '' : v; const accId = ncf.account_id ? Number(ncf.account_id) : null; setNcf({ ...ncf, product_id: pid, marker: (accId != null && pid) ? nextMarker(accId, Number(pid)) : ncf.marker }) }}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="opsional">{(() => { const pp = products.find(x => String(x.id) === ncf.product_id); return pp ? pp.name : 'opsional' })()}</SelectValue></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="pilih produk">{(() => { const pp = products.find(x => String(x.id) === ncf.product_id); return pp ? pp.name : 'pilih produk' })()}</SelectValue></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— pilih produk —</SelectItem>
                     {products.map(pp => <SelectItem key={pp.id} value={String(pp.id)}>{pp.name}</SelectItem>)}

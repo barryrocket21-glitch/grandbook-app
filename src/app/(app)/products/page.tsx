@@ -1,9 +1,10 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Package, Pencil, Trash2, Search, ShieldOff, AlertTriangle } from 'lucide-react'
+import { Plus, Package, Pencil, Trash2, Search, ShieldOff, AlertTriangle, Copy, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { getErrorMessage } from '@/lib/errors'
 import { useAuth } from '@/components/providers/auth-provider'
 import { canManageSettings } from '@/lib/auth/permissions'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,10 @@ export default function ProductsListPage() {
   const [search, setSearch] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null)
   const [deleting, setDeleting] = useState(false)
+  // Duplikat produk (dari produk lain, wajib ganti nama)
+  const [dupTarget, setDupTarget] = useState<Row | null>(null)
+  const [dupName, setDupName] = useState('')
+  const [dupSaving, setDupSaving] = useState(false)
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -71,9 +76,46 @@ export default function ProductsListPage() {
       setDeleteTarget(null)
       load()
     } catch (err) {
-      toast.error('Gagal hapus produk', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal hapus produk', { description: getErrorMessage(err) })
     } finally {
       setDeleting(false)
+    }
+  }
+
+  async function doDuplicate() {
+    if (!dupTarget) return
+    const name = dupName.trim()
+    if (!name) { toast.error('Nama produk baru wajib diisi'); return }
+    if (name.toLowerCase() === dupTarget.name.trim().toLowerCase()) { toast.error('Nama harus BEDA dari produk asal'); return }
+    setDupSaving(true)
+    try {
+      const s = dupTarget
+      // Salin semua field master, kecuali id/sku(unik→kosong)/timestamp/variant. Nama = baru.
+      const { error } = await supabase.from('products').insert({
+        organization_id: orgId ?? 1,
+        name,
+        sku: null,
+        price_default: s.price_default,
+        hpp: s.hpp,
+        category: s.category,
+        category_id: s.category_id,
+        variation: s.variation,
+        notes: s.notes,
+        has_variants: false,
+        supplier_id: s.supplier_id,
+        packing_fee: (s as { packing_fee?: number | null }).packing_fee ?? null,
+        display_name: s.display_name,
+        weight_kg: s.weight_kg,
+        active: true,
+      })
+      if (error) throw error
+      toast.success(`Produk "${name}" diduplikat dari "${s.name}"`)
+      setDupTarget(null); setDupName('')
+      load()
+    } catch (err) {
+      toast.error('Gagal duplikat produk', { description: getErrorMessage(err) })
+    } finally {
+      setDupSaving(false)
     }
   }
 
@@ -198,6 +240,16 @@ export default function ProductsListPage() {
                           <Button
                             size="sm"
                             variant="ghost"
+                            title="Duplikat produk ini (wajib ganti nama)"
+                            onClick={() => { setDupTarget(r); setDupName(`${r.name} (copy)`) }}
+                          >
+                            <Copy className="size-3.5" />
+                          </Button>
+                        )}
+                        {canManage && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="text-red-500"
                             onClick={() => setDeleteTarget(r)}
                           >
@@ -213,6 +265,32 @@ export default function ProductsListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Duplikat produk */}
+      <Dialog open={!!dupTarget} onOpenChange={v => { if (!v) { setDupTarget(null); setDupName('') } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Copy className="size-4 text-violet-500" /> Duplikat Produk</DialogTitle>
+            <DialogDescription>
+              Salin semua data dari <b>{dupTarget?.name}</b> (HPP, harga, kategori, berat, packing fee, supplier) ke produk baru. <b>Wajib ganti nama.</b> SKU dikosongin (isi sendiri biar unik).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-1">
+            <label className="text-xs font-medium">Nama produk baru</label>
+            <Input value={dupName} onChange={e => setDupName(e.target.value)} placeholder="Nama produk baru" autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') doDuplicate() }} />
+            {dupTarget && dupName.trim().toLowerCase() === dupTarget.name.trim().toLowerCase() && (
+              <p className="text-[11px] text-amber-600">Nama harus beda dari produk asal.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDupTarget(null); setDupName('') }} disabled={dupSaving}>Batal</Button>
+            <Button onClick={doDuplicate} disabled={dupSaving} className="gap-1.5">
+              {dupSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Copy className="size-3.5" />} Duplikat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-md">

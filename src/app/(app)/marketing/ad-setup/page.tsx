@@ -34,6 +34,7 @@ export default function AdSetupPage() {
   const [advs, setAdvs] = useState<Prof[]>([])
   const [products, setProducts] = useState<Prod[]>([])
   const [campProd, setCampProd] = useState<Record<number, string>>({})
+  const [campProdId, setCampProdId] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(true)
   const [resolving, setResolving] = useState(false)
   // new account form
@@ -56,19 +57,19 @@ export default function AdSetupPage() {
         supabase.from('campaigns').select('id, campaign_name, platform, account_id, campaign_marker, active').order('campaign_name'),
         supabase.from('profiles').select('id, full_name').in('role', ['advertiser', 'admin', 'owner']),
         supabase.from('products').select('id, name').eq('active', true).order('name'),
-        supabase.from('campaign_products').select('campaign_id, products(name)'),
+        supabase.from('campaign_products').select('campaign_id, product_id, products(name)'),
       ])
       setAccounts((acc || []) as Account[])
       setCampaigns((camp || []) as Campaign[])
       setAdvs((pr || []) as Prof[])
       setProducts((prod || []) as Prod[])
-      // campaign_id → nama produk (buat tampilin "Luna F.A.1")
-      const cpMap: Record<number, string> = {}
-      for (const r of (cprod || []) as unknown as { campaign_id: number; products: { name: string } | { name: string }[] | null }[]) {
+      // campaign_id → produk (nama buat tampilan, id buat marker per-produk)
+      const cpMap: Record<number, string> = {}; const cpIdMap: Record<number, number> = {}
+      for (const r of (cprod || []) as unknown as { campaign_id: number; product_id: number; products: { name: string } | { name: string }[] | null }[]) {
         const pn = Array.isArray(r.products) ? r.products[0]?.name : r.products?.name
-        if (pn && !cpMap[r.campaign_id]) cpMap[r.campaign_id] = pn
+        if (!cpMap[r.campaign_id]) { if (pn) cpMap[r.campaign_id] = pn; cpIdMap[r.campaign_id] = r.product_id }
       }
-      setCampProd(cpMap)
+      setCampProd(cpMap); setCampProdId(cpIdMap)
     } catch (err) { console.warn('ad-setup load:', err) } finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
@@ -104,9 +105,10 @@ export default function AdSetupPage() {
   const platLabel = (pf: string) => `${pf} (${PLATFORM_LETTER[pf] ?? '?'})`
   // Brief #28 — berapa campaign di tiap akun (akun = wadah banyak campaign).
   const campCount = (accId: number) => campaigns.filter(c => c.account_id === accId).length
-  // Brief #26 — marker berikutnya buat akun (campaign ke-N otomatis).
-  const nextMarker = (accountId: number) => {
-    const used = campaigns.filter(c => c.account_id === accountId)
+  // Brief #29 — marker berikutnya per (akun + PRODUK). Mis. Luna di akun A → 1,2;
+  // Pavio di akun A → 1,2,3 (terpisah). Marker reset per produk.
+  const nextMarker = (accountId: number, productId: number | null) => {
+    const used = campaigns.filter(c => c.account_id === accountId && (productId != null && campProdId[c.id] === productId))
       .map(c => parseInt(c.campaign_marker || '0', 10)).filter(n => !isNaN(n))
     return String((used.length ? Math.max(...used) : 0) + 1)
   }
@@ -117,9 +119,14 @@ export default function AdSetupPage() {
   const createCampaign = async () => {
     const acc = accounts.find(a => String(a.id) === ncf.account_id)
     if (!acc) { toast.error('Pilih akun dulu'); return }
-    const marker = (ncf.marker.trim() || nextMarker(acc.id))
+    if (!ncf.product_id) { toast.error('Pilih produk dulu (marker per produk)'); return }
+    const prodId = Number(ncf.product_id)
+    const marker = (ncf.marker.trim() || nextMarker(acc.id, prodId))
     const prod = products.find(x => String(x.id) === ncf.product_id)
-    // nama auto kalau kosong (biar unik per-marker, gak bentrok constraint nama)
+    // guard: (akun + produk + marker) gak boleh dobel
+    const dup = campaigns.some(c => c.account_id === acc.id && campProdId[c.id] === prodId && (c.campaign_marker || '') === marker)
+    if (dup) { toast.error(`Kode ${codeFor(prod?.name, acc, marker)} udah ada — pakai marker lain`); return }
+    // nama auto kalau kosong (= kode penuh, unik per produk+marker)
     const name = ncf.name.trim() || codeFor(prod?.name, acc, marker)
     setSavingNew(true)
     try {
@@ -349,7 +356,7 @@ export default function AdSetupPage() {
               </div>
               <div className="space-y-1">
                 <Label className="text-[10px]">Akun (platform)</Label>
-                <Select value={ncf.account_id || 'none'} onValueChange={v => { const id = (!v || v === 'none') ? '' : v; setNcf({ ...ncf, account_id: id, marker: ncf.marker.trim() || (id ? nextMarker(Number(id)) : '') }) }}>
+                <Select value={ncf.account_id || 'none'} onValueChange={v => { const id = (!v || v === 'none') ? '' : v; const pid = ncf.product_id ? Number(ncf.product_id) : null; setNcf({ ...ncf, account_id: id, marker: (id && pid != null) ? nextMarker(Number(id), pid) : ncf.marker }) }}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="pilih akun">{(() => { const a = accounts.find(x => String(x.id) === ncf.account_id); return a ? `${platLabel(a.platform)} · ${a.account_code}` : 'pilih akun' })()}</SelectValue></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— pilih akun —</SelectItem>
@@ -362,11 +369,11 @@ export default function AdSetupPage() {
                 <Input value={ncf.marker} onChange={e => setNcf({ ...ncf, marker: e.target.value })} placeholder="1" className="h-9 text-xs" />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px]">Produk</Label>
-                <Select value={ncf.product_id || 'none'} onValueChange={v => setNcf({ ...ncf, product_id: (!v || v === 'none') ? '' : v })}>
+                <Label className="text-[10px]">Produk (wajib)</Label>
+                <Select value={ncf.product_id || 'none'} onValueChange={v => { const pid = (!v || v === 'none') ? '' : v; const accId = ncf.account_id ? Number(ncf.account_id) : null; setNcf({ ...ncf, product_id: pid, marker: (accId != null && pid) ? nextMarker(accId, Number(pid)) : ncf.marker }) }}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="opsional">{(() => { const pp = products.find(x => String(x.id) === ncf.product_id); return pp ? pp.name : 'opsional' })()}</SelectValue></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">— opsional —</SelectItem>
+                    <SelectItem value="none">— pilih produk —</SelectItem>
                     {products.map(pp => <SelectItem key={pp.id} value={String(pp.id)}>{pp.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

@@ -3,15 +3,10 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Megaphone,
-  Package,
-  Users,
   Settings,
   Coins,
-  LineChart,
   Scale,
-  Inbox,
   UserRound,
-  Headset,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -137,33 +132,22 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Export ke Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
       { title: 'Post-Export (Nunggu Resi)', href: '/orders/post-export', roles: ['owner', 'admin', 'cs'] },
       { title: 'Sync Status SPX', href: '/reconciliation/spx-status', roles: ['owner', 'admin'] },
-      // 'Arsip Semua Order' (/orders/list) dibuang dari nav — Pembukuan udah
-      // nampilin SEMUA order termasuk terminal (filter zona). Halaman tetap routable.
+      // Inbox (benerin data nyangkut) masuk grup Order — masih bagian pipeline.
+      // Sub-antrian jadi tab di dalam halaman (inbox/layout.tsx). 'Arsip' dibuang
+      // (Pembukuan udah superset). Halaman lama tetap routable.
+      { title: 'Inbox', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
     ],
   },
   {
-    // Brief #1 — Pelanggan: reputasi per nomor HP + blacklist.
-    // owner/admin manage; akunting read-only. CS dapet warning di form (bukan menu).
+    // Pelanggan — gabung Daftar Pelanggan (blacklist/VIP) + Follow Up (CRM).
     title: 'Pelanggan',
     href: '/customers',
     icon: UserRound,
-    roles: ['owner', 'admin', 'akunting'],
-  },
-  {
-    // Brief #2 — CRM: follow-up order PROBLEM. owner/admin semua kasus,
-    // cs kasus order-nya sendiri (PEMBELI aksi, EKSPEDISI read-only).
-    title: 'Follow Up',
-    href: '/crm',
-    icon: Headset,
-    roles: ['owner', 'admin', 'cs'],
-  },
-  {
-    // Inbox — semua antrian benerin data digabung jadi 1 menu; sub-antrian
-    // jadi TAB di dalam halaman (lihat inbox/layout.tsx). Sebelumnya 6 menu.
-    title: 'Inbox',
-    href: '/inbox/pending-review',
-    icon: Inbox,
-    roles: ['owner', 'admin'],
+    roles: ['owner', 'admin', 'akunting', 'cs'],
+    children: [
+      { title: 'Daftar Pelanggan', href: '/customers', roles: ['owner', 'admin', 'akunting'] },
+      { title: 'Follow Up', href: '/crm', roles: ['owner', 'admin', 'cs'] },
+    ],
   },
   {
     // Keuangan — gabungan Reconciliation + Biaya Operasional.
@@ -195,64 +179,38 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    // Brief #22 — rapiin 7→4: Setup Iklan (akun+campaign) · Input Harian
-    // (spend+lead) · Performa (CPR/CPA/CPA Final) · Margin Simulator.
-    title: 'Marketing',
+    // Marketing & Tim — gabung Marketing (iklan) + CS (laporan) + Analytics.
+    // Tiap child WAJIB roles eksplisit: advertiser cuma lihat menu iklan, cs cuma
+    // menu CS, owner/admin lihat semua + Analytics.
+    title: 'Marketing & Tim',
     href: '/marketing/ad-setup',
     icon: Megaphone,
-    roles: ['owner', 'admin', 'advertiser'],
+    roles: ['owner', 'admin', 'advertiser', 'cs'],
     children: [
-      // Brief #25 — alur: Setup (config) → Input Harian (input spend+lead, ada quick
-      // perf) → Performa (analisis: campaign + advertiser + dashboard, filter tanggal).
-      { title: 'Setup Iklan', href: '/marketing/ad-setup' },
-      { title: 'Input Harian', href: '/ad-spend' },
-      { title: 'Performa & Analisis', href: '/marketing/performa' },
+      { title: 'Setup Iklan', href: '/marketing/ad-setup', roles: ['owner', 'admin', 'advertiser'] },
+      { title: 'Input Harian', href: '/ad-spend', roles: ['owner', 'admin', 'advertiser'] },
+      { title: 'Performa Iklan', href: '/marketing/performa', roles: ['owner', 'admin', 'advertiser'] },
       { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
-    ],
-  },
-  {
-    title: 'CS',
-    href: '/cs-dashboard',
-    icon: Users,
-    roles: ['owner', 'admin', 'cs'],
-    children: [
-      { title: 'Dashboard CS', href: '/cs-dashboard' },
-      { title: 'Laporan Harian', href: '/cs-report' },
+      { title: 'Dashboard CS', href: '/cs-dashboard', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Laporan Harian CS', href: '/cs-report', roles: ['owner', 'admin', 'cs'] },
       { title: 'Performa CS', href: '/team/cs', roles: ['owner', 'admin'] },
+      { title: 'Analytics', href: '/analytics', roles: ['owner', 'admin'] },
     ],
   },
   {
-    title: 'Analytics',
-    href: '/analytics',
-    icon: LineChart,
-    roles: ['owner', 'admin'],
-  },
-  {
-    // Master Data — config bisnis. Per-child roles supaya CS/Advertiser
-    // gak lihat menu config operational yang gak relevan untuk mereka.
-    title: 'Master Data',
+    // Pengaturan — gabung Master Data (produk/kurir/wilayah) + Sistem (users/audit/reset).
+    title: 'Pengaturan',
     href: '/products',
-    icon: Package,
+    icon: Settings,
     roles: ['owner', 'admin', 'akunting'],
     children: [
       { title: 'Produk', href: '/products', roles: ['owner', 'admin', 'akunting'] },
       { title: 'Supplier', href: '/settings/suppliers', roles: ['owner', 'admin', 'akunting'] },
-      // Brief #12 — 4 menu master kurir digabung jadi 1 "Master Kurir". Halaman
-      // lama tetap routable (fallback advanced) tapi gak di sidebar.
       { title: 'Setup Kurir', href: '/settings/master-kurir', roles: ['owner', 'admin'] },
       { title: 'Converter Profiles', href: '/settings/converter-profiles', roles: ['owner', 'admin'] },
       { title: 'Master Wilayah', href: '/settings/wilayah', roles: ['owner', 'admin', 'akunting'] },
-    ],
-  },
-  {
-    title: 'Pengaturan Sistem',
-    href: '/settings/users',
-    icon: Settings,
-    roles: ['owner', 'admin'],
-    children: [
-      { title: 'Users & Roles', href: '/settings/users' },
-      // Aturan Komisi moved to Komisi group (sebelumnya duplicate di sini).
-      { title: 'Audit Log', href: '/settings/audit-log' },
+      { title: 'Users & Roles', href: '/settings/users', roles: ['owner', 'admin'] },
+      { title: 'Audit Log', href: '/settings/audit-log', roles: ['owner', 'admin'] },
       { title: 'Reset Data', href: '/settings/reset-data', roles: ['owner'] },
     ],
   },

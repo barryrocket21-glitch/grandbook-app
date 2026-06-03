@@ -7,7 +7,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { ShoppingCart } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageTabs } from '@/components/ui/page-tabs'
 import { OrderForm } from '@/components/orders/order-form'
+
+const INPUT_TABS = [
+  { label: 'Ketik Manual', href: '/orders/new' },
+  { label: 'Upload CSV', href: '/orders/bulk-upload' },
+  { label: 'Tempel WA', href: '/orders/wa-paste' },
+]
 import { canCreateOrders, canApproveOrders } from '@/lib/auth/permissions'
 import { generateOrderNumber } from '@/lib/orders/order-number'
 import type { OrderInputFormData } from '@/lib/schemas/settings'
@@ -140,6 +147,7 @@ export default function NewOrderPage() {
 
   return (
     <div className="space-y-4">
+      <PageTabs items={INPUT_TABS} />
       <PageHeader
         icon={ShoppingCart}
         title="Input Order Baru"

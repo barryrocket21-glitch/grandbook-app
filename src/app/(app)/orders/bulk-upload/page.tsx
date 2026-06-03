@@ -16,7 +16,14 @@ import {
   CheckCircle2, AlertTriangle, Eye, RotateCcw,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageTabs } from '@/components/ui/page-tabs'
 import { canCreateOrders, canApproveOrders } from '@/lib/auth/permissions'
+
+const INPUT_TABS = [
+  { label: 'Ketik Manual', href: '/orders/new' },
+  { label: 'Upload CSV', href: '/orders/bulk-upload' },
+  { label: 'Tempel WA', href: '/orders/wa-paste' },
+]
 import { previewParse, type PreviewResult } from '@/lib/converter/preview'
 import { ingestInbound, type IngestResult } from '@/lib/converter/engine'
 import { TARGET_TABLE_BADGE_COLOR } from '@/lib/schemas/settings'
@@ -196,6 +203,7 @@ export default function BulkUploadPage() {
 
   return (
     <div className="space-y-6">
+      <PageTabs items={INPUT_TABS} />
       <PageHeader
         icon={Upload}
         title="Upload Massal"

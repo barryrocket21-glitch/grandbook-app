@@ -130,9 +130,9 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'cs', 'akunting'],
     children: [
       { title: 'Pembukuan (Satu Tampilan)', href: '/orders/pembukuan', roles: ['owner', 'admin', 'cs', 'akunting'] },
-      { title: 'Input Order Baru', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Upload Massal', href: '/orders/bulk-upload', roles: ['owner', 'admin'] },
-      { title: 'WA Paste', href: '/orders/wa-paste', roles: ['owner', 'admin', 'cs'] },
+      // Input Order digabung jadi 1 menu — di halaman ada tab (Ketik Manual /
+      // Upload CSV / Tempel WA). Sebelumnya 3 menu kepisah.
+      { title: 'Input Order', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
       { title: 'Antrian Kerja', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },
       { title: 'Export ke Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
       { title: 'Post-Export (Nunggu Resi)', href: '/orders/post-export', roles: ['owner', 'admin', 'cs'] },
@@ -158,19 +158,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'cs'],
   },
   {
-    // Inbox — item yang nyangkut di pipeline, perlu resolusi manual.
+    // Inbox — semua antrian benerin data digabung jadi 1 menu; sub-antrian
+    // jadi TAB di dalam halaman (lihat inbox/layout.tsx). Sebelumnya 6 menu.
     title: 'Inbox',
-    href: '/inbox',
+    href: '/inbox/pending-review',
     icon: Inbox,
-    roles: ['owner', 'admin', 'cs'],
-    children: [
-      { title: 'Pending Review', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
-      { title: 'Atribusi Required', href: '/inbox/atribusi-required', roles: ['owner', 'admin'] },
-      { title: 'Unmatched Resi', href: '/inbox/unmatched-resi', roles: ['owner', 'admin'] },
-      { title: 'Unmapped Statuses', href: '/inbox/unmapped-statuses', roles: ['owner', 'admin'] },
-      { title: 'Address Review', href: '/inbox/address-review' },
-      { title: 'Phone Review', href: '/inbox/phone-review' },
-    ],
+    roles: ['owner', 'admin'],
   },
   {
     // Keuangan — gabungan Reconciliation + Biaya Operasional.
@@ -181,7 +174,9 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Posisi Keuangan', href: '/financial-position' },
       { title: 'Laporan Laba Rugi', href: '/laba-rugi', badge: 'BARU' },
-      { title: 'Rekonsiliasi Ekspedisi', href: '/reconciliation/ekspedisi' },
+      // Rekonsiliasi jadi 1 hub — tab di dalam: Ekspedisi / Sync Status SPX /
+      // Cashflow SPX (lihat reconciliation/layout.tsx).
+      { title: 'Rekonsiliasi', href: '/reconciliation/ekspedisi' },
       { title: 'Biaya Operasional', href: '/expenses' },
       // Dibuang dari nav (halaman tetap routable):
       // - 'Cross-check Platform Iklan' (/reconciliation) — peninggalan lama, fungsi udah di Marketing.

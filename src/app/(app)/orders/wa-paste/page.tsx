@@ -11,7 +11,14 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { MessageSquare, Loader2, CheckCircle2, AlertTriangle, ArrowRight, RotateCcw, Info } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageTabs } from '@/components/ui/page-tabs'
 import { canCreateOrders } from '@/lib/auth/permissions'
+
+const INPUT_TABS = [
+  { label: 'Ketik Manual', href: '/orders/new' },
+  { label: 'Upload CSV', href: '/orders/bulk-upload' },
+  { label: 'Tempel WA', href: '/orders/wa-paste' },
+]
 import { parseWaPasteV3, type ParsedWaOrder } from '@/lib/converter/wa-paste-v3'
 import {
   adaptOrder,
@@ -224,6 +231,7 @@ export default function WaPastePage() {
 
   return (
     <div className="space-y-4">
+      <PageTabs items={INPUT_TABS} />
       <PageHeader
         icon={MessageSquare}
         title="WA Paste"

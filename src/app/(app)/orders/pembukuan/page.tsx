@@ -29,7 +29,7 @@ interface Row {
   source: string; id: number; order_number: string; order_date: string
   status: string; zone: string; customer_name: string; customer_city: string | null
   cs_name: string | null; channel_name: string | null; product_summary: string | null
-  total: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
+  total: number; penjualan: number; ongkir: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
   delivered_at: string | null; returned_at: string | null; exported_at: string | null
   payment_method: string | null; qty: number
   est_biaya_kurir: number; est_omset: number; est_hpp: number; est_fee_cs: number; est_gross_profit: number
@@ -101,7 +101,7 @@ export default function PembukuanPage() {
   // Filter zona (klik chip) di atas hasil server — biar bisa "filter tracking + liat total"
   const displayed = useMemo(() => zoneFilter ? rows.filter(r => r.zone === zoneFilter) : rows, [rows, zoneFilter])
   const totals = useMemo(() => displayed.reduce((a, r) => ({
-    n: a.n + 1, total: a.total + n(r.total),
+    n: a.n + 1, total: a.total + n(r.penjualan),
     est_gp: a.est_gp + n(r.est_gross_profit),
     act_gp: a.act_gp + n(r.act_gross_profit),
     dicair: a.dicair + n(r.dicairkan),
@@ -233,7 +233,7 @@ export default function PembukuanPage() {
                   {view === 'keuangan' && canFinance ? (
                     <>
                       <TableCell className="text-xs max-w-[160px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
-                      <TableCell className="text-right text-xs"><Money v={n(r.total)} /></TableCell>
+                      <TableCell className="text-right text-xs"><Money v={n(r.penjualan)} /></TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_biaya_kurir)} /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={n(r.est_omset)} /></TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_hpp)} /></TableCell>
@@ -250,7 +250,7 @@ export default function PembukuanPage() {
                       <TableCell className="text-xs max-w-[200px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
                       <TableCell className="text-center text-xs">{r.qty || '—'}</TableCell>
                       <TableCell className="text-xs">{r.payment_method || '—'}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{formatRupiah(n(r.total))}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{formatRupiah(n(r.penjualan))}</TableCell>
                       <TableCell className="font-mono text-[10px]">{r.tracking_no || r.resi || '—'}</TableCell>
                     </>
                   )}

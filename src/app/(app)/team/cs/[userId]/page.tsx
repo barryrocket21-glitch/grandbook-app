@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Users, ShieldOff } from 'lucide-react'
@@ -49,7 +50,7 @@ export default function CsDetailPage() {
       const d = await fetchCsTeamDetail(supabase, userId, range.from, range.to)
       setData(d)
     } catch (err) {
-      toast.error('Gagal load data', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load data', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }

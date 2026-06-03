@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -84,7 +85,7 @@ export function NotificationBell() {
       setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x))
       setUnreadCount(c => Math.max(0, c - 1))
     } catch (err) {
-      toast.error('Gagal mark read', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal mark read', { description: getErrorMessage(err) })
     }
   }
 
@@ -102,7 +103,7 @@ export function NotificationBell() {
       setUnreadCount(0)
       toast.success('Semua notif ditandai dibaca')
     } catch (err) {
-      toast.error('Gagal mark all read', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal mark all read', { description: getErrorMessage(err) })
     }
   }
 

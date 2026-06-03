@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
@@ -126,7 +127,7 @@ export default function MasterKurirPage() {
       toast.success('Rates kesimpen (histori lama disimpan)')
       await load()
     } catch (err) {
-      toast.error('Gagal simpan rates', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan rates', { description: getErrorMessage(err) })
     } finally { setSavingRates(null) }
   }
 
@@ -150,7 +151,7 @@ export default function MasterKurirPage() {
       toast.success('Status mapping kesimpen')
       await load()
     } catch (err) {
-      toast.error('Gagal simpan status', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan status', { description: getErrorMessage(err) })
     } finally { setSavingStatus(null) }
   }
 
@@ -164,7 +165,7 @@ export default function MasterKurirPage() {
         description: 'estimated_profit dkk keisi. Order baru otomatis ke-hitung (trigger).',
       })
     } catch (err) {
-      toast.error('Gagal recompute', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal recompute', { description: getErrorMessage(err) })
     } finally { setRecomputing(false) }
   }
 

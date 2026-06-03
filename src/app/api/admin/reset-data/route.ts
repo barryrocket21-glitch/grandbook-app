@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
         results[t] = `${count ?? 0} rows`
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       results[t] = `error: ${msg}`
     }
   }

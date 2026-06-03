@@ -1,5 +1,6 @@
 'use client'
 import { useState, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -141,7 +142,7 @@ export function ColumnCustomizer({
           </p>
           <Button size="sm" onClick={async () => {
             try { await onPersist(); toast.success('Tersimpan'); }
-            catch (e) { toast.error('Gagal simpan', { description: e instanceof Error ? e.message : String(e) }) }
+            catch (e) { toast.error('Gagal simpan', { description: getErrorMessage(e) }) }
           }}>
             <Save className="w-3.5 h-3.5 mr-1" />Simpan sekarang
           </Button>
@@ -385,7 +386,7 @@ function SavedViewsTab({
       if (error) throw error
       toast.success(`"${v.name}" jadi Team Default`)
     } catch (err) {
-      toast.error('Gagal set team default', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal set team default', { description: getErrorMessage(err) })
     } finally {
       setSavingTeam(null)
     }

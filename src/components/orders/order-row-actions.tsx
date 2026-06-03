@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -108,7 +109,7 @@ export function OrderRowActions({ row, onUpdated }: Props) {
       toast.success(`Order baru ${newNumber} dibuat`)
       router.push(`/orders/${newRow.id}`)
     } catch (err) {
-      toast.error('Gagal duplicate', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal duplicate', { description: getErrorMessage(err) })
     } finally {
       setDuplicating(false)
     }
@@ -131,7 +132,7 @@ export function OrderRowActions({ row, onUpdated }: Props) {
       setReason('')
       onUpdated()
     } catch (err) {
-      toast.error('Gagal update status', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal update status', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }
@@ -261,7 +262,7 @@ function AuditTrailDialog({ orderId, orderNumber, onClose }: {
         if (!cancelled) setLogs((data || []) as AuditLogRow[])
       } catch (err) {
         if (!cancelled) {
-          toast.error('Gagal load audit log', { description: err instanceof Error ? err.message : String(err) })
+          toast.error('Gagal load audit log', { description: getErrorMessage(err) })
         }
       } finally {
         if (!cancelled) setLoading(false)

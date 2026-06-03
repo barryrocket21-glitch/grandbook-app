@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -140,7 +141,7 @@ export function BulkResiDialog({ open, onOpenChange, onApplied }: Props) {
       })
       setParsed(out)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal preview', { description: msg })
     } finally {
       setPreviewLoading(false)
@@ -172,7 +173,7 @@ export function BulkResiDialog({ open, onOpenChange, onApplied }: Props) {
             applied++
           }
         } catch (err) {
-          errors.push({ lineNo: r.lineNo, reason: err instanceof Error ? err.message : String(err) })
+          errors.push({ lineNo: r.lineNo, reason: getErrorMessage(err) })
         }
       }
       setResult({ applied, errors })
@@ -186,7 +187,7 @@ export function BulkResiDialog({ open, onOpenChange, onApplied }: Props) {
       }
       onApplied()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal apply bulk', { description: msg })
     } finally {
       setApplying(false)

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -62,7 +63,7 @@ export function ResiInputDialog({
       onOpenChange(false)
       onPromoted()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal set resi', { description: msg })
     } finally {
       setSaving(false)

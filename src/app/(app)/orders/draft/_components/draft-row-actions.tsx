@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -66,7 +67,7 @@ export function DraftRowActions({ row, onUpdated, onEdit }: Props) {
       setDetailOpen(false)
       onUpdated()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal hapus draft', { description: msg })
     } finally {
       setDeleting(false)

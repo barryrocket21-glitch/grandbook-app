@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -178,7 +179,7 @@ export function DraftQuickEditDialog({ open, onOpenChange, draft, onSaved }: Pro
       onOpenChange(false)
       onSaved()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal simpan', { description: msg })
     } finally {
       setSaving(false)

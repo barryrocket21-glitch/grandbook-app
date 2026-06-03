@@ -8,6 +8,7 @@
 // - Build insert payload untuk orders_draft + order_items_draft
 // =============================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getErrorMessage } from '@/lib/errors'
 import { normalize_phone_id_safe } from './transforms'
 import type { ParsedWaOrder } from './wa-paste-v3'
 
@@ -268,7 +269,7 @@ export async function insertAdaptedOrders(
       result.failed++
       result.errors.push({
         index: a.originalIndex,
-        message: err instanceof Error ? err.message : String(err),
+        message: getErrorMessage(err),
       })
     }
   }

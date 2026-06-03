@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
@@ -85,7 +86,7 @@ export default function ReconSpxCashflowPage() {
         `${result?.cod_unmatched_count ?? 0} unmatch, ${result?.withdrawal_count ?? 0} penarikan)`
       )
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal preview', { description: msg })
     } finally {
       setUploading(false)
@@ -118,7 +119,7 @@ export default function ReconSpxCashflowPage() {
         `${result?.unmatched_to_inbox ?? 0} unmatched logged`
       )
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal apply', { description: msg })
       setStep('preview')
     } finally {

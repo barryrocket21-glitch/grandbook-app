@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { Calculator, Plus, RotateCcw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
@@ -51,7 +52,7 @@ export default function MarginSimulatorPage() {
       setProducts(data)
     } catch (err) {
       toast.error('Gagal load produk', {
-        description: err instanceof Error ? err.message : String(err),
+        description: getErrorMessage(err),
       })
     } finally {
       setProductsLoading(false)

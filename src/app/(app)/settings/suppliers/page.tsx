@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -81,7 +82,7 @@ export default function SuppliersPage() {
         order_count: orderCounts.get(s.id) || 0,
       })))
     } catch (err) {
-      toast.error('Gagal load supplier', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load supplier', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -132,7 +133,7 @@ export default function SuppliersPage() {
       reset()
       load()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }
@@ -152,7 +153,7 @@ export default function SuppliersPage() {
       setToggleTarget(null)
       load()
     } catch (err) {
-      toast.error('Gagal', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal', { description: getErrorMessage(err) })
     } finally {
       setToggling(false)
     }

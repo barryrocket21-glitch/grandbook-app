@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
@@ -71,7 +72,7 @@ export function PayoutReconSection() {
       })
       if (error) throw error
       setPreview(data as Preview)
-    } catch (err) { toast.error('Gagal baca/preview', { description: err instanceof Error ? err.message : String(err) }) }
+    } catch (err) { toast.error('Gagal baca/preview', { description: getErrorMessage(err) }) }
     finally { setBusy(false) }
   }
 
@@ -84,7 +85,7 @@ export function PayoutReconSection() {
       setResult(data as ApplyRes)
       const d = data as ApplyRes
       toast.success(`Cair diterapkan: ${d.settled} order, ${d.commissions_paid} komisi PAID`)
-    } catch (err) { toast.error('Gagal apply', { description: err instanceof Error ? err.message : String(err) }) }
+    } catch (err) { toast.error('Gagal apply', { description: getErrorMessage(err) }) }
     finally { setBusy(false) }
   }
 

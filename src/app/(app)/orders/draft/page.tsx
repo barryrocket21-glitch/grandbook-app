@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState, Suspense } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -240,7 +241,7 @@ function OrdersDraftInner() {
       setSelectedIds(new Set())
       await loadDrafts(true)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal bulk delete', { description: msg })
     } finally {
       setBulkDeleting(false)

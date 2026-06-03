@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { useAuth } from '@/components/providers/auth-provider'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
@@ -117,7 +118,7 @@ export default function ResetDataPage() {
       )
       setCounts(Object.fromEntries(entries))
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal reset', { description: msg })
     } finally {
       setRunning(false)

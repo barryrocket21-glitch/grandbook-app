@@ -3,6 +3,7 @@
 // Pure functions — no DB writes.
 // =============================================================
 import Papa from 'papaparse'
+import { getErrorMessage } from '@/lib/errors'
 import * as XLSX from 'xlsx'
 import type { ConverterProfile, ConverterValueMapping } from '@/lib/types'
 
@@ -146,7 +147,7 @@ export function parseRegex(
   try {
     re = new RegExp(pattern, 'gm')
   } catch (err) {
-    throw new Error(`Regex tidak valid: ${err instanceof Error ? err.message : String(err)}`)
+    throw new Error(`Regex tidak valid: ${getErrorMessage(err)}`)
   }
 
   // Phase 8K — pre-split multi-order WA paste by timestamp line, then apply

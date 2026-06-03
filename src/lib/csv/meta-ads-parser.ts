@@ -12,6 +12,7 @@
 //   - detectExportMode() — SNAPSHOT_SINGLE_DAY / SNAPSHOT_DATE_RANGE_AGGREGATE / DAILY_BREAKDOWN
 // =============================================================
 import Papa from 'papaparse'
+import { getErrorMessage } from '@/lib/errors'
 
 export type ExportMode =
   | 'SNAPSHOT_SINGLE_DAY'
@@ -443,7 +444,7 @@ export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult>
     } catch (err) {
       result.errors.push({
         rowIndex: idx,
-        message: err instanceof Error ? err.message : String(err),
+        message: getErrorMessage(err),
       })
     }
   })

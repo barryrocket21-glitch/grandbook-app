@@ -4,6 +4,7 @@
 // route mismatches to inbox tables (UI dibangun Phase 2B).
 // =============================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getErrorMessage } from '@/lib/errors'
 import { applyTransform } from './transforms'
 import { indexValueMappings, parseSource } from './parser'
 import { inferStatusForProfile } from './status-inference'
@@ -92,7 +93,7 @@ export async function ingestRekonsil(opts: RekonsilOptions): Promise<RekonsilRes
   try {
     rawRows = await parseSource(opts.profile, opts.fileOrText, parseWarnings)
   } catch (err) {
-    throw new Error(err instanceof Error ? err.message : String(err))
+    throw new Error(getErrorMessage(err))
   }
   result.totalRowsDetected = rawRows.length
   parseWarnings.forEach((m) => result.warnings.push({ rowIndex: -1, message: m }))
@@ -204,7 +205,7 @@ export async function ingestRekonsil(opts: RekonsilOptions): Promise<RekonsilRes
     } catch (err) {
       result.errors.push({
         rowIndex,
-        reason: err instanceof Error ? err.message : String(err),
+        reason: getErrorMessage(err),
         raw,
       })
     }

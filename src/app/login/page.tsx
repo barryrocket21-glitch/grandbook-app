@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -65,7 +66,7 @@ export default function LoginPage() {
       router.refresh()
     } catch (err: unknown) {
       toast.error('Terjadi kesalahan', {
-        description: err instanceof Error ? err.message : String(err),
+        description: getErrorMessage(err),
       })
     } finally {
       setLoading(false)

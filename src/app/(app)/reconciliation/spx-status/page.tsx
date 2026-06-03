@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -102,7 +103,7 @@ export default function SpxStatusSyncPage() {
       const buf = await file.arrayBuffer()
       setParsed(parseSpxFile(buf, file.name, file.size))
     } catch (err) {
-      toast.error('Gagal baca file', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal baca file', { description: getErrorMessage(err) })
     } finally { setParsing(false) }
   }
 
@@ -131,7 +132,7 @@ export default function SpxStatusSyncPage() {
       } catch (e) { console.warn('record batch:', e) }
       toast.success(`Sync selesai: ${acc.updated} order ke-update, ${acc.skipped_no_ref + acc.skipped_no_match} di-skip`)
     } catch (err) {
-      toast.error('Gagal sync', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal sync', { description: getErrorMessage(err) })
     } finally { setApplying(false) }
   }
 

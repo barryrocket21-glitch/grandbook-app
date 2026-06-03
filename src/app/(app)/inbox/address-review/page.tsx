@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -263,7 +264,7 @@ function ResolveDialog({
       toast.success('Address ter-resolve & order ke-update')
       onResolved()
     } catch (err) {
-      toast.error('Gagal save', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal save', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }
@@ -284,7 +285,7 @@ function ResolveDialog({
       toast.success('Entry di-skip')
       onResolved()
     } catch (err) {
-      toast.error('Gagal skip', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal skip', { description: getErrorMessage(err) })
     } finally {
       setSkipping(false)
     }

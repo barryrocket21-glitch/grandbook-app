@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { Plus, Pencil, Trash2, Coins, ShieldOff, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -91,7 +92,7 @@ export default function CommissionRulesPage() {
       setProducts(p as Product[])
       setUsers((u.data || []) as UserOption[])
     } catch (err) {
-      toast.error('Gagal load', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -180,7 +181,7 @@ export default function CommissionRulesPage() {
         okCount++
       } catch (err) {
         const productLabel = pid === null ? 'Default' : (products.find(p => p.id === pid)?.name || `Produk #${pid}`)
-        const msg = err instanceof Error ? err.message : String(err)
+        const msg = getErrorMessage(err)
         if (msg.includes('duplicate') || msg.includes('unique')) {
           errs.push(`${productLabel} — sudah ada rule (skip)`)
         } else {
@@ -216,7 +217,7 @@ export default function CommissionRulesPage() {
       setDeleteTarget(null)
       load()
     } catch (err) {
-      toast.error('Gagal hapus', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal hapus', { description: getErrorMessage(err) })
     }
   }
 

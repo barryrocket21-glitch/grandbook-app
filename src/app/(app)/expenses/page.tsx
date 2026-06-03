@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -115,7 +116,7 @@ export default function ExpensesPage() {
       setRecurringAll(rec)
       setSelectedIds(new Set())
     } catch (err) {
-      toast.error('Gagal load expenses', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load expenses', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -178,7 +179,7 @@ export default function ExpensesPage() {
       reset()
       void load()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }
@@ -191,7 +192,7 @@ export default function ExpensesPage() {
       toast.success('Biaya dihapus')
       void load()
     } catch (err) {
-      toast.error('Gagal hapus', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal hapus', { description: getErrorMessage(err) })
     }
   }
 
@@ -203,7 +204,7 @@ export default function ExpensesPage() {
       toast.success(`${n} biaya dihapus`)
       void load()
     } catch (err) {
-      toast.error('Gagal bulk hapus', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal bulk hapus', { description: getErrorMessage(err) })
     }
   }
 
@@ -223,7 +224,7 @@ export default function ExpensesPage() {
       }
       void load()
     } catch (err) {
-      toast.error('Gagal copy', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal copy', { description: getErrorMessage(err) })
     } finally {
       setCopying(false)
     }

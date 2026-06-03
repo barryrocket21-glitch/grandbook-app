@@ -8,6 +8,7 @@
 // `buildOutboundRows()` (lower-level) is shared with previewOutbound().
 // =============================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getErrorMessage } from '@/lib/errors'
 import { applyTransform, type TransformContext } from './transforms'
 import { indexValueMappings } from './parser'
 import {
@@ -175,7 +176,7 @@ export async function buildOutboundRows(opts: OutboundRowsOptions): Promise<Outb
       result.errors.push({
         orderId: id,
         orderNumber: order.order_number,
-        reason: err instanceof Error ? err.message : String(err),
+        reason: getErrorMessage(err),
       })
       result.ordersSkipped++
     }

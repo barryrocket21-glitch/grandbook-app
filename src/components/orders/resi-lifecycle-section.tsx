@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,7 +62,7 @@ export function ResiLifecycleSection({
       setEditing(null)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }

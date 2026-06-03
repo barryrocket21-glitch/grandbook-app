@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { toast } from 'sonner'
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
@@ -153,7 +154,7 @@ export function SupplierPayableSheet({
       await loadGroups()
       onChanged()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal mark paid', { description: msg })
     } finally {
       setMarking(false)

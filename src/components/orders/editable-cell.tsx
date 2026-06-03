@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Input } from '@/components/ui/input'
@@ -199,7 +200,7 @@ function StatusEditor({ row, onUpdated, renderDisplay }: Omit<EditorBaseProps, '
       toast.success(`Status → ${STATUS_LABEL[v as OrderStatus] || v}`)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal update status', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal update status', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
   return (
@@ -233,7 +234,7 @@ function PriorityEditor({ row, onUpdated, renderDisplay }: Omit<EditorBaseProps,
       toast.success(`Prioritas → ${v}`)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal update prioritas', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal update prioritas', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
   return (
@@ -279,7 +280,7 @@ function TextEditor({ row, field, onUpdated, renderDisplay }: EditorBaseProps) {
       setEditing(false)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -352,7 +353,7 @@ function NumberEditor({ row, field, onUpdated, renderDisplay, integer = false }:
       setEditing(false)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -420,7 +421,7 @@ function FinancialEditor({ row, field, onUpdated, renderDisplay }: EditorBasePro
       setOpen(false)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -509,7 +510,7 @@ function TextareaPopoverEditor({ row, field, onUpdated, renderDisplay }: EditorB
       setOpen(false)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -565,7 +566,7 @@ function TagsEditor({ row, onUpdated, renderDisplay }: Omit<EditorBaseProps, 'fi
       setOpen(false)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -647,7 +648,7 @@ function DateTimeEditor({ row, field, onUpdated, renderDisplay }: EditorBaseProp
       setEditing(false)
       onUpdated()
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 

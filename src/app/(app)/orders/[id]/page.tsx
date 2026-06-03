@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, use } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -757,7 +758,7 @@ function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomput
       toast.success('Cost recomputed')
       onRecomputed()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal recompute', { description: msg })
     } finally {
       setRecomputing(false)

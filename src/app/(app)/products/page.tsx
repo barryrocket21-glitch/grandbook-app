@@ -53,7 +53,7 @@ export default function ProductsListPage() {
       const data = await listProductsWithCounts(supabase, orgId)
       setRows(data as Row[])
     } catch (err) {
-      toast.error('Gagal load produk', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load produk', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }

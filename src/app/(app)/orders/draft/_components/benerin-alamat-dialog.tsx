@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -175,7 +176,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
       setIdx(0)
       setFixedCount(0)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal memuat antrian', { description: msg })
     } finally {
       setLoadingQueue(false)
@@ -250,7 +251,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
       setFixedCount(c => c + 1)
       advance()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal simpan', { description: msg })
     } finally {
       setSaving(false)

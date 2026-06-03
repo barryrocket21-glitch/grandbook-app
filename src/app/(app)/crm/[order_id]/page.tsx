@@ -3,6 +3,7 @@
 // Brief #2 — /crm/[order_id] : detail kasus + timeline + follow-up + resolve.
 // =============================================================
 import { useCallback, useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -94,7 +95,7 @@ export default function CrmDetailPage() {
       setResult(''); setNote(''); setNextAction('')
       await load()
     } catch (err) {
-      toast.error('Gagal catat aktivitas', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal catat aktivitas', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -107,7 +108,7 @@ export default function CrmDetailPage() {
       toast.success(`Tipe diubah ke ${CRM_PROBLEM_TYPE_LABEL[pt]}`)
       await load()
     } catch (err) {
-      toast.error('Gagal ubah tipe', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal ubah tipe', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -130,7 +131,7 @@ export default function CrmDetailPage() {
       toast.success('Kasus di-eskalasi ke admin/owner')
       await load()
     } catch (err) {
-      toast.error('Gagal eskalasi', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal eskalasi', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -141,7 +142,7 @@ export default function CrmDetailPage() {
       toast.success(`Kasus selesai → ${outcome}`)
       router.push('/crm')
     } catch (err) {
-      toast.error('Gagal resolve', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal resolve', { description: getErrorMessage(err) })
     } finally { setSaving(false); setResolveOpen(false) }
   }
 

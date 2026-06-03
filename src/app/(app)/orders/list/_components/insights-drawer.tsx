@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { useRouter } from 'next/navigation'
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,
@@ -69,7 +70,7 @@ export function InsightsDrawer({
       if (error) throw error
       setData((data || []) as OrderDimensionStat[])
     } catch (err) {
-      toast.error('Gagal load insights', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load insights', { description: getErrorMessage(err) })
       setData([])
     } finally {
       setLoading(false)

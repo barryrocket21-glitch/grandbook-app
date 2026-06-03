@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2, Save, ChevronLeft, Warehouse, Package, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
@@ -132,7 +133,7 @@ export function ProductVariantForm({ productId }: Props) {
           setVariants(localVariants)
         }
       } catch (err) {
-        toast.error('Gagal load produk', { description: err instanceof Error ? err.message : String(err) })
+        toast.error('Gagal load produk', { description: getErrorMessage(err) })
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -147,7 +148,7 @@ export function ProductVariantForm({ productId }: Props) {
       const data = await listAttributes(supabase, orgId)
       setAllAttributes(data)
     } catch (err) {
-      toast.error('Gagal load attribute', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load attribute', { description: getErrorMessage(err) })
     }
   }, [orgId])
 
@@ -215,7 +216,7 @@ export function ProductVariantForm({ productId }: Props) {
       setAttributesUsed(usedUpdated)
       regenerateCombos(usedUpdated, variants)
     } catch (err) {
-      toast.error('Gagal tambah nilai', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal tambah nilai', { description: getErrorMessage(err) })
     }
   }
 
@@ -243,7 +244,7 @@ export function ProductVariantForm({ productId }: Props) {
       setNewAttrValues('')
       toast.success(`Atribut "${trimmedName}" dibuat`)
     } catch (err) {
-      toast.error('Gagal buat atribut', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal buat atribut', { description: getErrorMessage(err) })
     }
   }
 
@@ -355,7 +356,7 @@ export function ProductVariantForm({ productId }: Props) {
       toast.success(productId ? 'Produk diupdate' : 'Produk dibuat')
       router.push(`/products`)
     } catch (err) {
-      toast.error('Gagal simpan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }

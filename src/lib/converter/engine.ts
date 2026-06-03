@@ -4,6 +4,7 @@
 // REKONSIL → Phase 3B. OUTBOUND → Phase 3C.
 // =============================================================
 import { applyTransform, normalize_phone_id_safe, type PhoneInvalidReason } from './transforms'
+import { getErrorMessage } from '@/lib/errors'
 import { indexValueMappings, parseSource } from './parser'
 import {
   createProductMatcher,
@@ -137,7 +138,7 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
   try {
     rawRows = await parseSource(opts.profile, opts.fileOrText, parseWarnings)
   } catch (err) {
-    throw new Error(err instanceof Error ? err.message : String(err))
+    throw new Error(getErrorMessage(err))
   }
   result.totalRowsDetected = rawRows.length
   parseWarnings.forEach((m) => result.warnings.push({ rowIndex: -1, message: m }))
@@ -543,7 +544,7 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
     } catch (err) {
       result.errors.push({
         rowIndex,
-        reason: err instanceof Error ? err.message : String(err),
+        reason: getErrorMessage(err),
         raw,
       })
     }

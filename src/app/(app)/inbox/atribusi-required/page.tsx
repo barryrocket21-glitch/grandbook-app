@@ -6,6 +6,7 @@
 // Role: owner, admin. Bulk-assign CS / ADV ke order terpilih.
 // =============================================================
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -111,7 +112,7 @@ export default function AtribusiRequiredPage() {
       setSelected(new Set()); setAssignCs(''); setAssignAdv('')
       await load()
     } catch (err) {
-      toast.error('Gagal assign', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal assign', { description: getErrorMessage(err) })
     } finally {
       setApplying(false)
     }

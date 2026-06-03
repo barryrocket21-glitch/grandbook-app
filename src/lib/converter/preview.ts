@@ -5,6 +5,7 @@
 // lookups against orders to enrich the preview, but never mutate).
 // =============================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getErrorMessage } from '@/lib/errors'
 import { applyTransform } from './transforms'
 import { indexValueMappings, parseSource } from './parser'
 import { inferStatusForProfile } from './status-inference'
@@ -55,7 +56,7 @@ export async function previewParse(
   try {
     rawRows = await parseSource(profile, fileOrText, warnings)
   } catch (err) {
-    errors.push(err instanceof Error ? err.message : String(err))
+    errors.push(getErrorMessage(err))
     return { ...EMPTY, errors }
   }
 
@@ -168,7 +169,7 @@ export async function previewRekonsil(
       rows: [],
       totalRowsDetected: 0,
       globalWarnings,
-      errors: [err instanceof Error ? err.message : String(err)],
+      errors: [getErrorMessage(err)],
     }
   }
 

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -290,7 +291,7 @@ function OrdersExportResiInner() {
       }
       setStep('preview')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal preview', { description: msg })
     } finally {
       setPreviewLoading(false)
@@ -351,7 +352,7 @@ function OrdersExportResiInner() {
       if (r.errors.length === 0) toast.success(`File ${r.fileName} terunduh (${r.rowsGenerated} baris)`)
       else toast.error(`Selesai dengan ${r.errors.length} error`)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal generate file', { description: msg })
       setStep('preview')
     } finally {

@@ -4,6 +4,7 @@
 // Toggle Blacklist / Mark VIP / Add Note (owner+admin). Audit via DB trigger.
 // =============================================================
 import { useCallback, useEffect, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -92,7 +93,7 @@ export default function CustomerDetailPage() {
       setBlacklistOpen(false); setReason('')
       await load()
     } catch (err) {
-      toast.error('Gagal update blacklist', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal update blacklist', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -106,7 +107,7 @@ export default function CustomerDetailPage() {
       toast.success(cust.is_vip ? 'VIP dilepas' : 'Ditandai VIP')
       await load()
     } catch (err) {
-      toast.error('Gagal update VIP', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal update VIP', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 
@@ -122,7 +123,7 @@ export default function CustomerDetailPage() {
       toast.success('Catatan disimpan')
       await load()
     } catch (err) {
-      toast.error('Gagal simpan catatan', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal simpan catatan', { description: getErrorMessage(err) })
     } finally { setSaving(false) }
   }
 

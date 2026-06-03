@@ -1,4 +1,5 @@
 // =============================================================
+import { getErrorMessage } from '@/lib/errors'
 // Transforms catalog (Phase 2B)
 // Light-weight registry for the Test Parser preview. Phase 3 engine
 // will reuse the same `key` strings, but may implement additional
@@ -363,6 +364,6 @@ export function applyTransform(
         return { ok: false, reason: `Transform "${key}" belum diimplementasi di preview (Phase 3)` }
     }
   } catch (err) {
-    return { ok: false, reason: err instanceof Error ? err.message : String(err) }
+    return { ok: false, reason: getErrorMessage(err) }
   }
 }

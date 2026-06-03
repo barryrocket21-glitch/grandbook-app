@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -413,7 +414,7 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
       toast.success('Channel billing meta tersimpan')
       await loadBundle(Number(pickedChannelId))
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal simpan', { description: msg })
     } finally {
       setSavingMeta(false)
@@ -434,7 +435,7 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
       toast.success('Billing config tersimpan untuk period ' + effectiveFrom)
       await loadBundle(Number(pickedChannelId))
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal simpan', { description: msg })
     } finally {
       setSavingConfig(false)

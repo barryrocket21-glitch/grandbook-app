@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Megaphone, ShieldOff, ChevronRight, ArrowUpDown } from 'lucide-react'
@@ -51,7 +52,7 @@ export default function AdvertiserTeamListPage() {
       const data = await fetchAdvertiserTeamSummary(supabase, range.from, range.to)
       setRows(data)
     } catch (err) {
-      toast.error('Gagal load data', { description: err instanceof Error ? err.message : String(err) })
+      toast.error('Gagal load data', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }

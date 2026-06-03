@@ -10,6 +10,7 @@
 // (perlu dibayar), berapa yang Sudah Dibayar, dan tombol bayar batch.
 // =============================================================
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -82,7 +83,7 @@ export default function ManageCommissionsPage() {
       })
       setRows(data)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal load komisi', { description: msg })
     } finally {
       setLoading(false)
@@ -175,7 +176,7 @@ export default function ManageCommissionsPage() {
       setDialogTarget(null)
       void load()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal mark paid', { description: msg })
     } finally {
       setSubmitting(false)

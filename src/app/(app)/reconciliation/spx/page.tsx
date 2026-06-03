@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
@@ -71,7 +72,7 @@ export default function ReconSpxPage() {
       setStep('preview')
       toast.success(`Preview siap: ${result?.total_rows ?? 0} baris (${result?.matched_count ?? 0} match, ${result?.variance_count ?? 0} variance, ${result?.unmatched_count ?? 0} unmatch)`)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal preview', { description: msg })
     } finally {
       setUploading(false)
@@ -92,7 +93,7 @@ export default function ReconSpxPage() {
       setStep('done')
       toast.success(`Applied! ${result?.matched_updated ?? 0} matched + ${result?.variance_updated ?? 0} variance updated, ${result?.unmatched_logged ?? 0} unmatched logged ke inbox`)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       toast.error('Gagal apply', { description: msg })
       setStep('preview')
     } finally {

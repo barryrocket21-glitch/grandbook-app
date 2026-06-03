@@ -31,13 +31,15 @@ interface LabaRugi {
   inflight_count: number
   retur_pct: number
   est_penjualan: number
-  est_biaya_kurir: number
+  est_selisih_ongkir: number
+  est_fee_admin: number
   est_omset: number
   est_hpp: number
   est_fee_cs: number
   est_gross_profit: number
   act_penjualan: number
-  act_biaya_kurir: number
+  act_selisih_ongkir: number
+  act_fee_admin: number
   act_omset: number
   act_hpp: number
   act_fee_cs: number
@@ -177,8 +179,9 @@ export default function LabaRugiPage() {
                   </tr>
                 </thead>
                 <tbody className="tabular-nums">
-                  <PnlRow label="Total Penjualan" est={n(data.est_penjualan)} act={n(data.act_penjualan)} />
-                  <PnlRow label="Biaya Kurir (ongkir net + Fee COD + PPN)" est={n(data.est_biaya_kurir)} act={n(data.act_biaya_kurir)} kind="minus" />
+                  <PnlRow label="Penjualan (harga barang)" est={n(data.est_penjualan)} act={n(data.act_penjualan)} />
+                  <PnlRow label="(+) Selisih Ongkir (untung ongkir: cashback + markup/diskon)" est={n(data.est_selisih_ongkir)} act={n(data.act_selisih_ongkir)} />
+                  <PnlRow label="Biaya Admin (Fee COD + PPN)" est={n(data.est_fee_admin)} act={n(data.act_fee_admin)} kind="minus" />
                   <PnlRow label="Omset" est={n(data.est_omset)} act={n(data.act_omset)} kind="subtotal" />
                   <PnlRow label="HPP (modal barang)" est={n(data.est_hpp)} act={n(data.act_hpp)} kind="minus" />
                   <PnlRow label="Fee CS" est={n(data.est_fee_cs)} act={n(data.act_fee_cs)} kind="minus" />

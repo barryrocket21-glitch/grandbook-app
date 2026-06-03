@@ -161,10 +161,9 @@ export const NAV_ITEMS: NavItem[] = [
       // Rekonsiliasi jadi 1 hub — tab di dalam: Ekspedisi / Sync Status SPX /
       // Cashflow SPX (lihat reconciliation/layout.tsx).
       { title: 'Rekonsiliasi', href: '/reconciliation/ekspedisi' },
+      { title: 'Selisih Ongkir', href: '/shipping-diff', roles: ['owner', 'admin'] },
       { title: 'Biaya Operasional', href: '/expenses' },
-      // Dibuang dari nav (halaman tetap routable):
-      // - 'Cross-check Platform Iklan' (/reconciliation) — peninggalan lama, fungsi udah di Marketing.
-      // - 'Selisih Ongkir' (/shipping-diff) — selisih ongkir aktual-vs-est udah keliatan di ledger Pembukuan.
+      // 'Cross-check Platform Iklan' (/reconciliation) dibuang dari nav (peninggalan lama). Routable.
     ],
   },
   {

@@ -29,18 +29,18 @@ interface Row {
   source: string; id: number; order_number: string; order_date: string
   status: string; zone: string; customer_name: string; customer_city: string | null
   cs_name: string | null; channel_name: string | null; product_summary: string | null
-  total: number; penjualan: number; ongkir: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
+  total: number; penjualan: number; ongkir: number; selisih_ongkir: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
   delivered_at: string | null; returned_at: string | null; exported_at: string | null
   payment_method: string | null; qty: number
-  est_biaya_kurir: number; est_omset: number; est_hpp: number; est_fee_cs: number; est_gross_profit: number
+  est_fee_admin: number; est_omset: number; est_hpp: number; est_fee_cs: number; est_gross_profit: number
   act_omset: number | null; act_hpp: number | null; act_fee_cs: number | null; act_gross_profit: number | null
   dicairkan: number | null; cod_settled_at: string | null
   total_count: number
 }
 
 interface LabaRugi {
-  est_penjualan: number; est_biaya_kurir: number; est_omset: number; est_hpp: number; est_fee_cs: number; est_gross_profit: number
-  act_penjualan: number; act_biaya_kurir: number; act_omset: number; act_hpp: number; act_fee_cs: number; act_gross_profit: number
+  est_penjualan: number; est_selisih_ongkir: number; est_fee_admin: number; est_omset: number; est_hpp: number; est_fee_cs: number; est_gross_profit: number
+  act_penjualan: number; act_selisih_ongkir: number; act_fee_admin: number; act_omset: number; act_hpp: number; act_fee_cs: number; act_gross_profit: number
   total_ad_spend: number; total_opex: number; laba_bersih_est: number; laba_bersih_act: number
 }
 
@@ -107,7 +107,7 @@ export default function PembukuanPage() {
     dicair: a.dicair + n(r.dicairkan),
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
-  const cols = view === 'keuangan' && canFinance ? 12 : 11
+  const cols = view === 'keuangan' && canFinance ? 13 : 11
 
   return (
     <div className="space-y-4">
@@ -156,8 +156,9 @@ export default function PembukuanPage() {
                 <div className="text-xs font-medium text-muted-foreground"></div>
                 <div className="text-xs font-medium text-muted-foreground text-right">Proyeksi</div>
                 <div className="text-xs font-medium text-muted-foreground text-right">Realisasi</div>
-                <PnlRow label="Penjualan" est={summary?.est_penjualan} act={summary?.act_penjualan} />
-                <PnlRow label="− Biaya Kurir" est={summary?.est_biaya_kurir} act={summary?.act_biaya_kurir} sub />
+                <PnlRow label="Penjualan (barang)" est={summary?.est_penjualan} act={summary?.act_penjualan} />
+                <PnlRow label="+ Selisih Ongkir" est={summary?.est_selisih_ongkir} act={summary?.act_selisih_ongkir} sub />
+                <PnlRow label="− Biaya Admin (Fee COD+PPN)" est={summary?.est_fee_admin} act={summary?.act_fee_admin} sub />
                 <PnlRow label="= Omset" est={summary?.est_omset} act={summary?.act_omset} strong />
                 <PnlRow label="− HPP" est={summary?.est_hpp} act={summary?.act_hpp} sub />
                 <PnlRow label="− Fee CS" est={summary?.est_fee_cs} act={summary?.act_fee_cs} sub />
@@ -203,7 +204,8 @@ export default function PembukuanPage() {
                 <>
                   <TableHead className="max-w-[160px]">Produk</TableHead>
                   <TableHead className="text-right">Penjualan</TableHead>
-                  <TableHead className="text-right">Biaya Kurir</TableHead>
+                  <TableHead className="text-right">Selisih Ongkir</TableHead>
+                  <TableHead className="text-right">Biaya Admin</TableHead>
                   <TableHead className="text-right">Omset</TableHead>
                   <TableHead className="text-right">HPP</TableHead>
                   <TableHead className="text-right">Fee CS</TableHead>
@@ -234,7 +236,8 @@ export default function PembukuanPage() {
                     <>
                       <TableCell className="text-xs max-w-[160px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
                       <TableCell className="text-right text-xs"><Money v={n(r.penjualan)} /></TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_biaya_kurir)} /></TableCell>
+                      <TableCell className="text-right text-xs"><Money v={n(r.selisih_ongkir)} /></TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_fee_admin)} /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={n(r.est_omset)} /></TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_hpp)} /></TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_fee_cs)} /></TableCell>
@@ -262,7 +265,7 @@ export default function PembukuanPage() {
                     <>
                       <TableCell colSpan={4} className="text-xs">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
                       <TableCell className="text-right text-xs"><Money v={totals.total} bold /></TableCell>
-                      <TableCell /><TableCell /><TableCell /><TableCell />
+                      <TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
                       <TableCell className="text-right text-xs"><Money v={totals.est_gp} bold /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={totals.act_gp} bold /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={totals.dicair} bold /></TableCell>

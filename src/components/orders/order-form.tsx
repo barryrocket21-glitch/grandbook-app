@@ -275,7 +275,10 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
     () => items.reduce((sum, it) => sum + (Number(it.qty) || 0) * (Number(it.price) || 0), 0),
     [items]
   )
-  const total = Math.max(0, subtotal + Number(shippingCost || 0) - Number(discount || 0))
+  // total = HARGA BARANG (subtotal − diskon), ongkir TERPISAH di shipping_cost —
+  // konsisten dgn import (WA paste) + model NET pembukuan (Penjualan = barang).
+  const total = Math.max(0, subtotal - Number(discount || 0))
+  const codTotal = total + Number(shippingCost || 0) // yang dibayar pembeli (COD)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -595,9 +598,9 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm pt-2 border-t">
-            <div>Subtotal: <span className="font-medium">Rp {subtotal.toLocaleString('id-ID')}</span></div>
+            <div>Harga Barang: <span className="font-medium">Rp {total.toLocaleString('id-ID')}</span></div>
             <div>Ongkir: <span className="font-medium">Rp {Number(shippingCost || 0).toLocaleString('id-ID')}</span></div>
-            <div className="font-bold">Total: Rp {total.toLocaleString('id-ID')}</div>
+            <div className="font-bold">Total Bayar (COD): Rp {codTotal.toLocaleString('id-ID')}</div>
           </div>
         </CardContent>
       </Card>

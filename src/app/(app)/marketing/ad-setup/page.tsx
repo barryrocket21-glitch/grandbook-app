@@ -86,12 +86,24 @@ export default function AdSetupPage() {
       toast.success(`Akun "${naf.account_code.trim()}" (${naf.platform}) ditambah`)
       setNaf({ platform: 'META', account_code: '', name: '', advertiser_id: '' })
       await load()
-    } catch (err) { toast.error('Gagal tambah akun', { description: getErrorMessage(err) }) }
+    } catch (err) {
+      const msg = getErrorMessage(err)
+      // Brief #28 — dup kode akun: arahin ke Campaign (akun gak perlu dibikin 2x).
+      if (/udah ada|already/i.test(msg)) {
+        toast.error(`Akun "${naf.account_code.trim()}" udah ada — gak perlu dibikin lagi`, {
+          description: '1 akun bisa banyak produk & campaign. Mau nambah produk/campaign di akun ini? Scroll ke "Buat Campaign Baru" di bawah, pilih akun ini. Mau ganti nama akun? Pakai tombol Edit (pensil) di baris akun.',
+        })
+      } else {
+        toast.error('Gagal tambah akun', { description: msg })
+      }
+    }
     finally { setSavingAcc(false) }
   }
 
   // Brief #23 — singkatan platform (Meta=F dst) buat tampilan
   const platLabel = (pf: string) => `${pf} (${PLATFORM_LETTER[pf] ?? '?'})`
+  // Brief #28 — berapa campaign di tiap akun (akun = wadah banyak campaign).
+  const campCount = (accId: number) => campaigns.filter(c => c.account_id === accId).length
   // Brief #26 — marker berikutnya buat akun (campaign ke-N otomatis).
   const nextMarker = (accountId: number) => {
     const used = campaigns.filter(c => c.account_id === accountId)
@@ -235,7 +247,7 @@ export default function AdSetupPage() {
       <Card>
         <CardContent className="pt-4 pb-4 space-y-3">
           <div className="text-sm font-semibold">Master Akun Iklan</div>
-          <p className="text-[11px] text-muted-foreground">Daftar akun iklan tiap advertiser. <b>Kode Akun</b> = huruf identitas akun yang masuk ke kode atribusi (mis. <b>A</b> di <span className="font-mono">Luna F.<b>A</b>.1</span>), unik per platform. <b>Nama</b> = label bebas (gak masuk kode). Nomor campaign (1,2,3) di-isi di bagian <b>Campaign → Marker</b>, bukan di sini.</p>
+          <p className="text-[11px] text-muted-foreground"><b>1 akun = wadah, dibikin SEKALI.</b> Di dalam 1 akun bisa banyak produk &amp; banyak campaign (semua dibuat di bagian <b>Campaign</b> di bawah, pilih akun ini). Jadi <b>gak perlu bikin akun kode sama 2x</b> — kode akun unik per platform (kayak KTP). <b>Kode Akun</b> = huruf identitas akun yang masuk ke kode atribusi (mis. <b>A</b> di <span className="font-mono">Luna F.<b>A</b>.1</span>). <b>Nama</b> = label bebas (gak masuk kode). Nomor campaign (1,2,3) = di <b>Campaign → Marker</b>.</p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
             <div className="space-y-1">
               <Label className="text-xs">Platform</Label>
@@ -271,7 +283,7 @@ export default function AdSetupPage() {
           ) : (
             <div className="border rounded-md overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Platform</TableHead><TableHead>Kode</TableHead><TableHead>Nama</TableHead><TableHead>Advertiser</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Platform</TableHead><TableHead>Kode</TableHead><TableHead>Nama</TableHead><TableHead>Advertiser</TableHead><TableHead className="text-center">Campaign</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {accounts.map(a => editAccId === a.id ? (
                     <TableRow key={a.id} className="bg-violet-500/5">
@@ -290,6 +302,7 @@ export default function AdSetupPage() {
                         </Select>
                       </TableCell>
                       <TableCell />
+                      <TableCell />
                       <TableCell className="text-right whitespace-nowrap">
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" disabled={accBusy} onClick={saveEditAcc} title="Simpan"><Check className="w-4 h-4" /></Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditAccId(null)} title="Batal"><X className="w-4 h-4" /></Button>
@@ -301,6 +314,7 @@ export default function AdSetupPage() {
                       <TableCell className="font-mono text-xs">{a.account_code}</TableCell>
                       <TableCell className="text-xs">{a.name || '—'}</TableCell>
                       <TableCell className="text-xs">{advName(a.advertiser_id)}</TableCell>
+                      <TableCell className="text-center text-xs tabular-nums">{campCount(a.id) > 0 ? <span className="font-medium">{campCount(a.id)}</span> : <span className="text-muted-foreground">0</span>}</TableCell>
                       <TableCell><Badge variant="outline" className={a.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{a.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => startEditAcc(a)} title="Edit"><Pencil className="w-3.5 h-3.5" /></Button>

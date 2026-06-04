@@ -47,6 +47,7 @@ interface LabaRugi {
 const STATUSES = ['BARU', 'SIAP_KIRIM', 'DIKIRIM', 'PROBLEM', 'DITERIMA', 'RETUR', 'CANCEL', 'FAKE']
 const ZONE_COLOR: Record<string, string> = {
   Baru: 'bg-zinc-500/10 text-zinc-500', Antrian: 'bg-sky-500/10 text-sky-600',
+  'Siap Kirim': 'bg-teal-500/10 text-teal-600',
   'Nunggu Resi': 'bg-amber-500/10 text-amber-600', Dikirim: 'bg-indigo-500/10 text-indigo-500',
   Problem: 'bg-orange-500/10 text-orange-600', 'Arsip (Delivered)': 'bg-emerald-500/10 text-emerald-600',
   Retur: 'bg-rose-500/10 text-rose-600', Batal: 'bg-zinc-500/10 text-zinc-400', Fake: 'bg-red-500/10 text-red-600',

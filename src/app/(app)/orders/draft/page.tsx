@@ -107,6 +107,7 @@ function OrdersDraftInner() {
           p_from: dateFrom || null,
           p_to: dateTo || null,
           p_search: search.trim() || null,
+          p_exported: false, // konsisten sama tabel: Antrian Kerja = belum di-export
         }),
         supabase.rpc('get_draft_readiness_stats', {
           p_from: dateFrom || null,

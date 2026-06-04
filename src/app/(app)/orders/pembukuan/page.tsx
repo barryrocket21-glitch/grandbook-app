@@ -77,6 +77,7 @@ export default function PembukuanPage() {
   const [allTime, setAllTime] = useState(true) // default: semua periode (biar semua order kelihatan)
   const [zoneFilter, setZoneFilter] = useState<string | null>(null) // klik chip zona = filter
   const [detail, setDetail] = useState<{ source: 'draft' | 'final'; id: number } | null>(null) // klik baris = detail
+  const [page, setPage] = useState(0) // pagination 50/halaman
 
   const load = useCallback(async () => {
     setLoading(true); setErr(false)
@@ -104,6 +105,10 @@ export default function PembukuanPage() {
 
   // Filter zona (klik chip) di atas hasil server — biar bisa "filter tracking + liat total"
   const displayed = useMemo(() => zoneFilter ? rows.filter(r => r.zone === zoneFilter) : rows, [rows, zoneFilter])
+  const PAGE_SIZE = 50
+  const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE))
+  const paged = useMemo(() => displayed.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [displayed, page])
+  useEffect(() => { setPage(0) }, [zoneFilter, status, search, allTime, range.from, range.to, view])
   const totals = useMemo(() => displayed.reduce((a, r) => ({
     n: a.n + 1, total: a.total + n(r.penjualan),
     est_gp: a.est_gp + n(r.est_gross_profit),
@@ -200,9 +205,9 @@ export default function PembukuanPage() {
 
       {/* Ledger table */}
       <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[70vh]">
           <Table>
-            <TableHeader><TableRow>
+            <TableHeader className="[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:bg-card [&>tr>th]:z-10"><TableRow>
               <TableHead>Tanggal</TableHead><TableHead>Order#</TableHead><TableHead>Status</TableHead>
               {view === 'keuangan' && canFinance ? (
                 <>
@@ -226,7 +231,7 @@ export default function PembukuanPage() {
                 <TableRow><TableCell colSpan={cols} className="py-8 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
               ) : displayed.length === 0 ? (
                 <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-rose-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
-              ) : displayed.map(r => (
+              ) : paged.map(r => (
                 <TableRow key={`${r.source}-${r.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetail({ source: r.source as 'draft' | 'final', id: r.id })}>
                   <TableCell className="text-xs whitespace-nowrap">{formatDate(r.order_date)}</TableCell>
                   <TableCell className="font-mono text-xs">{r.order_number}</TableCell>
@@ -272,6 +277,15 @@ export default function PembukuanPage() {
           </Table>
         </div>
       </div>
+      {!loading && displayed.length > 0 && (
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="text-muted-foreground tabular-nums">{displayed.length.toLocaleString('id-ID')} order · Hal {page + 1} / {totalPages}</span>
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" className="h-7" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>‹ Prev</Button>
+            <Button variant="outline" size="sm" className="h-7" disabled={page >= totalPages - 1} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}>Next ›</Button>
+          </div>
+        </div>
+      )}
       <OrderDetailSheet source={detail?.source ?? null} id={detail?.id ?? null} onClose={() => setDetail(null)} />
     </div>
   )

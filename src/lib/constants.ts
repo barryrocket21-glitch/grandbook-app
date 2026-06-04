@@ -7,6 +7,8 @@ import {
   Coins,
   Scale,
   UserRound,
+  LineChart,
+  Users,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -128,9 +130,9 @@ export const NAV_ITEMS: NavItem[] = [
       // Input Order digabung jadi 1 menu — di halaman ada tab (Ketik Manual /
       // Upload CSV / Tempel WA). Sebelumnya 3 menu kepisah.
       { title: 'Input Order', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Antrian Kerja', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Export ke Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
-      { title: 'Post-Export (Nunggu Resi)', href: '/orders/post-export', roles: ['owner', 'admin', 'cs'] },
+      // Kirim Order — 1 menu, tab di dalam: Antrian Kerja → Export → Post-Export
+      // (alur kirim berurutan). Sebelumnya 3 menu kepisah.
+      { title: 'Kirim Order', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },
       { title: 'Sync Status SPX', href: '/reconciliation/spx-status', roles: ['owner', 'admin'] },
       // Inbox (benerin data nyangkut) masuk grup Order — masih bagian pipeline.
       // Sub-antrian jadi tab di dalam halaman (inbox/layout.tsx). 'Arsip' dibuang
@@ -178,23 +180,39 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    // Marketing & Tim — gabung Marketing (iklan) + CS (laporan) + Analytics.
-    // Tiap child WAJIB roles eksplisit: advertiser cuma lihat menu iklan, cs cuma
-    // menu CS, owner/admin lihat semua + Analytics.
-    title: 'Marketing & Tim',
+    // Marketing — analisa strategis (owner/admin).
+    title: 'Marketing',
+    href: '/performa',
+    icon: LineChart,
+    roles: ['owner', 'admin'],
+    children: [
+      { title: 'Performa Bisnis', href: '/performa', badge: 'BARU' },
+      { title: 'Analytics', href: '/analytics' },
+    ],
+  },
+  {
+    // Advertiser — workspace iklan (setup + input spend + performa iklan).
+    title: 'Advertiser',
     href: '/marketing/ad-setup',
     icon: Megaphone,
-    roles: ['owner', 'admin', 'advertiser', 'cs'],
+    roles: ['owner', 'admin', 'advertiser'],
     children: [
-      { title: 'Performa Bisnis', href: '/performa', roles: ['owner', 'admin'], badge: 'BARU' },
-      { title: 'Setup Iklan', href: '/marketing/ad-setup', roles: ['owner', 'admin', 'advertiser'] },
-      { title: 'Input Harian', href: '/ad-spend', roles: ['owner', 'admin', 'advertiser'] },
-      { title: 'Performa Iklan', href: '/marketing/performa', roles: ['owner', 'admin', 'advertiser'] },
+      { title: 'Setup Iklan', href: '/marketing/ad-setup' },
+      { title: 'Input Harian', href: '/ad-spend' },
+      { title: 'Performa Iklan', href: '/marketing/performa' },
       { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
-      { title: 'Dashboard CS', href: '/cs-dashboard', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Laporan Harian CS', href: '/cs-report', roles: ['owner', 'admin', 'cs'] },
+    ],
+  },
+  {
+    // CS — workspace customer service (input lead/closing + performa).
+    title: 'CS',
+    href: '/cs-dashboard',
+    icon: Users,
+    roles: ['owner', 'admin', 'cs'],
+    children: [
+      { title: 'Dashboard CS', href: '/cs-dashboard' },
+      { title: 'Laporan Harian', href: '/cs-report' },
       { title: 'Performa CS', href: '/team/cs', roles: ['owner', 'admin'] },
-      { title: 'Analytics', href: '/analytics', roles: ['owner', 'admin'] },
     ],
   },
   {

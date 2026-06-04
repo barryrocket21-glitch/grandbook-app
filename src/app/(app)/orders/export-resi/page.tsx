@@ -20,6 +20,13 @@ import {
   Filter,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageTabs } from '@/components/ui/page-tabs'
+
+const KIRIM_TABS = [
+  { label: 'Antrian Kerja', href: '/orders/draft' },
+  { label: 'Export Ekspedisi', href: '/orders/export-resi' },
+  { label: 'Post-Export', href: '/orders/post-export' },
+]
 import { canApproveOrders } from '@/lib/auth/permissions'
 import { previewOutbound, type OutboundPreviewResult } from '@/lib/converter/preview'
 import {
@@ -529,6 +536,7 @@ function OrdersExportResiInner() {
 
   return (
     <div className="space-y-6">
+      <PageTabs items={KIRIM_TABS} />
       <PageHeader
         icon={Truck}
         title="Export ke Ekspedisi"

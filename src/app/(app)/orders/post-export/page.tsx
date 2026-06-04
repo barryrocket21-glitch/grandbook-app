@@ -9,7 +9,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PackageCheck, Search, RefreshCw, ChevronUp, ChevronDown, Inbox } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageTabs } from '@/components/ui/page-tabs'
 import { EmptyState } from '@/components/ui/empty-state'
+
+const KIRIM_TABS = [
+  { label: 'Antrian Kerja', href: '/orders/draft' },
+  { label: 'Export Ekspedisi', href: '/orders/export-resi' },
+  { label: 'Post-Export', href: '/orders/post-export' },
+]
 import { formatRupiah, formatDate } from '@/lib/format'
 import type { OrderDraftEnriched } from '@/lib/types'
 
@@ -95,6 +102,7 @@ export default function PostExportPage() {
 
   return (
     <div className="space-y-4">
+      <PageTabs items={KIRIM_TABS} />
       <PageHeader
         icon={PackageCheck}
         title="Post-Export — Nunggu Resi"

@@ -23,6 +23,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageTabs } from '@/components/ui/page-tabs'
+
+const KIRIM_TABS = [
+  { label: 'Antrian Kerja', href: '/orders/draft' },
+  { label: 'Export Ekspedisi', href: '/orders/export-resi' },
+  { label: 'Post-Export', href: '/orders/post-export' },
+]
 import { EmptyState } from '@/components/ui/empty-state'
 import { STATUS_BADGE_COLOR, STATUS_LABEL } from '@/lib/schemas/settings'
 import { formatRupiah, formatDate } from '@/lib/format'
@@ -288,6 +295,7 @@ function OrdersDraftInner() {
 
   return (
     <div className="space-y-4">
+      <PageTabs items={KIRIM_TABS} />
       <PageHeader
         icon={Inbox}
         title="Antrian Kerja"

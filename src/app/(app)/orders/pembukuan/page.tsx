@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
 import { BookOpen, Loader2, Search, RefreshCw, Wand2, TrendingUp, TrendingDown, Wallet, Receipt } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
-import { formatRupiah, formatDate } from '@/lib/format'
+import { formatRupiah } from '@/lib/format'
 import { OrderDetailSheet } from '@/components/orders/order-detail-sheet'
 
 const supabase = createClient()
@@ -117,6 +117,12 @@ export default function PembukuanPage() {
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
   const cols = view === 'keuangan' && canFinance ? 15 : 11
+  // tanggal singkat 04/06/26
+  const fmtShort = (d: string) => { const x = new Date(d); const p = (v: number) => String(v).padStart(2, '0'); return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)}` }
+  // freeze 4 kolom kiri (Tanggal·Order#·Nama·Status) — nempel pas scroll kanan
+  const FROZEN = [{ left: 0, width: 60 }, { left: 60, width: 142 }, { left: 202, width: 120 }, { left: 322, width: 86 }]
+  const fzTh = (i: number): React.CSSProperties => ({ position: 'sticky', top: 0, left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 30 })
+  const fzTd = (i: number): React.CSSProperties => ({ position: 'sticky', left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 20 })
 
   return (
     <div className="space-y-4">
@@ -208,14 +214,14 @@ export default function PembukuanPage() {
         <div className="overflow-auto max-h-[70vh]">
           <Table>
             <TableHeader className="[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:bg-card [&>tr>th]:z-10"><TableRow>
-              <TableHead>Tanggal</TableHead><TableHead>Order#</TableHead><TableHead>Nama</TableHead><TableHead>Status</TableHead>
+              <TableHead style={fzTh(0)} className="bg-card">Tgl</TableHead><TableHead style={fzTh(1)} className="bg-card">Order#</TableHead><TableHead style={fzTh(2)} className="bg-card">Nama</TableHead><TableHead style={fzTh(3)} className="bg-card border-r">Status</TableHead>
               {view === 'keuangan' && canFinance ? (
                 <>
                   <TableHead className="max-w-[160px]">Produk</TableHead>
                   <TableHead className="text-right">Penjualan</TableHead>
                   <TableHead className="text-right">Ongkir</TableHead>
                   <TableHead className="text-right">Selisih Ongkir</TableHead>
-                  <TableHead className="text-right">Biaya Admin</TableHead>
+                  <TableHead className="text-right">Biaya COD</TableHead>
                   <TableHead className="text-right">Omset</TableHead>
                   <TableHead className="text-right">HPP</TableHead>
                   <TableHead className="text-right">Fee CS</TableHead>
@@ -242,10 +248,10 @@ export default function PembukuanPage() {
                 <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-rose-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
               ) : paged.map(r => (
                 <TableRow key={`${r.source}-${r.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetail({ source: r.source as 'draft' | 'final', id: r.id })}>
-                  <TableCell className="text-sm whitespace-nowrap">{formatDate(r.order_date)}</TableCell>
-                  <TableCell className="font-mono text-sm whitespace-nowrap">{r.order_number}</TableCell>
-                  <TableCell className="text-sm font-medium max-w-[150px] truncate" title={r.customer_name || ''}>{r.customer_name || '—'}</TableCell>
-                  <TableCell><Badge variant="outline" className={`${ZONE_COLOR[r.zone] || 'bg-muted'} text-[11px] whitespace-nowrap`}>{r.zone}</Badge></TableCell>
+                  <TableCell style={fzTd(0)} className="bg-card text-sm whitespace-nowrap">{fmtShort(r.order_date)}</TableCell>
+                  <TableCell style={fzTd(1)} className="bg-card font-mono text-xs whitespace-nowrap overflow-hidden">{r.order_number}</TableCell>
+                  <TableCell style={fzTd(2)} className="bg-card text-sm font-medium truncate" title={r.customer_name || ''}>{r.customer_name || '—'}</TableCell>
+                  <TableCell style={fzTd(3)} className="bg-card border-r"><Badge variant="outline" className={`${ZONE_COLOR[r.zone] || 'bg-muted'} text-[11px] whitespace-nowrap`}>{r.zone}</Badge></TableCell>
                   {view === 'keuangan' && canFinance ? (
                     <>
                       <TableCell className="text-sm max-w-[160px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>

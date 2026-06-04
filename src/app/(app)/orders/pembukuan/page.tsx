@@ -77,7 +77,8 @@ export default function PembukuanPage() {
   const [allTime, setAllTime] = useState(true) // default: semua periode (biar semua order kelihatan)
   const [zoneFilter, setZoneFilter] = useState<string | null>(null) // klik chip zona = filter
   const [detail, setDetail] = useState<{ source: 'draft' | 'final'; id: number } | null>(null) // klik baris = detail
-  const [page, setPage] = useState(0) // pagination 50/halaman
+  const [page, setPage] = useState(0) // pagination
+  const [pageSize, setPageSize] = useState(50) // baris per halaman (pilihan)
 
   const load = useCallback(async () => {
     setLoading(true); setErr(false)
@@ -105,10 +106,9 @@ export default function PembukuanPage() {
 
   // Filter zona (klik chip) di atas hasil server — biar bisa "filter tracking + liat total"
   const displayed = useMemo(() => zoneFilter ? rows.filter(r => r.zone === zoneFilter) : rows, [rows, zoneFilter])
-  const PAGE_SIZE = 50
-  const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE))
-  const paged = useMemo(() => displayed.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [displayed, page])
-  useEffect(() => { setPage(0) }, [zoneFilter, status, search, allTime, range.from, range.to, view])
+  const totalPages = Math.max(1, Math.ceil(displayed.length / pageSize))
+  const paged = useMemo(() => displayed.slice(page * pageSize, (page + 1) * pageSize), [displayed, page, pageSize])
+  useEffect(() => { setPage(0) }, [zoneFilter, status, search, allTime, range.from, range.to, view, pageSize])
   const totals = useMemo(() => displayed.reduce((a, r) => ({
     n: a.n + 1, total: a.total + n(r.penjualan),
     est_gp: a.est_gp + n(r.est_gross_profit),
@@ -116,7 +116,7 @@ export default function PembukuanPage() {
     dicair: a.dicair + n(r.dicairkan),
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
-  const cols = view === 'keuangan' && canFinance ? 9 : 6
+  const cols = view === 'keuangan' && canFinance ? 15 : 11
 
   return (
     <div className="space-y-4">
@@ -208,21 +208,30 @@ export default function PembukuanPage() {
         <div className="overflow-auto max-h-[70vh]">
           <Table>
             <TableHeader className="[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:bg-card [&>tr>th]:z-10"><TableRow>
-              <TableHead>Tanggal</TableHead><TableHead>Order#</TableHead><TableHead>Status</TableHead>
+              <TableHead>Tanggal</TableHead><TableHead>Order#</TableHead><TableHead>Nama</TableHead><TableHead>Status</TableHead>
               {view === 'keuangan' && canFinance ? (
                 <>
                   <TableHead className="max-w-[160px]">Produk</TableHead>
                   <TableHead className="text-right">Penjualan</TableHead>
+                  <TableHead className="text-right">Ongkir</TableHead>
+                  <TableHead className="text-right">Selisih Ongkir</TableHead>
+                  <TableHead className="text-right">Biaya Admin</TableHead>
                   <TableHead className="text-right">Omset</TableHead>
+                  <TableHead className="text-right">HPP</TableHead>
+                  <TableHead className="text-right">Fee CS</TableHead>
                   <TableHead className="text-right">GP Proyeksi</TableHead>
                   <TableHead className="text-right">GP Realisasi</TableHead>
                   <TableHead className="text-right">Dicairkan</TableHead>
                 </>
               ) : (
                 <>
-                  <TableHead>Customer</TableHead>
+                  <TableHead>Kota</TableHead>
+                  <TableHead>CS</TableHead>
                   <TableHead>Produk</TableHead>
+                  <TableHead className="text-center">Qty</TableHead>
+                  <TableHead>Bayar</TableHead>
                   <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Resi</TableHead>
                 </>
               )}
             </TableRow></TableHeader>
@@ -233,23 +242,33 @@ export default function PembukuanPage() {
                 <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-rose-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
               ) : paged.map(r => (
                 <TableRow key={`${r.source}-${r.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetail({ source: r.source as 'draft' | 'final', id: r.id })}>
-                  <TableCell className="text-xs whitespace-nowrap">{formatDate(r.order_date)}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.order_number}</TableCell>
-                  <TableCell><Badge variant="outline" className={`${ZONE_COLOR[r.zone] || 'bg-muted'} text-[10px] whitespace-nowrap`}>{r.zone}</Badge></TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">{formatDate(r.order_date)}</TableCell>
+                  <TableCell className="font-mono text-sm whitespace-nowrap">{r.order_number}</TableCell>
+                  <TableCell className="text-sm font-medium max-w-[150px] truncate" title={r.customer_name || ''}>{r.customer_name || '—'}</TableCell>
+                  <TableCell><Badge variant="outline" className={`${ZONE_COLOR[r.zone] || 'bg-muted'} text-[11px] whitespace-nowrap`}>{r.zone}</Badge></TableCell>
                   {view === 'keuangan' && canFinance ? (
                     <>
-                      <TableCell className="text-xs max-w-[160px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
-                      <TableCell className="text-right text-xs"><Money v={n(r.penjualan)} /></TableCell>
-                      <TableCell className="text-right text-xs"><Money v={n(r.est_omset)} /></TableCell>
-                      <TableCell className="text-right text-xs"><Money v={n(r.est_gross_profit)} /></TableCell>
-                      <TableCell className="text-right text-xs"><Money v={r.act_gross_profit === null ? null : n(r.act_gross_profit)} bold /></TableCell>
-                      <TableCell className="text-right text-xs"><Money v={r.dicairkan === null ? null : n(r.dicairkan)} /></TableCell>
+                      <TableCell className="text-sm max-w-[160px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
+                      <TableCell className="text-right text-sm"><Money v={n(r.penjualan)} /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={n(r.ongkir)} /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={n(r.selisih_ongkir)} /></TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.est_fee_admin)} /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={n(r.est_omset)} /></TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.est_hpp)} /></TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.est_fee_cs)} /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={n(r.est_gross_profit)} /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={r.act_gross_profit === null ? null : n(r.act_gross_profit)} bold /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={r.dicairkan === null ? null : n(r.dicairkan)} /></TableCell>
                     </>
                   ) : (
                     <>
-                      <TableCell className="text-xs">{r.customer_name}</TableCell>
-                      <TableCell className="text-xs max-w-[220px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{formatRupiah(n(r.penjualan))}</TableCell>
+                      <TableCell className="text-sm">{r.customer_city || '—'}</TableCell>
+                      <TableCell className="text-sm">{r.cs_name || '—'}</TableCell>
+                      <TableCell className="text-sm max-w-[200px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
+                      <TableCell className="text-center text-sm">{r.qty || '—'}</TableCell>
+                      <TableCell className="text-sm">{r.payment_method || '—'}</TableCell>
+                      <TableCell className="text-right text-sm tabular-nums">{formatRupiah(n(r.penjualan))}</TableCell>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">{r.tracking_no || r.resi || '—'}</TableCell>
                     </>
                   )}
                 </TableRow>
@@ -258,17 +277,18 @@ export default function PembukuanPage() {
                 <TableRow className="bg-muted/50 font-semibold border-t-2 border-foreground/15">
                   {view === 'keuangan' && canFinance ? (
                     <>
-                      <TableCell colSpan={4} className="text-xs">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
-                      <TableCell className="text-right text-xs"><Money v={totals.total} bold /></TableCell>
-                      <TableCell />
-                      <TableCell className="text-right text-xs"><Money v={totals.est_gp} bold /></TableCell>
-                      <TableCell className="text-right text-xs"><Money v={totals.act_gp} bold /></TableCell>
-                      <TableCell className="text-right text-xs"><Money v={totals.dicair} bold /></TableCell>
+                      <TableCell colSpan={5} className="text-sm">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
+                      <TableCell className="text-right text-sm"><Money v={totals.total} bold /></TableCell>
+                      <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
+                      <TableCell className="text-right text-sm"><Money v={totals.est_gp} bold /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={totals.act_gp} bold /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={totals.dicair} bold /></TableCell>
                     </>
                   ) : (
                     <>
-                      <TableCell colSpan={5} className="text-xs">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{formatRupiah(totals.total)}</TableCell>
+                      <TableCell colSpan={9} className="text-sm">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
+                      <TableCell className="text-right text-sm tabular-nums">{formatRupiah(totals.total)}</TableCell>
+                      <TableCell />
                     </>
                   )}
                 </TableRow>
@@ -278,11 +298,19 @@ export default function PembukuanPage() {
         </div>
       </div>
       {!loading && displayed.length > 0 && (
-        <div className="flex items-center justify-between gap-2 text-xs">
-          <span className="text-muted-foreground tabular-nums">{displayed.length.toLocaleString('id-ID')} order · Hal {page + 1} / {totalPages}</span>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <div className="flex items-center gap-2">
+            <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="h-8 rounded-md border bg-background px-2 text-sm">
+              <option value={50}>50 / halaman</option>
+              <option value={100}>100 / halaman</option>
+              <option value={500}>500 / halaman</option>
+              <option value={1000}>1000 / halaman</option>
+            </select>
+            <span className="text-muted-foreground tabular-nums">{displayed.length.toLocaleString('id-ID')} order · Hal {page + 1} / {totalPages}</span>
+          </div>
           <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="sm" className="h-7" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>‹ Prev</Button>
-            <Button variant="outline" size="sm" className="h-7" disabled={page >= totalPages - 1} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}>Next ›</Button>
+            <Button variant="outline" size="sm" className="h-8" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>‹ Prev</Button>
+            <Button variant="outline" size="sm" className="h-8" disabled={page >= totalPages - 1} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}>Next ›</Button>
           </div>
         </div>
       )}

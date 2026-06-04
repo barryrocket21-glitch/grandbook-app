@@ -30,7 +30,7 @@ interface Row {
   source: string; id: number; order_number: string; order_date: string
   status: string; zone: string; customer_name: string; customer_city: string | null
   cs_name: string | null; channel_name: string | null; product_summary: string | null
-  total: number; penjualan: number; ongkir: number; selisih_ongkir: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
+  total: number; penjualan: number; ongkir: number; actual_shipping_fee: number | null; selisih_ongkir: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
   delivered_at: string | null; returned_at: string | null; exported_at: string | null
   payment_method: string | null; qty: number
   est_fee_admin: number; est_omset: number; est_hpp: number; est_fee_cs: number; est_gross_profit: number
@@ -116,11 +116,11 @@ export default function PembukuanPage() {
     dicair: a.dicair + n(r.dicairkan),
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
-  const cols = view === 'keuangan' && canFinance ? 15 : 11
+  const cols = view === 'keuangan' && canFinance ? 17 : 11
   // tanggal singkat 04/06/26
   const fmtShort = (d: string) => { const x = new Date(d); const p = (v: number) => String(v).padStart(2, '0'); return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)}` }
   // freeze 4 kolom kiri (Tanggal·Order#·Nama·Status) — nempel pas scroll kanan
-  const FROZEN = [{ left: 0, width: 60 }, { left: 60, width: 142 }, { left: 202, width: 120 }, { left: 322, width: 86 }]
+  const FROZEN = [{ left: 0, width: 82 }, { left: 82, width: 148 }, { left: 230, width: 120 }, { left: 350, width: 110 }]
   const fzTh = (i: number): React.CSSProperties => ({ position: 'sticky', top: 0, left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 30 })
   const fzTd = (i: number): React.CSSProperties => ({ position: 'sticky', left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 20 })
 
@@ -214,30 +214,32 @@ export default function PembukuanPage() {
         <div className="overflow-auto max-h-[70vh]">
           <Table>
             <TableHeader className="[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:bg-card [&>tr>th]:z-10"><TableRow>
-              <TableHead style={fzTh(0)} className="bg-card">Tgl</TableHead><TableHead style={fzTh(1)} className="bg-card">Order#</TableHead><TableHead style={fzTh(2)} className="bg-card">Nama</TableHead><TableHead style={fzTh(3)} className="bg-card border-r">Status</TableHead>
+              <TableHead style={fzTh(0)} className="bg-card" title="Tanggal order">Tgl</TableHead><TableHead style={fzTh(1)} className="bg-card" title="Nomor referensi GrandBook">Order#</TableHead><TableHead style={fzTh(2)} className="bg-card" title="Nama pembeli">Nama</TableHead><TableHead style={fzTh(3)} className="bg-card border-r" title="Status / zona pengiriman">Status</TableHead>
               {view === 'keuangan' && canFinance ? (
                 <>
-                  <TableHead className="max-w-[160px]">Produk</TableHead>
-                  <TableHead className="text-right">Penjualan</TableHead>
-                  <TableHead className="text-right">Ongkir</TableHead>
-                  <TableHead className="text-right">Selisih Ongkir</TableHead>
-                  <TableHead className="text-right">Biaya COD</TableHead>
-                  <TableHead className="text-right">Omset</TableHead>
-                  <TableHead className="text-right">HPP</TableHead>
-                  <TableHead className="text-right">Fee CS</TableHead>
-                  <TableHead className="text-right">GP Proyeksi</TableHead>
-                  <TableHead className="text-right">GP Realisasi</TableHead>
-                  <TableHead className="text-right">Dicairkan</TableHead>
+                  <TableHead className="max-w-[160px]" title="Produk yang dipesan">Produk</TableHead>
+                  <TableHead className="text-right" title="Harga barang (belum termasuk ongkir)">Penjualan</TableHead>
+                  <TableHead className="text-right" title="Ongkir yang ditagih ke pembeli (dari CS / input order)">Ongkir CS</TableHead>
+                  <TableHead className="text-right" title="Ongkir asli dari ekspedisi sebelum cashback (dari Sync SPX)">Ongkir Kurir</TableHead>
+                  <TableHead className="text-right" title="Potongan ongkir dari ekspedisi (±40% dari ongkir kurir)">Cashback</TableHead>
+                  <TableHead className="text-right" title="Ongkir CS − ongkir bersih ekspedisi (untung/rugi ongkir)">Selisih Ongkir</TableHead>
+                  <TableHead className="text-right" title="Fee layanan COD ekspedisi (±1%) + PPN">Biaya COD</TableHead>
+                  <TableHead className="text-right" title="Penjualan + Selisih Ongkir − Biaya COD (duit bersih masuk)">Omset</TableHead>
+                  <TableHead className="text-right" title="Modal barang + fee packing">HPP</TableHead>
+                  <TableHead className="text-right" title="Komisi CS per order">Fee CS</TableHead>
+                  <TableHead className="text-right" title="Omset − HPP − Fee CS (asumsi order sukses sampai)">GP Proyeksi</TableHead>
+                  <TableHead className="text-right" title="Gross profit final — cuma order DITERIMA (uang beneran)">GP Realisasi</TableHead>
+                  <TableHead className="text-right" title="COD yang sudah cair dari ekspedisi">Dicairkan</TableHead>
                 </>
               ) : (
                 <>
-                  <TableHead>Kota</TableHead>
-                  <TableHead>CS</TableHead>
-                  <TableHead>Produk</TableHead>
-                  <TableHead className="text-center">Qty</TableHead>
-                  <TableHead>Bayar</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Resi</TableHead>
+                  <TableHead title="Kota tujuan">Kota</TableHead>
+                  <TableHead title="CS yang menangani order">CS</TableHead>
+                  <TableHead title="Produk yang dipesan">Produk</TableHead>
+                  <TableHead className="text-center" title="Jumlah barang">Qty</TableHead>
+                  <TableHead title="Metode pembayaran (COD/Transfer)">Bayar</TableHead>
+                  <TableHead className="text-right" title="Harga barang">Total</TableHead>
+                  <TableHead title="Nomor resi ekspedisi">Resi</TableHead>
                 </>
               )}
             </TableRow></TableHeader>
@@ -257,6 +259,8 @@ export default function PembukuanPage() {
                       <TableCell className="text-sm max-w-[160px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.penjualan)} /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.ongkir)} /></TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.actual_shipping_fee)} /></TableCell>
+                      <TableCell className="text-right text-sm text-emerald-600"><Money v={n(r.actual_shipping_fee) > 0 ? n(r.actual_shipping_fee) - (n(r.ongkir) - n(r.selisih_ongkir)) : 0} /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.selisih_ongkir)} /></TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.est_fee_admin)} /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.est_omset)} /></TableCell>
@@ -285,7 +289,7 @@ export default function PembukuanPage() {
                     <>
                       <TableCell colSpan={5} className="text-sm">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
                       <TableCell className="text-right text-sm"><Money v={totals.total} bold /></TableCell>
-                      <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
+                      <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
                       <TableCell className="text-right text-sm"><Money v={totals.est_gp} bold /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={totals.act_gp} bold /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={totals.dicair} bold /></TableCell>

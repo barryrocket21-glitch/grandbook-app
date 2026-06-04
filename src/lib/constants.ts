@@ -205,6 +205,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'akunting'],
     children: [
       { title: 'Produk', href: '/products', roles: ['owner', 'admin', 'akunting'] },
+      { title: 'Stok / Inventory', href: '/inventory', roles: ['owner', 'admin'], badge: 'BARU' },
       { title: 'Supplier', href: '/settings/suppliers', roles: ['owner', 'admin', 'akunting'] },
       { title: 'Setup Kurir', href: '/settings/master-kurir', roles: ['owner', 'admin'] },
       { title: 'Converter Profiles', href: '/settings/converter-profiles', roles: ['owner', 'admin'] },

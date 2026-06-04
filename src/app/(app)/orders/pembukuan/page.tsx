@@ -22,6 +22,7 @@ import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date
 import { BookOpen, Loader2, Search, RefreshCw, Wand2, TrendingUp, TrendingDown, Wallet, Receipt } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah, formatDate } from '@/lib/format'
+import { OrderDetailSheet } from '@/components/orders/order-detail-sheet'
 
 const supabase = createClient()
 
@@ -75,6 +76,7 @@ export default function PembukuanPage() {
   const [range, setRange] = useState<DateRange>(thisMonth)
   const [allTime, setAllTime] = useState(true) // default: semua periode (biar semua order kelihatan)
   const [zoneFilter, setZoneFilter] = useState<string | null>(null) // klik chip zona = filter
+  const [detail, setDetail] = useState<{ source: 'draft' | 'final'; id: number } | null>(null) // klik baris = detail
 
   const load = useCallback(async () => {
     setLoading(true); setErr(false)
@@ -230,7 +232,7 @@ export default function PembukuanPage() {
               ) : displayed.length === 0 ? (
                 <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-rose-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
               ) : displayed.map(r => (
-                <TableRow key={`${r.source}-${r.id}`}>
+                <TableRow key={`${r.source}-${r.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetail({ source: r.source as 'draft' | 'final', id: r.id })}>
                   <TableCell className="text-xs whitespace-nowrap">{formatDate(r.order_date)}</TableCell>
                   <TableCell className="font-mono text-xs">{r.order_number}</TableCell>
                   <TableCell><Badge variant="outline" className={`${ZONE_COLOR[r.zone] || 'bg-muted'} text-[10px] whitespace-nowrap`}>{r.zone}</Badge></TableCell>
@@ -285,6 +287,7 @@ export default function PembukuanPage() {
           </Table>
         </div>
       </div>
+      <OrderDetailSheet source={detail?.source ?? null} id={detail?.id ?? null} onClose={() => setDetail(null)} />
     </div>
   )
 }

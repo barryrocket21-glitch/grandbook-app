@@ -186,6 +186,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Megaphone,
     roles: ['owner', 'admin', 'advertiser', 'cs'],
     children: [
+      { title: 'Performa Bisnis', href: '/performa', roles: ['owner', 'admin'], badge: 'BARU' },
       { title: 'Setup Iklan', href: '/marketing/ad-setup', roles: ['owner', 'admin', 'advertiser'] },
       { title: 'Input Harian', href: '/ad-spend', roles: ['owner', 'admin', 'advertiser'] },
       { title: 'Performa Iklan', href: '/marketing/performa', roles: ['owner', 'admin', 'advertiser'] },

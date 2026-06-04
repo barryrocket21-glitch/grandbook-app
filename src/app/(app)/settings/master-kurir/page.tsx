@@ -244,7 +244,7 @@ export default function MasterKurirPage() {
                           placeholder="Status dari kurir (mis. Delivered)" className="flex-1 h-8 text-xs" />
                         <span className="text-muted-foreground text-xs">→</span>
                         <Select value={r.internal_status} onValueChange={v => v && setStatusRow(ch.id, idx, { internal_status: v as OrderStatus })}>
-                          <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="w-44 h-8 text-xs"><SelectValue>{(v: string | null) => v ? (STATUS_LABEL[v as OrderStatus] ?? v) : 'pilih status'}</SelectValue></SelectTrigger>
                           <SelectContent>
                             {INTERNAL_STATUSES.map(s => (
                               <SelectItem key={s} value={s}>{STATUS_LABEL[s]}{CANONICAL_HINT[s] ? ` — ${CANONICAL_HINT[s]}` : ''}</SelectItem>

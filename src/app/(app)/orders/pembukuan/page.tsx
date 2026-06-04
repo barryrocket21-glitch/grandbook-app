@@ -68,6 +68,7 @@ export default function PembukuanPage() {
   const [rows, setRows] = useState<Row[]>([])
   const [summary, setSummary] = useState<LabaRugi | null>(null)
   const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState(false)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [view, setView] = useState<'ringkas' | 'keuangan'>('ringkas')
@@ -76,7 +77,7 @@ export default function PembukuanPage() {
   const [zoneFilter, setZoneFilter] = useState<string | null>(null) // klik chip zona = filter
 
   const load = useCallback(async () => {
-    setLoading(true)
+    setLoading(true); setErr(false)
     const p_from = allTime ? null : range.from
     const p_to = allTime ? null : range.to
     try {
@@ -87,7 +88,7 @@ export default function PembukuanPage() {
       if (lp.error) throw lp.error
       setRows((lp.data || []) as Row[])
       setSummary(lr.error ? null : ((lr.data?.[0] ?? null) as LabaRugi | null))
-    } catch (err) { console.warn('pembukuan load:', err) } finally { setLoading(false) }
+    } catch (e) { console.warn('pembukuan load:', e); setErr(true) } finally { setLoading(false) }
   }, [status, search, allTime, range.from, range.to, canFinance])
   useEffect(() => { void load() }, [load])
 
@@ -227,7 +228,7 @@ export default function PembukuanPage() {
               {loading ? (
                 <TableRow><TableCell colSpan={cols} className="py-8 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
               ) : displayed.length === 0 ? (
-                <TableRow><TableCell colSpan={cols} className="py-10 text-center text-sm text-muted-foreground">Belum ada order di periode/filter ini.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-rose-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
               ) : displayed.map(r => (
                 <TableRow key={`${r.source}-${r.id}`}>
                   <TableCell className="text-xs whitespace-nowrap">{formatDate(r.order_date)}</TableCell>

@@ -34,10 +34,11 @@ export default function PerformaPage() {
   const [camp, setCamp] = useState<Record<string, unknown>[]>([])
   const [cs, setCs] = useState<Record<string, unknown>[]>([])
   const [prod, setProd] = useState<Record<string, unknown>[]>([])
+  const [err, setErr] = useState(false)
 
   const load = useCallback(async () => {
     if (!canView) return
-    setLoading(true)
+    setLoading(true); setErr(false)
     const p_from = allTime ? null : range.from
     const p_to = allTime ? null : range.to
     try {
@@ -49,7 +50,7 @@ export default function PerformaPage() {
       setCamp((c.data || []) as Record<string, unknown>[])
       setCs((s.data || []) as Record<string, unknown>[])
       setProd((p.data || []) as Record<string, unknown>[])
-    } catch (err) { console.warn('performa load:', err) } finally { setLoading(false) }
+    } catch (e) { console.warn('performa load:', e); setErr(true) } finally { setLoading(false) }
   }, [canView, allTime, range.from, range.to])
   useEffect(() => { if (!authLoading) void load() }, [authLoading, load])
 
@@ -81,6 +82,7 @@ export default function PerformaPage() {
       <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
         <div className="overflow-x-auto">
           {loading ? <div className="py-10 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
+          : err ? <div className="py-10 text-center text-sm text-rose-600">⚠️ Gagal memuat data — klik Refresh atau cek koneksi.</div>
           : tab === 'campaign' ? (
             <Table>
               <TableHeader><TableRow>

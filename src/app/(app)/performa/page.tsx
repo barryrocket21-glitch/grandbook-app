@@ -26,7 +26,8 @@ type Tab = 'campaign' | 'cs' | 'produk'
 
 export default function PerformaPage() {
   const { role, loading: authLoading } = useAuth()
-  const canView = role === 'owner' || role === 'admin'
+  const canView = role === 'owner' || role === 'admin' || role === 'advertiser'
+  const advOnly = role === 'advertiser' // advertiser cuma lihat tab Campaign
   const [tab, setTab] = useState<Tab>('campaign')
   const [range, setRange] = useState<DateRange>(thisMonth)
   const [allTime, setAllTime] = useState(true)
@@ -59,7 +60,7 @@ export default function PerformaPage() {
     <Card className="max-w-md mx-auto mt-8"><CardContent className="pt-6 text-center space-y-2">
       <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
       <h2 className="text-lg font-semibold">Akses Dibatasi</h2>
-      <p className="text-sm text-muted-foreground">Performa Bisnis hanya untuk owner & admin.</p>
+      <p className="text-sm text-muted-foreground">Performa Bisnis untuk owner, admin & advertiser.</p>
     </CardContent></Card>
   )
 
@@ -70,7 +71,7 @@ export default function PerformaPage() {
 
       <Card><CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-md border p-0.5">
-          {([['campaign', 'Campaign'], ['cs', 'CS Scorecard'], ['produk', 'Produk × Platform']] as [Tab, string][]).map(([k, lbl]) => (
+          {((advOnly ? [['campaign', 'Campaign']] : [['campaign', 'Campaign'], ['cs', 'CS Scorecard'], ['produk', 'Produk × Platform']]) as [Tab, string][]).map(([k, lbl]) => (
             <button key={k} onClick={() => setTab(k)} className={`px-3 h-8 text-sm rounded ${tab === k ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>{lbl}</button>
           ))}
         </div>

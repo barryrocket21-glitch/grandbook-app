@@ -199,7 +199,9 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Setup Iklan', href: '/marketing/ad-setup' },
       { title: 'Input Harian', href: '/ad-spend' },
-      { title: 'Performa Iklan', href: '/marketing/performa' },
+      // Performa Iklan digabung ke Performa Bisnis (tab Campaign). Advertiser
+      // diarahkan ke /performa; route lama /marketing/performa tetap reachable.
+      { title: 'Performa Campaign', href: '/performa', roles: ['advertiser'] },
       { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
     ],
   },

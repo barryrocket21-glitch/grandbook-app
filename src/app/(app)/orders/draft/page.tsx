@@ -32,7 +32,7 @@ const KIRIM_TABS = [
 ]
 import { EmptyState } from '@/components/ui/empty-state'
 import { STATUS_BADGE_COLOR, STATUS_LABEL } from '@/lib/schemas/settings'
-import { formatRupiah, formatDate } from '@/lib/format'
+import { formatRupiah } from '@/lib/format'
 import type {
   OrderDraftEnriched, DraftOrderStatus, DraftStatusStat, OrderStatus,
 } from '@/lib/types'
@@ -46,7 +46,7 @@ import { DraftQuickEditDialog } from './_components/draft-quick-edit-dialog'
 import { BenerinAlamatDialog } from './_components/benerin-alamat-dialog'
 
 const supabase = createClient()
-const PAGE_SIZE = 100
+const fmtShort = (d: string) => { const x = new Date(d); const p = (v: number) => String(v).padStart(2, '0'); return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)}` }
 
 export default function OrdersDraftPage() {
   return (
@@ -70,6 +70,7 @@ function OrdersDraftInner() {
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')
   const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(100)
 
   const [rows, setRows] = useState<OrderDraftEnriched[]>([])
   // Brief #1 — reputasi per nomor (canonical "8xxx") utk quality flag "Customer Risk"
@@ -106,8 +107,8 @@ function OrdersDraftInner() {
           p_to: dateTo || null,
           p_status: statusFilter === 'ALL' ? null : statusFilter,
           p_search: search.trim() || null,
-          p_limit: PAGE_SIZE,
-          p_offset: page * PAGE_SIZE,
+          p_limit: pageSize,
+          p_offset: page * pageSize,
           p_exported: false,  // Brief #11 — Antrian Kerja = zona KERJAAN (belum diexport)
         }),
         supabase.rpc('get_draft_status_stats', {
@@ -150,10 +151,10 @@ function OrdersDraftInner() {
       setRefreshing(false)
       setStatsLoading(false)
     }
-  }, [statusFilter, search, page, dateFrom, dateTo])
+  }, [statusFilter, search, page, dateFrom, dateTo, pageSize])
 
   useEffect(() => { loadDrafts() }, [loadDrafts])
-  useEffect(() => { setPage(0); setSelectedIds(new Set()) }, [statusFilter, search, dateFrom, dateTo])
+  useEffect(() => { setPage(0); setSelectedIds(new Set()) }, [statusFilter, search, dateFrom, dateTo, pageSize])
 
   // Phase 8K polish: auto-refresh polling 30s. Pause saat tab hidden
   // (visibility API). Indra paste WA → 30s later list updates otomatis.
@@ -260,7 +261,7 @@ function OrdersDraftInner() {
   const selectedRows = rows.filter(r => selectedIds.has(r.id))
   const selectedTotal = selectedRows.reduce((sum, r) => sum + Number(r.total || 0), 0)
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
   const openResiDialog = (row: OrderDraftEnriched) => {
     setResiDialogDraft(row)
@@ -493,9 +494,9 @@ function OrdersDraftInner() {
 
       {/* Table */}
       <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[70vh]">
           <Table>
-            <TableHeader>
+            <TableHeader className="[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:bg-card [&>tr>th]:z-10">
               <TableRow>
                 <TableHead className="w-10 text-center">
                   <Checkbox
@@ -556,9 +557,17 @@ function OrdersDraftInner() {
         </div>
       </div>
 
-      {totalCount > PAGE_SIZE && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{totalCount.toLocaleString('id-ID')} entries · halaman {page + 1} dari {totalPages}</span>
+      {totalCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="h-8 rounded-md border bg-background px-2 text-sm">
+              <option value={50}>50 / halaman</option>
+              <option value={100}>100 / halaman</option>
+              <option value={500}>500 / halaman</option>
+              <option value={1000}>1000 / halaman</option>
+            </select>
+            <span className="tabular-nums">{totalCount.toLocaleString('id-ID')} order · Hal {page + 1} / {totalPages}</span>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>
               <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
@@ -700,7 +709,7 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
       <TableCell className="text-center">
         <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label={`Select ${row.order_number}`} />
       </TableCell>
-      <TableCell className="text-xs whitespace-nowrap">{formatDate(row.created_at)}</TableCell>
+      <TableCell className="text-sm whitespace-nowrap">{fmtShort(row.created_at)}</TableCell>
       <TableCell>
         <button
           type="button"
@@ -721,7 +730,7 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
           {issues && issues.length > 0 && (
             <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" aria-label="Data tidak lengkap" />
           )}
-          <span className="truncate">{row.customer_name}</span>
+          <span className="truncate text-sm font-medium">{row.customer_name}</span>
         </div>
       </TableCell>
       <TableCell className="text-xs">

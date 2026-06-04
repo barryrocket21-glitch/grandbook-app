@@ -111,7 +111,7 @@ export default function PembukuanPage() {
     dicair: a.dicair + n(r.dicairkan),
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
-  const cols = view === 'keuangan' && canFinance ? 13 : 11
+  const cols = view === 'keuangan' && canFinance ? 9 : 6
 
   return (
     <div className="space-y-4">
@@ -208,21 +208,16 @@ export default function PembukuanPage() {
                 <>
                   <TableHead className="max-w-[160px]">Produk</TableHead>
                   <TableHead className="text-right">Penjualan</TableHead>
-                  <TableHead className="text-right">Selisih Ongkir</TableHead>
-                  <TableHead className="text-right">Biaya Admin</TableHead>
                   <TableHead className="text-right">Omset</TableHead>
-                  <TableHead className="text-right">HPP</TableHead>
-                  <TableHead className="text-right">Fee CS</TableHead>
                   <TableHead className="text-right">GP Proyeksi</TableHead>
                   <TableHead className="text-right">GP Realisasi</TableHead>
                   <TableHead className="text-right">Dicairkan</TableHead>
                 </>
               ) : (
                 <>
-                  <TableHead>Customer</TableHead><TableHead>Kota</TableHead><TableHead>CS</TableHead>
-                  <TableHead>Produk</TableHead><TableHead className="text-center">Qty</TableHead>
-                  <TableHead>Bayar</TableHead><TableHead className="text-right">Total</TableHead>
-                  <TableHead>Resi/Tracking</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Produk</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                 </>
               )}
             </TableRow></TableHeader>
@@ -240,11 +235,7 @@ export default function PembukuanPage() {
                     <>
                       <TableCell className="text-xs max-w-[160px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
                       <TableCell className="text-right text-xs"><Money v={n(r.penjualan)} /></TableCell>
-                      <TableCell className="text-right text-xs"><Money v={n(r.selisih_ongkir)} /></TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_fee_admin)} /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={n(r.est_omset)} /></TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_hpp)} /></TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground"><Money v={n(r.est_fee_cs)} /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={n(r.est_gross_profit)} /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={r.act_gross_profit === null ? null : n(r.act_gross_profit)} bold /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={r.dicairkan === null ? null : n(r.dicairkan)} /></TableCell>
@@ -252,13 +243,8 @@ export default function PembukuanPage() {
                   ) : (
                     <>
                       <TableCell className="text-xs">{r.customer_name}</TableCell>
-                      <TableCell className="text-xs">{r.customer_city || '—'}</TableCell>
-                      <TableCell className="text-xs">{r.cs_name || '—'}</TableCell>
-                      <TableCell className="text-xs max-w-[200px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
-                      <TableCell className="text-center text-xs">{r.qty || '—'}</TableCell>
-                      <TableCell className="text-xs">{r.payment_method || '—'}</TableCell>
+                      <TableCell className="text-xs max-w-[220px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
                       <TableCell className="text-right text-xs tabular-nums">{formatRupiah(n(r.penjualan))}</TableCell>
-                      <TableCell className="font-mono text-[10px]">{r.tracking_no || r.resi || '—'}</TableCell>
                     </>
                   )}
                 </TableRow>
@@ -269,16 +255,15 @@ export default function PembukuanPage() {
                     <>
                       <TableCell colSpan={4} className="text-xs">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
                       <TableCell className="text-right text-xs"><Money v={totals.total} bold /></TableCell>
-                      <TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
+                      <TableCell />
                       <TableCell className="text-right text-xs"><Money v={totals.est_gp} bold /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={totals.act_gp} bold /></TableCell>
                       <TableCell className="text-right text-xs"><Money v={totals.dicair} bold /></TableCell>
                     </>
                   ) : (
                     <>
-                      <TableCell colSpan={9} className="text-xs">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
+                      <TableCell colSpan={5} className="text-xs">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
                       <TableCell className="text-right text-xs tabular-nums">{formatRupiah(totals.total)}</TableCell>
-                      <TableCell />
                     </>
                   )}
                 </TableRow>

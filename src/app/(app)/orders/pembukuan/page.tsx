@@ -260,7 +260,7 @@ export default function PembukuanPage() {
                       <TableCell className="text-right text-sm"><Money v={n(r.penjualan)} /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.ongkir)} /></TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.actual_shipping_fee)} /></TableCell>
-                      <TableCell className="text-right text-sm text-emerald-600"><Money v={n(r.actual_shipping_fee) > 0 ? n(r.actual_shipping_fee) - (n(r.ongkir) - n(r.selisih_ongkir)) : 0} /></TableCell>
+                      <TableCell className="text-right text-sm text-emerald-600"><Money v={Math.round(n(r.actual_shipping_fee) * 0.4)} /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.selisih_ongkir)} /></TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.est_fee_admin)} /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.est_omset)} /></TableCell>

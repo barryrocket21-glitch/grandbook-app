@@ -2,22 +2,25 @@
  * Format number to Indonesian Rupiah currency
  */
 export function formatRupiah(amount: number): string {
+  // guard NaN/Infinity/undefined -> 0 (cegah "Rp NaN" muncul di mana pun)
+  const v = Number.isFinite(amount) ? amount : 0
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount)
+  }).format(v)
 }
 
 /**
  * Format number with thousands separator
  */
 export function formatNumber(num: number, decimals = 0): string {
+  const v = Number.isFinite(num) ? num : 0
   return new Intl.NumberFormat('id-ID', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(num)
+  }).format(v)
 }
 
 /**

@@ -467,9 +467,9 @@ export default function AdSpendPage() {
                       <TableCell className="text-right text-xs tabular-nums">{p.leads}</TableCell>
                       <TableCell className="text-right text-xs tabular-nums">{p.attributed_orders}</TableCell>
                       <TableCell className="text-right text-xs tabular-nums">{p.delivered_orders}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.cpr != null ? 'Rp ' + Number(p.cpr).toLocaleString('id-ID') : '—'}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.cpa != null ? 'Rp ' + Number(p.cpa).toLocaleString('id-ID') : '—'}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums font-medium text-emerald-600">{p.cpa_final != null ? 'Rp ' + Number(p.cpa_final).toLocaleString('id-ID') : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.cpr != null && Number.isFinite(Number(p.cpr)) ? formatRupiah(Number(p.cpr)) : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{p.cpa != null && Number.isFinite(Number(p.cpa)) ? formatRupiah(Number(p.cpa)) : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums font-medium text-emerald-600">{p.cpa_final != null && Number.isFinite(Number(p.cpa_final)) ? formatRupiah(Number(p.cpa_final)) : '—'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -501,7 +501,7 @@ export default function AdSpendPage() {
                 <Input
                   type="number"
                   value={form.spend}
-                  onChange={e => setForm({ ...form, spend: Number(e.target.value) })}
+                  onChange={e => setForm({ ...form, spend: Number(e.target.value) || 0 })}
                   required
                 />
                 <p className="text-[10px] text-muted-foreground">Total yang lo bayar (kalau udah include PPN biarin PPN 0% di bawah).</p>
@@ -516,7 +516,7 @@ export default function AdSpendPage() {
                   max="100"
                   step="0.1"
                   value={form.ppn_rate}
-                  onChange={e => setForm({ ...form, ppn_rate: Number(e.target.value) })}
+                  onChange={e => setForm({ ...form, ppn_rate: Number(e.target.value) || 0 })}
                   placeholder="0"
                 />
                 <p className="text-[9px] text-muted-foreground">Default 0. Set 12 cuma kalau billing platform pisah PPN.</p>

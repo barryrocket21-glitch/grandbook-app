@@ -105,6 +105,21 @@ export default function AdSpendPage() {
   const [rangeReady, setRangeReady] = useState(false)
   const [platformFilter, setPlatformFilter] = useState<'ALL' | AdPlatform>('ALL')
   const [sourceFilter, setSourceFilter] = useState<'ALL' | AdSpendSource>('ALL')
+  const [tab, setTab] = useState<'spend' | 'perf'>('spend')
+
+  // Ringkasan IKUT filter (dihitung dari rows yg udah ke-filter), bukan full-range RPC
+  const live = useMemo(() => {
+    let spend = 0, spendTotal = 0, conv = 0, impr = 0, clicks = 0, leads = 0
+    for (const r of rows) {
+      spend += Number(r.spend) || 0
+      spendTotal += Number(r.spend_total ?? r.spend) || 0
+      conv += Number(r.conversions) || 0
+      impr += Number(r.impressions) || 0
+      clicks += Number(r.clicks) || 0
+      leads += Number((r as { meta_lead_count?: number | null }).meta_lead_count) || 0
+    }
+    return { spend, spendTotal, conv, impr, clicks, leads, ctr: impr > 0 ? (clicks / impr) * 100 : 0, cpr: leads > 0 ? spendTotal / leads : 0 }
+  }, [rows])
 
   useEffect(() => {
     setRange(thisMonth())
@@ -248,89 +263,61 @@ export default function AdSpendPage() {
         }
       />
 
-      {/* Stat cards */}
+      {/* Stat cards — IKUT filter periode + platform */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-violet-500/15 rounded-xl ring-1 ring-violet-500/20">
-              <Coins className="w-5 h-5 text-violet-500" />
-            </div>
+            <div className="p-2.5 bg-violet-500/15 rounded-xl ring-1 ring-violet-500/20"><Coins className="w-5 h-5 text-violet-500" /></div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Spend</p>
-              <p className="text-xl font-bold text-violet-500">{formatRupiah(summary?.total_spend_with_ppn ?? summary?.total_spend ?? 0)}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {(summary?.total_ppn ?? 0) > 0
-                  ? `Gross ${formatRupiah(summary?.total_spend ?? 0)} + PPN ${formatRupiah(summary?.total_ppn ?? 0)}`
-                  : `${summary?.campaigns_count ?? summary?.total_campaigns ?? 0} campaign aktif`}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent" />
-          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-emerald-500/15 rounded-xl ring-1 ring-emerald-500/20">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Conversions</p>
-              <p className="text-xl font-bold text-emerald-500">{formatNumber(summary?.total_conversions ?? 0)}</p>
-              <p className="text-[10px] text-muted-foreground">dari Meta/TikTok tracking</p>
+              <p className="text-xl font-bold text-violet-500">{formatRupiah(live.spendTotal)}</p>
+              <p className="text-[10px] text-muted-foreground">{live.spendTotal > live.spend ? `Gross ${formatRupiah(live.spend)} + PPN` : `${rows.length} entry`}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-blue-500/15 rounded-xl ring-1 ring-blue-500/20">
-              <Eye className="w-5 h-5 text-blue-500" />
-            </div>
+            <div className="p-2.5 bg-blue-500/15 rounded-xl ring-1 ring-blue-500/20"><Eye className="w-5 h-5 text-blue-500" /></div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Impressions</p>
-              <p className="text-xl font-bold">{formatNumber(summary?.total_impressions ?? 0)}</p>
-              <p className="text-[10px] text-muted-foreground">total view</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Lead</p>
+              <p className="text-xl font-bold text-blue-600">{formatNumber(live.leads)}</p>
+              <p className="text-[10px] text-muted-foreground">lead dashboard</p>
             </div>
           </CardContent>
         </Card>
         <Card className="overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-amber-500/15 rounded-xl ring-1 ring-amber-500/20">
-              <MousePointer className="w-5 h-5 text-amber-500" />
-            </div>
+            <div className="p-2.5 bg-amber-500/15 rounded-xl ring-1 ring-amber-500/20"><DollarSign className="w-5 h-5 text-amber-500" /></div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Clicks</p>
-              <p className="text-xl font-bold">{formatNumber(summary?.total_clicks ?? 0)}</p>
-              <p className="text-[10px] text-muted-foreground">
-                CTR {summary && summary.total_impressions > 0 ? ((summary.total_clicks / summary.total_impressions) * 100).toFixed(2) : '0.00'}%
-              </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">CPR rata-rata</p>
+              <p className="text-xl font-bold text-amber-600">{live.cpr > 0 ? formatRupiah(Math.round(live.cpr)) : '—'}</p>
+              <p className="text-[10px] text-muted-foreground">spend ÷ lead</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent" />
+          <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
+            <div className="p-2.5 bg-emerald-500/15 rounded-xl ring-1 ring-emerald-500/20"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Conversions</p>
+              <p className="text-xl font-bold text-emerald-500">{formatNumber(live.conv)}</p>
+              <p className="text-[10px] text-muted-foreground">CTR {live.ctr.toFixed(2)}%</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* By-platform breakdown */}
-      {summary && Object.keys(summary.by_platform).length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {Object.entries(summary.by_platform).sort((a, b) => Number(b[1]) - Number(a[1])).map(([plat, amt]) => {
-            const pct = summary.total_spend > 0 ? (Number(amt) / summary.total_spend) * 100 : 0
-            return (
-              <div key={plat} className="rounded-lg border bg-card p-3">
-                <Badge variant="outline" className={`text-[10px] mb-1 ${CAMPAIGN_PLATFORM_COLOR[plat as AdPlatform] || ''}`}>
-                  {CAMPAIGN_PLATFORM_LABEL[plat as AdPlatform] || plat}
-                </Badge>
-                <p className="text-base font-bold">{formatRupiah(Number(amt))}</p>
-                <p className="text-[10px] text-muted-foreground">{pct.toFixed(0)}%</p>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Filter row */}
+      {/* Tab + filter row */}
       <Card>
-        <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row gap-3">
+        <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="inline-flex rounded-md border p-0.5 shrink-0">
+            <button onClick={() => setTab('spend')} className={`px-3 h-8 text-sm rounded ${tab === 'spend' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Spend Harian</button>
+            <button onClick={() => setTab('perf')} className={`px-3 h-8 text-sm rounded ${tab === 'perf' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Performa Campaign</button>
+          </div>
           <Select value={platformFilter} onValueChange={v => v && setPlatformFilter(v as 'ALL' | AdPlatform)}>
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
             <SelectContent className="w-[240px]">
@@ -355,7 +342,8 @@ export default function AdSpendPage() {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {/* Tab: Spend Harian */}
+      {tab === 'spend' && (
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
@@ -443,8 +431,10 @@ export default function AdSpendPage() {
           </Table>
         </CardContent>
       </Card>
+      )}
 
       {/* Brief #24 — Performa Campaign (ikut filter periode di atas) */}
+      {tab === 'perf' && (
       <Card>
         <CardContent className="pt-4 pb-4 space-y-2">
           <div className="text-sm font-semibold">Performa Campaign — periode {range.from} s/d {range.to}</div>
@@ -478,6 +468,7 @@ export default function AdSpendPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Manual entry Dialog */}
       <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>

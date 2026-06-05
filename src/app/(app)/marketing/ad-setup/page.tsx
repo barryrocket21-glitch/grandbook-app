@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check, ChevronDown } from 'lucide-react'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
@@ -346,14 +345,9 @@ export default function AdSetupPage() {
                       <TableCell className="text-center text-xs tabular-nums">{campCount(a.id) > 0 ? <span className="font-medium">{campCount(a.id)}</span> : <span className="text-muted-foreground">0</span>}</TableCell>
                       <TableCell><Badge variant="outline" className={a.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{a.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger render={<Button size="sm" variant="outline" className="h-8 gap-1 text-xs" disabled={accBusy}>Kelola <ChevronDown className="w-3 h-3" /></Button>} />
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => startEditAcc(a)}><Pencil className="w-3.5 h-3.5 mr-2" /> Edit</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toggleAcc(a)}><Power className="w-3.5 h-3.5 mr-2" /> {a.active ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => deleteAcc(a)} className="text-red-500"><Trash2 className="w-3.5 h-3.5 mr-2" /> Hapus</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => startEditAcc(a)} title="Edit"><Pencil className="w-3.5 h-3.5" /></Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => toggleAcc(a)} title={a.active ? 'Nonaktifkan' : 'Aktifkan'}><Power className={`w-3.5 h-3.5 ${a.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" disabled={accBusy} onClick={() => deleteAcc(a)} title="Hapus"><Trash2 className="w-3.5 h-3.5" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -463,14 +457,11 @@ export default function AdSetupPage() {
                           <Button size="sm" variant="ghost" className="h-8 text-xs ml-1" onClick={() => { setEditCampId(null); load() }}>Batal</Button>
                         </>
                       ) : (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger render={<Button size="sm" variant="outline" className="h-8 gap-1 text-xs" disabled={savingCamp === c.id}>Kelola <ChevronDown className="w-3 h-3" /></Button>} />
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setEditCampId(c.id)}><Pencil className="w-3.5 h-3.5 mr-2" /> Edit</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toggleCampaign(c)}><Power className="w-3.5 h-3.5 mr-2" /> {c.active ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => deleteCampaignRow(c)} className="text-red-500"><Trash2 className="w-3.5 h-3.5 mr-2" /> Hapus</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditCampId(c.id)} title="Edit" disabled={savingCamp === c.id}><Pencil className="w-3.5 h-3.5" /></Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleCampaign(c)} title={c.active ? 'Nonaktifkan' : 'Aktifkan'} disabled={savingCamp === c.id}><Power className={`w-3.5 h-3.5 ${c.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteCampaignRow(c)} title="Hapus" disabled={savingCamp === c.id}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </>
                       )}
                     </TableCell>
                   </TableRow>

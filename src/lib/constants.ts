@@ -208,13 +208,14 @@ export const NAV_ITEMS: NavItem[] = [
   {
     // CS — workspace customer service (input lead/closing + performa).
     title: 'CS',
-    href: '/cs-dashboard',
+    href: '/cs-ringkasan',
     icon: Users,
     roles: ['owner', 'admin', 'cs'],
     children: [
-      { title: 'Dashboard CS', href: '/cs-dashboard' },
+      // Ringkasan CS = gabungan Dashboard CS + Performa CS (liat semua CS + drill
+      // per produk). Dashboard/Performa lama tetap reachable via URL.
+      { title: 'Ringkasan CS', href: '/cs-ringkasan', badge: 'BARU' },
       { title: 'Laporan Harian', href: '/cs-report' },
-      { title: 'Performa CS', href: '/team/cs', roles: ['owner', 'admin'] },
     ],
   },
   {

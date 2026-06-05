@@ -110,7 +110,7 @@ export default function DistribusiPage() {
             <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari order# / customer..." className="pl-9" />
           </div>
           <Select value={campaignId || 'none'} onValueChange={v => setCampaignId(!v || v === 'none' ? '' : v)}>
-            <SelectTrigger className="w-64"><SelectValue placeholder="Pilih campaign tujuan" /></SelectTrigger>
+            <SelectTrigger className="w-64"><SelectValue placeholder="Pilih campaign tujuan">{(v: string | null) => { if (!v || v === 'none') return 'Pilih campaign tujuan'; const c = camps.find(x => String(x.id) === v); return c ? `${c.campaign_name} (${c.platform})` : v }}</SelectValue></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">— pilih campaign —</SelectItem>
               {camps.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.campaign_name} ({c.platform})</SelectItem>)}

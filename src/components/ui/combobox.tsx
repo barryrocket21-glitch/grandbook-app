@@ -85,6 +85,10 @@ export function Combobox({
             variant="outline"
             disabled={disabled}
             className={cn('w-full justify-between font-normal', triggerClassName)}
+            // Klik = pointerdown duluan -> tandai skip, biar onFocus gak auto-buka.
+            // Klik cuma lewat toggle PopoverTrigger (kebuka 1x klik, gak flash).
+            // Keyboard Tab (tanpa pointerdown) tetep auto-buka.
+            onPointerDown={() => { skipNextAutoOpenRef.current = true }}
             onFocus={() => {
               if (disabled || !autoOpenOnFocus) return
               if (skipNextAutoOpenRef.current) {

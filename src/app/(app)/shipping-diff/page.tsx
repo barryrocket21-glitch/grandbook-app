@@ -183,7 +183,7 @@ export default function ShippingDiffPage() {
             <div className="space-y-1">
               <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Channel</label>
               <Select value={channelId} onValueChange={v => v && setChannelId(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Channel">{(v: string | null) => !v || v === 'ALL' ? 'Semua channel' : (channels.find(c => String(c.id) === v)?.name ?? v)}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">Semua channel</SelectItem>
                   {channels.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
@@ -193,7 +193,7 @@ export default function ShippingDiffPage() {
             <div className="space-y-1">
               <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Courier</label>
               <Select value={courierId} onValueChange={v => v && setCourierId(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Courier">{(v: string | null) => !v || v === 'ALL' ? 'Semua courier' : (couriers.find(c => String(c.id) === v)?.name ?? v)}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">Semua courier</SelectItem>
                   {couriers.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}

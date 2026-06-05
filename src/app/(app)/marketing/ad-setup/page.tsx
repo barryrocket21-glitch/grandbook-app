@@ -6,9 +6,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check } from 'lucide-react'
+import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check, ChevronRight, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
@@ -49,6 +48,10 @@ export default function AdSetupPage() {
   const [editCampId, setEditCampId] = useState<number | null>(null) // campaign read-only sampai klik Edit
   const [eaf, setEaf] = useState({ platform: 'META', account_code: '', name: '', advertiser_id: '' })
   const [accBusy, setAccBusy] = useState(false)
+  // Layout nested: akun bisa di-expand, campaign nested di dalamnya
+  const [showAddAcc, setShowAddAcc] = useState(false)
+  const [expandedAcc, setExpandedAcc] = useState<number | null>(null)
+  const [addCampAcc, setAddCampAcc] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -266,16 +269,20 @@ export default function AdSetupPage() {
       <PageHeader icon={Megaphone} title="Akun & Atribusi Iklan"
         description="Daftar Akun iklan + tandai Campaign (akun + marker) buat resolusi kode 'Platform.Akun.Campaign'."
         actions={
-          <Button size="sm" onClick={resolve} disabled={resolving} className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white">
-            {resolving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />} Resolve Atribusi
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant={showAddAcc ? 'default' : 'outline'} onClick={() => setShowAddAcc(v => !v)} className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Tambah Akun</Button>
+            <Button size="sm" onClick={resolve} disabled={resolving} className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white">
+              {resolving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />} Resolve Atribusi
+            </Button>
+          </div>
         } />
 
-      {/* Master Akun */}
+      {/* Tambah Akun (toggle) */}
+      {showAddAcc && (
       <Card>
         <CardContent className="pt-4 pb-4 space-y-3">
-          <div className="text-sm font-semibold">Master Akun Iklan</div>
-          <p className="text-[11px] text-muted-foreground"><b>1 akun = wadah, dibikin SEKALI.</b> Di dalam 1 akun bisa banyak produk &amp; banyak campaign (semua dibuat di bagian <b>Campaign</b> di bawah, pilih akun ini). Jadi <b>gak perlu bikin akun kode sama 2x</b> — kode akun unik per platform (kayak KTP). <b>Kode Akun</b> = huruf identitas akun yang masuk ke kode atribusi (mis. <b>A</b> di <span className="font-mono">Luna F.<b>A</b>.1</span>). <b>Nama</b> = label bebas (gak masuk kode). Nomor campaign (1,2,3) = di <b>Campaign → Marker</b>.</p>
+          <div className="text-sm font-semibold">Tambah Akun Iklan</div>
+          <p className="text-[11px] text-muted-foreground"><b>Kode Akun</b> = huruf identitas akun di kode atribusi (mis. <b>A</b> di <span className="font-mono">Luna F.<b>A</b>.1</span>), unik per platform. <b>Nama</b> = label bebas. Campaign-nya dibuat nanti dari dalam akun ini (tombol + Campaign).</p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
             <div className="space-y-1">
               <Label className="text-xs">Platform</Label>
@@ -306,171 +313,121 @@ export default function AdSetupPage() {
               {savingAcc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Tambah
             </Button>
           </div>
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : accounts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Belum ada akun. Tambah di atas (mis. META · kode A).</p>
-          ) : (
-            <div className="border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader><TableRow><TableHead>Platform</TableHead><TableHead>Kode</TableHead><TableHead>Nama</TableHead><TableHead>Advertiser</TableHead><TableHead className="text-center">Campaign</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {accounts.map(a => editAccId === a.id ? (
-                    <TableRow key={a.id} className="bg-violet-500/5">
-                      <TableCell>
-                        <Select value={eaf.platform} onValueChange={v => v && setEaf({ ...eaf, platform: v })}>
-                          <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>{PLATFORMS.map(p => <SelectItem key={p} value={p}>{platLabel(p)}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell><Input value={eaf.account_code} onChange={e => setEaf({ ...eaf, account_code: e.target.value })} className="h-8 w-20 text-xs font-mono" /></TableCell>
-                      <TableCell><Input value={eaf.name} onChange={e => setEaf({ ...eaf, name: e.target.value })} className="h-8 text-xs" /></TableCell>
-                      <TableCell>
-                        <Select value={eaf.advertiser_id || 'none'} onValueChange={v => setEaf({ ...eaf, advertiser_id: (!v || v === 'none') ? '' : v })}>
-                          <SelectTrigger className="h-8 w-36 text-xs"><SelectValue placeholder="—">{eaf.advertiser_id ? advName(eaf.advertiser_id) : '—'}</SelectValue></SelectTrigger>
-                          <SelectContent><SelectItem value="none">— belum —</SelectItem>{advs.map(x => <SelectItem key={x.id} value={x.id}>{x.full_name || x.id.slice(0, 8)}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell />
-                      <TableCell />
-                      <TableCell className="text-right whitespace-nowrap">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" disabled={accBusy} onClick={saveEditAcc} title="Simpan"><Check className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditAccId(null)} title="Batal"><X className="w-4 h-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    <TableRow key={a.id} className={a.active ? '' : 'opacity-50'}>
-                      <TableCell className="text-xs">{a.platform}</TableCell>
-                      <TableCell className="font-mono text-xs">{a.account_code}</TableCell>
-                      <TableCell className="text-xs">{a.name || '—'}</TableCell>
-                      <TableCell className="text-xs">{advName(a.advertiser_id)}</TableCell>
-                      <TableCell className="text-center text-xs tabular-nums">{campCount(a.id) > 0 ? <span className="font-medium">{campCount(a.id)}</span> : <span className="text-muted-foreground">0</span>}</TableCell>
-                      <TableCell><Badge variant="outline" className={a.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{a.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => startEditAcc(a)} title="Edit"><Pencil className="w-3.5 h-3.5" /></Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => toggleAcc(a)} title={a.active ? 'Nonaktifkan' : 'Aktifkan'}><Power className={`w-3.5 h-3.5 ${a.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" disabled={accBusy} onClick={() => deleteAcc(a)} title="Hapus"><Trash2 className="w-3.5 h-3.5" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <p className="text-[10px] text-muted-foreground">Kode Akun = huruf di kode atribusi (mis. A di Luna F.A.1). 1 akun unik per platform. Nama = label bebas.</p>
         </CardContent>
       </Card>
+      )}
 
-      {/* Campaign account + marker */}
-      <Card>
-        <CardContent className="pt-4 pb-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-semibold">Campaign</div>
-            <a href="/campaigns" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-xs hover:bg-muted text-muted-foreground">Advanced (budget/tanggal) →</a>
+      {dupCodes.size > 0 && (
+        <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-xs space-y-1">
+          <div className="font-semibold text-rose-600 flex items-center gap-1.5"><X className="w-3.5 h-3.5" /> {dupCodes.size} kode campaign DOBEL terdeteksi</div>
+          <div className="text-rose-700/80">Kode atribusi sama (produk+platform+akun+marker) → resolusi order bisa ketuker. Ganti marker / hapus salah satu:</div>
+          <div className="flex flex-wrap gap-1.5">
+            {[...dupCodes.entries()].map(([code, ids]) => (
+              <span key={code} className="font-mono bg-rose-500/15 text-rose-700 px-1.5 py-0.5 rounded">{code} <b>×{ids.length}</b></span>
+            ))}
           </div>
-          <p className="text-xs text-muted-foreground">Kode atribusi yang dipakai CS = <b>Produk Platform.Akun.Marker</b> (mis. <b>Luna F.A.1</b>). Singkatan platform: META=F · GOOGLE=G · SNACK=S · TIKTOK=T.</p>
+        </div>
+      )}
 
-          {dupCodes.size > 0 && (
-            <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-xs space-y-1">
-              <div className="font-semibold text-rose-600 flex items-center gap-1.5"><X className="w-3.5 h-3.5" /> {dupCodes.size} kode campaign DOBEL terdeteksi</div>
-              <div className="text-rose-700/80">Kode atribusi sama (produk+platform+akun+marker) → resolusi order bisa ketuker. Ganti marker / hapus salah satu:</div>
-              <div className="flex flex-wrap gap-1.5">
-                {[...dupCodes.entries()].map(([code, ids]) => (
-                  <span key={code} className="font-mono bg-rose-500/15 text-rose-700 px-1.5 py-0.5 rounded">{code} <b>×{ids.length}</b></span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Brief #23 — Buat Campaign SIMPEL (akun + marker + produk + nama; tanpa budget) */}
-          <div className="rounded-md border bg-violet-500/5 p-3 space-y-2">
-            <div className="text-xs font-medium">+ Buat Campaign Baru</div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
-              <div className="space-y-1">
-                <Label className="text-[10px]">Nama</Label>
-                <Input value={ncf.name} onChange={e => setNcf({ ...ncf, name: e.target.value })} placeholder="auto: produk + kode" className="h-9 text-xs" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[10px]">Akun (platform)</Label>
-                <Select value={ncf.account_id || 'none'} onValueChange={v => { const id = (!v || v === 'none') ? '' : v; const pid = ncf.product_id ? Number(ncf.product_id) : null; setNcf({ ...ncf, account_id: id, marker: (id && pid != null) ? nextMarker(Number(id), pid) : ncf.marker }) }}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="pilih akun">{(() => { const a = accounts.find(x => String(x.id) === ncf.account_id); return a ? `${platLabel(a.platform)} · ${a.account_code}` : 'pilih akun' })()}</SelectValue></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— pilih akun —</SelectItem>
-                    {accounts.filter(a => a.active).map(a => <SelectItem key={a.id} value={String(a.id)}>{platLabel(a.platform)} · {a.account_code}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[10px]">Marker (no. urut, auto-isi)</Label>
-                <Input value={ncf.marker} onChange={e => setNcf({ ...ncf, marker: e.target.value })} placeholder="1" className="h-9 text-xs" title="Nomor campaign per produk (1,2,3...). Otomatis keisi pas pilih akun+produk; bisa diganti manual." />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[10px]">Produk (wajib)</Label>
-                <Select value={ncf.product_id || 'none'} onValueChange={v => { const pid = (!v || v === 'none') ? '' : v; const accId = ncf.account_id ? Number(ncf.account_id) : null; setNcf({ ...ncf, product_id: pid, marker: (accId != null && pid) ? nextMarker(accId, Number(pid)) : ncf.marker }) }}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="pilih produk">{(() => { const pp = products.find(x => String(x.id) === ncf.product_id); return pp ? pp.name : 'pilih produk' })()}</SelectValue></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— pilih produk —</SelectItem>
-                    {products.map(pp => <SelectItem key={pp.id} value={String(pp.id)}>{pp.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={createCampaign} disabled={savingNew} className="h-9 gap-1.5">{savingNew ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Buat</Button>
-            </div>
-            {(() => {
-              const a = accounts.find(x => String(x.id) === ncf.account_id)
-              const pp = products.find(x => String(x.id) === ncf.product_id)
-              if (a && ncf.marker.trim()) {
-                return <div className="text-[11px]">Kode atribusi CS: <span className="font-mono bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{codeFor(pp?.name, a, ncf.marker.trim())}</span></div>
-              }
-              return null
-            })()}
-          </div>
-
-          <div className="border rounded-md overflow-x-auto">
-            <Table>
-              <TableHeader><TableRow><TableHead>Campaign</TableHead><TableHead>Akun</TableHead><TableHead>Marker</TableHead><TableHead>Kode Atribusi</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {campaigns.map(c => {
-                  const acc = accounts.find(a => a.id === c.account_id)
-                  const code = acc && c.campaign_marker ? codeFor(campProd[c.id], acc, c.campaign_marker) : null
-                  const isDup = code != null && dupCodes.has(code)
-                  return (
-                  <TableRow key={c.id} className={`${c.active ? '' : 'opacity-50'} ${isDup ? 'bg-rose-500/10' : ''} ${editCampId === c.id ? 'bg-violet-500/5' : ''}`}>
-                    <TableCell>{editCampId === c.id
-                      ? <Input value={c.campaign_name} onChange={e => setCamp(c.id, { campaign_name: e.target.value })} className="h-8 w-48 text-xs" />
-                      : <span className="text-xs font-medium">{c.campaign_name}</span>}</TableCell>
-                    <TableCell>{editCampId === c.id ? (
-                      <Select value={c.account_id ? String(c.account_id) : 'none'} onValueChange={v => setCamp(c.id, { account_id: (!v || v === 'none') ? null : Number(v) })}>
-                        <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="—">{acc ? `${platLabel(acc.platform)} · ${acc.account_code}` : '—'}</SelectValue></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">— belum —</SelectItem>
-                          {accounts.filter(a => a.active).map(a => <SelectItem key={a.id} value={String(a.id)}>{platLabel(a.platform)} · {a.account_code}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    ) : <span className="text-xs">{acc ? `${platLabel(acc.platform)} · ${acc.account_code}` : '—'}</span>}</TableCell>
-                    <TableCell>{editCampId === c.id
-                      ? <Input value={c.campaign_marker ?? ''} onChange={e => setCamp(c.id, { campaign_marker: e.target.value })} placeholder="1" className="h-8 w-16 text-xs" />
-                      : <span className="text-xs font-mono">{c.campaign_marker ?? '—'}</span>}</TableCell>
-                    <TableCell>{code ? <span className="font-mono text-xs bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{code}</span> : <span className="text-[10px] text-muted-foreground">akun+marker dulu</span>}{isDup && <Badge variant="outline" className="ml-1 bg-rose-500/15 text-rose-600 text-[9px] border-rose-500/30">DOBEL</Badge>}</TableCell>
-                    <TableCell><Badge variant="outline" className={c.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{c.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      {editCampId === c.id ? (
-                        <>
-                          <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-emerald-600" onClick={async () => { await saveCampaign(c); setEditCampId(null) }} disabled={savingCamp === c.id} title="Simpan">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Simpan</Button>
-                          <Button size="sm" variant="ghost" className="h-8 text-xs ml-1" onClick={() => { setEditCampId(null); load() }}>Batal</Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditCampId(c.id)} title="Edit" disabled={savingCamp === c.id}><Pencil className="w-3.5 h-3.5" /></Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleCampaign(c)} title={c.active ? 'Nonaktifkan' : 'Aktifkan'} disabled={savingCamp === c.id}><Power className={`w-3.5 h-3.5 ${c.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteCampaignRow(c)} title="Hapus" disabled={savingCamp === c.id}><Trash2 className="w-3.5 h-3.5" /></Button>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )})}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Nested: akun -> campaign di dalamnya */}
+      {loading ? <Card><CardContent className="py-10 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></CardContent></Card>
+      : accounts.length === 0 ? <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Belum ada akun. Klik &quot;Tambah Akun&quot; di atas.</CardContent></Card>
+      : (
+        <div className="space-y-2">
+          {accounts.map(a => {
+            const camps = campaigns.filter(c => c.account_id === a.id)
+            const open = expandedAcc === a.id
+            const editing = editAccId === a.id
+            return (
+              <Card key={a.id} className={`overflow-hidden ${a.active ? '' : 'opacity-60'}`}>
+                {editing ? (
+                  <div className="flex flex-wrap items-end gap-2 p-3 bg-violet-500/5">
+                    <div className="space-y-0.5"><Label className="text-[9px]">Platform</Label>
+                      <Select value={eaf.platform} onValueChange={v => v && setEaf({ ...eaf, platform: v })}>
+                        <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>{PLATFORMS.map(p => <SelectItem key={p} value={p}>{platLabel(p)}</SelectItem>)}</SelectContent>
+                      </Select></div>
+                    <div className="space-y-0.5"><Label className="text-[9px]">Kode</Label><Input value={eaf.account_code} onChange={e => setEaf({ ...eaf, account_code: e.target.value })} className="h-8 w-16 text-xs font-mono" /></div>
+                    <div className="space-y-0.5 flex-1 min-w-[120px]"><Label className="text-[9px]">Nama</Label><Input value={eaf.name} onChange={e => setEaf({ ...eaf, name: e.target.value })} className="h-8 text-xs" /></div>
+                    <div className="space-y-0.5"><Label className="text-[9px]">Advertiser</Label>
+                      <Select value={eaf.advertiser_id || 'none'} onValueChange={v => setEaf({ ...eaf, advertiser_id: (!v || v === 'none') ? '' : v })}>
+                        <SelectTrigger className="h-8 w-36 text-xs"><SelectValue placeholder="—">{eaf.advertiser_id ? advName(eaf.advertiser_id) : '—'}</SelectValue></SelectTrigger>
+                        <SelectContent><SelectItem value="none">— belum —</SelectItem>{advs.map(x => <SelectItem key={x.id} value={x.id}>{x.full_name || x.id.slice(0, 8)}</SelectItem>)}</SelectContent>
+                      </Select></div>
+                    <Button size="sm" className="h-8 gap-1 text-xs text-emerald-600" variant="outline" disabled={accBusy} onClick={saveEditAcc}><Check className="w-3.5 h-3.5" /> Simpan</Button>
+                    <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setEditAccId(null)}>Batal</Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2.5 p-3 cursor-pointer hover:bg-muted/30" onClick={() => setExpandedAcc(open ? null : a.id)}>
+                    {open ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />}
+                    <Badge variant="outline" className="font-mono text-[10px] shrink-0">{platLabel(a.platform)}</Badge>
+                    <span className="font-mono text-sm font-semibold shrink-0">{a.account_code}</span>
+                    <span className="text-sm truncate">{a.name || '—'}</span>
+                    <span className="text-xs text-muted-foreground truncate hidden sm:inline">· {advName(a.advertiser_id)}</span>
+                    <Badge variant="outline" className="text-[10px] shrink-0">{camps.length} campaign</Badge>
+                    {!a.active && <Badge variant="outline" className="bg-zinc-500/10 text-zinc-500 text-[10px] shrink-0">Nonaktif</Badge>}
+                    <div className="ml-auto flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => startEditAcc(a)} title="Edit akun"><Pencil className="w-3.5 h-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => toggleAcc(a)} title={a.active ? 'Nonaktifkan' : 'Aktifkan'}><Power className={`w-3.5 h-3.5 ${a.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" disabled={accBusy} onClick={() => deleteAcc(a)} title="Hapus akun"><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  </div>
+                )}
+                {open && !editing && (
+                  <div className="border-t bg-muted/10 px-3 py-2 space-y-1">
+                    {camps.length === 0 && addCampAcc !== a.id && <p className="text-[11px] text-muted-foreground py-1">Belum ada campaign di akun ini. Klik + Campaign.</p>}
+                    {camps.map(c => {
+                      const code = c.campaign_marker ? codeFor(campProd[c.id], a, c.campaign_marker) : null
+                      const isDup = code != null && dupCodes.has(code)
+                      const ce = editCampId === c.id
+                      return (
+                        <div key={c.id} className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${isDup ? 'bg-rose-500/10' : 'bg-card'} ${c.active ? '' : 'opacity-50'}`}>
+                          {ce ? (
+                            <>
+                              <Input value={c.campaign_name} onChange={e => setCamp(c.id, { campaign_name: e.target.value })} className="h-8 flex-1 text-xs" placeholder="nama campaign" />
+                              <Input value={c.campaign_marker ?? ''} onChange={e => setCamp(c.id, { campaign_marker: e.target.value })} className="h-8 w-14 text-xs font-mono" placeholder="mkr" />
+                              <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-emerald-600" onClick={async () => { await saveCampaign(c); setEditCampId(null) }} disabled={savingCamp === c.id}>{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}</Button>
+                              <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setEditCampId(null); load() }}>Batal</Button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-xs flex-1 truncate font-medium">{c.campaign_name}</span>
+                              {code ? <span className="font-mono text-[11px] bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded shrink-0">{code}</span> : <span className="text-[10px] text-muted-foreground shrink-0">marker dulu</span>}
+                              {isDup && <Badge variant="outline" className="bg-rose-500/15 text-rose-600 text-[9px] border-rose-500/30 shrink-0">DOBEL</Badge>}
+                              <Badge variant="outline" className={`text-[9px] shrink-0 ${c.active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-zinc-500/10 text-zinc-500'}`}>{c.active ? 'Aktif' : 'Off'}</Badge>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => setEditCampId(c.id)} title="Edit" disabled={savingCamp === c.id}><Pencil className="w-3 h-3" /></Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => toggleCampaign(c)} title={c.active ? 'Nonaktifkan' : 'Aktifkan'} disabled={savingCamp === c.id}><Power className={`w-3 h-3 ${c.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 shrink-0" onClick={() => deleteCampaignRow(c)} title="Hapus" disabled={savingCamp === c.id}><Trash2 className="w-3 h-3" /></Button>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {addCampAcc === a.id ? (
+                      <div className="flex flex-wrap items-end gap-2 rounded-md border border-violet-500/30 bg-violet-500/5 p-2 mt-1">
+                        <div className="space-y-0.5"><Label className="text-[9px]">Produk *</Label>
+                          <Select value={ncf.product_id || 'none'} onValueChange={v => { const pid = (!v || v === 'none') ? '' : v; setNcf({ ...ncf, account_id: String(a.id), product_id: pid, marker: pid ? nextMarker(a.id, Number(pid)) : ncf.marker }) }}>
+                            <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="pilih produk">{(() => { const pp = products.find(x => String(x.id) === ncf.product_id); return pp ? pp.name : 'pilih produk' })()}</SelectValue></SelectTrigger>
+                            <SelectContent><SelectItem value="none">— produk —</SelectItem>{products.map(pp => <SelectItem key={pp.id} value={String(pp.id)}>{pp.name}</SelectItem>)}</SelectContent>
+                          </Select></div>
+                        <div className="space-y-0.5"><Label className="text-[9px]">Marker</Label><Input value={ncf.marker} onChange={e => setNcf({ ...ncf, marker: e.target.value })} placeholder="1" className="h-8 w-14 text-xs font-mono" /></div>
+                        <div className="space-y-0.5 flex-1 min-w-[120px]"><Label className="text-[9px]">Nama (opsional)</Label><Input value={ncf.name} onChange={e => setNcf({ ...ncf, name: e.target.value })} placeholder="auto: produk + kode" className="h-8 text-xs" /></div>
+                        <Button size="sm" className="h-8 gap-1 text-xs" disabled={savingNew} onClick={async () => { await createCampaign(); setAddCampAcc(null) }}>{savingNew ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Buat</Button>
+                        <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setAddCampAcc(null)}>Batal</Button>
+                        {(() => { const pp = products.find(x => String(x.id) === ncf.product_id); if (ncf.marker.trim()) return <span className="text-[10px] w-full">Kode: <span className="font-mono bg-violet-500/10 text-violet-600 px-1 rounded">{codeFor(pp?.name, a, ncf.marker.trim())}</span></span>; return null })()}
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-violet-600 gap-1" onClick={() => { setNcf({ account_id: String(a.id), marker: '', product_id: '', name: '' }); setAddCampAcc(a.id) }}><Plus className="w-3.5 h-3.5" /> Campaign</Button>
+                    )}
+                  </div>
+                )}
+              </Card>
+            )
+          })}
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">Klik baris akun buat buka/tutup campaign-nya. Kode atribusi CS: <b>Produk Platform.Akun.Marker</b> (META=F · GOOGLE=G · SNACK=S · TIKTOK=T). <a href="/campaigns" className="text-violet-500 hover:underline">Advanced campaign →</a></p>
     </div>
   )
 }

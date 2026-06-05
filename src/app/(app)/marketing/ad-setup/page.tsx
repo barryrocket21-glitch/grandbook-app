@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check } from 'lucide-react'
+import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check, ChevronDown, MoreVertical } from 'lucide-react'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
@@ -344,9 +345,14 @@ export default function AdSetupPage() {
                       <TableCell className="text-center text-xs tabular-nums">{campCount(a.id) > 0 ? <span className="font-medium">{campCount(a.id)}</span> : <span className="text-muted-foreground">0</span>}</TableCell>
                       <TableCell><Badge variant="outline" className={a.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{a.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => startEditAcc(a)} title="Edit"><Pencil className="w-3.5 h-3.5" /></Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={accBusy} onClick={() => toggleAcc(a)} title={a.active ? 'Nonaktifkan' : 'Aktifkan'}><Power className={`w-3.5 h-3.5 ${a.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" disabled={accBusy} onClick={() => deleteAcc(a)} title="Hapus"><Trash2 className="w-3.5 h-3.5" /></Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger render={<Button size="sm" variant="outline" className="h-8 gap-1 text-xs" disabled={accBusy}>Kelola <ChevronDown className="w-3 h-3" /></Button>} />
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => startEditAcc(a)}><Pencil className="w-3.5 h-3.5 mr-2" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleAcc(a)}><Power className="w-3.5 h-3.5 mr-2" /> {a.active ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => deleteAcc(a)} className="text-red-500"><Trash2 className="w-3.5 h-3.5 mr-2" /> Hapus</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -397,8 +403,8 @@ export default function AdSetupPage() {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px]">Marker</Label>
-                <Input value={ncf.marker} onChange={e => setNcf({ ...ncf, marker: e.target.value })} placeholder="1" className="h-9 text-xs" />
+                <Label className="text-[10px]">Marker (no. urut, auto-isi)</Label>
+                <Input value={ncf.marker} onChange={e => setNcf({ ...ncf, marker: e.target.value })} placeholder="1" className="h-9 text-xs" title="Nomor campaign per produk (1,2,3...). Otomatis keisi pas pilih akun+produk; bisa diganti manual." />
               </div>
               <div className="space-y-1">
                 <Label className="text-[10px]">Produk (wajib)</Label>
@@ -446,9 +452,14 @@ export default function AdSetupPage() {
                     <TableCell>{code ? <span className="font-mono text-xs bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{code}</span> : <span className="text-[10px] text-muted-foreground">akun+marker dulu</span>}{isDup && <Badge variant="outline" className="ml-1 bg-rose-500/15 text-rose-600 text-[9px] border-rose-500/30">DOBEL</Badge>}</TableCell>
                     <TableCell><Badge variant="outline" className={c.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{c.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => saveCampaign(c)} disabled={savingCamp === c.id} title="Simpan">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}</Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleCampaign(c)} disabled={savingCamp === c.id} title={c.active ? 'Nonaktifkan' : 'Aktifkan'}><Power className={`w-3.5 h-3.5 ${c.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteCampaignRow(c)} disabled={savingCamp === c.id} title="Hapus"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-emerald-600" onClick={() => saveCampaign(c)} disabled={savingCamp === c.id} title="Simpan perubahan">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Simpan</Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={<Button size="icon" variant="ghost" className="h-8 w-8 ml-1" disabled={savingCamp === c.id} title="Kelola"><MoreVertical className="w-4 h-4" /></Button>} />
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => toggleCampaign(c)}><Power className="w-3.5 h-3.5 mr-2" /> {c.active ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => deleteCampaignRow(c)} className="text-red-500"><Trash2 className="w-3.5 h-3.5 mr-2" /> Hapus</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 )})}

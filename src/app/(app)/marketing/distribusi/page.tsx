@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/errors'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah, formatDate } from '@/lib/format'
+import { OrderDetailSheet } from '@/components/orders/order-detail-sheet'
 
 const supabase = createClient()
 
@@ -35,6 +36,7 @@ export default function DistribusiPage() {
   const [campaignId, setCampaignId] = useState<string>('')
   const [resolving, setResolving] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  const [detail, setDetail] = useState<number | null>(null) // klik baris = detail
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -56,6 +58,14 @@ export default function DistribusiPage() {
     return q ? rows.filter(r => r.order_number.toLowerCase().includes(q) || (r.customer_name || '').toLowerCase().includes(q)) : rows
   }, [rows, search])
   const allSel = filtered.length > 0 && filtered.every(r => selected.has(r.id))
+  const counts = useMemo(() => {
+    let token = 0, noCode = 0, rp = 0
+    for (const r of filtered) {
+      if (r.meta && r.meta.atribusi_account) token++; else noCode++
+      rp += Number(r.total) || 0
+    }
+    return { token, noCode, rp }
+  }, [filtered])
 
   const toggleAll = () => setSelected(prev => {
     const n = new Set(prev)
@@ -123,6 +133,16 @@ export default function DistribusiPage() {
         </CardContent>
       </Card>
 
+      {!loading && filtered.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Badge variant="outline" className="font-medium">Total: {filtered.length.toLocaleString('id-ID')} order</Badge>
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-600">token gak resolve: {counts.token}</Badge>
+          <Badge variant="outline" className="bg-zinc-500/10 text-zinc-500">no-code: {counts.noCode}</Badge>
+          <Badge variant="outline">Total nilai: {formatRupiah(counts.rp)}</Badge>
+          {selected.size > 0 && <Badge variant="outline" className="bg-violet-500/10 text-violet-600">dipilih: {selected.size}</Badge>}
+        </div>
+      )}
+
       <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
@@ -139,7 +159,7 @@ export default function DistribusiPage() {
               ) : filtered.map(r => {
                 const hasToken = !!(r.meta && r.meta.atribusi_account)
                 return (
-                  <TableRow key={r.id} className="cursor-pointer" onClick={() => toggle(r.id)}>
+                  <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetail(r.id)}>
                     <TableCell onClick={e => e.stopPropagation()}><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggle(r.id)} /></TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{formatDate(r.order_date)}</TableCell>
                     <TableCell className="font-mono text-xs">{r.order_number}</TableCell>
@@ -156,6 +176,7 @@ export default function DistribusiPage() {
           </Table>
         </div>
       </div>
+      <OrderDetailSheet source={detail !== null ? 'draft' : null} id={detail} onClose={() => setDetail(null)} />
     </div>
   )
 }

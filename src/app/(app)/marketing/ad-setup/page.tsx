@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check, ChevronDown, MoreVertical } from 'lucide-react'
+import { Megaphone, Loader2, Plus, Save, Wand2, Pencil, Trash2, Power, X, Check, ChevronDown } from 'lucide-react'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
@@ -47,6 +47,7 @@ export default function AdSetupPage() {
   const [savingNew, setSavingNew] = useState(false)
   // Brief #21 — edit/hapus/toggle akun
   const [editAccId, setEditAccId] = useState<number | null>(null)
+  const [editCampId, setEditCampId] = useState<number | null>(null) // campaign read-only sampai klik Edit
   const [eaf, setEaf] = useState({ platform: 'META', account_code: '', name: '', advertiser_id: '' })
   const [accBusy, setAccBusy] = useState(false)
 
@@ -437,9 +438,11 @@ export default function AdSetupPage() {
                   const code = acc && c.campaign_marker ? codeFor(campProd[c.id], acc, c.campaign_marker) : null
                   const isDup = code != null && dupCodes.has(code)
                   return (
-                  <TableRow key={c.id} className={`${c.active ? '' : 'opacity-50'} ${isDup ? 'bg-rose-500/10' : ''}`}>
-                    <TableCell><Input value={c.campaign_name} onChange={e => setCamp(c.id, { campaign_name: e.target.value })} className="h-8 w-48 text-xs" /></TableCell>
-                    <TableCell>
+                  <TableRow key={c.id} className={`${c.active ? '' : 'opacity-50'} ${isDup ? 'bg-rose-500/10' : ''} ${editCampId === c.id ? 'bg-violet-500/5' : ''}`}>
+                    <TableCell>{editCampId === c.id
+                      ? <Input value={c.campaign_name} onChange={e => setCamp(c.id, { campaign_name: e.target.value })} className="h-8 w-48 text-xs" />
+                      : <span className="text-xs font-medium">{c.campaign_name}</span>}</TableCell>
+                    <TableCell>{editCampId === c.id ? (
                       <Select value={c.account_id ? String(c.account_id) : 'none'} onValueChange={v => setCamp(c.id, { account_id: (!v || v === 'none') ? null : Number(v) })}>
                         <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="—">{acc ? `${platLabel(acc.platform)} · ${acc.account_code}` : '—'}</SelectValue></SelectTrigger>
                         <SelectContent>
@@ -447,19 +450,28 @@ export default function AdSetupPage() {
                           {accounts.filter(a => a.active).map(a => <SelectItem key={a.id} value={String(a.id)}>{platLabel(a.platform)} · {a.account_code}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                    </TableCell>
-                    <TableCell><Input value={c.campaign_marker ?? ''} onChange={e => setCamp(c.id, { campaign_marker: e.target.value })} placeholder="1" className="h-8 w-16 text-xs" /></TableCell>
+                    ) : <span className="text-xs">{acc ? `${platLabel(acc.platform)} · ${acc.account_code}` : '—'}</span>}</TableCell>
+                    <TableCell>{editCampId === c.id
+                      ? <Input value={c.campaign_marker ?? ''} onChange={e => setCamp(c.id, { campaign_marker: e.target.value })} placeholder="1" className="h-8 w-16 text-xs" />
+                      : <span className="text-xs font-mono">{c.campaign_marker ?? '—'}</span>}</TableCell>
                     <TableCell>{code ? <span className="font-mono text-xs bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded">{code}</span> : <span className="text-[10px] text-muted-foreground">akun+marker dulu</span>}{isDup && <Badge variant="outline" className="ml-1 bg-rose-500/15 text-rose-600 text-[9px] border-rose-500/30">DOBEL</Badge>}</TableCell>
                     <TableCell><Badge variant="outline" className={c.active ? 'bg-emerald-500/10 text-emerald-600 text-[10px]' : 'bg-zinc-500/10 text-zinc-500 text-[10px]'}>{c.active ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-emerald-600" onClick={() => saveCampaign(c)} disabled={savingCamp === c.id} title="Simpan perubahan">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Simpan</Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger render={<Button size="icon" variant="ghost" className="h-8 w-8 ml-1" disabled={savingCamp === c.id} title="Kelola"><MoreVertical className="w-4 h-4" /></Button>} />
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => toggleCampaign(c)}><Power className="w-3.5 h-3.5 mr-2" /> {c.active ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => deleteCampaignRow(c)} className="text-red-500"><Trash2 className="w-3.5 h-3.5 mr-2" /> Hapus</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {editCampId === c.id ? (
+                        <>
+                          <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-emerald-600" onClick={async () => { await saveCampaign(c); setEditCampId(null) }} disabled={savingCamp === c.id} title="Simpan">{savingCamp === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Simpan</Button>
+                          <Button size="sm" variant="ghost" className="h-8 text-xs ml-1" onClick={() => { setEditCampId(null); load() }}>Batal</Button>
+                        </>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger render={<Button size="sm" variant="outline" className="h-8 gap-1 text-xs" disabled={savingCamp === c.id}>Kelola <ChevronDown className="w-3 h-3" /></Button>} />
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setEditCampId(c.id)}><Pencil className="w-3.5 h-3.5 mr-2" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleCampaign(c)}><Power className="w-3.5 h-3.5 mr-2" /> {c.active ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => deleteCampaignRow(c)} className="text-red-500"><Trash2 className="w-3.5 h-3.5 mr-2" /> Hapus</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 )})}

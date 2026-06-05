@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/errors'
 import {
   Plus, Loader2, Users, Save, CopyPlus, Trash2, RotateCcw,
-  TrendingUp, MessageCircle, CheckCircle2, AlertTriangle,
+  TrendingUp, MessageCircle, CheckCircle2, AlertTriangle, Pencil,
 } from 'lucide-react'
 import { formatNumber } from '@/lib/format'
 import type { Product, Profile } from '@/lib/types'
@@ -67,6 +67,7 @@ export default function CsReportPage() {
   const [saving, setSaving] = useState(false)
   const [copying, setCopying] = useState(false)
   const [summary, setSummary] = useState<CsDailySummary | null>(null)
+  const [editMode, setEditMode] = useState(false) // read-only default; klik Edit baru bisa ubah angka
 
   // Init: pick today + auto-set CS to current user kalau role=cs
   useEffect(() => {
@@ -237,6 +238,7 @@ export default function CsReportPage() {
         createdBy: profile?.id ?? null,
       })
       toast.success(`${result.upserted} laporan disimpan`)
+      setEditMode(false) // balik ke read-only abis save (aman)
       void loadReport()
     } catch (err) {
       const msg = getErrorMessage(err)
@@ -354,18 +356,22 @@ export default function CsReportPage() {
             </div>
           )}
           <div className="flex gap-2 ml-auto">
-            <Button
-              variant="outline" size="sm"
-              onClick={handleCopyFromYesterday}
-              disabled={copying || !selectedCsId}
-              title={`Copy laporan dari ${yesterdayOf(date)}`}
-            >
-              {copying ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <CopyPlus className="w-3.5 h-3.5 mr-2" />}
-              Copy dari Kemarin
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleResetUnsaved} disabled={!rows.some(r => r.isNew)}>
-              <RotateCcw className="w-3.5 h-3.5 mr-2" />Reset
-            </Button>
+            {!editMode ? (
+              <Button size="sm" onClick={() => setEditMode(true)} disabled={!selectedCsId} className="bg-violet-600 hover:bg-violet-700 text-white">
+                <Pencil className="w-3.5 h-3.5 mr-2" />Edit Angka
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={handleCopyFromYesterday} disabled={copying || !selectedCsId} title={`Copy laporan dari ${yesterdayOf(date)}`}>
+                  {copying ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <CopyPlus className="w-3.5 h-3.5 mr-2" />}
+                  Copy dari Kemarin
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleResetUnsaved} disabled={!rows.some(r => r.isNew)}>
+                  <RotateCcw className="w-3.5 h-3.5 mr-2" />Reset
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>Batal</Button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -465,36 +471,30 @@ export default function CsReportPage() {
                         {r.isNew && <Badge variant="outline" className="text-[9px] mt-1 bg-amber-500/10 text-amber-600 border-amber-500/30">unsaved</Badge>}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={r.lead_in}
-                          onChange={e => handleRowChange(idx, { lead_in: Math.max(0, Number(e.target.value)) })}
-                          className="text-right h-8 w-24 ml-auto"
-                        />
+                        {editMode ? (
+                          <Input type="number" min={0} value={r.lead_in}
+                            onChange={e => handleRowChange(idx, { lead_in: Math.max(0, Number(e.target.value)) })}
+                            className="text-right h-8 w-24 ml-auto" />
+                        ) : <span className="font-medium tabular-nums pr-2">{formatNumber(r.lead_in)}</span>}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={r.closing}
-                          onChange={e => handleRowChange(idx, { closing: Math.max(0, Number(e.target.value)) })}
-                          className={`text-right h-8 w-24 ml-auto ${err ? 'border-red-500/50' : ''}`}
-                        />
-                        {err && (
+                        {editMode ? (
+                          <Input type="number" min={0} value={r.closing}
+                            onChange={e => handleRowChange(idx, { closing: Math.max(0, Number(e.target.value)) })}
+                            className={`text-right h-8 w-24 ml-auto ${err ? 'border-red-500/50' : ''}`} />
+                        ) : <span className="font-medium tabular-nums pr-2">{formatNumber(r.closing)}</span>}
+                        {editMode && err && (
                           <div className="text-[10px] text-red-600 mt-1 flex items-center gap-1 justify-end">
                             <AlertTriangle className="w-3 h-3" />{err}
                           </div>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={r.rejected}
-                          onChange={e => handleRowChange(idx, { rejected: Math.max(0, Number(e.target.value)) })}
-                          className="text-right h-8 w-20 ml-auto"
-                        />
+                        {editMode ? (
+                          <Input type="number" min={0} value={r.rejected}
+                            onChange={e => handleRowChange(idx, { rejected: Math.max(0, Number(e.target.value)) })}
+                            className="text-right h-8 w-20 ml-auto" />
+                        ) : <span className="tabular-nums pr-2 text-muted-foreground">{formatNumber(r.rejected)}</span>}
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className={`text-[10px] ${rate >= 25 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : rate >= 10 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30'}`}>
@@ -502,31 +502,22 @@ export default function CsReportPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Input
-                          value={r.reject_reasons}
-                          onChange={e => handleRowChange(idx, { reject_reasons: e.target.value })}
-                          placeholder="mahal, stok habis…"
-                          className="h-8 text-xs"
-                        />
+                        {editMode ? (
+                          <Input value={r.reject_reasons} onChange={e => handleRowChange(idx, { reject_reasons: e.target.value })} placeholder="mahal, stok habis…" className="h-8 text-xs" />
+                        ) : <span className="text-xs text-muted-foreground">{r.reject_reasons || '—'}</span>}
                       </TableCell>
                       <TableCell>
-                        <Input
-                          value={r.notes}
-                          onChange={e => handleRowChange(idx, { notes: e.target.value })}
-                          placeholder="optional"
-                          className="h-8 text-xs"
-                        />
+                        {editMode ? (
+                          <Input value={r.notes} onChange={e => handleRowChange(idx, { notes: e.target.value })} placeholder="optional" className="h-8 text-xs" />
+                        ) : <span className="text-xs text-muted-foreground">{r.notes || '—'}</span>}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost" size="icon"
-                          onClick={() => handleRowDelete(idx)}
-                          className="text-red-500 h-8 w-8"
-                          title={r.id ? 'Hapus row (owner/admin only)' : 'Hapus row baru'}
-                          disabled={!!r.id && !isOwner}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                        {editMode && (
+                          <Button variant="ghost" size="icon" onClick={() => handleRowDelete(idx)} className="text-red-500 h-8 w-8"
+                            title={r.id ? 'Hapus row (owner/admin only)' : 'Hapus row baru'} disabled={!!r.id && !isOwner}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   )
@@ -548,8 +539,8 @@ export default function CsReportPage() {
         </Card>
       )}
 
-      {/* Add product Combobox + general notes + save */}
-      {selectedCsId && (
+      {/* Add product Combobox + general notes + save — cuma pas edit mode */}
+      {selectedCsId && editMode && (
         <Card>
           <CardContent className="pt-4 pb-4 space-y-4">
             <div className="flex flex-col sm:flex-row gap-3 items-end">

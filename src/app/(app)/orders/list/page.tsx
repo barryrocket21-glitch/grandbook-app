@@ -16,7 +16,7 @@ import { ClipboardList, Search, Filter, AlertTriangle, ChevronLeft, ChevronRight
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { INTERNAL_STATUSES, STATUS_BADGE_COLOR, STATUS_LABEL } from '@/lib/schemas/settings'
-import { formatRupiah, formatDate, formatDateTime } from '@/lib/format'
+import { formatRupiah, formatDateTime } from '@/lib/format'
 import { format, parseISO } from 'date-fns'
 import {
   COLUMNS, COLUMNS_BY_ID,
@@ -35,6 +35,7 @@ import type {
 } from '@/lib/types'
 
 const supabase = createClient()
+const fmtShort = (d: string) => { const x = new Date(d); const p = (v: number) => String(v).padStart(2, '0'); return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)}` }
 
 const STUCK_PICKUP_DAYS_THRESHOLD = 3
 const PAGE_SIZE = 100
@@ -602,7 +603,7 @@ function CellRenderer({ row, colId, onUpdated }: {
   if (col.format === 'rupiah') return <span>{formatRupiah(Number(raw) || 0)}</span>
   if (col.format === 'percent') return <span>{(Number(raw) || 0).toFixed(1)}%</span>
   if (col.format === 'number')  return <span>{Number(raw).toLocaleString('id-ID')}</span>
-  if (col.format === 'date')    return <span className="whitespace-nowrap">{formatDate(String(raw))}</span>
+  if (col.format === 'date')    return <span className="whitespace-nowrap">{fmtShort(String(raw))}</span>
   if (col.format === 'datetime') return <span className="whitespace-nowrap">{shortDateTime(String(raw))}</span>
 
   // Special days_in_status with color

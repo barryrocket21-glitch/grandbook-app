@@ -168,6 +168,12 @@ export function adaptOrder(
   if (parsed.atribusiPending) {
     meta.atribusi_pending = true
     warnings.push(`Atribusi parkir: platform=${parsed.platform ?? '?'}, akun=${parsed.atribusiAccount}, campaign=${parsed.atribusiCampaign} (resolve di menu ADV)`)
+  } else if (!parsed.atribusiAccount) {
+    // Kode atribusi GAK ADA / GAK LENGKAP (cuma huruf platform mis "F", atau kosong).
+    // Warning NON-BLOCKING: admin tetep bisa proses order ke ekspedisi; ADV isi
+    // campaign-nya nanti manual di Distribusi Atribusi (order tampil sbg "no-code").
+    meta.atribusi_missing = true
+    warnings.push(`⚠️ Produk "${parsed.produk ?? '?'}" gak ada kode atribusi lengkap (format: Produk Platform.Akun.Marker, mis. "Sandal Pavio S.A.1"). Order tetep bisa diproses — ADV isi campaign-nya nanti di Distribusi Atribusi.`)
   }
 
   const payload: OrderDraftPayload = {

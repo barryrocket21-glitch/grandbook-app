@@ -16,6 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 interface ProductRow {
   id: number
   name: string
+  search_aliases?: string[] | null
 }
 
 function normalize(raw: string): string {
@@ -30,6 +31,11 @@ export class ProductMatcher {
     for (const p of products) {
       if (!p.name) continue
       this.byName.set(normalize(p.name), p.id)
+      // alias teks -> produk yg sama (mis. "Luna"/"MJO Luna" -> Sandal Luna)
+      for (const a of p.search_aliases ?? []) {
+        const k = normalize(a)
+        if (k && !this.byName.has(k)) this.byName.set(k, p.id)
+      }
     }
   }
 
@@ -51,7 +57,7 @@ export async function createProductMatcher(
 ): Promise<ProductMatcher> {
   const { data, error } = await supabase
     .from('products')
-    .select('id, name')
+    .select('id, name, search_aliases')
     .eq('active', true)
   if (error) throw new Error(`createProductMatcher: ${error.message}`)
   return new ProductMatcher((data ?? []) as ProductRow[])

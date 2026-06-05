@@ -71,6 +71,7 @@ export interface OrderDraftPayload {
 interface ProductRow {
   id: number
   name: string
+  search_aliases?: string[] | null
 }
 
 interface ProfileRow {
@@ -82,11 +83,19 @@ interface ProfileRow {
 function matchProductIdSubstring(rawName: string, products: ProductRow[]): { id: number | null; matchedName: string | null } {
   if (!rawName) return { id: null, matchedName: null }
   const haystack = rawName.toLowerCase()
-  // Longest-first untuk prefer specific match ("Sandal Luna Premium" > "Sandal Luna")
-  const sorted = [...products].sort((a, b) => b.name.length - a.name.length)
-  for (const p of sorted) {
-    if (p.name && haystack.includes(p.name.toLowerCase())) {
-      return { id: p.id, matchedName: p.name }
+  // Term = nama + alias (mis. Sandal Luna + "luna"/"mjo luna"). Longest-first
+  // biar prefer match spesifik ("Sandal Luna Premium" > "Sandal Luna" > "luna").
+  const terms: { term: string; id: number; name: string }[] = []
+  for (const p of products) {
+    if (p.name) terms.push({ term: p.name.toLowerCase(), id: p.id, name: p.name })
+    for (const a of p.search_aliases ?? []) {
+      if (a) terms.push({ term: a.toLowerCase(), id: p.id, name: p.name })
+    }
+  }
+  terms.sort((a, b) => b.term.length - a.term.length)
+  for (const t of terms) {
+    if (t.term && haystack.includes(t.term)) {
+      return { id: t.id, matchedName: t.name }
     }
   }
   return { id: null, matchedName: null }
@@ -108,7 +117,7 @@ export async function preloadAdapterData(supabase: SupabaseClient, orgId: number
   csProfiles: ProfileRow[]
 }> {
   const [{ data: prods }, { data: profs }] = await Promise.all([
-    supabase.from('products').select('id, name').eq('organization_id', orgId).eq('active', true),
+    supabase.from('products').select('id, name, search_aliases').eq('organization_id', orgId).eq('active', true),
     supabase.from('profiles').select('id, full_name').in('role', ['cs', 'admin', 'owner']).eq('organization_id', orgId),
   ])
   return {

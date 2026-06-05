@@ -549,41 +549,40 @@ export default function AdSpendPage() {
                 }}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Impressions</Label>
-                <Input type="number" value={form.impressions} onChange={e => setForm({ ...form, impressions: Number(e.target.value) })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Reach</Label>
-                <Input type="number" value={form.reach} onChange={e => setForm({ ...form, reach: Number(e.target.value) })} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Clicks</Label>
-                <Input type="number" value={form.clicks} onChange={e => setForm({ ...form, clicks: Number(e.target.value) })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Leads <span className="text-[10px] text-violet-600 font-normal">← buat CPR (spend ÷ lead)</span></Label>
-                <Input type="number" value={form.leads} onChange={e => setForm({ ...form, leads: Number(e.target.value) })} placeholder="mis. 10" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Conversions (purchases)</Label>
-                <Input type="number" value={form.conversions} onChange={e => setForm({ ...form, conversions: Number(e.target.value) })} />
-              </div>
-            </div>
             <div className="space-y-2">
-              <Label>Revenue Reported (Meta Pixel)</Label>
-              <Input
-                type="number"
-                value={form.revenue_reported}
-                onChange={e => setForm({ ...form, revenue_reported: Number(e.target.value) })}
-                placeholder="opsional — revenue yang dilaporkan platform"
-              />
+              <Label>Leads <span className="text-[10px] text-violet-600 font-normal">← buat CPR (spend ÷ lead)</span></Label>
+              <Input type="number" value={form.leads} onChange={e => setForm({ ...form, leads: Number(e.target.value) })} placeholder="mis. 10" />
             </div>
+
+            <details className="rounded-md border bg-muted/20 px-3 py-2">
+              <summary className="text-xs font-medium cursor-pointer select-none text-muted-foreground">Metrik tambahan (opsional) — Impressions · Reach · Clicks · Conversions · Revenue</summary>
+              <div className="mt-3 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Impressions</Label>
+                    <Input type="number" value={form.impressions} onChange={e => setForm({ ...form, impressions: Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Reach</Label>
+                    <Input type="number" value={form.reach} onChange={e => setForm({ ...form, reach: Number(e.target.value) })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Clicks</Label>
+                    <Input type="number" value={form.clicks} onChange={e => setForm({ ...form, clicks: Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Conversions (purchases)</Label>
+                    <Input type="number" value={form.conversions} onChange={e => setForm({ ...form, conversions: Number(e.target.value) })} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Revenue Reported (Meta Pixel)</Label>
+                  <Input type="number" value={form.revenue_reported} onChange={e => setForm({ ...form, revenue_reported: Number(e.target.value) })} placeholder="opsional — revenue yang dilaporkan platform" />
+                </div>
+              </div>
+            </details>
             <div className="space-y-2">
               <Label>Catatan</Label>
               <Textarea

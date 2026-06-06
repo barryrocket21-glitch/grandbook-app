@@ -63,6 +63,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [campRows, setCampRows] = useState<CampaignsForProductRow[]>([])
   const [varRows, setVarRows] = useState<VariantPerProductRow[]>([])
   const [platformRows, setPlatformRows] = useState<ProfitPerPlatformRow[]>([])
+  const [prodMaster, setProdMaster] = useState<{ price_default: number; hpp: number } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -74,18 +75,20 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (!rangeReady || !productId || isNaN(productId)) return
     setLoading(true)
     try {
-      const [funnelAll, cs, camps, vars, platforms] = await Promise.all([
+      const [funnelAll, cs, camps, vars, platforms, prodM] = await Promise.all([
         fetchFunnelPerProduct(supabase, range.from, range.to),
         fetchCsPerformancePerProduct(supabase, { productId, from: range.from, to: range.to }),
         fetchCampaignsForProduct(supabase, { productId, from: range.from, to: range.to }),
         fetchVariantPerProduct(supabase, { productId, from: range.from, to: range.to }),
         fetchProfitPerProductPerPlatform(supabase, { productId, from: range.from, to: range.to }),
+        supabase.from('products').select('price_default, hpp').eq('id', productId).single(),
       ])
       setFunnel(funnelAll.find(r => Number(r.product_id) === productId) ?? null)
       setCsRows(cs)
       setCampRows(camps)
       setVarRows(vars)
       setPlatformRows(platforms)
+      setProdMaster(prodM.data ? { price_default: Number(prodM.data.price_default) || 0, hpp: Number(prodM.data.hpp) || 0 } : null)
     } finally {
       setLoading(false)
     }
@@ -94,6 +97,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     if (!authLoading && canViewAnalytics && rangeReady) void load()
   }, [authLoading, canViewAnalytics, rangeReady, load])
+
+  // Ringkasan JUARA: platform / CS / campaign terbaik buat produk ini
+  const juara = useMemo(() => {
+    const bestPlat = platformRows.length ? platformRows.reduce((a, b) => Number(b.net_profit) > Number(a.net_profit) ? b : a) : null
+    const bestCs = csRows.length ? csRows.reduce((a, b) => Number(b.closing_count) > Number(a.closing_count) ? b : a) : null
+    const bestCamp = campRows.length ? campRows.reduce((a, b) => Number(b.roas) > Number(a.roas) ? b : a) : null
+    const margin = prodMaster ? prodMaster.price_default - prodMaster.hpp : null
+    return { bestPlat, bestCs, bestCamp, margin }
+  }, [platformRows, csRows, campRows, prodMaster])
 
   if (!authLoading && !canViewAnalytics) {
     return (
@@ -191,6 +203,43 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               color={roas >= 2 ? 'emerald' : roas >= 1 ? 'amber' : 'red'}
             />
           </div>
+
+          {/* 1b. Ringkasan Juara — platform/CS/campaign terbaik + margin */}
+          <Card className="border-violet-500/20 bg-violet-500/5">
+            <CardContent className="pt-4 pb-4">
+              <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">🏆 Juara produk ini</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Platform terbaik</p>
+                  {juara.bestPlat ? (<>
+                    <p className="text-sm font-bold">{juara.bestPlat.platform}</p>
+                    <p className={`text-[11px] ${Number(juara.bestPlat.net_profit) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>laba {formatRupiah(Number(juara.bestPlat.net_profit))} · ROAS {Number(juara.bestPlat.roas).toFixed(1)}x</p>
+                  </>) : <p className="text-sm text-muted-foreground">—</p>}
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">CS terbaik</p>
+                  {juara.bestCs ? (<>
+                    <p className="text-sm font-bold">{juara.bestCs.cs_name || '—'}</p>
+                    <p className="text-[11px] text-muted-foreground">{Number(juara.bestCs.closing_count)} closing · {Number(juara.bestCs.close_rate).toFixed(0)}%</p>
+                  </>) : <p className="text-sm text-muted-foreground">—</p>}
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Campaign terbaik</p>
+                  {juara.bestCamp ? (<>
+                    <p className="text-sm font-bold truncate" title={juara.bestCamp.campaign_name}>{juara.bestCamp.campaign_name}</p>
+                    <p className="text-[11px] text-muted-foreground">ROAS {Number(juara.bestCamp.roas).toFixed(1)}x · {juara.bestCamp.platform}</p>
+                  </>) : <p className="text-sm text-muted-foreground">—</p>}
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Margin / unit</p>
+                  {juara.margin != null ? (<>
+                    <p className="text-sm font-bold text-emerald-600">{formatRupiah(juara.margin)}</p>
+                    <p className="text-[11px] text-muted-foreground">harga − HPP</p>
+                  </>) : <p className="text-sm text-muted-foreground">—</p>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* 2. Funnel visual (compact single row) */}
           <Card>

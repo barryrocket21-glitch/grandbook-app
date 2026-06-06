@@ -315,7 +315,7 @@ export default function AdSpendPage() {
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
             <div className="p-2.5 bg-emerald-500/15 rounded-xl ring-1 ring-emerald-500/20"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Laba Bersih</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Laba Bersih <span className="text-amber-600 normal-case">(proyeksi)</span></p>
               <p className={`text-xl font-bold ${perfT.net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatRupiah(perfT.net)}</p>
               <p className="text-[10px] text-muted-foreground">ROI {perfT.roi.toFixed(0)}% · retur {perfT.returRate.toFixed(0)}%</p>
             </div>
@@ -448,7 +448,7 @@ export default function AdSpendPage() {
       <Card>
         <CardContent className="pt-4 pb-4 space-y-2">
           <div className="text-sm font-semibold">Performa Campaign — periode {range.from} s/d {range.to}</div>
-          <p className="text-[11px] text-muted-foreground"><b>CPA Final</b> = spend÷terkirim (biaya per penjualan ASLI) · <b>BEP</b> = CPA maksimum sebelum rugi (laba kotor÷terkirim) · <b>ROI</b> = laba bersih÷spend. Baris merah = rugi. Diurut dari laba terbesar.</p>
+          <p className="text-[11px] text-muted-foreground"><b>CPA</b> = spend÷order · <b>BEP</b> = CPA maksimum sebelum rugi (laba kotor÷order). CPA &lt; BEP = untung. <b>ROI</b> = laba bersih÷spend. <span className="text-amber-600">Laba/ROI = PROYEKSI</span> (asumsi order terkirim; aktual nyusul pas DITERIMA). Baris merah = rugi. Urut laba terbesar.</p>
           {perf.length === 0 ? (
             <p className="text-xs text-muted-foreground py-2">Belum ada spend/atribusi di periode ini.</p>
           ) : (
@@ -461,17 +461,17 @@ export default function AdSpendPage() {
                   <TableHead className="text-right">Order</TableHead>
                   <TableHead className="text-right">Terkirim</TableHead>
                   <TableHead className="text-right">Retur%</TableHead>
-                  <TableHead className="text-right">CPA Final</TableHead>
+                  <TableHead className="text-right">CPA</TableHead>
                   <TableHead className="text-right">BEP CPA</TableHead>
                   <TableHead className="text-right">Laba Bersih</TableHead>
                   <TableHead className="text-right">ROI</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {[...perf].sort((a, b) => Number(b.net_profit) - Number(a.net_profit)).map(p => {
-                    const deliv = Number(p.delivered), ret = Number(p.retur)
+                    const deliv = Number(p.delivered), ret = Number(p.retur), ord = Number(p.total_order)
                     const rr = (deliv + ret) > 0 ? (ret / (deliv + ret)) * 100 : 0
-                    const bep = deliv > 0 ? Number(p.gross_profit) / deliv : null
-                    const cpaF = p.cpa_final != null && Number.isFinite(Number(p.cpa_final)) ? Number(p.cpa_final) : null
+                    const bep = ord > 0 ? Number(p.gross_profit) / ord : null
+                    const cpa = ord > 0 ? Number(p.spend) / ord : null
                     const win = Number(p.net_profit) >= 0
                     return (
                       <TableRow key={p.campaign_id} className={win ? '' : 'bg-red-500/5'}>
@@ -481,8 +481,8 @@ export default function AdSpendPage() {
                         <TableCell className="text-right text-xs tabular-nums">{Number(p.total_order)}</TableCell>
                         <TableCell className="text-right text-xs tabular-nums">{deliv}</TableCell>
                         <TableCell className={`text-right text-xs tabular-nums ${rr >= 25 ? 'text-red-600 font-semibold' : rr >= 10 ? 'text-amber-600' : 'text-muted-foreground'}`}>{rr.toFixed(0)}%</TableCell>
-                        <TableCell className="text-right text-xs tabular-nums">{cpaF != null ? formatRupiah(cpaF) : '—'}</TableCell>
-                        <TableCell className="text-right text-xs tabular-nums text-muted-foreground" title="CPA maksimum sebelum rugi (laba kotor ÷ terkirim)">{bep != null ? formatRupiah(Math.round(bep)) : '—'}</TableCell>
+                        <TableCell className={`text-right text-xs tabular-nums ${cpa != null && bep != null && cpa > bep ? 'text-red-600 font-medium' : ''}`}>{cpa != null ? formatRupiah(Math.round(cpa)) : '—'}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums text-muted-foreground" title="CPA maksimum sebelum rugi (laba kotor ÷ order)">{bep != null ? formatRupiah(Math.round(bep)) : '—'}</TableCell>
                         <TableCell className={`text-right text-xs tabular-nums font-semibold ${win ? 'text-emerald-600' : 'text-red-600'}`}>{formatRupiah(Number(p.net_profit))}</TableCell>
                         <TableCell className={`text-right text-xs tabular-nums font-semibold ${win ? 'text-emerald-600' : 'text-red-600'}`}>{p.roi != null && Number.isFinite(Number(p.roi)) ? Number(p.roi).toFixed(0) + '%' : '—'}</TableCell>
                       </TableRow>

@@ -455,16 +455,22 @@ export default function AdSpendPage() {
             <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead className="text-right">Spend</TableHead>
-                  <TableHead className="text-right">Lead</TableHead>
-                  <TableHead className="text-right">Order</TableHead>
-                  <TableHead className="text-right">Terkirim</TableHead>
-                  <TableHead className="text-right">Retur%</TableHead>
-                  <TableHead className="text-right">CPA</TableHead>
-                  <TableHead className="text-right">BEP CPA</TableHead>
-                  <TableHead className="text-right">Laba Bersih</TableHead>
-                  <TableHead className="text-right">ROI</TableHead>
+                  {([
+                    ['Campaign', '', 'text-left'],
+                    ['Spend', 'Total biaya iklan campaign di periode', ''],
+                    ['Lead', 'Jumlah lead dari iklan (Input Harian)', ''],
+                    ['Order', 'Order ter-atribusi ke campaign ini', ''],
+                    ['Terkirim', 'Order yang sudah DITERIMA (sampai)', ''],
+                    ['Retur%', '% retur dari order final (DITERIMA + RETUR)', ''],
+                    ['CPA', 'Spend ÷ Order (biaya per order)', ''],
+                    ['BEP CPA', 'CPA maksimum sebelum rugi = Laba Kotor ÷ Order. CPA di bawah ini = untung', ''],
+                    ['Laba Bersih', 'Gross Profit − Iklan. Gross Profit = Omset − HPP − Fee CS. PROYEKSI (asumsi order terkirim)', ''],
+                    ['ROI', 'Laba Bersih ÷ Spend × 100 — untung beneran per Rp iklan', ''],
+                  ] as [string, string, string][]).map(([lbl, tip, align]) => (
+                    <TableHead key={lbl} className={align || 'text-right'} title={tip || undefined}>
+                      {tip ? <span className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-2 cursor-help">{lbl}</span> : lbl}
+                    </TableHead>
+                  ))}
                 </TableRow></TableHeader>
                 <TableBody>
                   {[...perf].sort((a, b) => Number(b.net_profit) - Number(a.net_profit)).map(p => {

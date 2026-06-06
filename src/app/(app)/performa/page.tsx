@@ -6,7 +6,7 @@
 //   • Produk × Platform    — produk nghasilin berapa, platform terbaik, retur
 // Owner/admin only (angka revenue/laba sensitif).
 // =============================================================
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
@@ -45,6 +45,13 @@ const totalCell = (t: PTotal, m: ProdMetric) => {
   if (m === 'order') return <span>{t.order}</span>
   return <span className={t.net > 0 ? 'text-emerald-600' : t.net < 0 ? 'text-rose-600' : ''}>{rpShort(t.net)}</span>
 }
+
+// Header tabel + tooltip hover (underline titik = ada keterangan)
+const TH = ({ children, tip, className }: { children: ReactNode; tip?: string; className?: string }) => (
+  <TableHead className={className} title={tip}>
+    {tip ? <span className="underline decoration-dotted decoration-muted-foreground/50 underline-offset-2 cursor-help">{children}</span> : children}
+  </TableHead>
+)
 
 type Tab = 'campaign' | 'cs' | 'produk'
 
@@ -131,13 +138,20 @@ export default function PerformaPage() {
           : tab === 'campaign' ? (
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Campaign</TableHead><TableHead>Kode</TableHead><TableHead>Advertiser</TableHead>
-                <TableHead className="text-right">Spend</TableHead><TableHead className="text-right">Lead</TableHead>
-                <TableHead className="text-right">Order</TableHead><TableHead className="text-right">Sampai</TableHead>
-                <TableHead className="text-right">Retur%</TableHead><TableHead className="text-right">CPR</TableHead>
-                <TableHead className="text-right">CPA</TableHead><TableHead className="text-right">CPA Final</TableHead>
-                <TableHead className="text-right">ROAS</TableHead><TableHead className="text-right">ROI</TableHead>
-                <TableHead className="text-right">Laba Bersih</TableHead>
+                <TH>Campaign</TH>
+                <TH tip="Kode atribusi campaign: Platform.Akun.Marker (mis. F.A.1)">Kode</TH>
+                <TH tip="Advertiser yang pegang akun iklan ini">Advertiser</TH>
+                <TH className="text-right" tip="Total biaya iklan campaign ini di periode">Spend</TH>
+                <TH className="text-right" tip="Jumlah lead dari iklan (yang dilaporkan di Input Harian)">Lead</TH>
+                <TH className="text-right" tip="Order yang ter-atribusi ke campaign ini">Order</TH>
+                <TH className="text-right" tip="Order yang sudah DITERIMA (sampai ke customer)">Sampai</TH>
+                <TH className="text-right" tip="% retur dari order yang sudah final (DITERIMA + RETUR)">Retur%</TH>
+                <TH className="text-right" tip="Cost per Result = Spend ÷ Lead (biaya per lead)">CPR</TH>
+                <TH className="text-right" tip="Cost per Acquisition = Spend ÷ Order (biaya per order)">CPA</TH>
+                <TH className="text-right" tip="Spend ÷ order DITERIMA (biaya per penjualan yang benar-benar sampai)">CPA Final</TH>
+                <TH className="text-right" tip="Omset ÷ Spend. KOTOR — belum potong HPP/ongkir, bisa nipu kelihatan gede">ROAS</TH>
+                <TH className="text-right" tip="Laba Bersih ÷ Spend × 100. Kebenaran: untung beneran per Rp iklan">ROI</TH>
+                <TH className="text-right" tip="Laba Bersih = Gross Profit − Iklan. Gross Profit = Omset − HPP − Fee CS (omset udah termasuk ongkir & udah potong biaya admin COD)">Laba Bersih</TH>
               </TableRow></TableHeader>
               <TableBody>
                 {camp.length === 0 ? <TableRow><TableCell colSpan={14} className="py-10 text-center text-sm text-muted-foreground">Belum ada data campaign.</TableCell></TableRow>
@@ -164,11 +178,15 @@ export default function PerformaPage() {
           ) : tab === 'cs' ? (
             <Table>
               <TableHeader><TableRow>
-                <TableHead>CS</TableHead><TableHead className="text-right">Order</TableHead>
-                <TableHead className="text-right">Sampai</TableHead><TableHead className="text-right">Retur</TableHead>
-                <TableHead className="text-right">Retur%</TableHead><TableHead className="text-right">Penjualan</TableHead>
-                <TableHead className="text-right">Omset</TableHead><TableHead className="text-right">Gross Profit</TableHead>
-                <TableHead className="text-right">GP Realisasi</TableHead>
+                <TH>CS</TH>
+                <TH className="text-right" tip="Total order yang ditangani CS ini">Order</TH>
+                <TH className="text-right" tip="Order yang sudah DITERIMA (sampai)">Sampai</TH>
+                <TH className="text-right" tip="Jumlah order retur">Retur</TH>
+                <TH className="text-right" tip="% retur dari order final (DITERIMA + RETUR)">Retur%</TH>
+                <TH className="text-right" tip="Nilai barang (total produk) — belum termasuk ongkir/potongan">Penjualan</TH>
+                <TH className="text-right" tip="Penjualan + selisih ongkir − biaya admin COD">Omset</TH>
+                <TH className="text-right" tip="Omset − HPP − Fee CS (laba sebelum iklan; proyeksi SEMUA order termasuk yg belum sampai)">Gross Profit</TH>
+                <TH className="text-right" tip="Gross Profit dari order yang SUDAH DITERIMA aja (realisasi, bukan proyeksi)">GP Realisasi</TH>
               </TableRow></TableHeader>
               <TableBody>
                 {cs.length === 0 ? <TableRow><TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">Belum ada data.</TableCell></TableRow>

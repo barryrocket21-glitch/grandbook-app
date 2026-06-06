@@ -23,6 +23,15 @@ const num = (v: unknown) => Number(v) || 0
 
 interface CsRow { user_id: string; full_name: string; leads_reported: number; closing_reported: number; retur_rate: number; top_product_name: string | null }
 interface ProdRow { product_id: number; name: string; leads: number; closing: number }
+interface DimRow { cs_id: string; cs_name: string; product_id: number; product_name: string; platform: string; orders: number; delivered: number; retur: number }
+interface MCell { o: number; d: number; r: number }
+const csCell = (c: MCell | undefined, m: 'order' | 'deliv' | 'retur') => {
+  const dot = <span className="text-muted-foreground/30">·</span>
+  if (!c || c.o === 0) return dot
+  if (m === 'order') return <span>{c.o}</span>
+  if (m === 'deliv') { const v = c.o > 0 ? (c.d / c.o) * 100 : 0; return <span className={v >= 50 ? 'text-emerald-600 font-medium' : v >= 20 ? 'text-amber-600' : 'text-muted-foreground'}>{v.toFixed(0)}%</span> }
+  const d = c.d + c.r; if (d === 0) return dot; const v = (c.r / d) * 100; return <span className={v >= 20 ? 'text-rose-600 font-semibold' : v >= 10 ? 'text-amber-600' : ''}>{v.toFixed(0)}%</span>
+}
 
 export default function CsRingkasanPage() {
   const { role, loading: authLoading } = useAuth()
@@ -30,7 +39,10 @@ export default function CsRingkasanPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [preset, setPreset] = useState<'today' | 'yesterday' | 'week' | 'custom'>('today')
-  const [view, setView] = useState<'cs' | 'produk'>('cs')
+  const [view, setView] = useState<'cs' | 'produk' | 'matriks'>('cs')
+  const [csDim, setCsDim] = useState<DimRow[]>([])
+  const [matrixDim, setMatrixDim] = useState<'produk' | 'platform'>('produk')
+  const [matrixMetric, setMatrixMetric] = useState<'order' | 'deliv' | 'retur'>('order')
   const [loading, setLoading] = useState(true)
   const [csRows, setCsRows] = useState<CsRow[]>([])
   const [openCs, setOpenCs] = useState<string | null>(null)
@@ -68,13 +80,15 @@ export default function CsRingkasanPage() {
     if (!from || !to || !canView) return
     setLoading(true); setOpenCs(null)
     try {
-      const [{ data: cs }, prod] = await Promise.all([
+      const [{ data: cs }, prod, { data: dim }] = await Promise.all([
         supabase.rpc('team_cs_summary', { p_date_from: from, p_date_to: to }),
         aggProduk(null),
+        supabase.rpc('analytics_cs_dimension', { p_from: from, p_to: to }),
       ])
       setCsRows(((cs || []) as CsRow[]).filter(r => num(r.leads_reported) > 0 || num(r.closing_reported) > 0)
         .sort((a, b) => num(b.closing_reported) - num(a.closing_reported)))
       setProdAll(prod)
+      setCsDim((dim || []) as DimRow[])
     } catch (err) { console.warn('cs-ringkasan:', err) } finally { setLoading(false) }
   }, [from, to, canView, aggProduk])
   useEffect(() => { void load() }, [load])
@@ -90,6 +104,29 @@ export default function CsRingkasanPage() {
     const close = csRows.reduce((s, r) => s + num(r.closing_reported), 0)
     return { lead, close, rate: lead > 0 ? (close * 100) / lead : 0 }
   }, [csRows])
+
+  // Pivot CS×(produk/platform) buat view Matriks
+  const csMatrix = useMemo(() => {
+    const colSet = new Set<string>()
+    const m = new Map<string, { name: string; cells: Record<string, MCell>; total: MCell }>()
+    for (const r of csDim) {
+      const ck = matrixDim === 'produk' ? r.product_name : r.platform
+      colSet.add(ck)
+      if (!m.has(r.cs_name)) m.set(r.cs_name, { name: r.cs_name, cells: {}, total: { o: 0, d: 0, r: 0 } })
+      const row = m.get(r.cs_name)!
+      const cell = row.cells[ck] || { o: 0, d: 0, r: 0 }
+      cell.o += num(r.orders); cell.d += num(r.delivered); cell.r += num(r.retur)
+      row.cells[ck] = cell
+      row.total.o += num(r.orders); row.total.d += num(r.delivered); row.total.r += num(r.retur)
+    }
+    let cols = [...colSet]
+    if (matrixDim === 'platform') {
+      const ORD = ['META', 'GOOGLE', 'TIKTOK', 'SNACK']
+      cols = [...ORD.filter(p => colSet.has(p)), ...cols.filter(p => !ORD.includes(p)).sort()]
+    } else cols.sort()
+    const rows = [...m.values()].sort((a, b) => b.total.o - a.total.o)
+    return { cols, rows }
+  }, [csDim, matrixDim])
 
   const rate = (l: number, c: number) => l > 0 ? (c * 100) / l : 0
   const rateBadge = (r: number) => <Badge variant="outline" className={`text-[11px] ${r >= 50 ? 'bg-emerald-500/10 text-emerald-600' : r >= 25 ? 'bg-amber-500/10 text-amber-600' : 'bg-zinc-500/10 text-zinc-500'}`}>{r.toFixed(1)}%</Badge>
@@ -122,6 +159,7 @@ export default function CsRingkasanPage() {
         <div className="inline-flex rounded-md border p-0.5 ml-auto">
           <button onClick={() => setView('cs')} className={`px-3 h-8 text-sm rounded ${view === 'cs' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Per CS</button>
           <button onClick={() => setView('produk')} className={`px-3 h-8 text-sm rounded ${view === 'produk' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Per Produk</button>
+          <button onClick={() => setView('matriks')} className={`px-3 h-8 text-sm rounded ${view === 'matriks' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Matriks</button>
         </div>
       </CardContent></Card>
 
@@ -184,7 +222,7 @@ export default function CsRingkasanPage() {
                 })}
               </TableBody>
             </Table>
-          ) : (
+          ) : view === 'produk' ? (
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Produk</TableHead><TableHead className="text-right">Lead</TableHead>
@@ -202,10 +240,46 @@ export default function CsRingkasanPage() {
                 ))}
               </TableBody>
             </Table>
+          ) : (
+            <div className="p-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex rounded-md border p-0.5 text-xs">
+                  <button onClick={() => setMatrixDim('produk')} className={`px-2.5 h-7 rounded ${matrixDim === 'produk' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>CS × Produk</button>
+                  <button onClick={() => setMatrixDim('platform')} className={`px-2.5 h-7 rounded ${matrixDim === 'platform' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>CS × Platform</button>
+                </div>
+                <div className="inline-flex rounded-md border p-0.5 text-xs">
+                  {([['order', 'Order'], ['deliv', 'Terkirim%'], ['retur', 'Retur%']] as ['order' | 'deliv' | 'retur', string][]).map(([k, l]) => (
+                    <button key={k} onClick={() => setMatrixMetric(k)} className={`px-2.5 h-7 rounded ${matrixMetric === k ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              {csMatrix.rows.length === 0 ? <p className="py-10 text-center text-sm text-muted-foreground">Belum ada data order ber-CS di periode ini.</p> : (
+                <div className="overflow-x-auto">
+                  <table className="text-xs border-collapse min-w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 sticky left-0 bg-card z-10">CS</th>
+                        {csMatrix.cols.map(c => <th key={c} className="text-right p-2 whitespace-nowrap font-medium">{c === '(tanpa platform)' ? '(tanpa)' : c}</th>)}
+                        <th className="text-right p-2 font-semibold border-l">TOTAL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csMatrix.rows.map(row => (
+                        <tr key={row.name} className="border-b hover:bg-muted/30">
+                          <td className="p-2 font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{row.name}</td>
+                          {csMatrix.cols.map(c => <td key={c} className="text-right p-2 tabular-nums">{csCell(row.cells[c], matrixMetric)}</td>)}
+                          <td className="text-right p-2 tabular-nums font-semibold border-l">{csCell(row.total, matrixMetric)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
-      <p className="text-[11px] text-muted-foreground">Klik baris CS → breakdown per produk. Close Rate = closing ÷ lead. Retur% dari order (DITERIMA vs RETUR).</p>
+      <p className="text-[11px] text-muted-foreground">Klik baris CS → breakdown per produk. <b>Matriks</b>: Terkirim% = terkirim÷order (makin tinggi makin <i>cocok</i> produk/platform itu buat CS); Retur% rendah = bagus. Close Rate = closing ÷ lead.</p>
     </div>
   )
 }

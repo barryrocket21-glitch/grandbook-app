@@ -76,11 +76,13 @@ const emptyForm: SpendForm = {
   notes: '',
 }
 
-// Brief #24 — performa campaign (CPR/CPA/CPA Final) di Input Harian.
+// Performa campaign pakai analytics_campaign_profit (mig 123) — metrik KEBENARAN
+// buat COD: retur%, laba bersih, ROI (bukan vanity ROAS/Conv).
 interface Perf {
-  campaign_id: number; campaign_name: string; platform: string
-  spend_total: number; leads: number; attributed_orders: number; delivered_orders: number
-  cpr: number | null; cpa: number | null; cpa_final: number | null
+  campaign_id: number; campaign_name: string; platform: string; akun: string | null; marker: string | null; advertiser_name: string | null
+  spend: number; leads: number; total_order: number; delivered: number; retur: number; return_rate: number
+  cpr: number | null; cpa: number | null; cpa_final: number | null; omset: number; gross_profit: number
+  roas: number | null; roi: number | null; net_profit: number
 }
 
 export default function AdSpendPage() {
@@ -121,6 +123,16 @@ export default function AdSpendPage() {
     return { spend, spendTotal, conv, impr, clicks, leads, ctr: impr > 0 ? (clicks / impr) * 100 : 0, cpr: leads > 0 ? spendTotal / leads : 0 }
   }, [rows])
 
+  // Total dari performa campaign (laba bersih, retur) — metrik kebenaran
+  const perfT = useMemo(() => {
+    let spend = 0, net = 0, delivered = 0, retur = 0, totalOrder = 0
+    for (const p of perf) {
+      spend += Number(p.spend) || 0; net += Number(p.net_profit) || 0
+      delivered += Number(p.delivered) || 0; retur += Number(p.retur) || 0; totalOrder += Number(p.total_order) || 0
+    }
+    return { spend, net, delivered, retur, totalOrder, roi: spend > 0 ? (net / spend) * 100 : 0, returRate: (delivered + retur) > 0 ? (retur / (delivered + retur)) * 100 : 0 }
+  }, [perf])
+
   useEffect(() => {
     setRange(thisMonth())
     setRangeReady(true)
@@ -138,8 +150,8 @@ export default function AdSpendPage() {
         }),
         listCampaigns(supabase),
         fetchAdSpendSummary(supabase, range.from, range.to),
-        // Brief #24 — performa per periode (filter ikut DateRangePicker di atas).
-        supabase.rpc('campaign_performance', { p_from: range.from, p_to: range.to }),
+        // Performa campaign metrik kebenaran (retur/laba/ROI) — ikut periode.
+        supabase.rpc('analytics_campaign_profit', { p_from: range.from, p_to: range.to }),
       ])
       setRows(r)
       setCampaigns(c)
@@ -303,9 +315,9 @@ export default function AdSpendPage() {
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
             <div className="p-2.5 bg-emerald-500/15 rounded-xl ring-1 ring-emerald-500/20"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Conversions</p>
-              <p className="text-xl font-bold text-emerald-500">{formatNumber(live.conv)}</p>
-              <p className="text-[10px] text-muted-foreground">CTR {live.ctr.toFixed(2)}%</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Laba Bersih</p>
+              <p className={`text-xl font-bold ${perfT.net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatRupiah(perfT.net)}</p>
+              <p className="text-[10px] text-muted-foreground">ROI {perfT.roi.toFixed(0)}% · retur {perfT.returRate.toFixed(0)}%</p>
             </div>
           </CardContent>
         </Card>
@@ -357,7 +369,6 @@ export default function AdSpendPage() {
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Impr</TableHead>
                 <TableHead className="text-right">Clicks</TableHead>
-                <TableHead className="text-right">Conv</TableHead>
                 <TableHead className="text-center">Source</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
@@ -366,14 +377,14 @@ export default function AdSpendPage() {
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={11} className="py-3">
+                    <TableCell colSpan={10} className="py-3">
                       <div className="h-4 bg-muted animate-pulse rounded w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="p-0">
+                  <TableCell colSpan={10} className="p-0">
                     <EmptyState
                       icon={DollarSign}
                       title="Belum ada ad spend di periode ini"
@@ -407,7 +418,6 @@ export default function AdSpendPage() {
                   </TableCell>
                   <TableCell className="text-right text-xs">{r.impressions != null ? formatNumber(r.impressions) : '—'}</TableCell>
                   <TableCell className="text-right text-xs">{r.clicks != null ? formatNumber(r.clicks) : '—'}</TableCell>
-                  <TableCell className="text-right text-xs text-emerald-600 font-semibold">{r.conversions != null ? formatNumber(r.conversions) : '—'}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant="outline" className="text-[10px]">{AD_SPEND_SOURCE_LABEL[r.source || 'MANUAL']}</Badge>
                   </TableCell>
@@ -438,30 +448,46 @@ export default function AdSpendPage() {
       <Card>
         <CardContent className="pt-4 pb-4 space-y-2">
           <div className="text-sm font-semibold">Performa Campaign — periode {range.from} s/d {range.to}</div>
-          <p className="text-[11px] text-muted-foreground">CPR = spend ÷ lead · CPA = spend ÷ order ter-atribusi · <b>CPA Final</b> = spend ÷ delivered (DITERIMA).</p>
+          <p className="text-[11px] text-muted-foreground"><b>CPA Final</b> = spend÷terkirim (biaya per penjualan ASLI) · <b>BEP</b> = CPA maksimum sebelum rugi (laba kotor÷terkirim) · <b>ROI</b> = laba bersih÷spend. Baris merah = rugi. Diurut dari laba terbesar.</p>
           {perf.length === 0 ? (
             <p className="text-xs text-muted-foreground py-2">Belum ada spend/atribusi di periode ini.</p>
           ) : (
             <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Campaign</TableHead><TableHead className="text-right">Spend</TableHead><TableHead className="text-right">Lead</TableHead>
-                  <TableHead className="text-right">Closing</TableHead><TableHead className="text-right">Delivered</TableHead>
-                  <TableHead className="text-right">CPR</TableHead><TableHead className="text-right">CPA</TableHead><TableHead className="text-right">CPA Final</TableHead>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead className="text-right">Spend</TableHead>
+                  <TableHead className="text-right">Lead</TableHead>
+                  <TableHead className="text-right">Order</TableHead>
+                  <TableHead className="text-right">Terkirim</TableHead>
+                  <TableHead className="text-right">Retur%</TableHead>
+                  <TableHead className="text-right">CPA Final</TableHead>
+                  <TableHead className="text-right">BEP CPA</TableHead>
+                  <TableHead className="text-right">Laba Bersih</TableHead>
+                  <TableHead className="text-right">ROI</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
-                  {perf.map(p => (
-                    <TableRow key={p.campaign_id}>
-                      <TableCell className="text-xs">{p.campaign_name} <span className="text-muted-foreground">({p.platform})</span></TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">Rp {Number(p.spend_total).toLocaleString('id-ID')}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.leads}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.attributed_orders}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.delivered_orders}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.cpr != null && Number.isFinite(Number(p.cpr)) ? formatRupiah(Number(p.cpr)) : '—'}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{p.cpa != null && Number.isFinite(Number(p.cpa)) ? formatRupiah(Number(p.cpa)) : '—'}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums font-medium text-emerald-600">{p.cpa_final != null && Number.isFinite(Number(p.cpa_final)) ? formatRupiah(Number(p.cpa_final)) : '—'}</TableCell>
-                    </TableRow>
-                  ))}
+                  {[...perf].sort((a, b) => Number(b.net_profit) - Number(a.net_profit)).map(p => {
+                    const deliv = Number(p.delivered), ret = Number(p.retur)
+                    const rr = (deliv + ret) > 0 ? (ret / (deliv + ret)) * 100 : 0
+                    const bep = deliv > 0 ? Number(p.gross_profit) / deliv : null
+                    const cpaF = p.cpa_final != null && Number.isFinite(Number(p.cpa_final)) ? Number(p.cpa_final) : null
+                    const win = Number(p.net_profit) >= 0
+                    return (
+                      <TableRow key={p.campaign_id} className={win ? '' : 'bg-red-500/5'}>
+                        <TableCell className="text-xs font-medium">{p.campaign_name} <span className="text-muted-foreground font-normal">({p.platform})</span></TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{formatRupiah(Number(p.spend))}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{Number(p.leads)}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{Number(p.total_order)}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{deliv}</TableCell>
+                        <TableCell className={`text-right text-xs tabular-nums ${rr >= 25 ? 'text-red-600 font-semibold' : rr >= 10 ? 'text-amber-600' : 'text-muted-foreground'}`}>{rr.toFixed(0)}%</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{cpaF != null ? formatRupiah(cpaF) : '—'}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums text-muted-foreground" title="CPA maksimum sebelum rugi (laba kotor ÷ terkirim)">{bep != null ? formatRupiah(Math.round(bep)) : '—'}</TableCell>
+                        <TableCell className={`text-right text-xs tabular-nums font-semibold ${win ? 'text-emerald-600' : 'text-red-600'}`}>{formatRupiah(Number(p.net_profit))}</TableCell>
+                        <TableCell className={`text-right text-xs tabular-nums font-semibold ${win ? 'text-emerald-600' : 'text-red-600'}`}>{p.roi != null && Number.isFinite(Number(p.roi)) ? Number(p.roi).toFixed(0) + '%' : '—'}</TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -22,6 +22,30 @@ const n = (v: unknown) => Number(v) || 0
 const money = (v: number) => <span className={`tabular-nums ${v < 0 ? 'text-rose-600 font-semibold' : v > 0 ? 'text-emerald-600' : 'text-muted-foreground'}`}>{formatRupiah(v)}</span>
 const ret = (v: number) => <span className={`tabular-nums ${v >= 20 ? 'text-rose-600 font-semibold' : v >= 10 ? 'text-amber-600' : ''}`}>{v}%</span>
 
+// rupiah ringkas buat sel matriks (2.1jt / -600rb)
+const rpShort = (v: number): string => {
+  const a = Math.abs(v), s = v < 0 ? '-' : ''
+  if (a >= 1e6) return `${s}${(a / 1e6).toFixed(1)}jt`
+  if (a >= 1e3) return `${s}${Math.round(a / 1e3)}rb`
+  return `${s}${Math.round(a)}`
+}
+type ProdMetric = 'net' | 'roi' | 'retur' | 'order'
+const cellVal = (r: Record<string, unknown> | undefined, m: ProdMetric) => {
+  const dot = <span className="text-muted-foreground/30">·</span>
+  if (!r) return dot
+  if (m === 'roi') { if (r.roi == null) return dot; const v = n(r.roi); return <span className={v > 0 ? 'text-emerald-600 font-medium' : 'text-rose-600 font-medium'}>{v.toFixed(0)}%</span> }
+  if (m === 'retur') { if (n(r.delivered) + n(r.retur) === 0) return dot; const rr = n(r.return_rate); return <span className={rr >= 20 ? 'text-rose-600 font-semibold' : rr >= 10 ? 'text-amber-600' : ''}>{rr}%</span> }
+  if (m === 'order') { const o = n(r.total_order); return o > 0 ? <span>{o}</span> : dot }
+  const v = n(r.net_profit); return <span className={v > 0 ? 'text-emerald-600 font-medium' : v < 0 ? 'text-rose-600 font-medium' : 'text-muted-foreground'}>{rpShort(v)}</span>
+}
+interface PTotal { net: number; spend: number; order: number; deliv: number; ret: number }
+const totalCell = (t: PTotal, m: ProdMetric) => {
+  if (m === 'roi') { if (t.spend <= 0) return <span className="text-muted-foreground/30">·</span>; const v = (t.net / t.spend) * 100; return <span className={v > 0 ? 'text-emerald-600' : 'text-rose-600'}>{v.toFixed(0)}%</span> }
+  if (m === 'retur') { const d = t.deliv + t.ret; if (d === 0) return <span className="text-muted-foreground/30">·</span>; const rr = Math.round((t.ret / d) * 100); return <span className={rr >= 20 ? 'text-rose-600' : ''}>{rr}%</span> }
+  if (m === 'order') return <span>{t.order}</span>
+  return <span className={t.net > 0 ? 'text-emerald-600' : t.net < 0 ? 'text-rose-600' : ''}>{rpShort(t.net)}</span>
+}
+
 type Tab = 'campaign' | 'cs' | 'produk'
 
 export default function PerformaPage() {
@@ -36,6 +60,26 @@ export default function PerformaPage() {
   const [cs, setCs] = useState<Record<string, unknown>[]>([])
   const [prod, setProd] = useState<Record<string, unknown>[]>([])
   const [err, setErr] = useState(false)
+  const [prodMetric, setProdMetric] = useState<ProdMetric>('net')
+
+  // Pivot prod (flat produk×platform) -> matriks: rows=produk, cols=platform
+  const matrix = useMemo(() => {
+    const PLATS = ['META', 'GOOGLE', 'TIKTOK', 'SNACK']
+    const platSet = new Set<string>()
+    const pm = new Map<string, { name: string; cells: Record<string, Record<string, unknown>>; total: PTotal }>()
+    for (const r of prod) {
+      const name = String(r.product_name), plat = String(r.platform)
+      platSet.add(plat)
+      if (!pm.has(name)) pm.set(name, { name, cells: {}, total: { net: 0, spend: 0, order: 0, deliv: 0, ret: 0 } })
+      const row = pm.get(name)!
+      row.cells[plat] = r
+      row.total.net += n(r.net_profit); row.total.spend += n(r.ad_spend)
+      row.total.order += n(r.total_order); row.total.deliv += n(r.delivered); row.total.ret += n(r.retur)
+    }
+    const cols = [...PLATS.filter(p => platSet.has(p)), ...[...platSet].filter(p => !PLATS.includes(p)).sort()]
+    const rows = [...pm.values()].sort((a, b) => b.total.net - a.total.net)
+    return { cols, rows }
+  }, [prod])
 
   const load = useCallback(async () => {
     if (!canView) return
@@ -144,32 +188,38 @@ export default function PerformaPage() {
               </TableBody>
             </Table>
           ) : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Produk</TableHead><TableHead>Platform</TableHead>
-                <TableHead className="text-right">Order</TableHead><TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Sampai</TableHead><TableHead className="text-right">Retur</TableHead>
-                <TableHead className="text-right">Retur%</TableHead><TableHead className="text-right">Penjualan</TableHead>
-                <TableHead className="text-right">Omset</TableHead><TableHead className="text-right">Gross Profit</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {prod.length === 0 ? <TableRow><TableCell colSpan={10} className="py-10 text-center text-sm text-muted-foreground">Belum ada data.</TableCell></TableRow>
-                : prod.map((r, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="text-xs font-medium">{String(r.product_name)}</TableCell>
-                    <TableCell className="text-xs">{String(r.platform)}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{n(r.total_order)}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{n(r.qty)}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{n(r.delivered)}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{n(r.retur)}</TableCell>
-                    <TableCell className="text-right text-xs">{ret(n(r.return_rate))}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{formatRupiah(n(r.penjualan))}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{formatRupiah(n(r.omset))}</TableCell>
-                    <TableCell className="text-right text-xs">{money(n(r.gross_profit))}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="p-3 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground">Tampilkan:</span>
+                <div className="inline-flex rounded-md border p-0.5 text-xs">
+                  {([['net', 'Laba Bersih'], ['roi', 'ROI'], ['retur', 'Retur%'], ['order', 'Order']] as [ProdMetric, string][]).map(([k, l]) => (
+                    <button key={k} onClick={() => setProdMetric(k)} className={`px-2.5 h-7 rounded ${prodMetric === k ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              {matrix.rows.length === 0 ? <p className="py-10 text-center text-sm text-muted-foreground">Belum ada data.</p> : (
+                <div className="overflow-x-auto">
+                  <table className="text-xs border-collapse min-w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 sticky left-0 bg-card z-10">Produk</th>
+                        {matrix.cols.map(c => <th key={c} className="text-right p-2 whitespace-nowrap font-medium">{c === '(tanpa platform)' ? '(tanpa)' : c}</th>)}
+                        <th className="text-right p-2 font-semibold border-l">TOTAL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matrix.rows.map(row => (
+                        <tr key={row.name} className="border-b hover:bg-muted/30">
+                          <td className="p-2 font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{row.name}</td>
+                          {matrix.cols.map(c => <td key={c} className="text-right p-2 tabular-nums">{cellVal(row.cells[c], prodMetric)}</td>)}
+                          <td className="text-right p-2 tabular-nums font-semibold border-l">{totalCell(row.total, prodMetric)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

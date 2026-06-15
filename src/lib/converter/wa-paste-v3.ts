@@ -143,10 +143,35 @@ function normalizePhoneId(raw: string): string {
   return d.startsWith('8') ? '0' + d : d
 }
 
-/** "Rp 15.000" / "15000" / "Rp140.000,-" → number. Null kalau gak ada digit. */
+/**
+ * Parse nilai rupiah dari string yang bisa berisi ekspresi aritmatik.
+ * "Rp 15.000"            → 15000
+ * "15000"                → 15000
+ * "Rp140.000,-"          → 140000
+ * "1.500.000"            → 1500000
+ * "99.000 x 2 = 198.000" → 99000  (ambil nilai PERTAMA sebelum operator)
+ * Null kalau tidak ada angka sama sekali.
+ *
+ * ⚠ Jangan pakai replace(/\D/g,'') — kalau ada ekspresi aritmatik seperti
+ * "99.000 x 2 = 198.000" semua karakter non-digit di-strip → "990002198000"
+ * yang lalu disimpan sebagai harga 990 miliar (data corruption).
+ */
 function parseRupiah(raw: string): number | null {
-  const digits = (raw ?? '').replace(/\D/g, '')
-  return digits ? Number(digits) : null
+  const text = (raw ?? '').trim()
+  if (!text) return null
+  // Strip Rp / IDR prefix
+  const clean = text.replace(/^(Rp\.?\s*|IDR\s*)/i, '').trim()
+  // Ambil sequence digit+separator pertama (berhenti di spasi/operator aritmatik)
+  const m = clean.match(/^[\d.,]+/)
+  if (m) {
+    const n = Number(m[0].replace(/[.,]/g, ''))
+    // Sanity cap 10 miliar — harga produk COD tak mungkin sebesar itu
+    if (Number.isFinite(n) && n > 0 && n < 10_000_000_000) return n
+  }
+  // Fallback: string pure digit tanpa separator (e.g. "198000")
+  const digits = clean.replace(/[^0-9]/g, '').slice(0, 10) // max 10 digit
+  const n = Number(digits)
+  return digits && Number.isFinite(n) && n > 0 ? n : null
 }
 
 // Brief #14 — kode atribusi nempel di akhir "Produk:" → "Nama Produk P.A.C".

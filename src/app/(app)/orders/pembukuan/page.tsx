@@ -76,7 +76,7 @@ export default function PembukuanPage() {
     const p_to = allTime ? null : range.to
     try {
       const [lp, lr] = await Promise.all([
-        supabase.rpc('list_pembukuan', { p_from, p_to, p_status: status === 'all' ? null : status, p_search: search.trim() || null, p_limit: 2000, p_offset: 0 }),
+        supabase.rpc('list_pembukuan', { p_from, p_to, p_status: status === 'all' ? null : status, p_search: search.trim() || null, p_limit: 5000, p_offset: 0 }).range(0, 4999),
         canFinance ? supabase.rpc('laba_rugi_summary', { p_from, p_to }) : Promise.resolve({ data: null, error: null }),
       ])
       if (lp.error) throw lp.error

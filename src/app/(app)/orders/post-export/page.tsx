@@ -47,8 +47,8 @@ export default function PostExportPage() {
     try {
       const { data, error } = await supabase.rpc('list_orders_draft_enriched', {
         p_from: dateFrom || null, p_to: dateTo || null, p_status: null,
-        p_search: search.trim() || null, p_limit: 2000, p_offset: 0, p_exported: true,
-      })
+        p_search: search.trim() || null, p_limit: 5000, p_offset: 0, p_exported: true,
+      }).range(0, 4999)
       if (error) throw error
       setRows((data || []) as OrderDraftEnriched[])
     } catch (e) { console.warn('post-export load failed:', e); setErr(true) } finally { setLoading(false) }

@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,7 +40,9 @@ interface CaseOrder {
 
 export default function CrmDetailPage() {
   const params = useParams<{ order_id: string }>()
+  const searchParams = useSearchParams()
   const orderId = Number(params.order_id)
+  const source = (searchParams.get('source') ?? 'draft') as 'draft' | 'final'
   const router = useRouter()
   const { user, role } = useAuth()
 
@@ -64,17 +66,20 @@ export default function CrmDetailPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await supabase.from('orders')
-        .select('id, order_number, customer_name, customer_phone, status, problem_type, crm_status, reject_reason, cs_id, cs_name, assigned_to, sla_due_at, problem_opened_at, last_contact_at, cs_attempts, resi, total')
-        .eq('id', orderId).maybeSingle()
-      setOrder((data as CaseOrder) || null)
-      if (data) setActivities(await listCrmActivities(supabase, orderId))
+      const table = source === 'draft' ? 'orders_draft' : 'orders'
+      const COLS = 'id, order_number, customer_name, customer_phone, status, problem_type, crm_status, reject_reason, cs_id, cs_name, assigned_to, sla_due_at, problem_opened_at, last_contact_at, cs_attempts, tracking_no, total'
+      const { data } = await supabase.from(table).select(COLS).eq('id', orderId).maybeSingle()
+      // Normalise: draft pakai tracking_no sebagai resi
+      const row = data ? { ...data, resi: (data as Record<string, unknown>).tracking_no ?? null } : null
+      setOrder((row as CaseOrder) || null)
+      // crm_activities FK ke orders — hanya ada untuk final orders
+      if (data && source === 'final') setActivities(await listCrmActivities(supabase, orderId))
     } catch {
       setOrder(null)
     } finally {
       setLoading(false)
     }
-  }, [orderId])
+  }, [orderId, source])
 
   useEffect(() => { load() }, [load])
 
@@ -103,7 +108,8 @@ export default function CrmDetailPage() {
     if (!order) return
     setSaving(true)
     try {
-      const { error } = await supabase.from('orders').update({ problem_type: pt }).eq('id', orderId)
+      const table = source === 'draft' ? 'orders_draft' : 'orders'
+      const { error } = await supabase.from(table).update({ problem_type: pt }).eq('id', orderId)
       if (error) throw error
       toast.success(`Tipe diubah ke ${CRM_PROBLEM_TYPE_LABEL[pt]}`)
       await load()
@@ -116,7 +122,8 @@ export default function CrmDetailPage() {
     if (!order) return
     setSaving(true)
     try {
-      const { error } = await supabase.from('orders').update({ crm_status: 'ESCALATED' }).eq('id', orderId)
+      const table = source === 'draft' ? 'orders_draft' : 'orders'
+      const { error } = await supabase.from(table).update({ crm_status: 'ESCALATED' }).eq('id', orderId)
       if (error) throw error
       // notif ke owner/admin (best-effort)
       try {
@@ -138,7 +145,7 @@ export default function CrmDetailPage() {
   const doResolve = async () => {
     setSaving(true)
     try {
-      await resolveCrmCase(supabase, orderId, outcome, note.trim() || null)
+      await resolveCrmCase(supabase, orderId, source, outcome, note.trim() || null)
       toast.success(`Kasus selesai → ${outcome}`)
       router.push('/crm')
     } catch (err) {

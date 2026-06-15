@@ -1629,6 +1629,7 @@ export interface CrmCase {
   days_in_problem: number
   is_overdue: boolean
   can_act: boolean
+  source: 'draft' | 'final'
   total_count: number
 }
 

@@ -48,11 +48,13 @@ export async function listCrmActivities(supabase: SupabaseClient, orderId: numbe
 export async function resolveCrmCase(
   supabase: SupabaseClient,
   orderId: number,
+  source: 'draft' | 'final',
   outcome: CrmResolveOutcome,
   note?: string | null
 ): Promise<void> {
   const { error } = await supabase.rpc('resolve_crm_case', {
     p_order_id: orderId,
+    p_source: source,
     p_outcome: outcome,
     p_note: note ?? null,
   })

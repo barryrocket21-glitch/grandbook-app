@@ -1,0 +1,9 @@
+-- 133 — CRM draft-aware: list_crm_cases + resolve_crm_case baca orders_draft.
+-- Applied via Supabase MCP (crm_draft_aware).
+-- Lihat isi lengkap di migration yang di-apply.
+-- Summary:
+--   1) ADD COLUMN orders_draft: problem_type, crm_status, sla_due_at, problem_opened_at, assigned_to
+--   2) CREATE TRIGGER trg_set_crm_on_problem ON orders_draft (reuse set_crm_on_problem)
+--   3) BACKFILL: 105 PROBLEM orders → crm_status=OPEN, sla_due_at=+48h, problem_type=EKSPEDISI
+--   4) list_crm_cases: UNION orders_draft + orders, tambah kolom source
+--   5) resolve_crm_case: signature baru (p_source TEXT), handle orders_draft

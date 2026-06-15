@@ -140,7 +140,7 @@ export default function CrmPage() {
                   return (
                     <TableRow key={c.id} className={c.is_overdue ? 'bg-red-500/5' : ''}>
                       <TableCell className="text-xs font-mono">
-                        <Link href={`/crm/${c.id}`} className="hover:underline">{c.order_number}</Link>
+                        <Link href={`/crm/${c.id}?source=${c.source ?? 'draft'}`} className="hover:underline">{c.order_number}</Link>
                       </TableCell>
                       <TableCell className="text-sm">
                         {c.customer_name || '—'}
@@ -166,7 +166,7 @@ export default function CrmPage() {
                             </Button>
                           </a>
                         )}
-                        <Link href={`/crm/${c.id}`}><Button variant="ghost" size="sm">Detail →</Button></Link>
+                        <Link href={`/crm/${c.id}?source=${c.source ?? 'draft'}`}><Button variant="ghost" size="sm">Detail →</Button></Link>
                       </TableCell>
                     </TableRow>
                   )

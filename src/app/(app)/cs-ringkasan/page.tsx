@@ -21,7 +21,7 @@ const isoToday = () => { const d = new Date(); return d.toISOString().slice(0, 1
 const isoOffset = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10) }
 const num = (v: unknown) => Number(v) || 0
 
-interface CsRow { user_id: string; full_name: string; leads_reported: number; closing_reported: number; retur_rate: number; top_product_name: string | null }
+interface CsRow { user_id: string; full_name: string; leads_reported: number; closing_reported: number; retur_rate: number; retur_count: number; total_orders: number; top_product_name: string | null }
 interface ProdRow { product_id: number; name: string; leads: number; closing: number }
 interface DimRow { cs_id: string; cs_name: string; product_id: number; product_name: string; platform: string; orders: number; delivered: number; retur: number }
 interface MCell { o: number; d: number; r: number }
@@ -139,9 +139,10 @@ export default function CsRingkasanPage() {
   return (
     <div className="space-y-4">
       <PageHeader icon={MessageCircle} title="Ringkasan CS"
-        description="Performa semua CS sekaligus — lead, closing, close rate. Klik CS buat breakdown per produk."
+        description="Lead, closing, close rate, dan retur per CS. Retur% merah = ≥20% (bahaya). Klik CS → breakdown per produk."
         actions={
           <div className="flex gap-2">
+            <Link href="/performa"><Button variant="outline" size="sm" className="gap-1.5">Performa Detail →</Button></Link>
             <Link href="/cs-report"><Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5"><Pencil className="w-3.5 h-3.5" /> Input Laporan</Button></Link>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></Button>
           </div>
@@ -178,11 +179,13 @@ export default function CsRingkasanPage() {
               <TableHeader><TableRow>
                 <TableHead className="w-8"></TableHead><TableHead>CS</TableHead>
                 <TableHead className="text-right">Lead</TableHead><TableHead className="text-right">Closing</TableHead>
-                <TableHead className="text-center">Rate</TableHead><TableHead className="text-right">Retur%</TableHead>
+                <TableHead className="text-center">Close Rate</TableHead>
+                <TableHead className="text-right" title="% retur dari order final (DITERIMA+RETUR). ≥20% = bahaya merah">Retur% ⚠</TableHead>
+                <TableHead className="text-right">Jml Retur</TableHead>
                 <TableHead>Produk Top</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {csRows.length === 0 ? <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">Belum ada laporan CS di periode ini.</TableCell></TableRow>
+                {csRows.length === 0 ? <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">Belum ada laporan CS di periode ini.</TableCell></TableRow>
                 : csRows.map((r, i) => {
                   const rt = rate(num(r.leads_reported), num(r.closing_reported))
                   const open = openCs === r.user_id
@@ -194,13 +197,16 @@ export default function CsRingkasanPage() {
                         <TableCell className="text-right text-sm tabular-nums">{formatNumber(num(r.leads_reported))}</TableCell>
                         <TableCell className="text-right text-sm tabular-nums font-medium">{formatNumber(num(r.closing_reported))}</TableCell>
                         <TableCell className="text-center">{rateBadge(rt)}</TableCell>
-                        <TableCell className="text-right text-sm tabular-nums text-muted-foreground">{num(r.retur_rate).toFixed(1)}%</TableCell>
+                        <TableCell className="text-right text-sm tabular-nums font-semibold">
+                          {(() => { const rr = num(r.retur_rate); return <span className={rr >= 20 ? 'text-rose-600' : rr >= 10 ? 'text-amber-600' : 'text-muted-foreground'}>{rr.toFixed(1)}%</span> })()}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums text-muted-foreground">{num(r.retur_count) || '—'}</TableCell>
                         <TableCell className="text-sm">{r.top_product_name || '—'}</TableCell>
                       </TableRow>
                       {open && (
                         <TableRow className="bg-muted/30">
                           <TableCell></TableCell>
-                          <TableCell colSpan={6} className="py-2">
+                          <TableCell colSpan={7} className="py-2">
                             {drillLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : drill.length === 0 ? <span className="text-xs text-muted-foreground">Gak ada breakdown produk.</span> : (
                               <div className="space-y-1">
                                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Breakdown per produk — {r.full_name}</div>

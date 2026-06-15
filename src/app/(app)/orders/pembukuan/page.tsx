@@ -1,14 +1,4 @@
 'use client'
-// =============================================================
-// Pembukuan (Satu Tampilan) — sekarang LEDGER KEUANGAN per-order.
-// Union orders_draft (jalan) + orders (terminal) jadi satu tabel; status =
-// kolom filter. Dua mode tampilan:
-//   • Ringkas    — operasional (tanggal, customer, produk, total, resi)
-//   • Keuangan   — P&L per baris: Penjualan→Omset→Gross Profit (EST vs Aktual)
-//                  + Dicairkan. Cuma owner/admin/akunting.
-// Ringkasan atas = laba_rugi_summary(range) → Proyeksi vs Realisasi + Laba
-// Bersih (setelah ad spend & opex periode). Angka rekonsil 1:1 dgn /laba-rugi.
-// =============================================================
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -19,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
-import { BookOpen, Loader2, Search, RefreshCw, Wand2, TrendingUp, TrendingDown, Wallet, Receipt } from 'lucide-react'
+import { BookOpen, Loader2, Search, RefreshCw, Wand2, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah } from '@/lib/format'
 import { OrderDetailSheet } from '@/components/orders/order-detail-sheet'
@@ -55,7 +45,6 @@ const ZONE_COLOR: Record<string, string> = {
 }
 const n = (v: unknown) => Number(v) || 0
 
-// Sel uang berwarna: hijau (+), merah (−), abu kalau null (belum final)
 function Money({ v, bold }: { v: number | null | undefined; bold?: boolean }) {
   if (v === null || v === undefined) return <span className="text-muted-foreground/50">—</span>
   const neg = v < 0
@@ -74,11 +63,12 @@ export default function PembukuanPage() {
   const [status, setStatus] = useState('all')
   const [view, setView] = useState<'ringkas' | 'keuangan'>('ringkas')
   const [range, setRange] = useState<DateRange>(thisMonth)
-  const [allTime, setAllTime] = useState(true) // default: semua periode (biar semua order kelihatan)
-  const [zoneFilter, setZoneFilter] = useState<string | null>(null) // klik chip zona = filter
-  const [detail, setDetail] = useState<{ source: 'draft' | 'final'; id: number } | null>(null) // klik baris = detail
-  const [page, setPage] = useState(0) // pagination
-  const [pageSize, setPageSize] = useState(50) // baris per halaman (pilihan)
+  const [allTime, setAllTime] = useState(true)
+  const [zoneFilter, setZoneFilter] = useState<string | null>(null)
+  const [detail, setDetail] = useState<{ source: 'draft' | 'final'; id: number } | null>(null)
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(50)
+  const [pnlOpen, setPnlOpen] = useState(false) // collapsed by default
 
   const load = useCallback(async () => {
     setLoading(true); setErr(false)
@@ -94,6 +84,7 @@ export default function PembukuanPage() {
       setSummary(lr.error ? null : ((lr.data?.[0] ?? null) as LabaRugi | null))
     } catch (e) { console.warn('pembukuan load:', e); setErr(true) } finally { setLoading(false) }
   }, [status, search, allTime, range.from, range.to, canFinance])
+
   useEffect(() => { void load() }, [load])
 
   const total = rows[0]?.total_count ?? rows.length
@@ -102,13 +93,12 @@ export default function PembukuanPage() {
     for (const r of rows) m[r.zone] = (m[r.zone] || 0) + 1
     return m
   }, [rows])
-  const totalDicair = useMemo(() => rows.reduce((s, r) => s + n(r.dicairkan), 0), [rows])
 
-  // Filter zona (klik chip) di atas hasil server — biar bisa "filter tracking + liat total"
   const displayed = useMemo(() => zoneFilter ? rows.filter(r => r.zone === zoneFilter) : rows, [rows, zoneFilter])
   const totalPages = Math.max(1, Math.ceil(displayed.length / pageSize))
   const paged = useMemo(() => displayed.slice(page * pageSize, (page + 1) * pageSize), [displayed, page, pageSize])
   useEffect(() => { setPage(0) }, [zoneFilter, status, search, allTime, range.from, range.to, view, pageSize])
+
   const totals = useMemo(() => displayed.reduce((a, r) => ({
     n: a.n + 1, total: a.total + n(r.penjualan),
     est_gp: a.est_gp + n(r.est_gross_profit),
@@ -116,10 +106,15 @@ export default function PembukuanPage() {
     dicair: a.dicair + n(r.dicairkan),
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
+  // Hitung retur rate dari row yang ada
+  const deliveredCount = counts['Arsip (Delivered)'] || 0
+  const returCount = counts['Retur'] || 0
+  const returRate = deliveredCount + returCount > 0
+    ? Math.round(returCount / (deliveredCount + returCount) * 100)
+    : null
+
   const cols = view === 'keuangan' && canFinance ? 17 : 11
-  // tanggal singkat 04/06/26
   const fmtShort = (d: string) => { const x = new Date(d); const p = (v: number) => String(v).padStart(2, '0'); return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)}` }
-  // freeze 4 kolom kiri (Tanggal·Order#·Nama·Status) — nempel pas scroll kanan
   const FROZEN = [{ left: 0, width: 82 }, { left: 82, width: 148 }, { left: 230, width: 120 }, { left: 350, width: 110 }]
   const fzTh = (i: number): React.CSSProperties => ({ position: 'sticky', top: 0, left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 30 })
   const fzTd = (i: number): React.CSSProperties => ({ position: 'sticky', left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 20 })
@@ -127,7 +122,7 @@ export default function PembukuanPage() {
   return (
     <div className="space-y-4">
       <PageHeader icon={BookOpen} title="Pembukuan (Satu Tampilan)"
-        description="Ledger semua order dalam satu tabel — operasional + keuangan (P&L Proyeksi vs Realisasi + Dicairkan). Order yang udah delivered/retur/batal tetap di sini (pindah status, bukan ilang)."
+        description="Semua order dari draft sampai selesai — dalam satu ledger."
         actions={
           <a href="/marketing/distribusi" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-sm hover:bg-muted"><Wand2 className="w-3.5 h-3.5" /> Distribusi Atribusi</a>
         } />
@@ -154,59 +149,101 @@ export default function PembukuanPage() {
         </CardContent>
       </Card>
 
-      {/* Ringkasan keuangan (owner/admin/akunting) */}
-      {canFinance && (
-        <div className="grid gap-3 lg:grid-cols-[1fr_1.4fr]">
-          {/* Headline cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard icon={total ? TrendingUp : TrendingUp} label="Order" value={`${total}`} sub={`${counts['Arsip (Delivered)'] || 0} delivered`} />
-            <StatCard icon={(summary && n(summary.act_gross_profit) < 0) ? TrendingDown : TrendingUp} label="Gross Profit (Realisasi)" value={formatRupiah(summary ? n(summary.act_gross_profit) : 0)} money={summary ? n(summary.act_gross_profit) : 0} />
-            <StatCard icon={Wallet} label="Laba Bersih (Realisasi)" value={formatRupiah(summary ? n(summary.laba_bersih_act) : 0)} money={summary ? n(summary.laba_bersih_act) : 0} sub="setelah iklan + opex" />
-            <StatCard icon={Receipt} label="Total Dicairkan" value={formatRupiah(totalDicair)} sub="COD masuk rekening" />
-          </div>
-          {/* P&L cascade: Proyeksi vs Realisasi */}
-          <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-1 text-sm">
-                <div className="text-xs font-medium text-muted-foreground"></div>
-                <div className="text-xs font-medium text-muted-foreground text-right">Proyeksi</div>
-                <div className="text-xs font-medium text-muted-foreground text-right">Realisasi</div>
-                <PnlRow label="Penjualan (barang)" est={summary?.est_penjualan} act={summary?.act_penjualan} />
-                <PnlRow label="+ Selisih Ongkir" est={summary?.est_selisih_ongkir} act={summary?.act_selisih_ongkir} sub />
-                <PnlRow label="− Biaya Admin (Fee COD+PPN)" est={summary?.est_fee_admin} act={summary?.act_fee_admin} sub />
-                <PnlRow label="= Omset" est={summary?.est_omset} act={summary?.act_omset} strong />
-                <PnlRow label="− HPP" est={summary?.est_hpp} act={summary?.act_hpp} sub />
-                <PnlRow label="− Fee CS" est={summary?.est_fee_cs} act={summary?.act_fee_cs} sub />
-                <PnlRow label="= Gross Profit" est={summary?.est_gross_profit} act={summary?.act_gross_profit} strong />
-                <PnlRow label="− Biaya Iklan" est={summary?.total_ad_spend} act={summary?.total_ad_spend} sub />
-                <PnlRow label="− Biaya Operasional" est={summary?.total_opex} act={summary?.total_opex} sub />
-                <div className="col-span-3 border-t border-foreground/10 mt-1" />
-                <PnlRow label="LABA BERSIH" est={summary?.laba_bersih_est} act={summary?.laba_bersih_act} strong big />
-              </div>
-              <div className="mt-2 text-[11px] text-muted-foreground">Realisasi = akrual (revenue diakui pas delivered). Proyeksi = kalau semua order sukses. <a href="/laba-rugi" className="text-violet-500 hover:underline">Laporan lengkap →</a></div>
-            </CardContent>
-          </Card>
+      {/* Compact summary bar — 1 baris, semua role */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-1">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+          <span className="text-muted-foreground">
+            <span className="font-semibold text-foreground">{total.toLocaleString('id-ID')}</span> order total
+          </span>
+          {deliveredCount > 0 && (
+            <span className="text-muted-foreground">
+              <span className="font-semibold text-emerald-600">{deliveredCount.toLocaleString('id-ID')}</span> delivered
+            </span>
+          )}
+          {returCount > 0 && (
+            <span className="text-muted-foreground">
+              <span className={`font-semibold ${returRate !== null && returRate >= 25 ? 'text-rose-600' : 'text-orange-500'}`}>
+                {returCount.toLocaleString('id-ID')} retur {returRate !== null ? `(${returRate}%)` : ''}
+              </span>
+            </span>
+          )}
+          {(counts['Problem'] || 0) > 0 && (
+            <span className="text-orange-600 font-semibold">
+              ⚠ {counts['Problem']} problem
+            </span>
+          )}
+          {canFinance && summary && (
+            <span className="text-muted-foreground">
+              Laba Bersih:{' '}
+              <span className={`font-semibold tabular-nums ${n(summary.laba_bersih_act) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                {formatRupiah(n(summary.laba_bersih_act))}
+              </span>
+              <span className="text-xs text-muted-foreground/60 ml-1">(realisasi)</span>
+            </span>
+          )}
         </div>
+
+        <div className="flex items-center gap-2">
+          {/* Toggle view Ringkas/Keuangan */}
+          {canFinance && (
+            <div className="inline-flex rounded-md border p-0.5">
+              <button onClick={() => setView('ringkas')} className={`px-3 h-7 text-xs rounded ${view === 'ringkas' ? 'bg-violet-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>Ringkas</button>
+              <button onClick={() => setView('keuangan')} className={`px-3 h-7 text-xs rounded flex items-center gap-1 ${view === 'keuangan' ? 'bg-violet-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>
+                <BarChart2 className="w-3 h-3" /> Keuangan
+              </button>
+            </div>
+          )}
+
+          {/* Toggle P&L ringkasan */}
+          {canFinance && (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setPnlOpen(v => !v)}>
+              {pnlOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {pnlOpen ? 'Sembunyikan P&L' : 'Lihat Ringkasan P&L'}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* P&L cascade — collapsible, owner/admin/akunting only */}
+      {canFinance && pnlOpen && (
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 gap-y-1 text-sm max-w-xl">
+              <div className="text-xs font-medium text-muted-foreground col-span-1"></div>
+              <div className="text-xs font-medium text-muted-foreground text-right">Proyeksi</div>
+              <div className="text-xs font-medium text-muted-foreground text-right">Realisasi</div>
+              <PnlRow label="Penjualan (barang)" est={summary?.est_penjualan} act={summary?.act_penjualan} />
+              <PnlRow label="+ Selisih Ongkir" est={summary?.est_selisih_ongkir} act={summary?.act_selisih_ongkir} sub />
+              <PnlRow label="− Biaya Admin (Fee COD+PPN)" est={summary?.est_fee_admin} act={summary?.act_fee_admin} sub />
+              <PnlRow label="= Omset" est={summary?.est_omset} act={summary?.act_omset} strong />
+              <PnlRow label="− HPP" est={summary?.est_hpp} act={summary?.act_hpp} sub />
+              <PnlRow label="− Fee CS" est={summary?.est_fee_cs} act={summary?.act_fee_cs} sub />
+              <PnlRow label="= Gross Profit" est={summary?.est_gross_profit} act={summary?.act_gross_profit} strong />
+              <PnlRow label="− Biaya Iklan" est={summary?.total_ad_spend} act={summary?.total_ad_spend} sub />
+              <PnlRow label="− Biaya Operasional" est={summary?.total_opex} act={summary?.total_opex} sub />
+              <div className="col-span-3 border-t border-foreground/10 mt-1" />
+              <PnlRow label="LABA BERSIH" est={summary?.laba_bersih_est} act={summary?.laba_bersih_act} strong big />
+            </div>
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              Realisasi = akrual (revenue diakui pas delivered). Proyeksi = kalau semua order sukses.{' '}
+              <a href="/laba-rugi" className="text-violet-500 hover:underline">Laporan lengkap →</a>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Zona chips (klik = filter) + view toggle */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Zone chips (klik = filter) */}
+      <div className="flex flex-wrap items-center gap-1.5">
         <button onClick={() => setZoneFilter(null)}
-          className={`text-[11px] px-2 h-6 rounded-full border ${zoneFilter === null ? 'bg-violet-500 text-white border-violet-500' : 'bg-muted text-muted-foreground'}`}>
-          Semua: {rows.length}
+          className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === null ? 'bg-violet-500 text-white border-violet-500' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+          Semua · {rows.length}
         </button>
         {Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([z, c]) => (
           <button key={z} onClick={() => setZoneFilter(zoneFilter === z ? null : z)}
-            className={`text-[11px] px-2 h-6 rounded-full border ${zoneFilter === z ? `ring-2 ring-violet-400 ${ZONE_COLOR[z] || 'bg-muted'}` : (ZONE_COLOR[z] || 'bg-muted')}`}>
-            {z}: {c}
+            className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === z ? `ring-2 ring-violet-400 ${ZONE_COLOR[z] || 'bg-muted'}` : (ZONE_COLOR[z] || 'bg-muted text-muted-foreground')} hover:opacity-80`}>
+            {z} · {c}
           </button>
         ))}
-        {canFinance && (
-          <div className="ml-auto inline-flex rounded-md border p-0.5">
-            <button onClick={() => setView('ringkas')} className={`px-3 h-7 text-xs rounded ${view === 'ringkas' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Ringkas</button>
-            <button onClick={() => setView('keuangan')} className={`px-3 h-7 text-xs rounded ${view === 'keuangan' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Keuangan</button>
-          </div>
-        )}
       </div>
 
       {/* Ledger table */}
@@ -214,32 +251,35 @@ export default function PembukuanPage() {
         <div className="overflow-auto max-h-[70vh]">
           <Table>
             <TableHeader className="[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:bg-card [&>tr>th]:z-10"><TableRow>
-              <TableHead style={fzTh(0)} className="bg-card" title="Tanggal order">Tgl</TableHead><TableHead style={fzTh(1)} className="bg-card" title="Nomor referensi GrandBook">Order#</TableHead><TableHead style={fzTh(2)} className="bg-card" title="Nama pembeli">Nama</TableHead><TableHead style={fzTh(3)} className="bg-card border-r" title="Status / zona pengiriman">Status</TableHead>
+              <TableHead style={fzTh(0)} className="bg-card">Tgl</TableHead>
+              <TableHead style={fzTh(1)} className="bg-card">Order#</TableHead>
+              <TableHead style={fzTh(2)} className="bg-card">Nama</TableHead>
+              <TableHead style={fzTh(3)} className="bg-card border-r">Status</TableHead>
               {view === 'keuangan' && canFinance ? (
                 <>
-                  <TableHead className="max-w-[160px]" title="Produk yang dipesan">Produk</TableHead>
+                  <TableHead className="max-w-[160px]">Produk</TableHead>
                   <TableHead className="text-right" title="Harga barang (belum termasuk ongkir)">Penjualan</TableHead>
-                  <TableHead className="text-right" title="Ongkir yang ditagih ke pembeli (dari CS / input order)">Ongkir CS</TableHead>
-                  <TableHead className="text-right" title="Ongkir asli dari ekspedisi sebelum cashback (dari Sync SPX)">Ongkir Kurir</TableHead>
-                  <TableHead className="text-right" title="Potongan ongkir dari ekspedisi (±40% dari ongkir kurir)">Cashback</TableHead>
-                  <TableHead className="text-right" title="Ongkir CS − ongkir bersih ekspedisi (untung/rugi ongkir)">Selisih Ongkir</TableHead>
-                  <TableHead className="text-right" title="Fee layanan COD ekspedisi (±1%) + PPN">Biaya COD</TableHead>
-                  <TableHead className="text-right" title="Penjualan + Selisih Ongkir − Biaya COD (duit bersih masuk)">Omset</TableHead>
-                  <TableHead className="text-right" title="Modal barang + fee packing">HPP</TableHead>
-                  <TableHead className="text-right" title="Komisi CS per order">Fee CS</TableHead>
-                  <TableHead className="text-right" title="Omset − HPP − Fee CS (asumsi order sukses sampai)">GP Proyeksi</TableHead>
-                  <TableHead className="text-right" title="Gross profit final — cuma order DITERIMA (uang beneran)">GP Realisasi</TableHead>
-                  <TableHead className="text-right" title="COD yang sudah cair dari ekspedisi">Dicairkan</TableHead>
+                  <TableHead className="text-right" title="Ongkir yang ditagih ke pembeli">Ongkir CS</TableHead>
+                  <TableHead className="text-right" title="Ongkir asli dari SPX sebelum cashback">Ongkir Kurir</TableHead>
+                  <TableHead className="text-right" title="Potongan cashback 40% dari ekspedisi">Cashback</TableHead>
+                  <TableHead className="text-right" title="Ongkir CS − ongkir bersih ekspedisi">Selisih Ongkir</TableHead>
+                  <TableHead className="text-right" title="Fee COD 1% + PPN 12%">Biaya COD</TableHead>
+                  <TableHead className="text-right" title="Penjualan + Selisih − Biaya COD">Omset</TableHead>
+                  <TableHead className="text-right" title="Modal barang + packing">HPP</TableHead>
+                  <TableHead className="text-right" title="Komisi CS">Fee CS</TableHead>
+                  <TableHead className="text-right" title="Proyeksi GP (semua order)">GP Proj.</TableHead>
+                  <TableHead className="text-right" title="GP Realisasi — hanya DITERIMA">GP Real.</TableHead>
+                  <TableHead className="text-right" title="COD yang sudah cair ke rekening">Dicairkan</TableHead>
                 </>
               ) : (
                 <>
-                  <TableHead title="Kota tujuan">Kota</TableHead>
-                  <TableHead title="CS yang menangani order">CS</TableHead>
-                  <TableHead title="Produk yang dipesan">Produk</TableHead>
-                  <TableHead className="text-center" title="Jumlah barang">Qty</TableHead>
-                  <TableHead title="Metode pembayaran (COD/Transfer)">Bayar</TableHead>
-                  <TableHead className="text-right" title="Harga barang">Total</TableHead>
-                  <TableHead title="Nomor resi ekspedisi">Resi</TableHead>
+                  <TableHead>Kota</TableHead>
+                  <TableHead>CS</TableHead>
+                  <TableHead>Produk</TableHead>
+                  <TableHead className="text-center">Qty</TableHead>
+                  <TableHead>Bayar</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Resi</TableHead>
                 </>
               )}
             </TableRow></TableHeader>
@@ -307,6 +347,7 @@ export default function PembukuanPage() {
           </Table>
         </div>
       </div>
+
       {!loading && displayed.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="flex items-center gap-2">
@@ -324,19 +365,9 @@ export default function PembukuanPage() {
           </div>
         </div>
       )}
+
       <OrderDetailSheet source={detail?.source ?? null} id={detail?.id ?? null} onClose={() => setDetail(null)} />
     </div>
-  )
-}
-
-function StatCard({ icon: Icon, label, value, sub, money }: { icon: React.ElementType; label: string; value: string; sub?: string; money?: number }) {
-  const color = money === undefined ? '' : money < 0 ? 'text-rose-600' : money > 0 ? 'text-emerald-600' : ''
-  return (
-    <Card><CardContent className="pt-4 pb-3">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Icon className="w-3.5 h-3.5" />{label}</div>
-      <div className={`mt-1 text-lg font-bold tabular-nums ${color}`}>{value}</div>
-      {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
-    </CardContent></Card>
   )
 }
 

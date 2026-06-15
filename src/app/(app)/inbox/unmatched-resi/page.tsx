@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -109,7 +110,7 @@ export default function UnmatchedResiPage() {
       setOrderResults((data as any) || [])
       if ((data || []).length === 0) toast.info('Tidak ada order match.')
     } catch (err: any) {
-      toast.error('Gagal cari', { description: err.message })
+      toast.error('Gagal cari', { description: getErrorMessage(err) })
     } finally {
       setOrderSearching(false)
     }
@@ -163,7 +164,7 @@ export default function UnmatchedResiPage() {
       setActive(null)
       load()
     } catch (err: any) {
-      toast.error('Gagal resolve', { description: err.message })
+      toast.error('Gagal resolve', { description: getErrorMessage(err) })
     } finally {
       setSubmitting(false)
     }

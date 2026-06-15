@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -125,7 +126,7 @@ export default function ReconciliationUploadPage() {
       setPreview(r)
       setStep('preview')
     } catch (err: any) {
-      toast.error('Gagal preview', { description: err.message })
+      toast.error('Gagal preview', { description: getErrorMessage(err) })
     } finally {
       setPreviewLoading(false)
     }
@@ -153,7 +154,7 @@ export default function ReconciliationUploadPage() {
       if (r.errors.length === 0) toast.success(`Selesai: ${r.matched} match, ${r.inbox_unmatched} unmatched`)
       else toast.error(`Selesai dengan ${r.errors.length} error`)
     } catch (err: any) {
-      toast.error('Gagal rekonsil', { description: err.message })
+      toast.error('Gagal rekonsil', { description: getErrorMessage(err) })
       setStep('preview')
     }
   }

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -169,7 +170,7 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
         setProducts((prods || []) as ProductLite[])
         setAdvertisers((advs || []) as AdvertiserLite[])
       } catch (err: any) {
-        toast.error('Gagal load master data', { description: err.message })
+        toast.error('Gagal load master data', { description: getErrorMessage(err) })
       }
     }
     load()

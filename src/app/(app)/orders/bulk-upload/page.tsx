@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -140,7 +141,7 @@ export default function BulkUploadPage() {
       setPreview(r)
       setStep('preview')
     } catch (err: any) {
-      toast.error('Gagal preview', { description: err.message })
+      toast.error('Gagal preview', { description: getErrorMessage(err) })
     } finally {
       setPreviewLoading(false)
     }
@@ -174,7 +175,7 @@ export default function BulkUploadPage() {
         toast.error(`Selesai dengan ${r.errors.length} error`)
       }
     } catch (err: any) {
-      toast.error('Gagal import', { description: err.message })
+      toast.error('Gagal import', { description: getErrorMessage(err) })
       setStep('preview')
     }
   }

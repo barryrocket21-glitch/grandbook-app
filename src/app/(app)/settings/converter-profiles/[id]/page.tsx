@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { use } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -205,7 +206,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
       setFmEditId(null)
       load()
     } catch (err: any) {
-      toast.error('Gagal simpan', { description: err.message })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setFmSaving(false)
     }
@@ -297,7 +298,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
       setVmEditId(null)
       load()
     } catch (err: any) {
-      toast.error('Gagal simpan', { description: err.message })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setVmSaving(false)
     }
@@ -342,7 +343,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
       setBulkSource('')
       load()
     } catch (err: any) {
-      toast.error('Gagal copy', { description: err.message })
+      toast.error('Gagal copy', { description: getErrorMessage(err) })
     } finally {
       setBulkRunning(false)
     }
@@ -372,7 +373,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
         toast.success(`Preview selesai (${result.rows.length} rows ditampilkan, total ${result.totalRowsDetected} terdeteksi)`)
       }
     } catch (err: any) {
-      toast.error('Gagal parse', { description: err.message })
+      toast.error('Gagal parse', { description: getErrorMessage(err) })
     } finally {
       setTestRunning(false)
     }

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -123,7 +124,7 @@ export default function UnmappedStatusesPage() {
       setActive(null)
       load()
     } catch (err: any) {
-      toast.error('Gagal map', { description: err.message })
+      toast.error('Gagal map', { description: getErrorMessage(err) })
     } finally {
       setSubmitting(false)
     }
@@ -148,7 +149,7 @@ export default function UnmappedStatusesPage() {
       setActive(null)
       load()
     } catch (err: any) {
-      toast.error('Gagal abaikan', { description: err.message })
+      toast.error('Gagal abaikan', { description: getErrorMessage(err) })
     } finally {
       setSubmitting(false)
     }

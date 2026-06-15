@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -119,7 +120,7 @@ export default function ReconciliationPage() {
       toast.success('Reconciliation tersimpan', { description: `${payload.length} platform untuk bulan ${month}` })
       load()
     } catch (err: any) {
-      toast.error('Gagal simpan', { description: err.message })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -89,7 +90,7 @@ export default function StatusMappingPage() {
       }
       toast.success(editId ? 'Mapping diupdate' : 'Mapping ditambahkan')
       setOpen(false); reset(); load()
-    } catch (err: any) { toast.error('Gagal simpan', { description: err.message }) }
+    } catch (err: any) { toast.error('Gagal simpan', { description: getErrorMessage(err) }) }
     finally { setSaving(false) }
   }
 
@@ -121,7 +122,7 @@ export default function StatusMappingPage() {
         description: 'Mapping yang sudah ada di target di-skip.',
       })
       setBulkOpen(false); setBulkSource(''); setBulkTarget(''); load()
-    } catch (err: any) { toast.error('Gagal copy', { description: err.message }) }
+    } catch (err: any) { toast.error('Gagal copy', { description: getErrorMessage(err) }) }
     finally { setBulkRunning(false) }
   }
 

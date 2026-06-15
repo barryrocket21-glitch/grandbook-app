@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -77,7 +78,7 @@ export default function CouriersPage() {
       }
       toast.success(editId ? 'Courier diupdate' : 'Courier ditambahkan')
       setOpen(false); reset(); load()
-    } catch (err: any) { toast.error('Gagal simpan', { description: err.message }) }
+    } catch (err: any) { toast.error('Gagal simpan', { description: getErrorMessage(err) }) }
     finally { setSaving(false) }
   }
 
@@ -97,7 +98,7 @@ export default function CouriersPage() {
       }
       toast.success(next ? `${c.name} aktif` : `${c.name} di-disable`)
       load()
-    } catch (err: any) { toast.error('Gagal', { description: err.message }) }
+    } catch (err: any) { toast.error('Gagal', { description: getErrorMessage(err) }) }
   }
 
   const filtered = useMemo(() => {

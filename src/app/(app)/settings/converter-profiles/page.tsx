@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -206,7 +207,7 @@ export default function ConverterProfilesPage() {
         else load()
       }
     } catch (err: any) {
-      toast.error('Gagal simpan', { description: err.message })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }

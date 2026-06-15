@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo, Suspense } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -111,7 +112,7 @@ function ChannelsContent() {
       }
       toast.success(editId ? 'Channel diupdate' : 'Channel ditambahkan')
       setOpen(false); reset(); load()
-    } catch (err: any) { toast.error('Gagal simpan', { description: err.message }) }
+    } catch (err: any) { toast.error('Gagal simpan', { description: getErrorMessage(err) }) }
     finally { setSaving(false) }
   }
 
@@ -123,7 +124,7 @@ function ChannelsContent() {
       if (error) throw error
       toast.success(next ? 'Channel aktif' : 'Channel di-disable')
       load()
-    } catch (err: any) { toast.error('Gagal', { description: err.message }) }
+    } catch (err: any) { toast.error('Gagal', { description: getErrorMessage(err) }) }
   }
 
   const aggregators = useMemo(() => {

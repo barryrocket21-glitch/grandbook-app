@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,7 +43,7 @@ export default function UsersPage() {
       if (!res.ok) throw new Error(json.error || 'Gagal load users')
       setUsers(json.users || [])
     } catch (err: any) {
-      toast.error('Gagal load users', { description: err.message })
+      toast.error('Gagal load users', { description: getErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -71,7 +72,7 @@ export default function UsersPage() {
       toast.success('User berhasil dibuat!', { description: `${form.full_name} (${ROLE_LABELS[form.role]})` })
       setOpen(false); setForm({ email: '', password: '', full_name: '', role: 'admin' }); loadUsers()
     } catch (err: any) {
-      toast.error('Gagal membuat user', { description: err.message })
+      toast.error('Gagal membuat user', { description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }
@@ -90,7 +91,7 @@ export default function UsersPage() {
       toast.success('Database diperbaiki!', { description: 'Coba tambah user lagi sekarang.' })
       setShowSqlHelp(false)
     } catch (err: any) {
-      toast.error('Auto-fix gagal', { description: err.message })
+      toast.error('Auto-fix gagal', { description: getErrorMessage(err) })
     } finally {
       setRepairing(false)
     }
@@ -109,7 +110,7 @@ export default function UsersPage() {
       toast.success(user.active ? 'User dinonaktifkan' : 'User diaktifkan')
       loadUsers()
     } catch (err: any) {
-      toast.error('Gagal', { description: err.message })
+      toast.error('Gagal', { description: getErrorMessage(err) })
     }
   }
 
@@ -122,7 +123,7 @@ export default function UsersPage() {
       toast.success('User dihapus')
       loadUsers()
     } catch (err: any) {
-      toast.error('Gagal hapus', { description: err.message })
+      toast.error('Gagal hapus', { description: getErrorMessage(err) })
     }
   }
 
@@ -139,7 +140,7 @@ export default function UsersPage() {
       toast.success(`Role diubah ke ${ROLE_LABELS[newRole]}`)
       loadUsers()
     } catch (err: any) {
-      toast.error('Gagal ubah role', { description: err.message })
+      toast.error('Gagal ubah role', { description: getErrorMessage(err) })
     }
   }
 
@@ -167,7 +168,7 @@ export default function UsersPage() {
       toast.success('User diupdate')
       setEditTarget(null); loadUsers()
     } catch (err: any) {
-      toast.error('Gagal update', { description: err.message })
+      toast.error('Gagal update', { description: getErrorMessage(err) })
     } finally {
       setEditing(false)
     }
@@ -189,7 +190,7 @@ export default function UsersPage() {
       toast.success('Password direset', { description: `Beritahu ${resetTarget.full_name} password baru.` })
       setResetTarget(null); setNewPassword('')
     } catch (err: any) {
-      toast.error('Gagal reset password', { description: err.message })
+      toast.error('Gagal reset password', { description: getErrorMessage(err) })
     } finally {
       setResetting(false)
     }

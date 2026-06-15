@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { getErrorMessage } from '@/lib/errors'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -128,7 +129,7 @@ export default function NewOrderPage() {
       toast.success(`Order ${orderNumber} masuk Antrian Kerja`)
       router.push('/orders/draft')
     } catch (err: any) {
-      toast.error('Gagal simpan', { description: err.message })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSubmitting(false)
     }

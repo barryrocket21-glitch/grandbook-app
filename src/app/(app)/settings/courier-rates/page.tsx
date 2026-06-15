@@ -143,7 +143,7 @@ export default function CourierRatesPage() {
       }
       toast.success(editId ? 'Rate diupdate' : 'Rate ditambahkan')
       setOpen(false); reset(); load()
-    } catch (err: any) { toast.error('Gagal simpan', { description: err.message }) }
+    } catch (err: any) { toast.error('Gagal simpan', { description: getErrorMessage(err) }) }
     finally { setSaving(false) }
   }
 

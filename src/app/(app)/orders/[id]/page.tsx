@@ -189,7 +189,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setStatusNote('')
       load()
     } catch (err: any) {
-      toast.error('Gagal update status', { description: err.message })
+      toast.error('Gagal update status', { description: getErrorMessage(err) })
     } finally {
       setStatusRunning(false)
     }
@@ -253,7 +253,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setEditing(false)
       load()
     } catch (err: any) {
-      toast.error('Gagal simpan', { description: err.message })
+      toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSavingEdit(false)
     }

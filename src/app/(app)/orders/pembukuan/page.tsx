@@ -236,7 +236,7 @@ export default function PembukuanPage() {
       <div className="flex flex-wrap items-center gap-1.5">
         <button onClick={() => setZoneFilter(null)}
           className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === null ? 'bg-violet-500 text-white border-violet-500' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
-          Semua · {rows.length}
+          Semua · {total.toLocaleString('id-ID')}{rows.length < total ? ` (loaded ${rows.length.toLocaleString('id-ID')})` : ''}
         </button>
         {Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([z, c]) => (
           <button key={z} onClick={() => setZoneFilter(zoneFilter === z ? null : z)}

@@ -69,6 +69,13 @@ export default function PerformaPage() {
   const [err, setErr] = useState(false)
   const [prodMetric, setProdMetric] = useState<ProdMetric>('net')
 
+  // Aggregat total campaign untuk summary bar
+  const campTotals = useMemo(() => {
+    let spend = 0, net = 0, orders = 0, delivered = 0
+    for (const r of camp) { spend += n(r.spend); net += n(r.net_profit); orders += n(r.total_order); delivered += n(r.delivered) }
+    return { spend, net, orders, delivered }
+  }, [camp])
+
   // Pivot prod (flat produk×platform) -> matriks: rows=produk, cols=platform
   const matrix = useMemo(() => {
     const PLATS = ['META', 'GOOGLE', 'TIKTOK', 'SNACK']
@@ -136,6 +143,22 @@ export default function PerformaPage() {
           {loading ? <div className="py-10 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
           : err ? <div className="py-10 text-center text-sm text-rose-600">⚠️ Gagal memuat data — klik Refresh atau cek koneksi.</div>
           : tab === 'campaign' ? (
+            <>
+              {/* Summary bar — aggregate semua campaign */}
+              {camp.length > 0 && (
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2.5 border-b text-sm bg-muted/30">
+                  <span className="text-muted-foreground">{camp.length} campaign</span>
+                  <span className="text-muted-foreground">Total Spend: <span className="font-semibold text-foreground tabular-nums">{formatRupiah(campTotals.spend)}</span></span>
+                  <span className="text-muted-foreground">Total Order: <span className="font-semibold text-foreground">{campTotals.orders}</span></span>
+                  <span className="text-muted-foreground">Sampai: <span className="font-semibold text-foreground">{campTotals.delivered}</span></span>
+                  <span className="text-muted-foreground">Total Laba Bersih:
+                    <span className={`ml-1 font-bold tabular-nums ${campTotals.net < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatRupiah(campTotals.net)}</span>
+                  </span>
+                  {campTotals.spend > 0 && (
+                    <span className="text-muted-foreground">ROI: <span className={`font-semibold ${campTotals.net / campTotals.spend * 100 > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{((campTotals.net / campTotals.spend) * 100).toFixed(0)}%</span></span>
+                  )}
+                </div>
+              )}
             <Table>
               <TableHeader><TableRow>
                 <TH>Campaign</TH>
@@ -173,8 +196,20 @@ export default function PerformaPage() {
                     <TableCell className="text-right text-xs">{money(n(r.net_profit))}</TableCell>
                   </TableRow>
                 ))}
+                {/* Total row */}
+                {camp.length > 0 && (
+                  <TableRow className="bg-muted/40 font-semibold border-t-2 border-foreground/10">
+                    <TableCell className="text-xs" colSpan={3}>TOTAL ({camp.length} campaign)</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{formatRupiah(campTotals.spend)}</TableCell>
+                    <TableCell /><TableCell className="text-right text-xs tabular-nums">{campTotals.orders}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{campTotals.delivered}</TableCell>
+                    <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
+                    <TableCell className="text-right text-xs">{money(campTotals.net)}</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
+            </>
           ) : tab === 'cs' ? (
             <Table>
               <TableHeader><TableRow>

@@ -160,7 +160,7 @@ export default function MyCommissionsPage() {
                       title="Tidak ada komisi pribadi"
                       description="Sebagai owner, Anda mengelola komisi tim — bukan menerimanya. Buka Kelola Komisi untuk melihat & mencairkan komisi CS dan Advertiser."
                       action={
-                        <Link href="/commissions/manage" className="text-sm font-medium text-violet-500 hover:underline">
+                        <Link href="/commissions/manage" className="text-sm font-medium text-zinc-500 hover:underline">
                           Buka Kelola Komisi →
                         </Link>
                       }
@@ -176,7 +176,7 @@ export default function MyCommissionsPage() {
               ) : rows.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell>
-                    <Link href={`/orders/${c.order_id}`} className="font-mono text-xs hover:underline text-violet-500">
+                    <Link href={`/orders/${c.order_id}`} className="font-mono text-xs hover:underline text-zinc-500">
                       {c.order?.order_number || `#${c.order_id}`}
                     </Link>
                   </TableCell>
@@ -233,7 +233,7 @@ function StatCard({ label, value, sub, color }: {
   color: 'blue' | 'amber' | 'emerald' | 'zinc'
 }) {
   const colorMap: Record<string, string> = {
-    blue: 'bg-blue-500/10 border-blue-500/30 text-blue-600',
+    blue: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
     zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',

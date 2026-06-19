@@ -131,7 +131,7 @@ export default function CsDetailPage() {
                 <RechartsTooltip
                   contentStyle={{ background: 'rgb(15 23 42 / 0.95)', border: '1px solid rgb(148 163 184 / 0.3)', borderRadius: 6, fontSize: 12 }}
                 />
-                <Area type="monotone" dataKey="orders"  stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="orders" />
+                <Area type="monotone" dataKey="orders"  stroke="#3f6fd1" fill="#3f6fd1" fillOpacity={0.3} name="orders" />
                 <Area type="monotone" dataKey="closing" stroke="#10b981" fill="#10b981" fillOpacity={0.3} name="closing" />
               </AreaChart>
             </ResponsiveContainer>
@@ -180,7 +180,7 @@ export default function CsDetailPage() {
                       return (
                         <TableRow key={o.id}>
                           <TableCell>
-                            <Link href={`/orders/${o.id}`} className="text-violet-500 hover:underline font-mono text-xs">
+                            <Link href={`/orders/${o.id}`} className="text-zinc-500 hover:underline font-mono text-xs">
                               {o.order_number}
                             </Link>
                           </TableCell>
@@ -236,7 +236,7 @@ export default function CsDetailPage() {
                         <TableCell>
                           <Badge variant="outline" className={
                             c.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-700' :
-                            c.status === 'EARNED' ? 'bg-blue-500/15 text-blue-700' :
+                            c.status === 'EARNED' ? 'bg-zinc-500/15 text-zinc-700' :
                             c.status === 'CANCELLED' ? 'bg-red-500/15 text-red-700' :
                             'bg-zinc-500/15 text-zinc-700'
                           }>

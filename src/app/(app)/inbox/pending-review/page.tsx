@@ -190,7 +190,7 @@ export default function PendingReviewPage() {
         <PageHeader icon={Inbox} title="Pending Review" />
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
           Hanya owner/admin yang bisa akses approval inbox.
-          <Link href="/orders/list" className="ml-2 text-violet-400 hover:underline">→ Lihat daftar order</Link>
+          <Link href="/orders/list" className="ml-2 text-zinc-400 hover:underline">→ Lihat daftar order</Link>
         </CardContent></Card>
       </div>
     )
@@ -250,10 +250,10 @@ export default function PendingReviewPage() {
       </Card>
 
       {selectedIds.size > 0 && (
-        <Card className="border-violet-500/30 bg-violet-500/5">
+        <Card className="border-zinc-500/30 bg-zinc-500/5">
           <CardContent className="pt-3 pb-3 flex flex-wrap items-center gap-2 justify-between">
             <div className="text-sm">
-              <span className="font-bold text-violet-500">{selectedIds.size}</span> order terpilih
+              <span className="font-bold text-zinc-500">{selectedIds.size}</span> order terpilih
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -335,7 +335,7 @@ export default function PendingReviewPage() {
                         />
                       </TableCell>
                       <TableCell className="font-mono text-xs whitespace-nowrap">
-                        <Link href={`/orders/${r.id}`} className="text-violet-400 hover:underline">
+                        <Link href={`/orders/${r.id}`} className="text-zinc-400 hover:underline">
                           {r.order_number}
                         </Link>
                       </TableCell>

@@ -49,6 +49,8 @@
 }
 
 :root {
+  /* ── Satu aksen warna (ganti nilai ini doang buat re-brand seluruh app) ── */
+  --brand: oklch(0.55 0.18 256);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -66,24 +68,26 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: var(--brand);
+  --chart-1: var(--brand);
+  --chart-2: oklch(0.45 0 0);
+  --chart-3: oklch(0.60 0 0);
+  --chart-4: oklch(0.72 0 0);
+  --chart-5: oklch(0.83 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: var(--brand);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: var(--brand);
 }
 
 .dark {
+  /* aksen sedikit lebih terang biar kontras di background gelap */
+  --brand: oklch(0.62 0.17 256);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -101,20 +105,20 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.637 0.237 308.364);
-  --chart-2: oklch(0.545 0.245 264.376);
-  --chart-3: oklch(0.598 0.158 163.231);
-  --chart-4: oklch(0.723 0.219 149.579);
-  --chart-5: oklch(0.769 0.189 70.08);
-  --sidebar: oklch(0.17 0.005 285);
+  --ring: var(--brand);
+  --chart-1: var(--brand);
+  --chart-2: oklch(0.75 0 0);
+  --chart-3: oklch(0.62 0 0);
+  --chart-4: oklch(0.50 0 0);
+  --chart-5: oklch(0.38 0 0);
+  --sidebar: oklch(0.18 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.637 0.237 308.364);
+  --sidebar-primary: var(--brand);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.24 0.01 285);
+  --sidebar-accent: oklch(0.25 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.637 0.237 308.364);
+  --sidebar-ring: var(--brand);
 }
 
 @layer base {
@@ -123,13 +127,17 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.04), transparent 40%),
-      radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.04), transparent 40%);
-    background-attachment: fixed;
   }
   html {
     @apply font-sans scroll-smooth;
+  }
+  /* Heading lebih tegas (tracking-tight, ala Konorder) */
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
+  }
+  /* Angka rata vertikal di tabel — penting buat kolom duit */
+  table {
+    font-variant-numeric: tabular-nums;
   }
 }
 

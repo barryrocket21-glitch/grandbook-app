@@ -104,7 +104,7 @@ export function WilayahAutocomplete({ initialQuery = '', onSelect, placeholder =
                   variant="outline"
                   className={`text-[9px] shrink-0 ${
                     r.match_score >= 95 ? 'bg-emerald-500/15 text-emerald-600' :
-                    r.match_score >= 75 ? 'bg-blue-500/15 text-blue-600' :
+                    r.match_score >= 75 ? 'bg-zinc-500/15 text-zinc-600' :
                     'bg-zinc-500/15 text-muted-foreground'
                   }`}
                 >

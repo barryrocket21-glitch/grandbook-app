@@ -515,7 +515,7 @@ function CellRenderer({ row, colId, onUpdated }: {
   // Order number → link ke detail
   if (colId === 'order_number') {
     return (
-      <Link href={`/orders/${row.id}`} className="text-violet-400 hover:underline font-mono whitespace-nowrap">
+      <Link href={`/orders/${row.id}`} className="text-zinc-400 hover:underline font-mono whitespace-nowrap">
         {row.order_number}
       </Link>
     )
@@ -546,7 +546,7 @@ function CellRenderer({ row, colId, onUpdated }: {
 
   if (colId === 'is_repeat_customer') {
     return row.is_repeat_customer
-      ? <Badge variant="outline" className="bg-violet-500/10 text-violet-600 text-[10px]">Repeat</Badge>
+      ? <Badge variant="outline" className="bg-zinc-500/10 text-zinc-600 text-[10px]">Repeat</Badge>
       : <span className="text-muted-foreground">—</span>
   }
 
@@ -569,7 +569,7 @@ function CellRenderer({ row, colId, onUpdated }: {
     return (
       <div className="flex items-center gap-1 min-w-0" title={summary}>
         <span className="text-xs truncate min-w-0">{primary}</span>
-        <Badge variant="outline" className="text-[10px] shrink-0 bg-violet-500/10 text-violet-600">
+        <Badge variant="outline" className="text-[10px] shrink-0 bg-zinc-500/10 text-zinc-600">
           +{count - 1}
         </Badge>
       </div>

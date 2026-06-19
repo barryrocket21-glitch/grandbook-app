@@ -96,7 +96,7 @@ export function DateRangePicker({ value, onChange, className }: Props) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger render={
         <Button variant="outline" className={cn('gap-2 font-normal justify-start min-w-[240px]', className)}>
-          <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
+          <Calendar className="w-4 h-4 text-zinc-400 shrink-0" />
           <span className="truncate">{formatDisplay(value.from, value.to, value.label)}</span>
         </Button>
       } />
@@ -113,7 +113,7 @@ export function DateRangePicker({ value, onChange, className }: Props) {
                   className={cn(
                     'w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors',
                     selectedPreset === p.label
-                      ? 'bg-violet-500/15 text-violet-300 font-medium'
+                      ? 'bg-zinc-500/15 text-zinc-300 font-medium'
                       : 'hover:bg-muted text-foreground/80'
                   )}
                 >
@@ -154,7 +154,7 @@ export function DateRangePicker({ value, onChange, className }: Props) {
             <p className="text-[11px] text-muted-foreground">Tanggal dalam zona waktu kamu</p>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={cancel}>Batal</Button>
-              <Button size="sm" onClick={apply} className="bg-violet-600 hover:bg-violet-700 text-white">Update</Button>
+              <Button size="sm" onClick={apply} className="bg-zinc-600 hover:bg-zinc-700 text-white">Update</Button>
             </div>
           </div>
         </div>

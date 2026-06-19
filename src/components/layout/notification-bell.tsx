@@ -174,12 +174,12 @@ function NotificationItem({
 
   const inner = (
     <div
-      className={`p-3 hover:bg-muted/40 cursor-pointer transition-colors ${isUnread ? 'bg-blue-500/5' : ''}`}
+      className={`p-3 hover:bg-muted/40 cursor-pointer transition-colors ${isUnread ? 'bg-zinc-500/5' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-start gap-2">
         {isUnread && (
-          <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" aria-label="unread" />
+          <span className="w-2 h-2 rounded-full bg-zinc-500 mt-1.5 shrink-0" aria-label="unread" />
         )}
         <div className="flex-1 space-y-1 min-w-0">
           <div className="flex items-start gap-2">

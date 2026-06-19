@@ -134,16 +134,16 @@ export default function ReconEkspedisiLandingPage() {
                     <Link
                       key={flow.href}
                       href={flow.href}
-                      className="group flex items-start gap-3 p-3 rounded-lg border border-border/60 hover:border-violet-500/40 hover:bg-violet-500/5 transition-colors"
+                      className="group flex items-start gap-3 p-3 rounded-lg border border-border/60 hover:border-zinc-500/40 hover:bg-zinc-500/5 transition-colors"
                     >
-                      <div className="shrink-0 mt-0.5 size-8 rounded-md bg-gradient-to-br from-violet-500/15 to-indigo-500/15 ring-1 ring-violet-500/20 flex items-center justify-center">
-                        <flow.icon className="size-4 text-violet-400" />
+                      <div className="shrink-0 mt-0.5 size-8 rounded-md bg-gradient-to-br from-zinc-500/15 to-zinc-500/15 ring-1 ring-zinc-500/20 flex items-center justify-center">
+                        <flow.icon className="size-4 text-zinc-400" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium group-hover:text-violet-400 transition-colors">{flow.title}</div>
+                        <div className="text-sm font-medium group-hover:text-zinc-400 transition-colors">{flow.title}</div>
                         <div className="text-[11px] text-muted-foreground mt-0.5">{flow.description}</div>
                       </div>
-                      <ArrowRight className="size-4 text-muted-foreground/60 group-hover:text-violet-400 transition-colors shrink-0 mt-1.5" />
+                      <ArrowRight className="size-4 text-muted-foreground/60 group-hover:text-zinc-400 transition-colors shrink-0 mt-1.5" />
                     </Link>
                   ))}
                 </div>

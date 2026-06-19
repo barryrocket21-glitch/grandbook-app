@@ -62,11 +62,11 @@ function AgingBucket({ label, tone, count, amount }: { label: string; tone: stri
 type Tone = 'blue' | 'emerald' | 'orange' | 'amber' | 'rose'
 
 const TONE: Record<Tone, { border: string; iconBg: string; icon: string; amount: string }> = {
-  blue:    { border: 'border-blue-500/30',    iconBg: 'bg-blue-500/10',    icon: 'text-blue-600',    amount: 'text-blue-700 dark:text-blue-400' },
+  blue:    { border: 'border-zinc-500/30',    iconBg: 'bg-zinc-500/10',    icon: 'text-zinc-600',    amount: 'text-zinc-700 dark:text-zinc-400' },
   emerald: { border: 'border-emerald-500/30', iconBg: 'bg-emerald-500/10', icon: 'text-emerald-600', amount: 'text-emerald-700 dark:text-emerald-400' },
-  orange:  { border: 'border-orange-500/30',  iconBg: 'bg-orange-500/10',  icon: 'text-orange-600',  amount: 'text-orange-700 dark:text-orange-400' },
+  orange:  { border: 'border-amber-500/30',  iconBg: 'bg-amber-500/10',  icon: 'text-amber-600',  amount: 'text-amber-700 dark:text-amber-400' },
   amber:   { border: 'border-amber-500/30',   iconBg: 'bg-amber-500/10',   icon: 'text-amber-600',   amount: 'text-amber-700 dark:text-amber-400' },
-  rose:    { border: 'border-rose-500/30',    iconBg: 'bg-rose-500/10',    icon: 'text-rose-600',    amount: 'text-rose-700 dark:text-rose-400' },
+  rose:    { border: 'border-red-500/30',    iconBg: 'bg-red-500/10',    icon: 'text-red-600',    amount: 'text-red-700 dark:text-red-400' },
 }
 
 export default function FinancialPositionPage() {
@@ -164,7 +164,7 @@ export default function FinancialPositionPage() {
                 </div>
                 <div>
                   <div className="text-[10px] text-muted-foreground">Komisi Terutang (EARNED)</div>
-                  <div className="text-xl font-bold tabular-nums text-orange-600">{formatRupiah(n(payout?.komisi_earned))}</div>
+                  <div className="text-xl font-bold tabular-nums text-amber-600">{formatRupiah(n(payout?.komisi_earned))}</div>
                 </div>
               </div>
               {/* Aging belum-cair */}
@@ -173,15 +173,15 @@ export default function FinancialPositionPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <AgingBucket label="0–7 hari" tone="text-emerald-600" count={n(payout?.aging_0_7_count)} amount={n(payout?.aging_0_7_amount)} />
                   <AgingBucket label="8–14 hari" tone="text-amber-600" count={n(payout?.aging_8_14_count)} amount={n(payout?.aging_8_14_amount)} />
-                  <AgingBucket label="15+ hari" tone="text-rose-600" count={n(payout?.aging_15plus_count)} amount={n(payout?.aging_15plus_amount)} />
+                  <AgingBucket label="15+ hari" tone="text-red-600" count={n(payout?.aging_15plus_count)} amount={n(payout?.aging_15plus_amount)} />
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground">Upload payout di <a href="/reconciliation/ekspedisi" className="text-violet-500 hover:underline">Rekonsiliasi Ekspedisi</a> buat update pencairan.</p>
+              <p className="text-[10px] text-muted-foreground">Upload payout di <a href="/reconciliation/ekspedisi" className="text-zinc-500 hover:underline">Rekonsiliasi Ekspedisi</a> buat update pencairan.</p>
             </CardContent>
           </Card>
 
           {/* Headline — Posisi Bersih */}
-          <Card className="border-violet-500/30 bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-violet-500/10">
+          <Card className="border-zinc-500/30 bg-gradient-to-r from-zinc-500/10 via-zinc-500/10 to-zinc-500/10">
             <CardContent className="pt-5 pb-5">
               <div className="flex items-baseline justify-between flex-wrap gap-4">
                 <div>
@@ -193,7 +193,7 @@ export default function FinancialPositionPage() {
                 </div>
                 <div className="text-right text-xs space-y-1">
                   <div className="text-muted-foreground">Total Aset: <span className="text-emerald-600 font-semibold tabular-nums">{formatRupiah(totalAset)}</span></div>
-                  <div className="text-muted-foreground">Total Utang: <span className="text-orange-600 font-semibold tabular-nums">{formatRupiah(totalUtang)}</span></div>
+                  <div className="text-muted-foreground">Total Utang: <span className="text-amber-600 font-semibold tabular-nums">{formatRupiah(totalUtang)}</span></div>
                 </div>
               </div>
             </CardContent>
@@ -214,7 +214,7 @@ export default function FinancialPositionPage() {
                     <div className="text-[11px] text-muted-foreground">
                       {p.in_transit_orders} order SIAP_KIRIM / DIKIRIM · belum pasti (ada risiko retur)
                     </div>
-                    <Link href="/orders/list?status=DIKIRIM" className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-1">
+                    <Link href="/orders/list?status=DIKIRIM" className="text-xs text-zinc-600 hover:underline flex items-center gap-1 mt-1">
                       Lihat order in-transit <ExternalLink className="w-3 h-3" />
                     </Link>
                   </>
@@ -259,7 +259,7 @@ export default function FinancialPositionPage() {
                       <Building2 className="w-3 h-3" />
                       {p.hpp_supplier_orders} order · {p.hpp_supplier_count} supplier
                     </div>
-                    <button onClick={() => setSupplierSheetOpen(true)} className="text-xs text-orange-600 hover:underline flex items-center gap-1 mt-1">
+                    <button onClick={() => setSupplierSheetOpen(true)} className="text-xs text-amber-600 hover:underline flex items-center gap-1 mt-1">
                       Detail per supplier <ArrowRight className="w-3 h-3" />
                     </button>
                   </>
@@ -289,7 +289,7 @@ export default function FinancialPositionPage() {
                     <div className="text-[11px] text-muted-foreground">
                       {p.komisi_count} komisi status EARNED
                     </div>
-                    <Link href="/commissions/manage" className="text-xs text-rose-600 hover:underline flex items-center gap-1 mt-1">
+                    <Link href="/commissions/manage" className="text-xs text-red-600 hover:underline flex items-center gap-1 mt-1">
                       Kelola komisi <ExternalLink className="w-3 h-3" />
                     </Link>
                   </>

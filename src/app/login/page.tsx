@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookOpen, Loader2, Mail, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -74,85 +73,62 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-950 via-violet-950/20 to-zinc-950 p-4">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-600/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo & Title */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl shadow-lg shadow-violet-500/25 mb-4">
-            <BookOpen className="w-8 h-8 text-white" />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm">
+        {/* Wordmark */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-foreground text-background mb-4">
+            <BookOpen className="w-5 h-5" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-            GrandBook
-          </h1>
-          <p className="text-muted-foreground mt-1">Sistem Pembukuan Bisnis Online</p>
+          <h1 className="text-2xl font-semibold tracking-tight">GrandBook</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">
+            Sistem pembukuan bisnis online
+          </p>
         </div>
 
-        <Card className="border-white/10 bg-zinc-900/80 backdrop-blur-xl shadow-2xl shadow-violet-500/10">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl text-white">Masuk ke Akun</CardTitle>
-            <CardDescription>
-              Login untuk mengakses dashboard
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-zinc-200">
-                  Email
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="nama@perusahaan.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-zinc-800/60 border-white/10 text-white placeholder:text-zinc-500 focus-visible:border-violet-500/50 focus-visible:ring-2 focus-visible:ring-violet-500/30"
-                    required
-                    autoComplete="email"
-                  />
-                </div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nama@perusahaan.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-9"
+                  required
+                  autoComplete="email"
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-zinc-200">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-zinc-800/60 border-white/10 text-white placeholder:text-zinc-500 focus-visible:border-violet-500/50 focus-visible:ring-2 focus-visible:ring-violet-500/30"
-                    required
-                    autoComplete="current-password"
-                  />
-                </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-9"
+                  required
+                  autoComplete="current-password"
+                />
               </div>
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/25 transition-all duration-300"
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Masuk
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Masuk
+            </Button>
+          </form>
+        </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2026 GrandBook. Hubungi Owner untuk mendapatkan akun.
+          © 2026 GrandBook · Hubungi owner untuk dapat akun
         </p>
       </div>
     </div>

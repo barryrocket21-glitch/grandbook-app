@@ -37,18 +37,18 @@ interface LabaRugi {
 
 const STATUSES = ['BARU', 'SIAP_KIRIM', 'DIKIRIM', 'PROBLEM', 'DITERIMA', 'RETUR', 'CANCEL', 'FAKE']
 const ZONE_COLOR: Record<string, string> = {
-  Baru: 'bg-zinc-500/10 text-zinc-500', Antrian: 'bg-sky-500/10 text-sky-600',
-  'Siap Kirim': 'bg-teal-500/10 text-teal-600',
-  'Nunggu Resi': 'bg-amber-500/10 text-amber-600', Dikirim: 'bg-indigo-500/10 text-indigo-500',
-  Problem: 'bg-orange-500/10 text-orange-600', 'Arsip (Delivered)': 'bg-emerald-500/10 text-emerald-600',
-  Retur: 'bg-rose-500/10 text-rose-600', Batal: 'bg-zinc-500/10 text-zinc-400', Fake: 'bg-red-500/10 text-red-600',
+  Baru: 'bg-zinc-500/10 text-zinc-500', Antrian: 'bg-zinc-500/10 text-zinc-600',
+  'Siap Kirim': 'bg-zinc-500/10 text-zinc-600',
+  'Nunggu Resi': 'bg-amber-500/10 text-amber-600', Dikirim: 'bg-zinc-500/10 text-zinc-500',
+  Problem: 'bg-amber-500/10 text-amber-600', 'Arsip (Delivered)': 'bg-emerald-500/10 text-emerald-600',
+  Retur: 'bg-red-500/10 text-red-600', Batal: 'bg-zinc-500/10 text-zinc-400', Fake: 'bg-red-500/10 text-red-600',
 }
 const n = (v: unknown) => Number(v) || 0
 
 function Money({ v, bold }: { v: number | null | undefined; bold?: boolean }) {
   if (v === null || v === undefined) return <span className="text-muted-foreground/50">—</span>
   const neg = v < 0
-  return <span className={`tabular-nums ${bold ? 'font-semibold' : ''} ${neg ? 'text-rose-600' : v > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{formatRupiah(v)}</span>
+  return <span className={`tabular-nums ${bold ? 'font-semibold' : ''} ${neg ? 'text-red-600' : v > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{formatRupiah(v)}</span>
 }
 
 export default function PembukuanPage() {
@@ -162,20 +162,20 @@ export default function PembukuanPage() {
           )}
           {returCount > 0 && (
             <span className="text-muted-foreground">
-              <span className={`font-semibold ${returRate !== null && returRate >= 25 ? 'text-rose-600' : 'text-orange-500'}`}>
+              <span className={`font-semibold ${returRate !== null && returRate >= 25 ? 'text-red-600' : 'text-amber-500'}`}>
                 {returCount.toLocaleString('id-ID')} retur {returRate !== null ? `(${returRate}%)` : ''}
               </span>
             </span>
           )}
           {(counts['Problem'] || 0) > 0 && (
-            <span className="text-orange-600 font-semibold">
+            <span className="text-amber-600 font-semibold">
               ⚠ {counts['Problem']} problem
             </span>
           )}
           {canFinance && summary && (
             <span className="text-muted-foreground">
               Laba Bersih:{' '}
-              <span className={`font-semibold tabular-nums ${n(summary.laba_bersih_act) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+              <span className={`font-semibold tabular-nums ${n(summary.laba_bersih_act) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                 {formatRupiah(n(summary.laba_bersih_act))}
               </span>
               <span className="text-xs text-muted-foreground/60 ml-1">(realisasi)</span>
@@ -187,8 +187,8 @@ export default function PembukuanPage() {
           {/* Toggle view Ringkas/Keuangan */}
           {canFinance && (
             <div className="inline-flex rounded-md border p-0.5">
-              <button onClick={() => setView('ringkas')} className={`px-3 h-7 text-xs rounded ${view === 'ringkas' ? 'bg-violet-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>Ringkas</button>
-              <button onClick={() => setView('keuangan')} className={`px-3 h-7 text-xs rounded flex items-center gap-1 ${view === 'keuangan' ? 'bg-violet-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>
+              <button onClick={() => setView('ringkas')} className={`px-3 h-7 text-xs rounded ${view === 'ringkas' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>Ringkas</button>
+              <button onClick={() => setView('keuangan')} className={`px-3 h-7 text-xs rounded flex items-center gap-1 ${view === 'keuangan' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>
                 <BarChart2 className="w-3 h-3" /> Keuangan
               </button>
             </div>
@@ -226,7 +226,7 @@ export default function PembukuanPage() {
             </div>
             <div className="mt-2 text-[11px] text-muted-foreground">
               Realisasi = akrual (revenue diakui pas delivered). Proyeksi = kalau semua order sukses.{' '}
-              <a href="/laba-rugi" className="text-violet-500 hover:underline">Laporan lengkap →</a>
+              <a href="/laba-rugi" className="text-zinc-500 hover:underline">Laporan lengkap →</a>
             </div>
           </CardContent>
         </Card>
@@ -235,12 +235,12 @@ export default function PembukuanPage() {
       {/* Zone chips (klik = filter) */}
       <div className="flex flex-wrap items-center gap-1.5">
         <button onClick={() => setZoneFilter(null)}
-          className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === null ? 'bg-violet-500 text-white border-violet-500' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+          className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === null ? 'bg-zinc-500 text-white border-zinc-500' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
           Semua · {total.toLocaleString('id-ID')}{rows.length < total ? ` (loaded ${rows.length.toLocaleString('id-ID')})` : ''}
         </button>
         {Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([z, c]) => (
           <button key={z} onClick={() => setZoneFilter(zoneFilter === z ? null : z)}
-            className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === z ? `ring-2 ring-violet-400 ${ZONE_COLOR[z] || 'bg-muted'}` : (ZONE_COLOR[z] || 'bg-muted text-muted-foreground')} hover:opacity-80`}>
+            className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === z ? `ring-2 ring-zinc-400 ${ZONE_COLOR[z] || 'bg-muted'}` : (ZONE_COLOR[z] || 'bg-muted text-muted-foreground')} hover:opacity-80`}>
             {z} · {c}
           </button>
         ))}
@@ -287,7 +287,7 @@ export default function PembukuanPage() {
               {loading ? (
                 <TableRow><TableCell colSpan={cols} className="py-8 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
               ) : displayed.length === 0 ? (
-                <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-rose-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-red-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
               ) : paged.map(r => (
                 <TableRow key={`${r.source}-${r.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetail({ source: r.source as 'draft' | 'final', id: r.id })}>
                   <TableCell style={fzTd(0)} className="bg-card text-sm whitespace-nowrap">{fmtShort(r.order_date)}</TableCell>
@@ -375,7 +375,7 @@ function PnlRow({ label, est, act, strong, big, sub }: { label: string; est?: nu
   const cls = `${big ? 'text-base' : 'text-sm'} ${strong ? 'font-semibold' : sub ? 'text-muted-foreground' : ''}`
   const money = (v?: number) => {
     const x = Number(v) || 0
-    return <span className={`tabular-nums ${x < 0 ? 'text-rose-600' : strong && x > 0 ? 'text-emerald-600' : ''}`}>{formatRupiah(x)}</span>
+    return <span className={`tabular-nums ${x < 0 ? 'text-red-600' : strong && x > 0 ? 'text-emerald-600' : ''}`}>{formatRupiah(x)}</span>
   }
   return (
     <>

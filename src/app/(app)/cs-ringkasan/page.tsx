@@ -30,7 +30,7 @@ const csCell = (c: MCell | undefined, m: 'order' | 'deliv' | 'retur') => {
   if (!c || c.o === 0) return dot
   if (m === 'order') return <span>{c.o}</span>
   if (m === 'deliv') { const v = c.o > 0 ? (c.d / c.o) * 100 : 0; return <span className={v >= 50 ? 'text-emerald-600 font-medium' : v >= 20 ? 'text-amber-600' : 'text-muted-foreground'}>{v.toFixed(0)}%</span> }
-  const d = c.d + c.r; if (d === 0) return dot; const v = (c.r / d) * 100; return <span className={v >= 20 ? 'text-rose-600 font-semibold' : v >= 10 ? 'text-amber-600' : ''}>{v.toFixed(0)}%</span>
+  const d = c.d + c.r; if (d === 0) return dot; const v = (c.r / d) * 100; return <span className={v >= 20 ? 'text-red-600 font-semibold' : v >= 10 ? 'text-amber-600' : ''}>{v.toFixed(0)}%</span>
 }
 
 export default function CsRingkasanPage() {
@@ -143,7 +143,7 @@ export default function CsRingkasanPage() {
         actions={
           <div className="flex gap-2">
             <Link href="/performa"><Button variant="outline" size="sm" className="gap-1.5">Performa Detail →</Button></Link>
-            <Link href="/cs-report"><Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5"><Pencil className="w-3.5 h-3.5" /> Input Laporan</Button></Link>
+            <Link href="/cs-report"><Button size="sm" className="bg-zinc-600 hover:bg-zinc-700 text-white gap-1.5"><Pencil className="w-3.5 h-3.5" /> Input Laporan</Button></Link>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></Button>
           </div>
         } />
@@ -151,24 +151,24 @@ export default function CsRingkasanPage() {
       <Card><CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-md border p-0.5">
           {([['today', 'Hari ini'], ['yesterday', 'Kemarin'], ['week', '7 Hari']] as [typeof preset, string][]).map(([k, l]) => (
-            <button key={k} onClick={() => applyPreset(k)} className={`px-3 h-8 text-sm rounded ${preset === k ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>{l}</button>
+            <button key={k} onClick={() => applyPreset(k)} className={`px-3 h-8 text-sm rounded ${preset === k ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>{l}</button>
           ))}
         </div>
         <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPreset('custom') }} className="h-8 rounded-md border bg-background px-2 text-sm" />
         <span className="text-muted-foreground text-sm">s/d</span>
         <input type="date" value={to} onChange={e => { setTo(e.target.value); setPreset('custom') }} className="h-8 rounded-md border bg-background px-2 text-sm" />
         <div className="inline-flex rounded-md border p-0.5 ml-auto">
-          <button onClick={() => setView('cs')} className={`px-3 h-8 text-sm rounded ${view === 'cs' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Per CS</button>
-          <button onClick={() => setView('produk')} className={`px-3 h-8 text-sm rounded ${view === 'produk' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Per Produk</button>
-          <button onClick={() => setView('matriks')} className={`px-3 h-8 text-sm rounded ${view === 'matriks' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Matriks</button>
+          <button onClick={() => setView('cs')} className={`px-3 h-8 text-sm rounded ${view === 'cs' ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>Per CS</button>
+          <button onClick={() => setView('produk')} className={`px-3 h-8 text-sm rounded ${view === 'produk' ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>Per Produk</button>
+          <button onClick={() => setView('matriks')} className={`px-3 h-8 text-sm rounded ${view === 'matriks' ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>Matriks</button>
         </div>
       </CardContent></Card>
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-4 pb-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Lead</p><p className="text-2xl font-bold text-blue-600">{formatNumber(totals.lead)}</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Lead</p><p className="text-2xl font-bold text-zinc-600">{formatNumber(totals.lead)}</p></CardContent></Card>
         <Card><CardContent className="pt-4 pb-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Closing</p><p className="text-2xl font-bold text-emerald-600">{formatNumber(totals.close)}</p></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Close Rate</p><p className="text-2xl font-bold text-violet-600">{totals.rate.toFixed(1)}%</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Close Rate</p><p className="text-2xl font-bold text-zinc-600">{totals.rate.toFixed(1)}%</p></CardContent></Card>
       </div>
 
       <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
@@ -198,7 +198,7 @@ export default function CsRingkasanPage() {
                         <TableCell className="text-right text-sm tabular-nums font-medium">{formatNumber(num(r.closing_reported))}</TableCell>
                         <TableCell className="text-center">{rateBadge(rt)}</TableCell>
                         <TableCell className="text-right text-sm tabular-nums font-semibold">
-                          {(() => { const rr = num(r.retur_rate); return <span className={rr >= 20 ? 'text-rose-600' : rr >= 10 ? 'text-amber-600' : 'text-muted-foreground'}>{rr.toFixed(1)}%</span> })()}
+                          {(() => { const rr = num(r.retur_rate); return <span className={rr >= 20 ? 'text-red-600' : rr >= 10 ? 'text-amber-600' : 'text-muted-foreground'}>{rr.toFixed(1)}%</span> })()}
                         </TableCell>
                         <TableCell className="text-right text-sm tabular-nums text-muted-foreground">{num(r.retur_count) || '—'}</TableCell>
                         <TableCell className="text-sm">{r.top_product_name || '—'}</TableCell>
@@ -250,12 +250,12 @@ export default function CsRingkasanPage() {
             <div className="p-3 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="inline-flex rounded-md border p-0.5 text-xs">
-                  <button onClick={() => setMatrixDim('produk')} className={`px-2.5 h-7 rounded ${matrixDim === 'produk' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>CS × Produk</button>
-                  <button onClick={() => setMatrixDim('platform')} className={`px-2.5 h-7 rounded ${matrixDim === 'platform' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>CS × Platform</button>
+                  <button onClick={() => setMatrixDim('produk')} className={`px-2.5 h-7 rounded ${matrixDim === 'produk' ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>CS × Produk</button>
+                  <button onClick={() => setMatrixDim('platform')} className={`px-2.5 h-7 rounded ${matrixDim === 'platform' ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>CS × Platform</button>
                 </div>
                 <div className="inline-flex rounded-md border p-0.5 text-xs">
                   {([['order', 'Order'], ['deliv', 'Terkirim%'], ['retur', 'Retur%']] as ['order' | 'deliv' | 'retur', string][]).map(([k, l]) => (
-                    <button key={k} onClick={() => setMatrixMetric(k)} className={`px-2.5 h-7 rounded ${matrixMetric === k ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>{l}</button>
+                    <button key={k} onClick={() => setMatrixMetric(k)} className={`px-2.5 h-7 rounded ${matrixMetric === k ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>{l}</button>
                   ))}
                 </div>
               </div>

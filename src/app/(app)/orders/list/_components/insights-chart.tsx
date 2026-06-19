@@ -8,7 +8,7 @@ import type { OrderDimensionStat } from '@/lib/types'
 
 /**
  * Phase 8I-Followup Part 4F — Bar chart horizontal (vertical layout) untuk
- * top 10 dimension. Bar color violet-500 dengan opacity scaled (top 1 full,
+ * top 10 dimension. Bar color zinc-500 dengan opacity scaled (top 1 full,
  * bottom = 0.5) supaya highlight ranking. Recharts ResponsiveContainer
  * supaya scale ke width drawer.
  */

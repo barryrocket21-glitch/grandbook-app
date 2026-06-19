@@ -152,7 +152,7 @@ export default function AddressReviewPage() {
                 <TableRow key={r.id} className={r.resolved ? 'opacity-50' : ''}>
                   <TableCell className="text-xs font-mono">
                     {r.order ? (
-                      <Link href={`/orders/${r.order.id}`} className="text-violet-400 hover:underline">
+                      <Link href={`/orders/${r.order.id}`} className="text-zinc-400 hover:underline">
                         {r.order.order_number}
                       </Link>
                     ) : <span className="text-muted-foreground">—</span>}
@@ -343,7 +343,7 @@ function ResolveDialog({
                     </div>
                     <Badge variant="outline" className={`text-[9px] shrink-0 ${
                       c.match_score >= 95 ? 'bg-emerald-500/15 text-emerald-600' :
-                      c.match_score >= 75 ? 'bg-blue-500/15 text-blue-600' :
+                      c.match_score >= 75 ? 'bg-zinc-500/15 text-zinc-600' :
                       'bg-zinc-500/15 text-muted-foreground'
                     }`}>
                       score {c.match_score}

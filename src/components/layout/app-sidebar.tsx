@@ -54,11 +54,11 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
-              <div className="bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-600 text-white rounded-xl flex aspect-square size-9 items-center justify-center shadow-lg shadow-violet-500/30 ring-1 ring-white/10">
+              <div className="bg-gradient-to-br from-zinc-500 via-zinc-600 to-zinc-600 text-white rounded-xl flex aspect-square size-9 items-center justify-center shadow-lg shadow-zinc-500/30 ring-1 ring-white/10">
                 <BookOpen className="size-4.5" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-bold text-base bg-gradient-to-r from-violet-300 to-indigo-300 bg-clip-text text-transparent">
+                <span className="truncate font-bold text-base bg-gradient-to-r from-zinc-300 to-zinc-300 bg-clip-text text-transparent">
                   GrandBook
                 </span>
                 <span className="truncate text-[11px] text-muted-foreground tracking-wide">
@@ -116,7 +116,7 @@ export function AppSidebar() {
                                       </span>
                                     )}
                                     {!count && child.badge && (
-                                      <span className="ml-auto rounded bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-600">
+                                      <span className="ml-auto rounded bg-zinc-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
                                         {child.badge}
                                       </span>
                                     )}
@@ -154,7 +154,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <div className="flex items-center gap-2 p-2">
               <Avatar className="size-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-white text-xs">
+                <AvatarFallback className="rounded-lg bg-gradient-to-br from-zinc-600 to-zinc-600 text-white text-xs">
                   {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                 </AvatarFallback>
               </Avatar>

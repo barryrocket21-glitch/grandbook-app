@@ -38,9 +38,9 @@ import { ReturSection } from '@/components/analytics/retur-section'
 const supabase = createClient()
 
 const STATUS_COLORS: Record<string, string> = {
-  BARU: '#3b82f6',
+  BARU: '#3f6fd1',
   SIAP_KIRIM: '#eab308',
-  DIKIRIM: '#a855f7',
+  DIKIRIM: '#71717a',
   DITERIMA: '#10b981',
   PROBLEM: '#f59e0b',
   RETUR: '#f97316',
@@ -155,8 +155,8 @@ function AnalyticsPageInner() {
         <PageHeader icon={LineChartIcon} title="Analytics" />
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
           Hanya owner &amp; admin yang bisa lihat full analytics. CS bisa lihat performa sendiri di{' '}
-          <Link href="/cs-dashboard" className="text-violet-500 hover:underline">/cs-dashboard</Link>,
-          advertiser di <Link href="/adv-dashboard" className="text-violet-500 hover:underline">/adv-dashboard</Link>.
+          <Link href="/cs-dashboard" className="text-zinc-500 hover:underline">/cs-dashboard</Link>,
+          advertiser di <Link href="/adv-dashboard" className="text-zinc-500 hover:underline">/adv-dashboard</Link>.
         </CardContent></Card>
       </div>
     )
@@ -299,7 +299,7 @@ function AnalyticsPageInner() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     🔮 Forecast (Estimasi termasuk pipeline)
-                    <Badge variant="outline" className="text-[10px] bg-violet-500/10 text-violet-500">
+                    <Badge variant="outline" className="text-[10px] bg-zinc-500/10 text-zinc-500">
                       SR {Number(forecast.success_rate_pct).toFixed(1)}%
                     </Badge>
                   </h3>
@@ -360,7 +360,7 @@ function AnalyticsPageInner() {
                         contentStyle={{ background: 'rgb(15 23 42 / 0.95)', border: '1px solid rgb(148 163 184 / 0.3)', borderRadius: 6, fontSize: 12 }}
                         formatter={(value, name) => name === 'revenue' ? [formatRupiah(Number(value)), 'Revenue'] : [String(value), String(name)]}
                       />
-                      <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
+                      <Area type="monotone" dataKey="revenue" stroke="#3f6fd1" fill="#3f6fd1" fillOpacity={0.3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
@@ -446,7 +446,7 @@ function AnalyticsPageInner() {
                             <div className="font-mono text-xs">{r.channel_code || `#${r.channel_id}`}</div>
                             <div className="text-[10px] text-muted-foreground">{r.channel_name}</div>
                             {r.billing_model && (
-                              <div className="text-[10px] text-violet-600 mt-0.5">{r.billing_model}</div>
+                              <div className="text-[10px] text-zinc-600 mt-0.5">{r.billing_model}</div>
                             )}
                           </TableCell>
                           <TableCell className="text-right text-xs font-semibold">
@@ -454,14 +454,14 @@ function AnalyticsPageInner() {
                             <div className="text-[10px] text-muted-foreground">
                               <span className="text-emerald-600">{r.diterima_orders}D</span>
                               {' / '}
-                              <span className="text-orange-600">{r.retur_orders}R</span>
+                              <span className="text-amber-600">{r.retur_orders}R</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
                           <TableCell className={`text-right text-xs font-semibold ${Number(r.shipping_diff) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                             {formatRupiah(Number(r.shipping_diff))}
                           </TableCell>
-                          <TableCell className="text-right text-xs text-orange-600">{formatRupiah(Number(r.estimated_total_cost))}</TableCell>
+                          <TableCell className="text-right text-xs text-amber-600">{formatRupiah(Number(r.estimated_total_cost))}</TableCell>
                           <TableCell className="text-right text-xs">{formatRupiah(Number(r.estimated_cash_in))}</TableCell>
                           <TableCell className={`text-right text-xs font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                             {formatRupiah(profit)}
@@ -543,18 +543,18 @@ function RoasPerCampaignTable({ rows, loading }: { rows: RoasPerCampaignRow[]; l
               <TableHead>Advertiser</TableHead>
               <TableHead>Linked Products</TableHead>
               <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy('spend')}>
-                <span className={sortBy === 'spend' ? 'text-violet-500 font-semibold' : ''}>Spend</span>
+                <span className={sortBy === 'spend' ? 'text-zinc-500 font-semibold' : ''}>Spend</span>
               </TableHead>
               <TableHead className="text-right">Conv</TableHead>
               <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy('orders')}>
-                <span className={sortBy === 'orders' ? 'text-violet-500 font-semibold' : ''}>Orders</span>
+                <span className={sortBy === 'orders' ? 'text-zinc-500 font-semibold' : ''}>Orders</span>
               </TableHead>
               <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy('revenue')}>
-                <span className={sortBy === 'revenue' ? 'text-violet-500 font-semibold' : ''}>Revenue</span>
+                <span className={sortBy === 'revenue' ? 'text-zinc-500 font-semibold' : ''}>Revenue</span>
               </TableHead>
               <TableHead className="text-right">Rev (DITERIMA)</TableHead>
               <TableHead className="text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => setSortBy('roas')}>
-                <span className={sortBy === 'roas' ? 'text-violet-500 font-semibold' : ''}>ROAS Diterima</span>
+                <span className={sortBy === 'roas' ? 'text-zinc-500 font-semibold' : ''}>ROAS Diterima</span>
               </TableHead>
               <TableHead className="text-right">Cost/Order</TableHead>
             </TableRow>
@@ -670,7 +670,7 @@ function PerUserTable({ rows, loading, kind }: { rows: PerUserRow[]; loading: bo
                 <TableCell className="text-right text-xs font-semibold">{r.total_orders}</TableCell>
                 <TableCell className="text-right text-xs">{formatRupiah(Number(r.total_revenue))}</TableCell>
                 <TableCell className="text-right text-xs text-emerald-600">{r.diterima_orders}</TableCell>
-                <TableCell className="text-right text-xs text-orange-600">{r.retur_orders}</TableCell>
+                <TableCell className="text-right text-xs text-amber-600">{r.retur_orders}</TableCell>
                 <TableCell className="text-right text-xs">
                   <Badge variant="outline" className={`text-[10px] ${Number(r.conversion_rate) >= 80 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : Number(r.conversion_rate) >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' : 'bg-red-500/10 text-red-600 border-red-500/30'}`}>
                     {Number(r.conversion_rate).toFixed(1)}%
@@ -691,7 +691,7 @@ function SortableHead({ label, field, current, onClick }: { label: string; field
   const active = current === field
   return (
     <TableHead className="text-right cursor-pointer select-none hover:bg-muted/50" onClick={() => onClick(field)}>
-      <span className={`inline-flex items-center gap-1 ${active ? 'text-violet-500 font-semibold' : ''}`}>
+      <span className={`inline-flex items-center gap-1 ${active ? 'text-zinc-500 font-semibold' : ''}`}>
         {label}
         {active ? <TrendingDown className="w-3 h-3" /> : <span className="w-3 h-3 inline-block" />}
       </span>
@@ -710,7 +710,7 @@ function TopUsersBar({ rows, title }: { rows: { name: string; value: number }[];
             <XAxis type="number" tick={{ fontSize: 10 }} />
             <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
             <RechartsTooltip contentStyle={{ background: 'rgb(15 23 42 / 0.95)', border: '1px solid rgb(148 163 184 / 0.3)', fontSize: 12 }} />
-            <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="value" fill="#3f6fd1" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
@@ -725,13 +725,13 @@ function StatCard({ label, value, sub, color }: {
   color: 'blue' | 'amber' | 'emerald' | 'zinc' | 'violet' | 'red' | 'orange'
 }) {
   const colorMap: Record<string, string> = {
-    blue: 'bg-blue-500/10 border-blue-500/30 text-blue-600',
+    blue: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
     zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
+    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     red: 'bg-red-500/10 border-red-500/30 text-red-600',
-    orange: 'bg-orange-500/10 border-orange-500/30 text-orange-600',
+    orange: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
   }
   return (
     <div className={`p-3 rounded border ${colorMap[color]}`}>

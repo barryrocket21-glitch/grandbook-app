@@ -57,7 +57,7 @@ function WilayahPicker({ onPick }: { onPick: (h: WilayahHit) => void }) {
             <button key={h.id} type="button"
               onClick={() => { onPick(h); setQ(`${h.subdistrict}, ${h.city}`); setOpen(false) }}
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/60 flex items-start gap-1.5">
-              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-violet-500" />
+              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-zinc-500" />
               <span><span className="font-medium">{h.subdistrict}</span>, {h.city}, <span className="text-muted-foreground">{h.province}</span>{h.zip ? ` · ${h.zip}` : ''}</span>
             </button>
           ))}
@@ -193,7 +193,7 @@ export function DraftQuickEditDialog({ open, onOpenChange, draft, onSaved }: Pro
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Pencil className="w-4 h-4 text-violet-500" />
+            <Pencil className="w-4 h-4 text-zinc-500" />
             Edit Draft — <span className="font-mono text-sm">{draft.order_number}</span>
           </DialogTitle>
           <DialogDescription>

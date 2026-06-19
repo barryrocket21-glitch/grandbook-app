@@ -205,7 +205,7 @@ export default function UsersPage() {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6 text-center space-y-2">
-          <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto" />
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
           <h2 className="text-lg font-semibold">Akses Dibatasi</h2>
           <p className="text-sm text-muted-foreground">Hanya Owner atau Admin yang dapat mengelola users.</p>
         </CardContent>
@@ -221,7 +221,7 @@ export default function UsersPage() {
         description={`${users.length} user terdaftar`}
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}><UserPlus className="w-4 h-4 mr-2" />Tambah User</DialogTrigger>
+            <DialogTrigger render={<Button className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" />}><UserPlus className="w-4 h-4 mr-2" />Tambah User</DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Tambah User Baru</DialogTitle></DialogHeader>
             <form onSubmit={handleInvite} className="space-y-4">
@@ -229,7 +229,7 @@ export default function UsersPage() {
               <div className="space-y-2"><Label>Email *</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></div>
               <div className="space-y-2"><Label>Password *</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} minLength={8} required /></div>
               <div className="space-y-2"><Label>Role</Label><Select value={form.role} onValueChange={v => setForm({ ...form, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
-              <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Buat User</Button>
+              <Button type="submit" className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Buat User</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -237,10 +237,10 @@ export default function UsersPage() {
       />
 
       {showSqlHelp && (
-        <Card className="border-yellow-500/40 bg-yellow-500/5">
+        <Card className="border-amber-500/40 bg-amber-500/5">
           <CardContent className="pt-4 pb-4 space-y-3">
             <div className="flex items-start gap-3">
-              <Wrench className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
+              <Wrench className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
               <div className="flex-1 space-y-2">
                 <p className="font-semibold text-sm">Database error terdeteksi</p>
                 <p className="text-sm text-muted-foreground">
@@ -248,13 +248,13 @@ export default function UsersPage() {
                   Klik <strong>Auto-Fix</strong> di bawah untuk drop trigger-nya. Aman — kita sudah handle pembuatan profile sendiri di API.
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  <strong>Catatan:</strong> Auto-Fix butuh function <code className="px-1 py-0.5 rounded bg-zinc-800 text-yellow-300 font-mono">repair_user_creation()</code> yang sudah di-install.
+                  <strong>Catatan:</strong> Auto-Fix butuh function <code className="px-1 py-0.5 rounded bg-zinc-800 text-amber-300 font-mono">repair_user_creation()</code> yang sudah di-install.
                   Kalau belum, copy SQL dari file <code className="px-1 py-0.5 rounded bg-zinc-800 font-mono">migrations/003_install_repair_function.sql</code> ke Supabase SQL Editor dan Run.
                 </p>
               </div>
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleAutoFix} disabled={repairing} className="bg-yellow-600 hover:bg-yellow-700 text-white">
+              <Button onClick={handleAutoFix} disabled={repairing} className="bg-amber-600 hover:bg-amber-700 text-white">
                 {repairing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wrench className="w-4 h-4 mr-2" />}
                 Auto-Fix Database
               </Button>
@@ -313,7 +313,7 @@ export default function UsersPage() {
             <div className="space-y-2"><Label>Nama Lengkap *</Label><Input value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Email *</Label><Input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} required /><p className="text-xs text-muted-foreground">Mengubah email akan mengirim email konfirmasi ke alamat baru.</p></div>
             <div className="space-y-2"><Label>Role</Label><Select value={editForm.role} onValueChange={v => v && setEditForm({ ...editForm, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
-            <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={editing}>{editing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan Perubahan</Button>
+            <Button type="submit" className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" disabled={editing}>{editing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan Perubahan</Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -330,7 +330,7 @@ export default function UsersPage() {
               <Input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} required placeholder="Minimal 8 karakter" autoFocus />
               <p className="text-xs text-muted-foreground">Catat password ini — kamu harus beritahu user secara manual.</p>
             </div>
-            <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={resetting}>{resetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Reset Password</Button>
+            <Button type="submit" className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" disabled={resetting}>{resetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Reset Password</Button>
           </form>
         </DialogContent>
       </Dialog>

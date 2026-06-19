@@ -178,7 +178,7 @@ export default function MasterKurirPage() {
       <PageHeader icon={Truck} title="Setup Kurir"
         description="Satu tempat config tiap kurir: tipe, billing, rates (biaya), & status mapping. Ganti % langsung di sini."
         actions={
-          <Button size="sm" onClick={recompute} disabled={recomputing} className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white">
+          <Button size="sm" onClick={recompute} disabled={recomputing} className="gap-1.5 bg-zinc-600 hover:bg-zinc-700 text-white">
             {recomputing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
             Recompute Biaya
           </Button>
@@ -199,9 +199,9 @@ export default function MasterKurirPage() {
                   <span className="font-semibold">{ch.name}</span>
                   <Badge variant="outline" className="font-mono text-[10px]">{ch.code}</Badge>
                   {ch.aggregator
-                    ? <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/30 text-[10px]">Agregator: {ch.aggregator}</Badge>
+                    ? <Badge variant="outline" className="bg-zinc-500/10 text-zinc-600 border-zinc-500/30 text-[10px]">Agregator: {ch.aggregator}</Badge>
                     : <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px]">Direct</Badge>}
-                  {ch.billing_model && <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-[10px]">Billing: {ch.billing_model}</Badge>}
+                  {ch.billing_model && <Badge variant="outline" className="bg-zinc-500/10 text-zinc-600 border-zinc-500/30 text-[10px]">Billing: {ch.billing_model}</Badge>}
                   {!ch.active && <Badge variant="outline" className="text-[10px]">nonaktif</Badge>}
                 </div>
                 {/* Billing detail (channel_billing_config) */}

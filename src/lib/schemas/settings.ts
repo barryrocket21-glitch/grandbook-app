@@ -77,12 +77,12 @@ export type StatusMappingFormData = z.infer<typeof statusMappingSchema>
 // UI helpers
 // =============================================================
 export const STATUS_BADGE_COLOR: Record<OrderStatus, string> = {
-  BARU: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-  SIAP_KIRIM: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
-  DIKIRIM: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+  BARU: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  SIAP_KIRIM: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  DIKIRIM: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   DITERIMA: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
   PROBLEM: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-  RETUR: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+  RETUR: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
   CANCEL: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   FAKE: 'bg-red-500/10 text-red-600 border-red-500/30',
 }
@@ -123,10 +123,10 @@ export const CONVERTER_TARGET_TABLES = ['orders', 'order_items', 'meta', 'file_c
 export type ConverterTargetTableEnum = (typeof CONVERTER_TARGET_TABLES)[number]
 
 export const DIRECTION_BADGE_COLOR: Record<ConverterDirectionEnum, string> = {
-  INBOUND_ORDER: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  INBOUND_ORDER: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   INBOUND_REKONSIL: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
-  OUTBOUND_TO_COURIER: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
-  WA_PASTE: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
+  OUTBOUND_TO_COURIER: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  WA_PASTE: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
 }
 
 export const DIRECTION_LABEL: Record<ConverterDirectionEnum, string> = {
@@ -137,10 +137,10 @@ export const DIRECTION_LABEL: Record<ConverterDirectionEnum, string> = {
 }
 
 export const TARGET_TABLE_BADGE_COLOR: Record<ConverterTargetTableEnum, string> = {
-  orders: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  orders: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   order_items: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
   meta: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
-  file_column: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+  file_column: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
 }
 
 export const converterProfileSchema = z
@@ -325,7 +325,7 @@ export const COMMISSION_STATUS_LABEL: Record<CommissionV2Status, string> = {
 export const COMMISSION_STATUS_BADGE_COLOR: Record<CommissionV2Status, string> = {
   // Phase 9
   PENDING: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-  EARNED: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  EARNED: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   PAID: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
   VOIDED: 'bg-red-500/10 text-red-600 border-red-500/30',
   // Legacy
@@ -457,14 +457,14 @@ export const EXPENSE_CATEGORY_LABEL: Record<OperationalExpenseCategory, string> 
 }
 
 export const EXPENSE_CATEGORY_COLOR: Record<OperationalExpenseCategory, string> = {
-  GAJI: 'bg-violet-500/10 text-violet-600 border-violet-500/30',
-  SEWA: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  GAJI: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  SEWA: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   UTILITY: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-  MARKETING: 'bg-pink-500/10 text-pink-600 border-pink-500/30',
-  OPERASIONAL: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30',
-  PERLENGKAPAN: 'bg-teal-500/10 text-teal-600 border-teal-500/30',
+  MARKETING: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  OPERASIONAL: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  PERLENGKAPAN: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   PAJAK: 'bg-red-500/10 text-red-600 border-red-500/30',
-  JASA: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+  JASA: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
   LAIN_LAIN: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
 }
 
@@ -527,10 +527,10 @@ export const CAMPAIGN_PLATFORM_LABEL: Record<AdPlatform, string> = {
 }
 
 export const CAMPAIGN_PLATFORM_COLOR: Record<AdPlatform, string> = {
-  META: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  META: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
   GOOGLE: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-  TIKTOK: 'bg-pink-500/10 text-pink-600 border-pink-500/30',
-  SNACK: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+  TIKTOK: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
+  SNACK: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
   OTHER: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30',
 }
 

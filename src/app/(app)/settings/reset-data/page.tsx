@@ -130,7 +130,7 @@ export default function ResetDataPage() {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6 text-center space-y-2">
-          <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto" />
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
           <h2 className="text-lg font-semibold">Akses Dibatasi</h2>
           <p className="text-sm text-muted-foreground">Halaman reset data hanya untuk Owner.</p>
         </CardContent>

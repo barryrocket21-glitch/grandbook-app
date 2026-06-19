@@ -80,9 +80,9 @@ export function CsLeadSection({ userId, from, to }: { userId: string; from: stri
     <div className="space-y-4">
       {/* Stat cards: 4 columns */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-3 rounded border bg-blue-500/10 border-blue-500/30">
+        <div className="p-3 rounded border bg-zinc-500/10 border-zinc-500/30">
           <div className="text-xs text-muted-foreground">Total Lead Masuk</div>
-          <div className="text-xl font-bold mt-1 text-blue-600">{formatNumber(summary?.total_lead_in ?? 0)}</div>
+          <div className="text-xl font-bold mt-1 text-zinc-600">{formatNumber(summary?.total_lead_in ?? 0)}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">{summary?.active_days ?? 0} hari aktif</div>
         </div>
         <div className="p-3 rounded border bg-emerald-500/10 border-emerald-500/30">
@@ -90,9 +90,9 @@ export function CsLeadSection({ userId, from, to }: { userId: string; from: stri
           <div className="text-xl font-bold mt-1 text-emerald-600">{formatNumber(summary?.total_closing ?? 0)}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">dari laporan CS</div>
         </div>
-        <div className="p-3 rounded border bg-violet-500/10 border-violet-500/30">
+        <div className="p-3 rounded border bg-zinc-500/10 border-zinc-500/30">
           <div className="text-xs text-muted-foreground">Close Rate</div>
-          <div className="text-xl font-bold mt-1 text-violet-600">{(summary?.close_rate ?? 0).toFixed(2)}%</div>
+          <div className="text-xl font-bold mt-1 text-zinc-600">{(summary?.close_rate ?? 0).toFixed(2)}%</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">closing / lead</div>
         </div>
         <div className="p-3 rounded border bg-amber-500/10 border-amber-500/30">
@@ -116,7 +116,7 @@ export function CsLeadSection({ userId, from, to }: { userId: string; from: stri
           </div>
           {noData ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
-              Belum ada laporan CS di periode ini. Klik <Link href="/cs-report" className="text-violet-500 hover:underline">Input Laporan</Link>.
+              Belum ada laporan CS di periode ini. Klik <Link href="/cs-report" className="text-zinc-500 hover:underline">Input Laporan</Link>.
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
@@ -127,7 +127,7 @@ export function CsLeadSection({ userId, from, to }: { userId: string; from: stri
                 <RechartsTooltip
                   contentStyle={{ background: 'rgb(15 23 42 / 0.95)', border: '1px solid rgb(148 163 184 / 0.3)', borderRadius: 6, fontSize: 12 }}
                 />
-                <Area type="monotone" dataKey="total_lead_in" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="lead" />
+                <Area type="monotone" dataKey="total_lead_in" stroke="#3f6fd1" fill="#3f6fd1" fillOpacity={0.3} name="lead" />
                 <Area type="monotone" dataKey="total_closing" stroke="#10b981" fill="#10b981" fillOpacity={0.3} name="closing" />
               </AreaChart>
             </ResponsiveContainer>
@@ -179,11 +179,11 @@ export function CsLeadSection({ userId, from, to }: { userId: string; from: stri
         </Card>
       )}
 
-      <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3 text-xs text-muted-foreground flex items-center gap-2">
-        <TrendingUp className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+      <div className="rounded-lg border border-zinc-500/20 bg-zinc-500/5 p-3 text-xs text-muted-foreground flex items-center gap-2">
+        <TrendingUp className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
         <span>
           Cross-check Lead/Closing vs Meta Ads + System Orders di{' '}
-          <Link href="/analytics" className="text-violet-500 hover:underline">/analytics → Tab Funnel</Link>
+          <Link href="/analytics" className="text-zinc-500 hover:underline">/analytics → Tab Funnel</Link>
           {' '}(owner only).
         </span>
       </div>

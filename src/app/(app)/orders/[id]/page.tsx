@@ -355,7 +355,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   Multi-Origin Order
                 </Badge>
               ) : order.origin_supplier ? (
-                <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/30">
+                <Badge variant="outline" className="bg-zinc-500/10 text-zinc-600 border-zinc-500/30">
                   Origin: {order.origin_supplier.code || order.origin_supplier.name}
                 </Badge>
               ) : null}
@@ -395,7 +395,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <Card>
               <CardContent className="pt-4 pb-4 space-y-2 text-sm">
                 <h3 className="font-semibold text-base flex items-center gap-2">
-                  <span className="w-1.5 h-5 bg-violet-500 rounded" />Customer
+                  <span className="w-1.5 h-5 bg-zinc-500 rounded" />Customer
                 </h3>
                 <Field label="Nama" value={order.customer_name} />
                 <Field label="No HP" value={order.customer_phone || '—'} />
@@ -414,7 +414,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <Card>
               <CardContent className="pt-4 pb-4 space-y-2 text-sm">
                 <h3 className="font-semibold text-base flex items-center gap-2">
-                  <span className="w-1.5 h-5 bg-indigo-500 rounded" />Pengiriman & Pembayaran
+                  <span className="w-1.5 h-5 bg-zinc-500 rounded" />Pengiriman & Pembayaran
                 </h3>
                 <Field
                   label="Channel"
@@ -477,7 +477,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <Card className="md:col-span-2">
               <CardContent className="pt-4 pb-4 space-y-3 text-sm">
                 <h3 className="font-semibold text-base flex items-center gap-2">
-                  <span className="w-1.5 h-5 bg-teal-500 rounded" />CS Tracking & Catatan
+                  <span className="w-1.5 h-5 bg-zinc-500 rounded" />CS Tracking & Catatan
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Field
@@ -579,7 +579,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   {history.map((h, idx) => (
                     <div key={h.id} className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <div className={`w-3 h-3 rounded-full ${idx === 0 ? 'bg-violet-500' : 'bg-muted-foreground/40'}`} />
+                        <div className={`w-3 h-3 rounded-full ${idx === 0 ? 'bg-zinc-500' : 'bg-muted-foreground/40'}`} />
                         {idx < history.length - 1 && <div className="w-px flex-1 bg-muted-foreground/20 my-1" />}
                       </div>
                       <div className="flex-1 pb-3 space-y-1">
@@ -685,7 +685,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <Button
                 onClick={submitStatus}
                 disabled={statusRunning}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 {statusRunning && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}Update
               </Button>
@@ -787,7 +787,7 @@ function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomput
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Coins className="w-4 h-4 text-violet-500" />
+              <Coins className="w-4 h-4 text-zinc-500" />
               Estimated Cost &amp; Profit
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -801,7 +801,7 @@ function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomput
         </div>
 
         {billingModel === 'NO_RECONCILIATION' && (
-          <div className="text-xs p-3 rounded bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400">
+          <div className="text-xs p-3 rounded bg-zinc-500/10 border border-zinc-500/20 text-zinc-700 dark:text-zinc-400">
             ℹ️ Channel ini billing model = NO_RECONCILIATION. Cash in = order total kalau COD; cost dihitung simbolis tanpa rekonsil.
           </div>
         )}
@@ -842,7 +842,7 @@ function CostProfitTab({ order, onRecomputed }: { order: OrderDetail; onRecomput
                 <span className="text-muted-foreground">PPN</span>
                 <span className="font-mono">{formatRupiah(Number(order.estimated_ppn ?? 0))}</span>
               </div>
-              <div className="flex justify-between border-t pt-1 text-orange-600">
+              <div className="flex justify-between border-t pt-1 text-amber-600">
                 <span className="font-semibold">Total Cost ke Ekspedisi</span>
                 <span className="font-mono font-bold">{formatRupiah(Number(order.estimated_total_cost ?? 0))}</span>
               </div>

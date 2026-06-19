@@ -271,7 +271,7 @@ export default function WaPastePage() {
                 <button
                   type="button"
                   onClick={() => setText(SAMPLE_TEXT)}
-                  className="text-violet-500 hover:underline"
+                  className="text-zinc-500 hover:underline"
                 >
                   Isi sample
                 </button>
@@ -282,7 +282,7 @@ export default function WaPastePage() {
               <Button
                 onClick={handleParse}
                 disabled={!text.trim() || !channelId || busy || !refData}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
                 Parse & Preview <ArrowRight className="w-3.5 h-3.5 ml-1" />
@@ -330,7 +330,7 @@ export default function WaPastePage() {
                 onClick={handleSubmit}
                 disabled={adapted.length === 0}
                 size="sm"
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Submit {adapted.length} Order
               </Button>
@@ -370,7 +370,7 @@ export default function WaPastePage() {
       {step === 'submitting' && (
         <Card>
           <CardContent className="pt-8 pb-8 text-center space-y-3">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-violet-500" />
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-zinc-500" />
             <div className="text-sm">Memasukkan {adapted.length} order ke database...</div>
           </CardContent>
         </Card>
@@ -408,7 +408,7 @@ export default function WaPastePage() {
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
                 onClick={() => router.push('/orders/draft')}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 Lihat Antrian Kerja <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
@@ -443,7 +443,7 @@ function StatChip({
     emerald: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10',
     red: 'text-red-700 dark:text-red-300 bg-red-500/10',
     amber: 'text-amber-700 dark:text-amber-300 bg-amber-500/10',
-    violet: 'text-violet-700 dark:text-violet-300 bg-violet-500/10',
+    violet: 'text-zinc-700 dark:text-zinc-300 bg-zinc-500/10',
   }
   return (
     <div className="flex items-center gap-1.5 text-xs">
@@ -466,7 +466,7 @@ function Stat({
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
     red: 'bg-red-500/10 border-red-500/30 text-red-600',
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
+    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
   }
   return (
     <div className={`p-3 rounded border ${colorMap[color]}`}>

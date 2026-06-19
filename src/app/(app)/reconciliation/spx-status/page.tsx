@@ -164,7 +164,7 @@ export default function SpxStatusSyncPage() {
         <Card>
           <CardContent className="pt-4 pb-4 space-y-3">
             <div className="flex items-center gap-2 text-sm">
-              <FileSpreadsheet className="w-4 h-4 text-violet-500" /> <span className="font-mono text-xs">{parsed.fileName}</span>
+              <FileSpreadsheet className="w-4 h-4 text-zinc-500" /> <span className="font-mono text-xs">{parsed.fileName}</span>
               <Badge variant="outline">{parsed.total} baris</Badge>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -203,7 +203,7 @@ export default function SpxStatusSyncPage() {
             </div>
             <div className="flex justify-between">
               <Button variant="outline" onClick={reset}><RotateCcw className="w-3.5 h-3.5 mr-1" /> Ganti File</Button>
-              <Button onClick={apply} disabled={applying} className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white">
+              <Button onClick={apply} disabled={applying} className="bg-gradient-to-r from-zinc-600 to-zinc-600 text-white">
                 {applying ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
                 Apply Sync ({parsed.withGb} ber-GB-)
               </Button>
@@ -232,7 +232,7 @@ export default function SpxStatusSyncPage() {
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   const c: Record<string, string> = {
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
-    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
+    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-500',
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
   }

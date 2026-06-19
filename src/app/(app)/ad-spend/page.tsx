@@ -265,7 +265,7 @@ export default function AdSpendPage() {
                 </Button>
                 <Button
                   onClick={() => { reset(); setOpen(true) }}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20"
+                  className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20"
                 >
                   <Plus className="w-4 h-4 mr-2" />Tambah Manual
                 </Button>
@@ -278,23 +278,23 @@ export default function AdSpendPage() {
       {/* Stat cards — IKUT filter periode + platform */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-violet-500/15 rounded-xl ring-1 ring-violet-500/20"><Coins className="w-5 h-5 text-violet-500" /></div>
+            <div className="p-2.5 bg-zinc-500/15 rounded-xl ring-1 ring-zinc-500/20"><Coins className="w-5 h-5 text-zinc-500" /></div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Spend</p>
-              <p className="text-xl font-bold text-violet-500">{formatRupiah(live.spendTotal)}</p>
+              <p className="text-xl font-bold text-zinc-500">{formatRupiah(live.spendTotal)}</p>
               <p className="text-[10px] text-muted-foreground">{live.spendTotal > live.spend ? `Gross ${formatRupiah(live.spend)} + PPN` : `${rows.length} entry`}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-blue-500/15 rounded-xl ring-1 ring-blue-500/20"><Eye className="w-5 h-5 text-blue-500" /></div>
+            <div className="p-2.5 bg-zinc-500/15 rounded-xl ring-1 ring-zinc-500/20"><Eye className="w-5 h-5 text-zinc-500" /></div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Lead</p>
-              <p className="text-xl font-bold text-blue-600">{formatNumber(live.leads)}</p>
+              <p className="text-xl font-bold text-zinc-600">{formatNumber(live.leads)}</p>
               <p className="text-[10px] text-muted-foreground">lead dashboard</p>
             </div>
           </CardContent>
@@ -327,8 +327,8 @@ export default function AdSpendPage() {
       <Card>
         <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row gap-3 sm:items-center">
           <div className="inline-flex rounded-md border p-0.5 shrink-0">
-            <button onClick={() => setTab('spend')} className={`px-3 h-8 text-sm rounded ${tab === 'spend' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Spend Harian</button>
-            <button onClick={() => setTab('perf')} className={`px-3 h-8 text-sm rounded ${tab === 'perf' ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>Performa Campaign</button>
+            <button onClick={() => setTab('spend')} className={`px-3 h-8 text-sm rounded ${tab === 'spend' ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>Spend Harian</button>
+            <button onClick={() => setTab('perf')} className={`px-3 h-8 text-sm rounded ${tab === 'perf' ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>Performa Campaign</button>
           </div>
           <Select value={platformFilter} onValueChange={v => v && setPlatformFilter(v as 'ALL' | AdPlatform)}>
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
@@ -551,8 +551,8 @@ export default function AdSpendPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-violet-500 font-semibold">Total</Label>
-                <div className="h-9 px-3 flex items-center rounded-md border bg-violet-500/5 text-sm font-semibold text-violet-600">
+                <Label className="text-xs text-zinc-500 font-semibold">Total</Label>
+                <div className="h-9 px-3 flex items-center rounded-md border bg-zinc-500/5 text-sm font-semibold text-zinc-600">
                   {formatRupiah(Math.round(form.spend * (1 + form.ppn_rate / 100)))}
                 </div>
               </div>
@@ -573,7 +573,7 @@ export default function AdSpendPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Leads <span className="text-[10px] text-violet-600 font-normal">← buat CPR (spend ÷ lead)</span></Label>
+              <Label>Leads <span className="text-[10px] text-zinc-600 font-normal">← buat CPR (spend ÷ lead)</span></Label>
               <Input type="number" value={form.leads} onChange={e => setForm({ ...form, leads: Number(e.target.value) })} placeholder="mis. 10" />
             </div>
 
@@ -617,7 +617,7 @@ export default function AdSpendPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               disabled={saving}
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -749,7 +749,7 @@ function CsvUploadDialog({
                   key={p}
                   type="button"
                   onClick={() => setPlatform(p)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${platform === p ? 'border-violet-500 bg-violet-500/5' : 'border-border hover:border-violet-500/30'}`}
+                  className={`p-4 rounded-lg border-2 transition-all text-left ${platform === p ? 'border-zinc-500 bg-zinc-500/5' : 'border-border hover:border-zinc-500/30'}`}
                 >
                   <Badge variant="outline" className={`mb-2 ${CAMPAIGN_PLATFORM_COLOR[p]}`}>{CAMPAIGN_PLATFORM_LABEL[p]}</Badge>
                   <p className="text-xs text-muted-foreground">
@@ -769,7 +769,7 @@ function CsvUploadDialog({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full p-8 border-2 border-dashed rounded-lg hover:border-violet-500/50 hover:bg-violet-500/5 transition-all"
+              className="w-full p-8 border-2 border-dashed rounded-lg hover:border-zinc-500/50 hover:bg-zinc-500/5 transition-all"
             >
               <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm font-medium">Klik untuk pilih file CSV</p>
@@ -911,7 +911,7 @@ function CsvUploadDialog({
                   matchResult.matched_rows.length === 0 ||
                   (parseResult.mode === 'SNAPSHOT_DATE_RANGE_AGGREGATE' && !forceImportAggregate)
                 }
-                className="ml-auto bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="ml-auto bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 {parseResult.mode === 'SNAPSHOT_DATE_RANGE_AGGREGATE' && forceImportAggregate
                   ? `Force import ${matchResult.matched_rows.length} rows`
@@ -924,7 +924,7 @@ function CsvUploadDialog({
 
         {step === 'importing' && (
           <div className="py-12 text-center">
-            <Loader2 className="w-10 h-10 animate-spin mx-auto text-violet-500" />
+            <Loader2 className="w-10 h-10 animate-spin mx-auto text-zinc-500" />
             <p className="text-sm mt-4">Importing ad spend...</p>
           </div>
         )}
@@ -953,7 +953,7 @@ function CsvUploadDialog({
                 {importResult.errors.map((e, i) => <p key={i} className="text-red-600">{e}</p>)}
               </div>
             )}
-            <Button onClick={onComplete} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+            <Button onClick={onComplete} className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white">
               Selesai
             </Button>
           </div>

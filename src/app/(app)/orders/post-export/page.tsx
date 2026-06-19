@@ -146,7 +146,7 @@ export default function PostExportPage() {
                   <TableRow key={i}><TableCell colSpan={10}><div className="h-4 bg-muted animate-pulse rounded" /></TableCell></TableRow>
                 ))
               ) : err ? (
-                <TableRow><TableCell colSpan={10} className="py-10 text-center text-sm text-rose-600">⚠️ Gagal memuat data — klik Refresh.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="py-10 text-center text-sm text-red-600">⚠️ Gagal memuat data — klik Refresh.</TableCell></TableRow>
               ) : sorted.length === 0 ? (
                 <TableRow><TableCell colSpan={10} className="p-0"><EmptyState icon={Inbox} title="Belum ada order diexport" description="Order yang udah di-generate ke file ekspedisi bakal muncul di sini." /></TableCell></TableRow>
               ) : (
@@ -159,11 +159,11 @@ export default function PostExportPage() {
                       {(() => {
                         const map: Record<string, { label: string; cls: string }> = {
                           DITERIMA: { label: 'Terkirim', cls: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' },
-                          RETUR: { label: 'Retur', cls: 'bg-orange-500/10 text-orange-600 border-orange-500/30' },
-                          DIKIRIM: { label: 'Dikirim', cls: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
+                          RETUR: { label: 'Retur', cls: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
+                          DIKIRIM: { label: 'Dikirim', cls: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30' },
                           PROBLEM: { label: 'Problem', cls: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
                         }
-                        const m = map[r.status] || { label: 'Sudah Diexport', cls: 'bg-blue-500/10 text-blue-600 border-blue-500/30' }
+                        const m = map[r.status] || { label: 'Sudah Diexport', cls: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30' }
                         return <Badge variant="outline" className={`${m.cls} text-[10px] whitespace-nowrap`}>{m.label}</Badge>
                       })()}
                     </TableCell>

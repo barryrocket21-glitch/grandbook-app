@@ -161,7 +161,7 @@ function EmptyHint({ hint }: { hint: ComboboxEmptyHint }): ReactNode {
       {hint.actionHref && (
         <Link
           href={hint.actionHref}
-          className="inline-flex items-center gap-1 text-violet-500 hover:underline text-xs pl-6"
+          className="inline-flex items-center gap-1 text-zinc-500 hover:underline text-xs pl-6"
         >
           + {hint.actionLabel ?? 'Tambah baru'}
         </Link>

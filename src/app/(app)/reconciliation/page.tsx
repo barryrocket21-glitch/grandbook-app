@@ -138,7 +138,7 @@ export default function ReconciliationPage() {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6 text-center space-y-2">
-          <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto" />
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
           <h2 className="text-lg font-semibold">Akses Dibatasi</h2>
           <p className="text-sm text-muted-foreground">Halaman reconciliation hanya untuk Owner, Admin, atau Akunting.</p>
         </CardContent>
@@ -155,7 +155,7 @@ export default function ReconciliationPage() {
         actions={
           <div className="flex items-center gap-2">
             <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-40" />
-            <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20">
+            <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Simpan
             </Button>
@@ -166,7 +166,7 @@ export default function ReconciliationPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 relative">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Tracked di GrandBook</p>
             <p className="text-2xl font-bold mt-1">{formatRupiah(totals.tracked)}</p>
@@ -174,10 +174,10 @@ export default function ReconciliationPage() {
           </CardContent>
         </Card>
         <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 relative">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Tagihan Real</p>
-            <p className="text-2xl font-bold mt-1 text-violet-500">{formatRupiah(totals.invoice)}</p>
+            <p className="text-2xl font-bold mt-1 text-zinc-500">{formatRupiah(totals.invoice)}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">total dari semua platform yang diisi</p>
           </CardContent>
         </Card>
@@ -248,7 +248,7 @@ export default function ReconciliationPage() {
                         placeholder="0"
                       />
                     </TableCell>
-                    <TableCell className={`text-right font-mono text-sm ${diff > 0 ? 'text-amber-500' : diff < 0 ? 'text-blue-500' : 'text-muted-foreground'}`}>
+                    <TableCell className={`text-right font-mono text-sm ${diff > 0 ? 'text-amber-500' : diff < 0 ? 'text-zinc-500' : 'text-muted-foreground'}`}>
                       {r.invoice > 0 ? `${diff > 0 ? '+' : ''}${formatRupiah(diff)}` : '—'}
                     </TableCell>
                     <TableCell className="text-center">
@@ -280,13 +280,13 @@ export default function ReconciliationPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-blue-500/20 bg-blue-500/5">
+      <Card className="border-zinc-500/20 bg-zinc-500/5">
         <CardContent className="pt-4 pb-4 text-sm space-y-2">
           <p>📊 <strong>Cara baca selisih:</strong></p>
           <ul className="list-disc list-inside space-y-1 text-muted-foreground">
             <li><span className="text-emerald-500">Hijau</span> (≤5%): tracked spend cukup akurat, advertiser input dengan benar</li>
             <li><span className="text-amber-500">Amber</span> (&gt;5%): kemungkinan auto-bid Meta lebih tinggi, atau advertiser miss input. Investigate.</li>
-            <li><span className="text-blue-500">Selisih negatif</span> (tagihan &lt; tracked): kemungkinan ada double-input ad_spend atau credit dari platform.</li>
+            <li><span className="text-zinc-500">Selisih negatif</span> (tagihan &lt; tracked): kemungkinan ada double-input ad_spend atau credit dari platform.</li>
           </ul>
         </CardContent>
       </Card>

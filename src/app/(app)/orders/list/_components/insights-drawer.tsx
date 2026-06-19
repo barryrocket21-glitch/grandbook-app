@@ -136,7 +136,7 @@ export function InsightsDrawer({
       <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
         <SheetHeader className="p-4 border-b">
           <SheetTitle className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-violet-500" />
+            <BarChart3 className="w-4 h-4 text-zinc-500" />
             Analisa Order
           </SheetTitle>
           <SheetDescription>

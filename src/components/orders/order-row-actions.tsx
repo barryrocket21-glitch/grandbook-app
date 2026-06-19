@@ -281,7 +281,7 @@ function AuditTrailDialog({ orderId, orderNumber, onClose }: {
           </DialogTitle>
           <DialogDescription>
             Semua mutasi data untuk order ini.{' '}
-            <Link href="/settings/audit-log" className="text-violet-500 hover:underline">
+            <Link href="/settings/audit-log" className="text-zinc-500 hover:underline">
               Buka full audit log →
             </Link>
           </DialogDescription>

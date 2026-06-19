@@ -147,7 +147,7 @@ export default function PhoneReviewPage() {
                 <TableRow key={r.id} className={r.resolved ? 'opacity-50' : ''}>
                   <TableCell className="text-xs font-mono">
                     {r.order ? (
-                      <Link href={`/orders/${r.order.id}`} className="text-violet-400 hover:underline">
+                      <Link href={`/orders/${r.order.id}`} className="text-zinc-400 hover:underline">
                         {r.order.order_number}
                       </Link>
                     ) : <span className="text-muted-foreground">—</span>}

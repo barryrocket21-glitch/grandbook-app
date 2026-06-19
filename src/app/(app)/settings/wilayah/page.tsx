@@ -231,7 +231,7 @@ export default function WilayahPage() {
         </div>
       )}
 
-      <Card className="border-blue-500/20 bg-blue-500/5">
+      <Card className="border-zinc-500/20 bg-zinc-500/5">
         <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
           ℹ️ Master wilayah dikelola via script <code className="px-1 py-0.5 rounded bg-muted font-mono">npm run import:wilayah</code>. Hubungi developer untuk update.
         </CardContent>

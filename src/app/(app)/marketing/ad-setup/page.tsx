@@ -271,7 +271,7 @@ export default function AdSetupPage() {
         actions={
           <div className="flex gap-2">
             <Button size="sm" variant={showAddAcc ? 'default' : 'outline'} onClick={() => setShowAddAcc(v => !v)} className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Tambah Akun</Button>
-            <Button size="sm" onClick={resolve} disabled={resolving} className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white">
+            <Button size="sm" onClick={resolve} disabled={resolving} className="gap-1.5 bg-zinc-600 hover:bg-zinc-700 text-white">
               {resolving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />} Resolve Atribusi
             </Button>
           </div>
@@ -319,12 +319,12 @@ export default function AdSetupPage() {
       )}
 
       {dupCodes.size > 0 && (
-        <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-xs space-y-1">
-          <div className="font-semibold text-rose-600 flex items-center gap-1.5"><X className="w-3.5 h-3.5" /> {dupCodes.size} kode campaign DOBEL terdeteksi</div>
-          <div className="text-rose-700/80">Kode atribusi sama (produk+platform+akun+marker) → resolusi order bisa ketuker. Ganti marker / hapus salah satu:</div>
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs space-y-1">
+          <div className="font-semibold text-red-600 flex items-center gap-1.5"><X className="w-3.5 h-3.5" /> {dupCodes.size} kode campaign DOBEL terdeteksi</div>
+          <div className="text-red-700/80">Kode atribusi sama (produk+platform+akun+marker) → resolusi order bisa ketuker. Ganti marker / hapus salah satu:</div>
           <div className="flex flex-wrap gap-1.5">
             {[...dupCodes.entries()].map(([code, ids]) => (
-              <span key={code} className="font-mono bg-rose-500/15 text-rose-700 px-1.5 py-0.5 rounded">{code} <b>×{ids.length}</b></span>
+              <span key={code} className="font-mono bg-red-500/15 text-red-700 px-1.5 py-0.5 rounded">{code} <b>×{ids.length}</b></span>
             ))}
           </div>
         </div>
@@ -342,7 +342,7 @@ export default function AdSetupPage() {
             return (
               <Card key={a.id} className={`overflow-hidden ${a.active ? '' : 'opacity-60'}`}>
                 {editing ? (
-                  <div className="flex flex-wrap items-end gap-2 p-3 bg-violet-500/5">
+                  <div className="flex flex-wrap items-end gap-2 p-3 bg-zinc-500/5">
                     <div className="space-y-0.5"><Label className="text-[9px]">Platform</Label>
                       <Select value={eaf.platform} onValueChange={v => v && setEaf({ ...eaf, platform: v })}>
                         <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
@@ -382,7 +382,7 @@ export default function AdSetupPage() {
                       const isDup = code != null && dupCodes.has(code)
                       const ce = editCampId === c.id
                       return (
-                        <div key={c.id} className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${isDup ? 'bg-rose-500/10' : 'bg-card'} ${c.active ? '' : 'opacity-50'}`}>
+                        <div key={c.id} className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${isDup ? 'bg-red-500/10' : 'bg-card'} ${c.active ? '' : 'opacity-50'}`}>
                           {ce ? (
                             <>
                               <Input value={c.campaign_name} onChange={e => setCamp(c.id, { campaign_name: e.target.value })} className="h-8 flex-1 text-xs" placeholder="nama campaign" />
@@ -393,8 +393,8 @@ export default function AdSetupPage() {
                           ) : (
                             <>
                               <span className="text-xs flex-1 truncate font-medium">{c.campaign_name}</span>
-                              {code ? <span className="font-mono text-[11px] bg-violet-500/10 text-violet-600 px-1.5 py-0.5 rounded shrink-0">{code}</span> : <span className="text-[10px] text-muted-foreground shrink-0">marker dulu</span>}
-                              {isDup && <Badge variant="outline" className="bg-rose-500/15 text-rose-600 text-[9px] border-rose-500/30 shrink-0">DOBEL</Badge>}
+                              {code ? <span className="font-mono text-[11px] bg-zinc-500/10 text-zinc-600 px-1.5 py-0.5 rounded shrink-0">{code}</span> : <span className="text-[10px] text-muted-foreground shrink-0">marker dulu</span>}
+                              {isDup && <Badge variant="outline" className="bg-red-500/15 text-red-600 text-[9px] border-red-500/30 shrink-0">DOBEL</Badge>}
                               <Badge variant="outline" className={`text-[9px] shrink-0 ${c.active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-zinc-500/10 text-zinc-500'}`}>{c.active ? 'Aktif' : 'Off'}</Badge>
                               <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => setEditCampId(c.id)} title="Edit" disabled={savingCamp === c.id}><Pencil className="w-3 h-3" /></Button>
                               <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => toggleCampaign(c)} title={c.active ? 'Nonaktifkan' : 'Aktifkan'} disabled={savingCamp === c.id}><Power className={`w-3 h-3 ${c.active ? 'text-amber-600' : 'text-emerald-600'}`} /></Button>
@@ -405,7 +405,7 @@ export default function AdSetupPage() {
                       )
                     })}
                     {addCampAcc === a.id ? (
-                      <div className="flex flex-wrap items-end gap-2 rounded-md border border-violet-500/30 bg-violet-500/5 p-2 mt-1">
+                      <div className="flex flex-wrap items-end gap-2 rounded-md border border-zinc-500/30 bg-zinc-500/5 p-2 mt-1">
                         <div className="space-y-0.5"><Label className="text-[9px]">Produk *</Label>
                           <Select value={ncf.product_id || 'none'} onValueChange={v => { const pid = (!v || v === 'none') ? '' : v; setNcf({ ...ncf, account_id: String(a.id), product_id: pid, marker: pid ? nextMarker(a.id, Number(pid)) : ncf.marker }) }}>
                             <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="pilih produk">{(() => { const pp = products.find(x => String(x.id) === ncf.product_id); return pp ? pp.name : 'pilih produk' })()}</SelectValue></SelectTrigger>
@@ -415,10 +415,10 @@ export default function AdSetupPage() {
                         <div className="space-y-0.5 flex-1 min-w-[120px]"><Label className="text-[9px]">Nama (opsional)</Label><Input value={ncf.name} onChange={e => setNcf({ ...ncf, name: e.target.value })} placeholder="auto: produk + kode" className="h-8 text-xs" /></div>
                         <Button size="sm" className="h-8 gap-1 text-xs" disabled={savingNew} onClick={async () => { await createCampaign(); setAddCampAcc(null) }}>{savingNew ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Buat</Button>
                         <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setAddCampAcc(null)}>Batal</Button>
-                        {(() => { const pp = products.find(x => String(x.id) === ncf.product_id); if (ncf.marker.trim()) return <span className="text-[10px] w-full">Kode: <span className="font-mono bg-violet-500/10 text-violet-600 px-1 rounded">{codeFor(pp?.name, a, ncf.marker.trim())}</span></span>; return null })()}
+                        {(() => { const pp = products.find(x => String(x.id) === ncf.product_id); if (ncf.marker.trim()) return <span className="text-[10px] w-full">Kode: <span className="font-mono bg-zinc-500/10 text-zinc-600 px-1 rounded">{codeFor(pp?.name, a, ncf.marker.trim())}</span></span>; return null })()}
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" className="h-7 text-xs text-violet-600 gap-1" onClick={() => { setNcf({ account_id: String(a.id), marker: '', product_id: '', name: '' }); setAddCampAcc(a.id) }}><Plus className="w-3.5 h-3.5" /> Campaign</Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-zinc-600 gap-1" onClick={() => { setNcf({ account_id: String(a.id), marker: '', product_id: '', name: '' }); setAddCampAcc(a.id) }}><Plus className="w-3.5 h-3.5" /> Campaign</Button>
                     )}
                   </div>
                 )}
@@ -427,7 +427,7 @@ export default function AdSetupPage() {
           })}
         </div>
       )}
-      <p className="text-[11px] text-muted-foreground">Klik baris akun buat buka/tutup campaign-nya. Kode atribusi CS: <b>Produk Platform.Akun.Marker</b> (META=F · GOOGLE=G · SNACK=S · TIKTOK=T). <a href="/campaigns" className="text-violet-500 hover:underline">Advanced campaign →</a></p>
+      <p className="text-[11px] text-muted-foreground">Klik baris akun buat buka/tutup campaign-nya. Kode atribusi CS: <b>Produk Platform.Akun.Marker</b> (META=F · GOOGLE=G · SNACK=S · TIKTOK=T). <a href="/campaigns" className="text-zinc-500 hover:underline">Advanced campaign →</a></p>
     </div>
   )
 }

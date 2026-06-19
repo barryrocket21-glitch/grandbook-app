@@ -122,7 +122,7 @@ export default function CsTeamListPage() {
               title="Belum ada CS terdaftar"
               description="Tambah user dengan role CS di Users & Roles."
               action={
-                <Link href="/settings/users" className="inline-flex items-center text-sm text-violet-500 hover:underline">
+                <Link href="/settings/users" className="inline-flex items-center text-sm text-zinc-500 hover:underline">
                   Buka Users &amp; Roles →
                 </Link>
               }
@@ -169,7 +169,7 @@ export default function CsTeamListPage() {
                     <TableCell className={cn('text-right tabular-nums', r.conv_rate >= 50 ? 'text-emerald-500' : r.conv_rate >= 30 ? 'text-amber-500' : 'text-muted-foreground')}>
                       {r.conv_rate.toFixed(1)}%
                     </TableCell>
-                    <TableCell className={cn('text-right tabular-nums', (r.retur_rate ?? 0) >= 30 ? 'text-rose-500' : (r.retur_rate ?? 0) >= 15 ? 'text-amber-500' : 'text-emerald-600')}>
+                    <TableCell className={cn('text-right tabular-nums', (r.retur_rate ?? 0) >= 30 ? 'text-red-500' : (r.retur_rate ?? 0) >= 15 ? 'text-amber-500' : 'text-emerald-600')}>
                       {(r.retur_rate ?? 0).toFixed(1)}%
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatRupiah(r.revenue_handled)}</TableCell>

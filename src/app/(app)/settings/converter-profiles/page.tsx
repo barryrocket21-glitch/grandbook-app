@@ -263,7 +263,7 @@ export default function ConverterProfilesPage() {
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
               <DialogTrigger
                 render={
-                  <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />
+                  <Button className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" />
                 }
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -533,7 +533,7 @@ export default function ConverterProfilesPage() {
                   </label>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20"
+                    className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20"
                     disabled={saving}
                   >
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -703,7 +703,7 @@ export default function ConverterProfilesPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleToggleActive(p)}
-                            className={p.active ? 'text-orange-500' : 'text-emerald-500'}
+                            className={p.active ? 'text-amber-500' : 'text-emerald-500'}
                           >
                             <Power className="w-3.5 h-3.5" />
                           </Button>
@@ -719,7 +719,7 @@ export default function ConverterProfilesPage() {
       </Card>
 
       {!canManage && (
-        <Card className="border-blue-500/20 bg-blue-500/5">
+        <Card className="border-zinc-500/20 bg-zinc-500/5">
           <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
             ℹ️ Mode read-only. Hanya Owner/Admin yang bisa edit converter profiles.
           </CardContent>

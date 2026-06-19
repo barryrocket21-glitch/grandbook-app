@@ -112,7 +112,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       <div className="space-y-6">
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
           Halaman ini hanya untuk owner &amp; admin. Untuk performance individual buka{' '}
-          <Link href="/cs-dashboard" className="text-violet-500 hover:underline">/cs-dashboard</Link>.
+          <Link href="/cs-dashboard" className="text-zinc-500 hover:underline">/cs-dashboard</Link>.
         </CardContent></Card>
       </div>
     )
@@ -157,7 +157,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <Package className="w-5 h-5 text-violet-500" />
+              <Package className="w-5 h-5 text-zinc-500" />
               <h1 className="text-2xl font-bold">{productName}</h1>
             </div>
             {funnel?.category_name && (
@@ -205,7 +205,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* 1b. Ringkasan Juara — platform/CS/campaign terbaik + margin */}
-          <Card className="border-violet-500/20 bg-violet-500/5">
+          <Card className="border-zinc-500/20 bg-zinc-500/5">
             <CardContent className="pt-4 pb-4">
               <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">🏆 Juara produk ini</div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -213,7 +213,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   <p className="text-[10px] text-muted-foreground">Platform terbaik</p>
                   {juara.bestPlat ? (<>
                     <p className="text-sm font-bold">{juara.bestPlat.platform}</p>
-                    <p className={`text-[11px] ${Number(juara.bestPlat.net_profit) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>laba {formatRupiah(Number(juara.bestPlat.net_profit))} · ROAS {Number(juara.bestPlat.roas).toFixed(1)}x</p>
+                    <p className={`text-[11px] ${Number(juara.bestPlat.net_profit) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>laba {formatRupiah(Number(juara.bestPlat.net_profit))} · ROAS {Number(juara.bestPlat.roas).toFixed(1)}x</p>
                   </>) : <p className="text-sm text-muted-foreground">—</p>}
                 </div>
                 <div>
@@ -393,12 +393,12 @@ function MiniStatCard({ label, value, color }: {
   color: 'orange' | 'emerald' | 'amber' | 'red' | 'violet' | 'blue'
 }) {
   const cls: Record<typeof color, string> = {
-    orange: 'border-orange-500/30 bg-orange-500/5',
+    orange: 'border-amber-500/30 bg-amber-500/5',
     emerald: 'border-emerald-500/30 bg-emerald-500/5',
     amber: 'border-amber-500/30 bg-amber-500/5',
     red: 'border-red-500/30 bg-red-500/5',
-    violet: 'border-violet-500/30 bg-violet-500/5',
-    blue: 'border-blue-500/30 bg-blue-500/5',
+    violet: 'border-zinc-500/30 bg-zinc-500/5',
+    blue: 'border-zinc-500/30 bg-zinc-500/5',
   }
   return (
     <div className={`p-3 rounded border ${cls[color]}`}>
@@ -515,7 +515,7 @@ function CampaignsTable({ rows }: { rows: CampaignsForProductRow[] }) {
                 </Badge>
               </TableCell>
               <TableCell className="text-right text-xs">{Number(r.allocation_pct).toFixed(0)}%</TableCell>
-              <TableCell className="text-right text-xs text-orange-600 font-semibold">{formatRupiah(Number(r.total_spend))}</TableCell>
+              <TableCell className="text-right text-xs text-amber-600 font-semibold">{formatRupiah(Number(r.total_spend))}</TableCell>
               <TableCell className="text-right text-xs">{formatNumber(Number(r.total_conversions))}</TableCell>
               <TableCell className="text-right">
                 {roas > 0 ? (

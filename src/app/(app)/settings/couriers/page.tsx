@@ -120,7 +120,7 @@ export default function CouriersPage() {
         actions={
           <PermissionGuard role={role} allowedRoles={['owner','admin']}>
             <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
-              <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}>
+              <DialogTrigger render={<Button className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" />}>
                 <Plus className="w-4 h-4 mr-2" />Tambah Courier
               </DialogTrigger>
               <DialogContent>
@@ -139,7 +139,7 @@ export default function CouriersPage() {
                     <Checkbox checked={form.active} onCheckedChange={v => setForm({ ...form, active: !!v })} id="active" />
                     <Label htmlFor="active" className="cursor-pointer">Aktif</Label>
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={saving}>
+                  <Button type="submit" className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" disabled={saving}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan
                   </Button>
                 </form>
@@ -196,7 +196,7 @@ export default function CouriersPage() {
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-center">
                     {c.channel_count && c.channel_count > 0 ? (
-                      <Link href={`/settings/courier-channels?courier=${c.id}`} className="text-xs text-violet-400 hover:underline">{c.channel_count} channel</Link>
+                      <Link href={`/settings/courier-channels?courier=${c.id}`} className="text-xs text-zinc-400 hover:underline">{c.channel_count} channel</Link>
                     ) : <span className="text-xs text-muted-foreground">0</span>}
                   </TableCell>
                   <TableCell className="text-center">
@@ -222,7 +222,7 @@ export default function CouriersPage() {
       </Card>
 
       {!canManage && (
-        <Card className="border-blue-500/20 bg-blue-500/5">
+        <Card className="border-zinc-500/20 bg-zinc-500/5">
           <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
             ℹ️ Mode read-only. Hanya Owner/Admin yang bisa edit master courier.
           </CardContent>

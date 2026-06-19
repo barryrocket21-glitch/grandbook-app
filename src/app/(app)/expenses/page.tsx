@@ -309,7 +309,7 @@ export default function ExpensesPage() {
                 </Button>
                 <Button
                   onClick={() => { reset(); setOpen(true) }}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20"
+                  className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20"
                 >
                   <Plus className="w-4 h-4 mr-2" />Tambah
                 </Button>
@@ -352,10 +352,10 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
         <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-blue-500/15 rounded-xl ring-1 ring-blue-500/20">
-              <Repeat className="w-5 h-5 text-blue-500" />
+            <div className="p-2.5 bg-zinc-500/15 rounded-xl ring-1 ring-zinc-500/20">
+              <Repeat className="w-5 h-5 text-zinc-500" />
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Recurring vs One-time</p>
@@ -365,10 +365,10 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
         <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-violet-500/15 rounded-xl ring-1 ring-violet-500/20">
-              <BadgeCheck className="w-5 h-5 text-violet-500" />
+            <div className="p-2.5 bg-zinc-500/15 rounded-xl ring-1 ring-zinc-500/20">
+              <BadgeCheck className="w-5 h-5 text-zinc-500" />
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Biaya Rutin Bulanan</p>
@@ -390,7 +390,7 @@ export default function ExpensesPage() {
                 key={cat}
                 type="button"
                 onClick={() => setCategoryFilter(isActive ? 'ALL' : cat as OperationalExpenseCategory)}
-                className={`text-left rounded-lg border bg-card p-3 transition-all hover:shadow-md ${isActive ? 'ring-2 ring-violet-500 border-violet-500/50' : 'hover:border-violet-500/30'}`}
+                className={`text-left rounded-lg border bg-card p-3 transition-all hover:shadow-md ${isActive ? 'ring-2 ring-zinc-500 border-zinc-500/50' : 'hover:border-zinc-500/30'}`}
               >
                 <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground truncate">
                   {EXPENSE_CATEGORY_LABEL[cat as OperationalExpenseCategory]}
@@ -519,7 +519,7 @@ export default function ExpensesPage() {
                   <TableCell className="font-semibold text-right whitespace-nowrap">{formatRupiah(e.amount)}</TableCell>
                   <TableCell className="text-center">
                     {e.recurring ? (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-[10px]">
+                      <Badge variant="outline" className="bg-zinc-500/10 text-zinc-600 border-zinc-500/30 text-[10px]">
                         <Repeat className="w-3 h-3 mr-1" />
                         {e.recurrence_period ? RECURRENCE_PERIOD_LABEL[e.recurrence_period] : 'Rutin'}
                       </Badge>
@@ -673,7 +673,7 @@ export default function ExpensesPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20"
+              className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20"
               disabled={saving}
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

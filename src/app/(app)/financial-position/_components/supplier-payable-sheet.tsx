@@ -174,7 +174,7 @@ export function SupplierPayableSheet({
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <Coins className="w-4 h-4 text-orange-500" />
+            <Coins className="w-4 h-4 text-amber-500" />
             HPP Terutang per Supplier
           </SheetTitle>
           <SheetDescription>
@@ -197,7 +197,7 @@ export function SupplierPayableSheet({
             </Card>
           ) : (
             groups.map(g => (
-              <Card key={g.supplier_id} className="border-orange-500/20">
+              <Card key={g.supplier_id} className="border-amber-500/20">
                 <CardContent className="pt-3 pb-3">
                   <button
                     onClick={() => toggleExpand(g.supplier_id)}
@@ -207,14 +207,14 @@ export function SupplierPayableSheet({
                       {expandedSupplier === g.supplier_id
                         ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
                         : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-                      <Building2 className="w-4 h-4 text-orange-600 shrink-0" />
+                      <Building2 className="w-4 h-4 text-amber-600 shrink-0" />
                       <div className="min-w-0">
                         <div className="font-semibold text-sm truncate">{g.supplier_name}</div>
                         <div className="text-[11px] text-muted-foreground font-mono">{g.supplier_code}</div>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="font-bold tabular-nums text-orange-700 dark:text-orange-400">{formatRupiah(Number(g.total_owed))}</div>
+                      <div className="font-bold tabular-nums text-amber-700 dark:text-amber-400">{formatRupiah(Number(g.total_owed))}</div>
                       <div className="text-[10px] text-muted-foreground">
                         {g.order_count} order · {g.qty_total} pcs · sejak {formatDate(g.oldest_shipped_at)}
                       </div>
@@ -231,7 +231,7 @@ export function SupplierPayableSheet({
                         details[g.supplier_id]?.map(d => (
                           <label
                             key={d.id}
-                            className={`flex items-center gap-2 text-xs py-1.5 px-2 rounded hover:bg-muted/40 cursor-pointer ${selectedPayables.has(d.id) ? 'bg-orange-500/10' : ''}`}
+                            className={`flex items-center gap-2 text-xs py-1.5 px-2 rounded hover:bg-muted/40 cursor-pointer ${selectedPayables.has(d.id) ? 'bg-amber-500/10' : ''}`}
                           >
                             {canManage && (
                               <input
@@ -241,7 +241,7 @@ export function SupplierPayableSheet({
                                 className="w-3.5 h-3.5"
                               />
                             )}
-                            <span className="font-mono text-violet-500 shrink-0">{d.order_number}</span>
+                            <span className="font-mono text-zinc-500 shrink-0">{d.order_number}</span>
                             <span className="truncate flex-1">{d.customer_name}</span>
                             <span className="text-muted-foreground shrink-0">{d.qty_total}pcs</span>
                             <span className="tabular-nums font-semibold shrink-0">{formatRupiah(d.hpp_total)}</span>
@@ -261,7 +261,7 @@ export function SupplierPayableSheet({
           <div className="sticky bottom-0 bg-background border-t p-3 -mx-4 px-6 flex items-center justify-between gap-2">
             <div className="text-xs">
               <div className="font-semibold">{selectedPayables.size} payable selected</div>
-              <div className="text-orange-600 tabular-nums font-bold">{formatRupiah(totalSelectedAmount)}</div>
+              <div className="text-amber-600 tabular-nums font-bold">{formatRupiah(totalSelectedAmount)}</div>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedPayables(new Set())} disabled={marking}>

@@ -59,7 +59,7 @@ function ReturPanel({
 
   return (
     <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Icon className="w-4 h-4 text-violet-500" />{title}</CardTitle></CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Icon className="w-4 h-4 text-zinc-500" />{title}</CardTitle></CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
           <p className="text-xs text-muted-foreground py-4 text-center">Memuat...</p>

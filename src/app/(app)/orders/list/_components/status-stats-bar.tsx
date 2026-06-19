@@ -52,7 +52,7 @@ export function StatusStatsBar({
         label="Total"
         cnt={totalCount}
         pct={null}
-        color="bg-violet-500/10 text-violet-600 border-violet-500/30"
+        color="bg-zinc-500/10 text-zinc-600 border-zinc-500/30"
         active={totalActive}
         loading={loading}
         onClick={() => onStatusClick('ALL')}

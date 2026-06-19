@@ -28,7 +28,7 @@ interface Row {
   sisa: number; available: number; threshold: number; status: string
 }
 const STATUS_COLOR: Record<string, string> = {
-  Ready: 'bg-emerald-500/10 text-emerald-600', Menipis: 'bg-amber-500/10 text-amber-600', Habis: 'bg-rose-500/10 text-rose-600',
+  Ready: 'bg-emerald-500/10 text-emerald-600', Menipis: 'bg-amber-500/10 text-amber-600', Habis: 'bg-red-500/10 text-red-600',
 }
 
 export default function InventoryPage() {
@@ -77,7 +77,7 @@ export default function InventoryPage() {
         actions={<Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></Button>} />
 
       <div className="flex flex-wrap gap-2">
-        <Badge variant="outline" className="bg-rose-500/10 text-rose-600">Habis: {habis}</Badge>
+        <Badge variant="outline" className="bg-red-500/10 text-red-600">Habis: {habis}</Badge>
         <Badge variant="outline" className="bg-amber-500/10 text-amber-600">Menipis: {menipis}</Badge>
         <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600">Ready: {rows.length - habis - menipis}</Badge>
       </div>
@@ -104,7 +104,7 @@ export default function InventoryPage() {
                   <TableCell className="text-right text-xs tabular-nums text-muted-foreground">{n(r.terkirim)}</TableCell>
                   <TableCell className="text-right text-xs tabular-nums">{n(r.retur)}</TableCell>
                   <TableCell className="text-right text-xs tabular-nums">{n(r.sisa)}</TableCell>
-                  <TableCell className={`text-right text-xs tabular-nums font-semibold ${n(r.available) <= 0 ? 'text-rose-600' : n(r.available) <= r.threshold ? 'text-amber-600' : 'text-emerald-600'}`}>{n(r.available)}</TableCell>
+                  <TableCell className={`text-right text-xs tabular-nums font-semibold ${n(r.available) <= 0 ? 'text-red-600' : n(r.available) <= r.threshold ? 'text-amber-600' : 'text-emerald-600'}`}>{n(r.available)}</TableCell>
                   <TableCell><Badge variant="outline" className={`${STATUS_COLOR[r.status] || 'bg-muted'} text-[10px]`}>{r.status}</Badge></TableCell>
                   {canManage && <TableCell className="text-right"><Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => { setDlg(r); setForm({ qty: '', reason: 'RESTOCK', note: '' }) }}><Plus className="w-3 h-3" />Stok</Button></TableCell>}
                 </TableRow>

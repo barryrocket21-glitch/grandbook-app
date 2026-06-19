@@ -79,7 +79,7 @@ export function ResiInputDialog({
             Input Resi — Cetak &amp; Pindah ke Arsip
           </DialogTitle>
           <DialogDescription>
-            Set resi untuk order <span className="font-mono text-violet-500">{draft.order_number}</span>.
+            Set resi untuk order <span className="font-mono text-zinc-500">{draft.order_number}</span>.
             Begitu resi tersimpan, order otomatis pindah dari Antrian Kerja ke Arsip.
           </DialogDescription>
         </DialogHeader>

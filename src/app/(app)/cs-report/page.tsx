@@ -357,7 +357,7 @@ export default function CsReportPage() {
           )}
           <div className="flex gap-2 ml-auto">
             {!editMode ? (
-              <Button size="sm" onClick={() => setEditMode(true)} disabled={!selectedCsId} className="bg-violet-600 hover:bg-violet-700 text-white">
+              <Button size="sm" onClick={() => setEditMode(true)} disabled={!selectedCsId} className="bg-zinc-600 hover:bg-zinc-700 text-white">
                 <Pencil className="w-3.5 h-3.5 mr-2" />Edit Angka
               </Button>
             ) : (
@@ -379,14 +379,14 @@ export default function CsReportPage() {
       {/* Stat cards: live totals */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-blue-500/15 rounded-xl ring-1 ring-blue-500/20">
-              <MessageCircle className="w-5 h-5 text-blue-500" />
+            <div className="p-2.5 bg-zinc-500/15 rounded-xl ring-1 ring-zinc-500/20">
+              <MessageCircle className="w-5 h-5 text-zinc-500" />
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Lead Masuk</p>
-              <p className="text-2xl font-bold text-blue-600">{formatNumber(totals.lead)}</p>
+              <p className="text-2xl font-bold text-zinc-600">{formatNumber(totals.lead)}</p>
               <p className="text-[10px] text-muted-foreground">{rows.length} produk</p>
             </div>
           </CardContent>
@@ -405,14 +405,14 @@ export default function CsReportPage() {
           </CardContent>
         </Card>
         <Card className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
-            <div className="p-2.5 bg-violet-500/15 rounded-xl ring-1 ring-violet-500/20">
-              <TrendingUp className="w-5 h-5 text-violet-500" />
+            <div className="p-2.5 bg-zinc-500/15 rounded-xl ring-1 ring-zinc-500/20">
+              <TrendingUp className="w-5 h-5 text-zinc-500" />
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Close Rate</p>
-              <p className="text-2xl font-bold text-violet-600">{totals.rate.toFixed(2)}%</p>
+              <p className="text-2xl font-bold text-zinc-600">{totals.rate.toFixed(2)}%</p>
               <p className="text-[10px] text-muted-foreground">closing / lead</p>
             </div>
           </CardContent>
@@ -564,7 +564,7 @@ export default function CsReportPage() {
               <Button
                 onClick={handleSaveAll}
                 disabled={saving || rows.length === 0 || hasErrors}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20"
               >
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Save All ({rows.length})
@@ -583,7 +583,7 @@ export default function CsReportPage() {
         </Card>
       )}
 
-      <Card className="border-blue-500/20 bg-blue-500/5">
+      <Card className="border-zinc-500/20 bg-zinc-500/5">
         <CardContent className="pt-4 pb-4 text-sm space-y-2">
           <p>💡 <strong>Tips:</strong></p>
           <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">

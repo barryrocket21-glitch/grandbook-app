@@ -152,7 +152,7 @@ export default function ShippingDiffPage() {
         <PageHeader icon={Truck} title="Selisih Ongkir" />
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
           Page ini owner/admin only. Untuk overview shipping diff per channel, buka{' '}
-          <Link href="/analytics?section=channel" className="text-violet-500 hover:underline">
+          <Link href="/analytics?section=channel" className="text-zinc-500 hover:underline">
             /analytics → Per Channel
           </Link>.
         </CardContent></Card>
@@ -304,7 +304,7 @@ export default function ShippingDiffPage() {
                 return (
                   <TableRow key={r.order_id}>
                     <TableCell>
-                      <Link href={`/orders/${r.order_id}`} className="font-mono text-xs text-violet-500 hover:underline">
+                      <Link href={`/orders/${r.order_id}`} className="font-mono text-xs text-zinc-500 hover:underline">
                         {r.order_number}
                       </Link>
                       <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{r.customer_name}</div>
@@ -363,7 +363,7 @@ export default function ShippingDiffPage() {
       </Card>
 
       {/* Legend */}
-      <Card className="border-blue-500/20 bg-blue-500/5">
+      <Card className="border-zinc-500/20 bg-zinc-500/5">
         <CardContent className="pt-4 pb-4 text-xs space-y-2">
           <p className="font-medium">📊 Legend kolom:</p>
           <ul className="text-muted-foreground space-y-1 list-disc list-inside">
@@ -396,7 +396,7 @@ function StatCard({ icon: Icon, color, label, value, sub }: {
   sub: string
 }) {
   const colorClass: Record<typeof color, string> = {
-    violet: 'bg-violet-500/15 ring-violet-500/20 text-violet-500',
+    violet: 'bg-zinc-500/15 ring-zinc-500/20 text-zinc-500',
     emerald: 'bg-emerald-500/15 ring-emerald-500/20 text-emerald-500',
     amber: 'bg-amber-500/15 ring-amber-500/20 text-amber-500',
     red: 'bg-red-500/15 ring-red-500/20 text-red-500',
@@ -442,7 +442,7 @@ function SortHead({
       className={`cursor-pointer select-none hover:bg-muted/50 text-${align}`}
       onClick={() => onClick(k)}
     >
-      <span className={`inline-flex items-center gap-1 ${active ? 'text-violet-500 font-semibold' : ''}`}>
+      <span className={`inline-flex items-center gap-1 ${active ? 'text-zinc-500 font-semibold' : ''}`}>
         {label}
         {active
           ? dir === 'desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />

@@ -141,7 +141,7 @@ export function CashflowHistory({ onResume }: { onResume?: (batchId: number) => 
                     <TableCell className="text-xs text-right tabular-nums text-emerald-600">{b.matched_count.toLocaleString('id-ID')}</TableCell>
                     <TableCell className="text-xs text-right tabular-nums text-amber-600">{b.variance_count.toLocaleString('id-ID')}</TableCell>
                     <TableCell className="text-xs text-right tabular-nums text-red-600">{b.unmatched_count.toLocaleString('id-ID')}</TableCell>
-                    <TableCell className="text-xs text-right tabular-nums text-blue-600">{(b.withdrawal_count_view ?? 0).toLocaleString('id-ID')}</TableCell>
+                    <TableCell className="text-xs text-right tabular-nums text-zinc-600">{(b.withdrawal_count_view ?? 0).toLocaleString('id-ID')}</TableCell>
                     <TableCell className="text-xs text-right">
                       {b.status === 'PREVIEW' && onResume && (
                         <Button variant="link" size="sm" className="text-xs h-6 px-2" onClick={() => onResume(b.id)}>

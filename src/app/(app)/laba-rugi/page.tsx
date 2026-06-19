@@ -130,8 +130,8 @@ export default function LabaRugiPage() {
       ) : (
         <>
           {/* Info banner — Realisasi vs Proyeksi (penting biar nggak ke-tukar konsepnya) */}
-          <div className="text-xs bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 flex gap-2 items-start">
-            <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+          <div className="text-xs bg-zinc-500/5 border border-zinc-500/20 rounded-lg p-3 flex gap-2 items-start">
+            <Info className="w-4 h-4 mt-0.5 shrink-0 text-zinc-600" />
             <div className="space-y-1 text-muted-foreground">
               <div><strong className="text-foreground">Realisasi</strong> = laporan resmi (accrual basis, untuk pajak/audit). Cuma hitung yang udah terwujud: order Diterima penuh, Retur = rugi ongkir, lainnya 0.</div>
               <div><strong className="text-foreground">Proyeksi</strong> = forecast kalau semua order sukses. Buat planning &mdash; <em>BUKAN</em> laporan keuangan formal.</div>
@@ -149,9 +149,9 @@ export default function LabaRugiPage() {
                 Dari {data.diterima_count} order Diterima (yang udah sampai)
               </div>
             </div>
-            <div className="rounded-xl p-5 ring-1 bg-blue-500/10 ring-blue-500/30">
+            <div className="rounded-xl p-5 ring-1 bg-zinc-500/10 ring-zinc-500/30">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Laba Bersih — Proyeksi</div>
-              <div className="text-3xl font-bold mt-1 text-blue-600">{formatRupiah(n(data.laba_bersih_est))}</div>
+              <div className="text-3xl font-bold mt-1 text-zinc-600">{formatRupiah(n(data.laba_bersih_est))}</div>
               <div className="text-[11px] text-muted-foreground mt-1">
                 Forecast {data.order_count} order (kalau semua sukses sampai)
               </div>
@@ -220,7 +220,7 @@ function Stat({ label, value, sub, tone }: {
   tone: 'blue' | 'emerald' | 'red' | 'amber' | 'zinc'
 }) {
   const toneMap: Record<string, string> = {
-    blue: 'text-blue-600',
+    blue: 'text-zinc-600',
     emerald: 'text-emerald-600',
     red: 'text-red-600',
     amber: 'text-amber-600',

@@ -645,12 +645,12 @@ function OrdersExportResiInner() {
                   <CheckCircle2 className="w-3.5 h-3.5" /> {readyCount} siap export
                 </span>
                 {warnCount > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300 px-2 py-0.5 font-medium" title="Alamat belum ke-resolve — dibenerin dulu di Antrian Kerja">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 font-medium" title="Alamat belum ke-resolve — dibenerin dulu di Antrian Kerja">
                     <AlertTriangle className="w-3.5 h-3.5" /> {warnCount} belum (ditahan)
                   </span>
                 )}
                 {includeExported && exportedCount > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-0.5 font-medium" title="Udah pernah diexport — re-export manual">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-zinc-500/40 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 font-medium" title="Udah pernah diexport — re-export manual">
                     <CheckCircle2 className="w-3.5 h-3.5" /> {exportedCount} udah diexport
                   </span>
                 )}
@@ -660,7 +660,7 @@ function OrdersExportResiInner() {
                     <Checkbox checked={includeExported} onCheckedChange={(v) => setIncludeExported(!!v)} />
                     Tampilkan yang udah diexport (re-export)
                   </label>
-                  <button type="button" onClick={() => toggleAllReady(true)} className="text-violet-500 hover:underline" disabled={autoFiltered.length === 0}>
+                  <button type="button" onClick={() => toggleAllReady(true)} className="text-zinc-500 hover:underline" disabled={autoFiltered.length === 0}>
                     Pilih semua ✅ ({autoFiltered.length})
                   </button>
                   {selectedIds.size > 0 && (
@@ -718,10 +718,10 @@ function OrdersExportResiInner() {
                             {ready ? (
                               <span className="inline-flex items-center gap-1 text-emerald-600 text-xs"><CheckCircle2 className="w-3.5 h-3.5" /> Siap</span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-orange-600 text-xs" title="Alamat belum ke-resolve"><AlertTriangle className="w-3.5 h-3.5" /> Belum</span>
+                              <span className="inline-flex items-center gap-1 text-amber-600 text-xs" title="Alamat belum ke-resolve"><AlertTriangle className="w-3.5 h-3.5" /> Belum</span>
                             )}
                             {isExported(o) && (
-                              <span className="ml-1 inline-flex items-center gap-0.5 rounded border border-blue-500/40 bg-blue-500/10 px-1 text-[9px] text-blue-600" title={`Udah diexport ${o.exported_at?.slice(0,10)}`}>diexport</span>
+                              <span className="ml-1 inline-flex items-center gap-0.5 rounded border border-zinc-500/40 bg-zinc-500/10 px-1 text-[9px] text-zinc-600" title={`Udah diexport ${o.exported_at?.slice(0,10)}`}>diexport</span>
                             )}
                           </TableCell>
                           <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
@@ -748,7 +748,7 @@ function OrdersExportResiInner() {
             <Button
               onClick={goToProfile}
               disabled={selectedIds.size === 0}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
             >
               Lanjutkan ({selectedIds.size} dipilih) <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
@@ -784,7 +784,7 @@ function OrdersExportResiInner() {
               </Select>
               <p className="text-xs text-muted-foreground">
                 Profile menentukan format file & kolom yang di-generate. Bikin/edit profile di{' '}
-                <Link href="/settings/converter-profiles" className="text-violet-400 hover:underline">Settings → Converter Profiles</Link>.
+                <Link href="/settings/converter-profiles" className="text-zinc-400 hover:underline">Settings → Converter Profiles</Link>.
               </p>
             </div>
 
@@ -805,7 +805,7 @@ function OrdersExportResiInner() {
               <Button
                 onClick={goToPreview}
                 disabled={!selectedProfileId || previewLoading}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 {previewLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
                 Lanjut ke Preview
@@ -910,7 +910,7 @@ function OrdersExportResiInner() {
             <Button
               onClick={startGenerate}
               disabled={preview.errors.length > 0 || preview.totalOrdersRequested === 0 || generating}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
             >
               <Download className="w-3.5 h-3.5 mr-1" />
               Lanjut Generate ({preview.totalOrdersRequested} order)
@@ -922,11 +922,11 @@ function OrdersExportResiInner() {
       {step === 'generate' && (
         <Card>
           <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-violet-500" />
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-zinc-500" />
             <div className="text-sm font-medium">Mengolah {progress.done} / {progress.total} order...</div>
             <div className="w-full max-w-md mx-auto bg-muted rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-violet-500 to-indigo-500 h-2 transition-all"
+                className="bg-gradient-to-r from-zinc-500 to-zinc-500 h-2 transition-all"
                 style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
               />
             </div>
@@ -945,7 +945,7 @@ function OrdersExportResiInner() {
               </div>
               <div className="text-sm space-y-1">
                 <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-violet-500" />
+                  <FileSpreadsheet className="w-4 h-4 text-zinc-500" />
                   <span className="font-mono text-xs">{result.fileName}</span>
                   <Badge variant="outline">{profileBundle.profile.file_format}</Badge>
                 </div>
@@ -992,7 +992,7 @@ function OrdersExportResiInner() {
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Ini menandakan order sudah di-export ke ekspedisi (siap dikirim).
-                  Resi belum keluar — akan terisi via <Link href="/reconciliation/upload" className="text-violet-400 hover:underline">/reconciliation/upload</Link> nanti.
+                  Resi belum keluar — akan terisi via <Link href="/reconciliation/upload" className="text-zinc-400 hover:underline">/reconciliation/upload</Link> nanti.
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Catatan ekspor (opsional)</Label>
@@ -1011,7 +1011,7 @@ function OrdersExportResiInner() {
                   <Button
                     onClick={finishWithStatusUpdate}
                     disabled={marking}
-                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                    className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
                   >
                     {marking ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
                     Update Status &amp; Selesai
@@ -1033,7 +1033,7 @@ function OrdersExportResiInner() {
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Button
                     onClick={() => router.push('/orders/list')}
-                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                    className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
                   >Lihat Daftar Order</Button>
                   <Button variant="outline" onClick={reset}>Export Lagi</Button>
                 </div>
@@ -1049,10 +1049,10 @@ function OrdersExportResiInner() {
 function Stat({ label, value, color }: { label: string; value: number; color: 'emerald' | 'blue' | 'red' | 'amber' | 'violet' }) {
   const colorMap: Record<string, string> = {
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
-    blue: 'bg-blue-500/10 border-blue-500/30 text-blue-600',
+    blue: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     red: 'bg-red-500/10 border-red-500/30 text-red-600',
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
+    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
   }
   return (
     <div className={`p-3 rounded border ${colorMap[color]}`}>
@@ -1076,7 +1076,7 @@ function StepIndicator({ current }: { current: StepKey }) {
       {steps.map((s, i) => (
         <div key={s.key} className="flex items-center gap-1">
           <span className={`px-2 py-1 rounded ${
-            i === currentIdx ? 'bg-violet-500/20 text-violet-500 font-medium' :
+            i === currentIdx ? 'bg-zinc-500/20 text-zinc-500 font-medium' :
             i < currentIdx ? 'text-muted-foreground' :
             'text-muted-foreground/50'
           }`}>{s.label}</span>

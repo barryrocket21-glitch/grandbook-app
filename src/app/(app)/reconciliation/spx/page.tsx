@@ -187,10 +187,10 @@ export default function ReconSpxPage() {
             </div>
             <label className="block">
               <div className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors
-                ${uploading ? 'bg-violet-500/5 border-violet-500/40' : 'border-border hover:bg-muted/30 cursor-pointer'}`}>
+                ${uploading ? 'bg-zinc-500/5 border-zinc-500/40' : 'border-border hover:bg-muted/30 cursor-pointer'}`}>
                 {uploading ? (
                   <>
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-violet-500" />
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-zinc-500" />
                     <div className="text-sm font-medium mt-2">Memproses {file?.name}...</div>
                     <div className="text-xs text-muted-foreground mt-1">Parsing XLSX + categorize matched/variance/unmatched</div>
                   </>
@@ -232,7 +232,7 @@ export default function ReconSpxPage() {
       {step === 'applying' && (
         <Card>
           <CardContent className="pt-8 pb-8 text-center space-y-3">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-violet-500" />
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-zinc-500" />
             <div className="text-sm font-medium">Applying batch ke database...</div>
             <p className="text-xs text-muted-foreground">UPDATE orders + INSERT inbox_unmatched_resi. Jangan tutup tab.</p>
           </CardContent>
@@ -321,7 +321,7 @@ function PreviewSection({
         <Button
           onClick={onApply}
           disabled={result.matched_count + result.variance_count === 0}
-          className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white gap-1.5"
+          className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white gap-1.5"
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
           Apply ke Database ({result.matched_count + result.variance_count} order)
@@ -383,7 +383,7 @@ function Stat({
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
     red: 'bg-red-500/10 border-red-500/30 text-red-600',
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
+    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
   }
   return (
     <div className={`p-3 rounded border ${colorMap[color]}`}>
@@ -417,7 +417,7 @@ function MatchedTab({ rows }: { rows: ReconMatchedRow[] }) {
           {rows.map((r, i) => (
             <TableRow key={`${r.resi}-${i}`}>
               <TableCell className="text-xs font-mono">{r.resi}</TableCell>
-              <TableCell className="text-xs font-mono text-violet-500">{r.order_number}</TableCell>
+              <TableCell className="text-xs font-mono text-zinc-500">{r.order_number}</TableCell>
               <TableCell className="text-xs">{r.customer_name}</TableCell>
               <TableCell className="text-xs text-right tabular-nums text-muted-foreground">
                 {r.old_payout != null ? formatRupiah(Number(r.old_payout)) : <span className="italic">—</span>}
@@ -459,7 +459,7 @@ function VarianceTab({ rows }: { rows: ReconVarianceRow[] }) {
             {rows.map((r, i) => (
               <TableRow key={`${r.resi}-${i}`}>
                 <TableCell className="text-xs font-mono">{r.resi}</TableCell>
-                <TableCell className="text-xs font-mono text-violet-500">{r.order_number}</TableCell>
+                <TableCell className="text-xs font-mono text-zinc-500">{r.order_number}</TableCell>
                 <TableCell className="text-xs">{r.customer_name}</TableCell>
                 <TableCell className="text-xs text-right tabular-nums text-muted-foreground">{formatRupiah(Number(r.old_payout))}</TableCell>
                 <TableCell className="text-xs text-right tabular-nums font-medium">{formatRupiah(Number(r.new_payout))}</TableCell>
@@ -545,7 +545,7 @@ function StepIndicator({ current }: { current: StepKey }) {
       {steps.map((s, i) => (
         <div key={s.key} className="flex items-center gap-1">
           <span className={`px-2 py-1 rounded ${
-            i === idx ? 'bg-violet-500/20 text-violet-500 font-medium' :
+            i === idx ? 'bg-zinc-500/20 text-zinc-500 font-medium' :
             i < idx ? 'text-muted-foreground' :
             'text-muted-foreground/50'
           }`}>{s.label}</span>

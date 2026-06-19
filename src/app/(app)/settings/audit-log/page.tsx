@@ -316,7 +316,7 @@ export default function AuditLogPage() {
 function ActionBadge({ action }: { action: string }) {
   const color =
     action === 'INSERT' ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
-    : action === 'UPDATE' ? 'bg-blue-500/15 text-blue-600 border-blue-500/30'
+    : action === 'UPDATE' ? 'bg-zinc-500/15 text-zinc-600 border-zinc-500/30'
     : action === 'DELETE' ? 'bg-red-500/15 text-red-600 border-red-500/30'
     : 'bg-zinc-500/15 text-zinc-600 border-zinc-500/30'
   return <Badge variant="outline" className={`font-mono text-[10px] ${color}`}>{action}</Badge>

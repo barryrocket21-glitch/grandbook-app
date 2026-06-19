@@ -178,7 +178,7 @@ export default function ProductsListPage() {
               }
               action={
                 canManage && rows.length === 0 ? (
-                  <Link href="/products/new" className="text-violet-500 hover:underline text-sm">
+                  <Link href="/products/new" className="text-zinc-500 hover:underline text-sm">
                     + Tambah produk pertama
                   </Link>
                 ) : null
@@ -205,14 +205,14 @@ export default function ProductsListPage() {
                       </Link>
                       {/* Brief #10 — flag berat belum diisi (jangan export 0 diam-diam) */}
                       {(r.weight_kg == null) && (
-                        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded border border-orange-500/40 bg-orange-500/10 px-1 py-0.5 text-[9px] text-orange-600 align-middle" title="Berat (kg) belum diisi — export SPX bisa salah berat">
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[9px] text-amber-600 align-middle" title="Berat (kg) belum diisi — export SPX bisa salah berat">
                           <AlertTriangle className="w-2.5 h-2.5" /> berat?
                         </span>
                       )}
                       {r.sku && <div className="text-[10px] font-mono text-muted-foreground">{r.sku}</div>}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="outline" className={r.has_variants ? 'bg-violet-500/10 text-violet-600' : 'bg-zinc-500/10 text-zinc-500'}>
+                      <Badge variant="outline" className={r.has_variants ? 'bg-zinc-500/10 text-zinc-600' : 'bg-zinc-500/10 text-zinc-500'}>
                         {r.has_variants ? 'Variable' : 'Simple'}
                       </Badge>
                     </TableCell>
@@ -270,7 +270,7 @@ export default function ProductsListPage() {
       <Dialog open={!!dupTarget} onOpenChange={v => { if (!v) { setDupTarget(null); setDupName('') } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Copy className="size-4 text-violet-500" /> Duplikat Produk</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Copy className="size-4 text-zinc-500" /> Duplikat Produk</DialogTitle>
             <DialogDescription>
               Salin semua data dari <b>{dupTarget?.name}</b> (HPP, harga, kategori, berat, packing fee, supplier) ke produk baru. <b>Wajib ganti nama.</b> SKU dikosongin (isi sendiri biar unik).
             </DialogDescription>

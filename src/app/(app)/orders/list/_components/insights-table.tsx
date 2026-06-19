@@ -71,8 +71,8 @@ export function InsightsTable({
   const sortIcon = (k: SortKey) => {
     if (sortKey !== k) return <ArrowUpDown className="w-3 h-3 inline ml-1 text-muted-foreground/50" />
     return sortDir === 'asc'
-      ? <ArrowUp className="w-3 h-3 inline ml-1 text-violet-500" />
-      : <ArrowDown className="w-3 h-3 inline ml-1 text-violet-500" />
+      ? <ArrowUp className="w-3 h-3 inline ml-1 text-zinc-500" />
+      : <ArrowDown className="w-3 h-3 inline ml-1 text-zinc-500" />
   }
 
   return (
@@ -131,7 +131,7 @@ export function InsightsTable({
               sorted.map((row, idx) => (
                 <TableRow
                   key={row.dimension_value}
-                  className="cursor-pointer hover:bg-violet-500/5"
+                  className="cursor-pointer hover:bg-zinc-500/5"
                   onClick={() => onSelect(row.dimension_value)}
                 >
                   <TableCell className="text-center text-xs text-muted-foreground tabular-nums">{idx + 1}</TableCell>

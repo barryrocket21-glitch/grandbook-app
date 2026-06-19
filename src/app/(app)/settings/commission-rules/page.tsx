@@ -281,7 +281,7 @@ export default function CommissionRulesPage() {
                 {sortedRules.map(r => (
                   <TableRow key={r.id}>
                     <TableCell>
-                      <Badge variant="outline" className={r.role === 'cs' ? 'bg-teal-500/10 text-teal-600' : 'bg-orange-500/10 text-orange-600'}>
+                      <Badge variant="outline" className={r.role === 'cs' ? 'bg-zinc-500/10 text-zinc-600' : 'bg-amber-500/10 text-amber-600'}>
                         {r.role.toUpperCase()}
                       </Badge>
                     </TableCell>
@@ -318,7 +318,7 @@ export default function CommissionRulesPage() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="ghost" onClick={() => openEditDialog(r)} title="Edit"><Pencil className="size-3.5"/></Button>
-                        <Button size="sm" variant="ghost" onClick={() => openDuplicateDialog(r)} title="Duplicate" className="text-violet-500"><Copy className="size-3.5"/></Button>
+                        <Button size="sm" variant="ghost" onClick={() => openDuplicateDialog(r)} title="Duplicate" className="text-zinc-500"><Copy className="size-3.5"/></Button>
                         <Button size="sm" variant="ghost" className="text-red-500" onClick={() => setDeleteTarget(r)} title="Hapus"><Trash2 className="size-3.5"/></Button>
                       </div>
                     </TableCell>
@@ -383,7 +383,7 @@ export default function CommissionRulesPage() {
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, product_mode: 'default', product_ids: [] }))}
-                  className={`text-xs py-2 px-3 rounded border transition text-left ${form.product_mode === 'default' ? 'border-violet-500 bg-violet-500/10 text-violet-600' : 'border-input hover:bg-muted/40'}`}
+                  className={`text-xs py-2 px-3 rounded border transition text-left ${form.product_mode === 'default' ? 'border-zinc-500 bg-zinc-500/10 text-zinc-600' : 'border-input hover:bg-muted/40'}`}
                 >
                   <div className="font-medium">Semua Produk</div>
                   <div className="text-[10px] text-muted-foreground">Catch-all default</div>
@@ -391,7 +391,7 @@ export default function CommissionRulesPage() {
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, product_mode: 'specific' }))}
-                  className={`text-xs py-2 px-3 rounded border transition text-left ${form.product_mode === 'specific' ? 'border-violet-500 bg-violet-500/10 text-violet-600' : 'border-input hover:bg-muted/40'}`}
+                  className={`text-xs py-2 px-3 rounded border transition text-left ${form.product_mode === 'specific' ? 'border-zinc-500 bg-zinc-500/10 text-zinc-600' : 'border-input hover:bg-muted/40'}`}
                 >
                   <div className="font-medium">Produk Spesifik</div>
                   <div className="text-[10px] text-muted-foreground">Pilih 1 atau banyak sekaligus</div>
@@ -405,11 +405,11 @@ export default function CommissionRulesPage() {
                     </span>
                     {form.id === null && products.length > 0 && (
                       <div className="flex gap-1.5 text-[10px]">
-                        <button type="button" onClick={() => setForm(f => ({ ...f, product_ids: products.map(p => p.id) }))} className="text-violet-500 hover:underline">
+                        <button type="button" onClick={() => setForm(f => ({ ...f, product_ids: products.map(p => p.id) }))} className="text-zinc-500 hover:underline">
                           Pilih semua
                         </button>
                         <span className="text-muted-foreground">·</span>
-                        <button type="button" onClick={() => setForm(f => ({ ...f, product_ids: [] }))} className="text-violet-500 hover:underline">
+                        <button type="button" onClick={() => setForm(f => ({ ...f, product_ids: [] }))} className="text-zinc-500 hover:underline">
                           Reset
                         </button>
                       </div>

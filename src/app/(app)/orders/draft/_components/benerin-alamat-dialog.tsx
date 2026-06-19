@@ -101,7 +101,7 @@ function WilayahPicker({ onPick }: { onPick: (h: WilayahHit) => void }) {
             <button key={h.id} type="button"
               onClick={() => { onPick(h); setQ(''); setHits([]); setOpen(false) }}
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/60 flex items-start gap-1.5">
-              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-violet-500" />
+              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-zinc-500" />
               <span><span className="font-medium">{h.subdistrict}</span>, {h.city}, <span className="text-muted-foreground">{h.province}</span>{h.zip ? ` · ${h.zip}` : ''}</span>
             </button>
           ))}
@@ -284,7 +284,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
         <DialogHeader>
           {/* pr-8 → judul gak ketabrak tombol X di pojok kanan */}
           <DialogTitle className="flex items-center gap-2 pr-8">
-            <Wand2 className="w-4 h-4 text-violet-500 shrink-0" />
+            <Wand2 className="w-4 h-4 text-zinc-500 shrink-0" />
             Benerin Alamat
           </DialogTitle>
         </DialogHeader>
@@ -297,7 +297,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
               <span className="tabular-nums font-medium text-foreground">{Math.min(idx + 1, total)} / {total}</span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-              <div className="h-full bg-violet-500 transition-all" style={{ width: `${Math.min(100, (idx / total) * 100)}%` }} />
+              <div className="h-full bg-zinc-500 transition-all" style={{ width: `${Math.min(100, (idx / total) * 100)}%` }} />
             </div>
           </div>
         )}
@@ -325,7 +325,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
             {/* Konteks order */}
             <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1.5">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-xs text-violet-500">{current.order_number}</span>
+                <span className="font-mono text-xs text-zinc-500">{current.order_number}</span>
                 <span className="inline-flex items-center gap-1 font-medium"><User className="w-3.5 h-3.5 text-muted-foreground" />{current.customer_name}</span>
                 {current.customer_phone && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{current.customer_phone}</span>}
                 <span className="ml-auto tabular-nums font-semibold">{formatRupiah(current.total)}</span>
@@ -371,7 +371,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
                     return (
                       <button key={h.id} type="button" onClick={() => applyPick(h)}
                         className={`text-left rounded-md border px-2.5 py-1.5 text-sm flex items-center gap-2 transition-colors ${
-                          active ? 'border-violet-500 bg-violet-500/10' : 'hover:bg-muted/60'}`}>
+                          active ? 'border-zinc-500 bg-zinc-500/10' : 'hover:bg-muted/60'}`}>
                         {i === 0
                           ? <Star className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400" />
                           : <MapPin className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
@@ -380,7 +380,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
                           {h.zip ? <span className="text-muted-foreground"> · {h.zip}</span> : ''}
                         </span>
                         <Badge variant="outline" className="text-[10px] shrink-0">{h.source === 'kodepos' ? 'kode pos' : 'nama'}</Badge>
-                        {active && <Check className="w-4 h-4 text-violet-500 shrink-0" />}
+                        {active && <Check className="w-4 h-4 text-zinc-500 shrink-0" />}
                       </button>
                     )
                   })}
@@ -404,7 +404,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
                 onChange={e => setAddrDetail(e.target.value)}
                 rows={2}
                 placeholder="Jl. ... RT/RW ... (+ patokan, mis. 'depan warung Bu Siti')"
-                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-violet-500"
+                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
               />
               <p className="text-[10px] text-muted-foreground">Detail mentah + patokan disimpan apa adanya buat driver — gak kehapus pas wilayah di-set.</p>
             </div>
@@ -415,7 +415,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
                 <SkipForward className="w-3.5 h-3.5" /> Lewati
               </Button>
               <span className="text-[11px] text-muted-foreground ml-auto hidden sm:inline">Enter = Simpan &amp; Lanjut</span>
-              <Button onClick={save} disabled={saving || !chosen} className="gap-1.5 bg-violet-600 hover:bg-violet-700">
+              <Button onClick={save} disabled={saving || !chosen} className="gap-1.5 bg-zinc-600 hover:bg-zinc-700">
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
                 Simpan &amp; Lanjut
               </Button>

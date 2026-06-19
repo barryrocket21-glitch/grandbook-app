@@ -175,14 +175,14 @@ export default function StatusMappingPage() {
                     <p className="text-xs text-muted-foreground">
                       Semua mapping dari source di-copy ke target. Mapping yang sudah ada di target di-skip (UNIQUE constraint).
                     </p>
-                    <Button onClick={handleBulkCopy} disabled={bulkRunning || !bulkSource || !bulkTarget} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20">
+                    <Button onClick={handleBulkCopy} disabled={bulkRunning || !bulkSource || !bulkTarget} className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20">
                       {bulkRunning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salin
                     </Button>
                   </div>
                 </DialogContent>
               </Dialog>
               <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
-                <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}>
+                <DialogTrigger render={<Button className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" />}>
                   <Plus className="w-4 h-4 mr-2" />Tambah Mapping
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
@@ -219,7 +219,7 @@ export default function StatusMappingPage() {
                       <Label className="text-xs">Notes</Label>
                       <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} placeholder='Opsional, e.g. "Kurir sudah pickup tapi belum on-the-way"' />
                     </div>
-                    <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={saving}>
+                    <Button type="submit" className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" disabled={saving}>
                       {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan
                     </Button>
                   </form>
@@ -305,7 +305,7 @@ export default function StatusMappingPage() {
       </Card>
 
       {!canManage && (
-        <Card className="border-blue-500/20 bg-blue-500/5">
+        <Card className="border-zinc-500/20 bg-zinc-500/5">
           <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
             ℹ️ Mode read-only. Hanya Owner/Admin yang bisa edit status mapping.
           </CardContent>

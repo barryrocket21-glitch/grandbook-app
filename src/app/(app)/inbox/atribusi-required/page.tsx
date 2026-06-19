@@ -158,7 +158,7 @@ export default function AtribusiRequiredPage() {
 
           {/* Bulk assign toolbar */}
           {selected.size > 0 && (
-            <div className="flex flex-wrap items-end gap-2 p-2.5 rounded-md border bg-violet-500/5">
+            <div className="flex flex-wrap items-end gap-2 p-2.5 rounded-md border bg-zinc-500/5">
               <div className="text-xs font-medium">{selected.size} dipilih · {formatRupiah(selectedTotal)}</div>
               <div className="space-y-1">
                 <label className="text-[10px] text-muted-foreground">Assign CS</label>
@@ -198,7 +198,7 @@ export default function AtribusiRequiredPage() {
                 ) : rows.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="py-8"><EmptyState icon={UserCog} title="Bersih" description="Semua order sudah punya atribusi sesuai filter." /></TableCell></TableRow>
                 ) : rows.map((r) => (
-                  <TableRow key={r.id} className={selected.has(r.id) ? 'bg-violet-500/5' : ''}>
+                  <TableRow key={r.id} className={selected.has(r.id) ? 'bg-zinc-500/5' : ''}>
                     <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggle(r.id)} /></TableCell>
                     <TableCell className="text-xs">{r.order_date ? formatDate(r.order_date) : '—'}</TableCell>
                     <TableCell className="text-xs font-mono">

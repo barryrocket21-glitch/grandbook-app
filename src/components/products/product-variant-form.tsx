@@ -420,7 +420,7 @@ export function ProductVariantForm({ productId }: Props) {
               className="max-w-[160px]"
             />
             {weightKg == null
-              ? <p className="text-[10px] text-orange-600 flex items-center gap-1"><AlertTriangle className="size-3" /> Berat belum diisi — SPX bakal nimbang 0/asal. Isi biar berat export bener.</p>
+              ? <p className="text-[10px] text-amber-600 flex items-center gap-1"><AlertTriangle className="size-3" /> Berat belum diisi — SPX bakal nimbang 0/asal. Isi biar berat export bener.</p>
               : <p className="text-[10px] text-muted-foreground">Berat flat (estimasi). Berat order = Σ(berat × qty). SPX nimbang ulang pas pickup.</p>}
           </div>
 
@@ -453,7 +453,7 @@ export function ProductVariantForm({ productId }: Props) {
             </Select>
             <p className="text-[10px] text-muted-foreground">
               Opsional. Untuk dropship, link produk ke supplier supaya order auto-detect gudang asal.{' '}
-              <Link href="/settings/suppliers" className="text-violet-500 hover:underline">
+              <Link href="/settings/suppliers" className="text-zinc-500 hover:underline">
                 Kelola supplier →
               </Link>
             </p>
@@ -522,7 +522,7 @@ export function ProductVariantForm({ productId }: Props) {
               <div className="space-y-2">
                 <Label>Atribut</Label>
                 {attributesUsed.map(attr => (
-                  <Card key={attr.id} className="border-violet-500/30">
+                  <Card key={attr.id} className="border-zinc-500/30">
                     <CardContent className="p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-sm">{attr.name}</span>
@@ -648,7 +648,7 @@ function AddValueChip({ attribute, onAdd }: { attribute: ProductAttribute; onAdd
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="text-xs text-violet-500 hover:underline px-2 py-0.5"
+        className="text-xs text-zinc-500 hover:underline px-2 py-0.5"
       >
         + tambah nilai
       </button>

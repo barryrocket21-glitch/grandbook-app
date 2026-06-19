@@ -191,7 +191,7 @@ export default function ManageCommissionsPage() {
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
           Hanya owner &amp; admin yang bisa kelola pencairan komisi.
           Untuk lihat komisi Anda sendiri, buka{' '}
-          <Link href="/commissions/my" className="text-violet-500 hover:underline">/commissions/my</Link>.
+          <Link href="/commissions/my" className="text-zinc-500 hover:underline">/commissions/my</Link>.
         </CardContent></Card>
       </div>
     )
@@ -227,8 +227,8 @@ export default function ManageCommissionsPage() {
       />
 
       {/* Info banner — cara kerja */}
-      <div className="text-xs bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 flex gap-2 items-start">
-        <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+      <div className="text-xs bg-zinc-500/5 border border-zinc-500/20 rounded-lg p-3 flex gap-2 items-start">
+        <Info className="w-4 h-4 mt-0.5 shrink-0 text-zinc-600" />
         <div className="space-y-0.5 text-muted-foreground">
           <div>Order <strong className="text-foreground">DITERIMA</strong> → komisi auto-EARNED (perlu dibayar). <strong className="text-foreground">RETUR/CANCEL/FAKE</strong> → auto-HANGUS. Order masih di jalan belum keitung.</div>
           <div>Klik tombol <strong className="text-foreground">Bayar</strong> di baris CS untuk batch-tandai semua komisi belum dibayar di periode ini → "Sudah Dibayar."</div>
@@ -292,7 +292,7 @@ export default function ManageCommissionsPage() {
                       size="sm"
                       disabled={agg.earned_unpaid_count === 0}
                       onClick={() => openPayDialog(agg)}
-                      className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white disabled:opacity-30 disabled:bg-none disabled:bg-zinc-500/20 disabled:text-muted-foreground"
+                      className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white disabled:opacity-30 disabled:bg-none disabled:bg-zinc-500/20 disabled:text-muted-foreground"
                     >
                       <BadgeDollarSign className="w-3.5 h-3.5 mr-1" />
                       Bayar {agg.earned_unpaid_count > 0 ? `${agg.earned_unpaid_count} order` : ''}
@@ -327,7 +327,7 @@ export default function ManageCommissionsPage() {
                 <div className="max-h-40 overflow-y-auto border rounded text-xs divide-y">
                   {dialogTarget.earned_unpaid_orders.map((o) => (
                     <div key={o.id} className="px-2.5 py-1.5 flex justify-between gap-2">
-                      <Link href={`/orders/${o.id}`} target="_blank" className="font-mono text-violet-500 hover:underline shrink-0">
+                      <Link href={`/orders/${o.id}`} target="_blank" className="font-mono text-zinc-500 hover:underline shrink-0">
                         {o.order_number}
                       </Link>
                       <span className="text-muted-foreground truncate flex-1">{o.customer_name}</span>
@@ -367,7 +367,7 @@ export default function ManageCommissionsPage() {
                 <Button
                   onClick={submitPayment}
                   disabled={submitting}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                  className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
                 >
                   {submitting && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                   Konfirmasi Bayar {formatRupiah(dialogTarget.earned_unpaid_total)}
@@ -391,7 +391,7 @@ function StatCard({ label, value, sub, color }: {
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
     zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-500',
-    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
+    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
   }
   return (
     <div className={`p-3 rounded border ${colorMap[color]}`}>

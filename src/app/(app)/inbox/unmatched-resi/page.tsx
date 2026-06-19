@@ -301,8 +301,8 @@ export default function UnmatchedResiPage() {
                       <TableCell className="text-xs">
                         {r.resolution ? (
                           <Badge variant="outline" className={
-                            r.resolution === 'linked' ? 'bg-blue-500/10 text-blue-600 border-blue-500/30' :
-                            r.resolution === 'created_new' ? 'bg-purple-500/10 text-purple-600 border-purple-500/30' :
+                            r.resolution === 'linked' ? 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30' :
+                            r.resolution === 'created_new' ? 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30' :
                             'bg-zinc-500/10 text-zinc-600 border-zinc-500/30'
                           }>
                             {r.resolution}
@@ -417,7 +417,7 @@ export default function UnmatchedResiPage() {
                           key={o.id}
                           type="button"
                           onClick={() => setPickedOrderId(o.id)}
-                          className={`w-full text-left p-2 text-xs hover:bg-muted border-b last:border-b-0 ${pickedOrderId === o.id ? 'bg-violet-500/10' : ''}`}
+                          className={`w-full text-left p-2 text-xs hover:bg-muted border-b last:border-b-0 ${pickedOrderId === o.id ? 'bg-zinc-500/10' : ''}`}
                         >
                           <div className="font-medium">{o.order_number} {o.external_order_id && <span className="text-muted-foreground">· {o.external_order_id}</span>}</div>
                           <div className="text-muted-foreground">
@@ -448,7 +448,7 @@ export default function UnmatchedResiPage() {
                 <Button
                   onClick={submitResolve}
                   disabled={submitting || (action === 'link' && !pickedOrderId)}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                  className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
                 >
                   {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Konfirmasi
                 </Button>

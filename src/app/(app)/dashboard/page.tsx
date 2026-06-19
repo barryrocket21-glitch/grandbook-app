@@ -23,7 +23,7 @@ import { PendingPickupWidget } from '@/components/dashboard/pending-pickup-widge
 import { CashflowSummaryWidget } from '@/components/dashboard/cashflow-summary-widget'
 
 // Chart colors
-const CHART_COLORS = ['#8b5cf6', '#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
+const CHART_COLORS = ['#3f6fd1', '#71717a', '#a1a1aa', '#10b981', '#f59e0b', '#ef4444']
 
 // Supabase client dibuat sekali di module level agar tidak trigger re-render loop
 const supabase = createClient()
@@ -229,7 +229,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
-            <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+            <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">Akses Terbatas</h2>
             <p className="text-muted-foreground">
               Dashboard ini hanya dapat diakses oleh Owner atau Admin.
@@ -297,12 +297,12 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/financial-position" className="group block">
-          <Card className="h-full transition-all hover:shadow-md border-violet-500/30 bg-violet-500/5">
+          <Card className="h-full transition-all hover:shadow-md border-zinc-500/30 bg-zinc-500/5">
             <CardContent className="pt-5 pb-5">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-violet-500/10">
-                    <Wallet className="w-4 h-4 text-violet-600" />
+                  <div className="p-2 rounded-lg bg-zinc-500/10">
+                    <Wallet className="w-4 h-4 text-zinc-600" />
                   </div>
                   <div>
                     <div className="text-xs uppercase tracking-wider text-muted-foreground">COD Sudah Cair</div>
@@ -329,34 +329,34 @@ export default function DashboardPage() {
           value={formatRupiah(data?.omzetHariIni || 0)}
           subtitle={`${data?.totalOrdersHariIni || 0} orders`}
           icon={DollarSign}
-          gradient="from-emerald-500 to-teal-600"
+          gradient="from-emerald-500 to-zinc-600"
         />
         <StatCard
           title="Omzet Bulan Ini"
           value={formatRupiah(data?.omzetBulanIni || 0)}
           subtitle={`${data?.totalOrdersBulanIni || 0} orders`}
           icon={CircleDollarSign}
-          gradient="from-violet-500 to-indigo-600"
+          gradient="from-zinc-500 to-zinc-600"
         />
         <StatCard
           title="ROAS Blended"
           value={`${(data?.blendedROAS || 0).toFixed(2)}x`}
           subtitle={`Ad Spend: ${formatRupiah(data?.totalAdSpendBulanIni || 0)}`}
           icon={Target}
-          gradient="from-amber-500 to-orange-600"
+          gradient="from-amber-500 to-amber-600"
         />
       </div>
 
       {/* Warning Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="border-orange-500/20 bg-orange-500/5">
+        <Card className="border-amber-500/20 bg-amber-500/5">
           <CardContent className="pt-4 pb-4 flex items-center gap-4">
-            <div className="p-2 bg-orange-500/15 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-orange-500" />
+            <div className="p-2 bg-amber-500/15 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
             </div>
             <div>
               <p className="text-sm font-medium">Retur Rate</p>
-              <p className="text-2xl font-bold text-orange-500">
+              <p className="text-2xl font-bold text-amber-500">
                 {formatPercent(data?.returPercentage || 0)}
               </p>
             </div>
@@ -387,7 +387,7 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-violet-500" />
+              <Activity className="w-5 h-5 text-zinc-500" />
               Trend 30 Hari Terakhir
             </CardTitle>
             <CardDescription>Omzet vs Ad Spend vs Profit</CardDescription>
@@ -398,8 +398,8 @@ export default function DashboardPage() {
                 <AreaChart data={data?.dailyChart || []}>
                   <defs>
                     <linearGradient id="gradientOmzet" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#3f6fd1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3f6fd1" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="gradientSpend" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
@@ -423,7 +423,7 @@ export default function DashboardPage() {
                     formatter={(value: any) => formatRupiah(Number(value))}
                   />
                   <Legend />
-                  <Area type="monotone" dataKey="omzet" stroke="#8b5cf6" fill="url(#gradientOmzet)" strokeWidth={2} name="Omzet" />
+                  <Area type="monotone" dataKey="omzet" stroke="#3f6fd1" fill="url(#gradientOmzet)" strokeWidth={2} name="Omzet" />
                   <Area type="monotone" dataKey="spend" stroke="#ef4444" fill="url(#gradientSpend)" strokeWidth={2} name="Ad Spend" />
                   <Area type="monotone" dataKey="profit" stroke="#10b981" fill="url(#gradientProfit)" strokeWidth={2} name="Omzet − Ad Spend" />
                 </AreaChart>
@@ -436,7 +436,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-violet-500" />
+              <ShoppingCart className="w-5 h-5 text-zinc-500" />
               Status Order
             </CardTitle>
             <CardDescription>Bulan ini</CardDescription>
@@ -488,7 +488,7 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-violet-500" />
+            <Package className="w-5 h-5 text-zinc-500" />
             Top 5 Produk
           </CardTitle>
           <CardDescription>By revenue bulan ini</CardDescription>
@@ -498,7 +498,7 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {data.topProducts.map((product, idx) => (
                 <div key={product.name} className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-violet-400 text-sm font-bold">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-zinc-500/20 to-zinc-500/20 text-zinc-400 text-sm font-bold">
                     {idx + 1}
                   </div>
                   <div className="flex-1 min-w-0">

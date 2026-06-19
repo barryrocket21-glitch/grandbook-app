@@ -260,7 +260,7 @@ export default function CrmDetailPage() {
           ) : (
             <div className="space-y-3">
               {activities.map((a) => (
-                <div key={a.id} className="flex gap-3 text-sm border-l-2 border-violet-500/30 pl-3">
+                <div key={a.id} className="flex gap-3 text-sm border-l-2 border-zinc-500/30 pl-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px]">{CRM_ACTIVITY_CHANNELS.find(c => c.value === a.channel)?.label ?? a.channel}</Badge>
@@ -268,7 +268,7 @@ export default function CrmDetailPage() {
                       <span className="text-[11px] text-muted-foreground ml-auto">{formatDate(a.created_at)}</span>
                     </div>
                     {a.note && <p className="text-xs text-muted-foreground mt-1">{a.note}</p>}
-                    {a.next_action && <p className="text-[11px] text-blue-600 mt-0.5">→ {a.next_action}</p>}
+                    {a.next_action && <p className="text-[11px] text-zinc-600 mt-0.5">→ {a.next_action}</p>}
                   </div>
                 </div>
               ))}

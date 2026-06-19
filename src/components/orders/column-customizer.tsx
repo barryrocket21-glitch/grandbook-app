@@ -215,7 +215,7 @@ function VisibilityTab({ visibility, onToggle, onSetAll, onResetSystem }: {
                   />
                   <span className="flex-1">{c.label}</span>
                   {c.editable_field && (
-                    <Badge variant="outline" className="text-[9px] bg-violet-500/10 text-violet-600">
+                    <Badge variant="outline" className="text-[9px] bg-zinc-500/10 text-zinc-600">
                       editable
                     </Badge>
                   )}
@@ -408,11 +408,11 @@ function SavedViewsTab({
       ) : (
         <ul className="space-y-2">
           {savedViews.map(v => (
-            <li key={v.id} className={`border rounded p-2.5 space-y-1.5 ${activeViewId === v.id ? 'border-violet-500/50 bg-violet-500/5' : ''}`}>
+            <li key={v.id} className={`border rounded p-2.5 space-y-1.5 ${activeViewId === v.id ? 'border-zinc-500/50 bg-zinc-500/5' : ''}`}>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium flex items-center gap-1.5">
                   {v.name}
-                  {activeViewId === v.id && <Pin className="w-3 h-3 text-violet-500" />}
+                  {activeViewId === v.id && <Pin className="w-3 h-3 text-zinc-500" />}
                 </span>
                 <Button size="sm" variant="ghost" onClick={() => deleteView(v.id)} className="h-6 px-2 text-red-500">
                   <Trash2 className="w-3 h-3" />

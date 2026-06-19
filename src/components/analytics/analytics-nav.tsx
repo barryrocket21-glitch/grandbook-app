@@ -70,7 +70,7 @@ export function AnalyticsNav({ section, onSelect }: Props) {
                 className={cn(
                   'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-sm whitespace-nowrap transition-colors',
                   active
-                    ? 'bg-violet-500/10 text-violet-700 dark:text-violet-300 font-medium'
+                    ? 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 font-medium'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                 )}
               >

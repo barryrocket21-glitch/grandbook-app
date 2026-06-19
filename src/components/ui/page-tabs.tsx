@@ -16,7 +16,7 @@ export function PageTabs({ items }: { items: PageTab[] }) {
         return (
           <Link key={it.href} href={it.href}
             className={`px-3 h-9 inline-flex items-center whitespace-nowrap text-sm border-b-2 -mb-px transition-colors ${
-              active ? 'border-violet-500 text-foreground font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
+              active ? 'border-zinc-500 text-foreground font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}>
             {it.label}
           </Link>

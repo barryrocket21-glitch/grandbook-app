@@ -202,13 +202,13 @@ export function PersonalDashboard({ role, pageTitle, pageDescription, icon: Icon
                 <StatCard
                   label="Komisi Earned (pending pencairan)"
                   value={formatRupiah(data.totals.commission_earned)}
-                  sub={<>Belum dicairkan • <Link href={commissionLink} className="text-violet-500 hover:underline">lihat detail</Link></>}
+                  sub={<>Belum dicairkan • <Link href={commissionLink} className="text-zinc-500 hover:underline">lihat detail</Link></>}
                   color="amber"
                 />
                 <StatCard
                   label="Komisi Paid (sudah dicairkan)"
                   value={formatRupiah(data.totals.commission_paid)}
-                  sub={<>Sudah ditransfer • <Link href={commissionLink} className="text-violet-500 hover:underline">history</Link></>}
+                  sub={<>Sudah ditransfer • <Link href={commissionLink} className="text-zinc-500 hover:underline">history</Link></>}
                   color="emerald"
                 />
               </div>
@@ -228,7 +228,7 @@ export function PersonalDashboard({ role, pageTitle, pageDescription, icon: Icon
                           contentStyle={{ background: 'rgb(15 23 42 / 0.95)', border: '1px solid rgb(148 163 184 / 0.3)', borderRadius: 6, fontSize: 12 }}
                           formatter={(value, name) => name === 'revenue' ? [formatRupiah(Number(value)), 'Revenue'] : [String(value), String(name)]}
                         />
-                        <Area type="monotone" dataKey="total_orders" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="orders" />
+                        <Area type="monotone" dataKey="total_orders" stroke="#3f6fd1" fill="#3f6fd1" fillOpacity={0.3} name="orders" />
                         <Area type="monotone" dataKey="diterima_orders" stroke="#10b981" fill="#10b981" fillOpacity={0.3} name="diterima" />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -256,7 +256,7 @@ export function PersonalDashboard({ role, pageTitle, pageDescription, icon: Icon
                       {data.recentOrders.map((o) => (
                         <TableRow key={o.id}>
                           <TableCell>
-                            <Link href={`/orders/${o.id}`} className="font-mono text-xs text-violet-500 hover:underline">
+                            <Link href={`/orders/${o.id}`} className="font-mono text-xs text-zinc-500 hover:underline">
                               {o.order_number}
                             </Link>
                           </TableCell>
@@ -303,13 +303,13 @@ function StatCard({ label, value, sub, color }: {
   color: 'blue' | 'amber' | 'emerald' | 'zinc' | 'violet' | 'red' | 'orange'
 }) {
   const colorMap: Record<string, string> = {
-    blue: 'bg-blue-500/10 border-blue-500/30 text-blue-600',
+    blue: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
     zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-    violet: 'bg-violet-500/10 border-violet-500/30 text-violet-600',
+    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     red: 'bg-red-500/10 border-red-500/30 text-red-600',
-    orange: 'bg-orange-500/10 border-orange-500/30 text-orange-600',
+    orange: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
   }
   return (
     <div className={`p-3 rounded border ${colorMap[color]}`}>

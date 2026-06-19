@@ -246,14 +246,14 @@ export default function BulkUploadPage() {
               </Select>
               <p className="text-xs text-muted-foreground">
                 Profile menentukan format file + cara terjemahkan kolom ke struktur Grandbook.
-                Bikin profile baru di <Link href="/settings/converter-profiles" className="text-violet-400 hover:underline">Settings → Converter Profiles</Link>.
+                Bikin profile baru di <Link href="/settings/converter-profiles" className="text-zinc-400 hover:underline">Settings → Converter Profiles</Link>.
               </p>
             </div>
             <div className="flex justify-end">
               <Button
                 onClick={goToFileStep}
                 disabled={!selectedProfileId}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 Lanjut <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
@@ -279,7 +279,7 @@ export default function BulkUploadPage() {
                 type="file"
                 accept={profileDetail.profile.file_format === 'CSV' ? '.csv,text/csv' : '.xlsx,.xls'}
                 onChange={(e) => { setFile(e.target.files?.[0] || null); setCsvPhoneIssue(null) }}
-                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-violet-500/10 file:text-violet-500 hover:file:bg-violet-500/20"
+                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-zinc-500/10 file:text-zinc-500 hover:file:bg-zinc-500/20"
               />
               {file && (
                 <p className="text-xs text-muted-foreground">
@@ -312,7 +312,7 @@ export default function BulkUploadPage() {
               <Button
                 onClick={goToPreview}
                 disabled={!file || previewLoading}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 {previewLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
                 Preview
@@ -386,14 +386,14 @@ export default function BulkUploadPage() {
                   <Checkbox checked={skipReview} onCheckedChange={(v) => setSkipReview(v === true)} />
                   <span className="text-sm">
                     Tandai semua sebagai{' '}
-                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">SIAP_KIRIM</Badge>
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">SIAP_KIRIM</Badge>
                     {' '}(skip review)
                   </span>
                 </label>
               ) : (
                 <p className="text-xs text-muted-foreground">
                   Order akan masuk dengan status{' '}
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">BARU</Badge>
+                  <Badge variant="outline" className="bg-zinc-500/10 text-zinc-600 border-zinc-500/30">BARU</Badge>
                   {' '}dan menunggu approval admin.
                 </p>
               )}
@@ -407,7 +407,7 @@ export default function BulkUploadPage() {
             <Button
               onClick={startIngest}
               disabled={preview.totalRowsDetected === 0 || preview.errors.length > 0}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
             >
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
               Lanjutkan Import {preview.totalRowsDetected} order
@@ -419,13 +419,13 @@ export default function BulkUploadPage() {
       {step === 'execute' && (
         <Card>
           <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-violet-500" />
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-zinc-500" />
             <div className="text-sm font-medium">
               Importing {progress.done} / {progress.total} rows...
             </div>
             <div className="w-full max-w-md mx-auto bg-muted rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-violet-500 to-indigo-500 h-2 transition-all"
+                className="bg-gradient-to-r from-zinc-500 to-zinc-500 h-2 transition-all"
                 style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
               />
             </div>
@@ -468,7 +468,7 @@ export default function BulkUploadPage() {
             <div className="flex flex-wrap gap-2 pt-2">
               <Button
                 onClick={() => router.push('/orders/draft')}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
               >
                 Lihat Antrian Kerja
               </Button>
@@ -486,7 +486,7 @@ export default function BulkUploadPage() {
 function Stat({ label, value, color }: { label: string; value: number; color: 'emerald' | 'blue' | 'red' | 'amber' }) {
   const colorMap: Record<string, string> = {
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
-    blue: 'bg-blue-500/10 border-blue-500/30 text-blue-600',
+    blue: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
     red: 'bg-red-500/10 border-red-500/30 text-red-600',
     amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
   }
@@ -512,7 +512,7 @@ function StepIndicator({ current }: { current: StepKey }) {
       {steps.map((s, i) => (
         <div key={s.key} className="flex items-center gap-1">
           <span className={`px-2 py-1 rounded ${
-            i === currentIdx ? 'bg-violet-500/20 text-violet-500 font-medium' :
+            i === currentIdx ? 'bg-zinc-500/20 text-zinc-500 font-medium' :
             i < currentIdx ? 'text-muted-foreground' :
             'text-muted-foreground/50'
           }`}>{s.label}</span>

@@ -128,7 +128,7 @@ export default function AdvertiserTeamListPage() {
               title="Belum ada Advertiser terdaftar"
               description="Tambah user dengan role Advertiser di Users & Roles."
               action={
-                <Link href="/settings/users" className="inline-flex items-center text-sm text-violet-500 hover:underline">
+                <Link href="/settings/users" className="inline-flex items-center text-sm text-zinc-500 hover:underline">
                   Buka Users &amp; Roles →
                 </Link>
               }

@@ -311,7 +311,7 @@ function OrdersDraftInner() {
               <Button
                 size="sm"
                 onClick={() => setBenerinOpen(true)}
-                className="gap-1.5 bg-orange-500 hover:bg-orange-600 text-white"
+                className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white"
               >
                 <Wand2 className="w-3.5 h-3.5" />
                 Benerin Alamat ({readiness.not_ready})
@@ -339,7 +339,7 @@ function OrdersDraftInner() {
               </Button>
             )}
             <Link href="/orders/new">
-              <Button size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700">
+              <Button size="sm" className="gap-1.5 bg-zinc-600 hover:bg-zinc-700">
                 <Plus className="w-3.5 h-3.5" />
                 Input Order Baru
               </Button>
@@ -385,14 +385,14 @@ function OrdersDraftInner() {
               readiness.not_ready === 0
                 ? 'border-border bg-muted text-muted-foreground'
                 : alamatKurangOnly
-                  ? 'border-orange-500 bg-orange-500 text-white'
-                  : 'border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20 cursor-pointer'}`}
+                  ? 'border-amber-500 bg-amber-500 text-white'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 cursor-pointer'}`}
             title={readiness.not_ready > 0 ? (alamatKurangOnly ? 'Klik: tampilkan semua lagi' : 'Klik: saring tampilkan cuma yang perlu dibenerin') : undefined}
           >
             <AlertTriangle className="w-3.5 h-3.5" /> Perlu Dibenerin {readiness.not_ready.toLocaleString('id-ID')}
           </button>
           <div className="hidden sm:flex items-center gap-2 ml-1 flex-1 min-w-[120px] max-w-[260px]">
-            <div className="h-2 flex-1 rounded-full bg-orange-500/20 overflow-hidden">
+            <div className="h-2 flex-1 rounded-full bg-amber-500/20 overflow-hidden">
               <div className="h-full bg-emerald-500 transition-all" style={{ width: `${readiness.total > 0 ? (readiness.ready / readiness.total) * 100 : 0}%` }} />
             </div>
             <span className="text-[11px] tabular-nums text-muted-foreground">{readiness.total > 0 ? Math.round((readiness.ready / readiness.total) * 100) : 0}%</span>
@@ -454,7 +454,7 @@ function OrdersDraftInner() {
                 type="button"
                 size="sm"
                 onClick={() => setAlamatKurangOnly(false)}
-                className="h-7 text-xs gap-1.5 bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+                className="h-7 text-xs gap-1.5 bg-amber-500 hover:bg-amber-600 text-white border-amber-500"
               >
                 <AlertTriangle className="w-3 h-3" />
                 Saring: alamat perlu dibenerin
@@ -645,7 +645,7 @@ function OrdersDraftInner() {
           <div className="rounded-md bg-red-500/5 border border-red-500/20 p-3 text-xs space-y-1 max-h-48 overflow-y-auto">
             {selectedRows.slice(0, 10).map(r => (
               <div key={r.id} className="flex justify-between gap-2">
-                <span className="font-mono text-violet-500 shrink-0">{r.order_number}</span>
+                <span className="font-mono text-zinc-500 shrink-0">{r.order_number}</span>
                 <span className="truncate">{r.customer_name}</span>
                 <span className="tabular-nums shrink-0">{formatRupiah(Number(r.total))}</span>
               </div>
@@ -705,7 +705,7 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
   ) : <span className="text-muted-foreground">—</span>
 
   return (
-    <TableRow className={`${selected ? 'bg-violet-500/5' : ''} ${needsFix ? 'border-l-2 border-l-orange-500/70' : ''}`}>
+    <TableRow className={`${selected ? 'bg-zinc-500/5' : ''} ${needsFix ? 'border-l-2 border-l-amber-500/70' : ''}`}>
       <TableCell className="text-center">
         <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label={`Select ${row.order_number}`} />
       </TableCell>
@@ -714,7 +714,7 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
         <button
           type="button"
           onClick={() => setEditOpen(true)}
-          className="text-violet-400 hover:underline font-mono text-xs whitespace-nowrap cursor-pointer"
+          className="text-zinc-400 hover:underline font-mono text-xs whitespace-nowrap cursor-pointer"
           title="Klik untuk Edit cepat"
         >
           {row.order_number}
@@ -738,7 +738,7 @@ function DraftRow({ row, selected, issues, onToggleSelect, onResiClick, onUpdate
           <button
             type="button"
             onClick={() => setEditOpen(true)}
-            className="inline-flex items-center gap-1 rounded border border-orange-500/40 bg-orange-500/10 px-1.5 py-0.5 text-[11px] text-orange-700 dark:text-orange-300 hover:bg-orange-500/20 cursor-pointer max-w-full"
+            className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 cursor-pointer max-w-full"
             title="Alamat belum ke-resolve — klik untuk benerin"
           >
             <AlertTriangle className="w-3 h-3 shrink-0" />

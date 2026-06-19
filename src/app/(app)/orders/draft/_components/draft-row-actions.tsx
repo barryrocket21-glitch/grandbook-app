@@ -104,7 +104,7 @@ export function DraftRowActions({ row, onUpdated, onEdit }: Props) {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 pr-8">
-              <Package className="w-4 h-4 text-violet-500 shrink-0" />
+              <Package className="w-4 h-4 text-zinc-500 shrink-0" />
               <span className="font-mono text-sm">{row.order_number}</span>
               <Badge variant="outline" className={`${statusColor} text-[10px] ml-auto`}>{STATUS_LABEL[status] || row.status}</Badge>
             </DialogTitle>
@@ -119,7 +119,7 @@ export function DraftRowActions({ row, onUpdated, onEdit }: Props) {
                 {wilayahLine}
                 {ready
                   ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  : <span className="inline-flex items-center gap-0.5 text-orange-600 text-xs"><AlertTriangle className="w-3 h-3" />perlu dibenerin</span>}
+                  : <span className="inline-flex items-center gap-0.5 text-amber-600 text-xs"><AlertTriangle className="w-3 h-3" />perlu dibenerin</span>}
                 {row.customer_zip ? <span className="text-muted-foreground">· {row.customer_zip}</span> : null}
               </span>
             } />
@@ -148,7 +148,7 @@ export function DraftRowActions({ row, onUpdated, onEdit }: Props) {
               </Button>
             )}
             <Button variant="outline" onClick={() => setDetailOpen(false)}>Tutup</Button>
-            <Button onClick={() => { setDetailOpen(false); onEdit() }} className="gap-1.5 bg-violet-600 hover:bg-violet-700">
+            <Button onClick={() => { setDetailOpen(false); onEdit() }} className="gap-1.5 bg-zinc-600 hover:bg-zinc-700">
               <Pencil className="w-3.5 h-3.5" /> Edit cepat
             </Button>
           </DialogFooter>

@@ -16,13 +16,13 @@ export function PageHeader({ title, description, icon: Icon, badge, actions, cla
     <div className={cn('flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6', className)}>
       <div className="flex items-start gap-3 min-w-0">
         {Icon && (
-          <div className="hidden sm:flex shrink-0 mt-0.5 size-10 rounded-xl bg-gradient-to-br from-violet-600/15 to-indigo-600/15 ring-1 ring-violet-500/20 items-center justify-center">
-            <Icon className="size-5 text-violet-400" />
+          <div className="hidden sm:flex shrink-0 mt-0.5 size-10 rounded-xl bg-gradient-to-br from-zinc-600/15 to-zinc-600/15 ring-1 ring-zinc-500/20 items-center justify-center">
+            <Icon className="size-5 text-zinc-400" />
           </div>
         )}
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl md:text-[28px] font-bold tracking-tight bg-gradient-to-r from-violet-300 to-indigo-300 bg-clip-text text-transparent leading-tight">
+            <h1 className="text-2xl md:text-[28px] font-bold tracking-tight bg-gradient-to-r from-zinc-300 to-zinc-300 bg-clip-text text-transparent leading-tight">
               {title}
             </h1>
             {badge}

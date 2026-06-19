@@ -12,12 +12,12 @@ import {
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
-  { value: 'BARU', label: 'Baru', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400' },
-  { value: 'SIAP_KIRIM', label: 'Siap Kirim', color: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400' },
-  { value: 'DIKIRIM', label: 'Dikirim', color: 'bg-purple-500/15 text-purple-700 dark:text-purple-400' },
+  { value: 'BARU', label: 'Baru', color: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400' },
+  { value: 'SIAP_KIRIM', label: 'Siap Kirim', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
+  { value: 'DIKIRIM', label: 'Dikirim', color: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400' },
   { value: 'DITERIMA', label: 'Diterima', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
   { value: 'PROBLEM', label: 'Problem', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
-  { value: 'RETUR', label: 'Retur', color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400' },
+  { value: 'RETUR', label: 'Retur', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
   { value: 'FAKE', label: 'Fake Order', color: 'bg-red-500/15 text-red-700 dark:text-red-400' },
   { value: 'CANCEL', label: 'Cancel', color: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400' },
 ]
@@ -38,9 +38,9 @@ export const EKSPEDISI_LIST = [
 ]
 
 export const RESI_STATUSES: { value: ResiStatus; label: string; color: string }[] = [
-  { value: 'AKTIF', label: 'Aktif (Dalam Pengiriman)', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400' },
+  { value: 'AKTIF', label: 'Aktif (Dalam Pengiriman)', color: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400' },
   { value: 'DITERIMA', label: 'Diterima', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
-  { value: 'PROBLEM', label: 'Problem', color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400' },
+  { value: 'PROBLEM', label: 'Problem', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
   { value: 'RETUR', label: 'Retur', color: 'bg-red-500/15 text-red-700 dark:text-red-400' },
 ]
 
@@ -66,8 +66,8 @@ export const PAYMENT_METHODS = [
 ]
 
 export const COMMISSION_STATUS_COLORS = {
-  PENDING: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
-  APPROVED: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  PENDING: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  APPROVED: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400',
   PAID: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
 }
 
@@ -80,10 +80,10 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 export const ROLE_COLORS: Record<UserRole, string> = {
-  owner: 'bg-violet-500/15 text-violet-700 dark:text-violet-400',
-  admin: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
-  cs: 'bg-teal-500/15 text-teal-700 dark:text-teal-400',
-  advertiser: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+  owner: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400',
+  admin: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400',
+  cs: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400',
+  advertiser: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   akunting: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
 }
 

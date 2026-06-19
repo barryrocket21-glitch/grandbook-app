@@ -44,7 +44,7 @@ export function DraftStatusStatsBar({
         label="Total"
         cnt={totalCount}
         pct={null}
-        color="bg-violet-500/10 text-violet-600 border-violet-500/30"
+        color="bg-zinc-500/10 text-zinc-600 border-zinc-500/30"
         active={totalActive}
         loading={loading}
         onClick={() => onStatusClick('ALL')}
@@ -102,7 +102,7 @@ function StatCard({
       </div>
       <div className="text-[10px] mt-1 uppercase tracking-wide font-medium text-current/80">{label}</div>
       {warn !== undefined && (
-        <div className="mt-1 inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] font-semibold bg-orange-500/15 text-orange-700 dark:text-orange-300 normal-case tracking-normal">
+        <div className="mt-1 inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 normal-case tracking-normal">
           ⚠️ {warn.toLocaleString('id-ID')} belum siap export
         </div>
       )}

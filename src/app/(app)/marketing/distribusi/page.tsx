@@ -126,7 +126,7 @@ export default function DistribusiPage() {
               {camps.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.campaign_name} ({c.platform})</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button onClick={assign} disabled={assigning || selected.size === 0 || !campaignId} className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white">
+          <Button onClick={assign} disabled={assigning || selected.size === 0 || !campaignId} className="gap-1.5 bg-zinc-600 hover:bg-zinc-700 text-white">
             {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} Assign ({selected.size})
           </Button>
           <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></Button>
@@ -139,7 +139,7 @@ export default function DistribusiPage() {
           <Badge variant="outline" className="bg-amber-500/10 text-amber-600">token gak resolve: {counts.token}</Badge>
           <Badge variant="outline" className="bg-zinc-500/10 text-zinc-500">no-code: {counts.noCode}</Badge>
           <Badge variant="outline">Total nilai: {formatRupiah(counts.rp)}</Badge>
-          {selected.size > 0 && <Badge variant="outline" className="bg-violet-500/10 text-violet-600">dipilih: {selected.size}</Badge>}
+          {selected.size > 0 && <Badge variant="outline" className="bg-zinc-500/10 text-zinc-600">dipilih: {selected.size}</Badge>}
         </div>
       )}
 

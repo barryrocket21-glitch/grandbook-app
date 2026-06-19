@@ -219,7 +219,7 @@ function ProductCell({
   const [open, setOpen] = useState(false)
 
   // Same border tone resolution sebagai CellEditor — biar konsisten.
-  let borderClass = 'border-transparent hover:border-border focus:border-violet-500'
+  let borderClass = 'border-transparent hover:border-border focus:border-zinc-500'
   if (flagRequired) {
     borderClass = 'border-red-500/60 bg-red-500/5 focus:border-red-500'
   } else if (statusTone === 'ok') {
@@ -240,7 +240,7 @@ function ProductCell({
         placeholder={flagRequired ? 'wajib' : ''}
         title={titleAttr}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full pl-1.5 pr-6 py-1 text-[11px] rounded border bg-transparent placeholder:text-red-500/70 focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${borderClass}`}
+        className={`w-full pl-1.5 pr-6 py-1 text-[11px] rounded border bg-transparent placeholder:text-red-500/70 focus:outline-none focus:ring-1 focus:ring-zinc-500/40 ${borderClass}`}
       />
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
@@ -311,7 +311,7 @@ function CellEditor({
   // 1. Required field empty → red strong
   // 2. Explicit status tone (ok/warn/bad)
   // 3. Default (transparent, hover hint)
-  let borderClass = 'border-transparent hover:border-border focus:border-violet-500'
+  let borderClass = 'border-transparent hover:border-border focus:border-zinc-500'
   if (flagRequired) {
     borderClass = 'border-red-500/60 bg-red-500/5 focus:border-red-500'
   } else if (statusTone === 'ok') {
@@ -343,7 +343,7 @@ function CellEditor({
           onChange(v)
         }
       }}
-      className={`w-full px-1.5 py-1 text-[11px] rounded border bg-transparent placeholder:text-red-500/70 focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${borderClass} ${
+      className={`w-full px-1.5 py-1 text-[11px] rounded border bg-transparent placeholder:text-red-500/70 focus:outline-none focus:ring-1 focus:ring-zinc-500/40 ${borderClass} ${
         align === 'right' ? 'text-right tabular-nums' : ''
       }`}
     />

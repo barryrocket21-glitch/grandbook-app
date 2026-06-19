@@ -58,7 +58,7 @@ export function PerProdukSection({ rows, loading }: Props) {
     const active = k === sortKey
     return (
       <TableHead className={`cursor-pointer select-none hover:bg-muted/50 text-${align}`} onClick={() => toggleSort(k)}>
-        <span className={`inline-flex items-center gap-1 ${active ? 'text-violet-500 font-semibold' : ''}`}>
+        <span className={`inline-flex items-center gap-1 ${active ? 'text-zinc-500 font-semibold' : ''}`}>
           {label}
           {active
             ? sortDir === 'desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
@@ -139,7 +139,7 @@ export function PerProdukSection({ rows, loading }: Props) {
                   </TableCell>
                   <TableCell className="text-right">
                     <Link href={`/analytics/produk/${r.product_id}`}>
-                      <Button variant="ghost" size="sm" className="text-violet-500 hover:text-violet-600">
+                      <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-600">
                         Detail <ArrowRight className="w-3.5 h-3.5 ml-1" />
                       </Button>
                     </Link>

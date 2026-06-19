@@ -492,7 +492,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
                     <Button
                       onClick={runBulkCopy}
                       disabled={bulkRunning || !bulkSource}
-                      className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                      className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
                     >
                       {bulkRunning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Salin
@@ -503,7 +503,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
               <Dialog open={fmOpen} onOpenChange={(v) => { setFmOpen(v); if (!v) { setFmForm(initialFieldForm); setFmEditId(null) } }}>
                 <DialogTrigger
                   render={
-                    <Button onClick={openAddField} size="sm" className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+                    <Button onClick={openAddField} size="sm" className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white">
                       <Plus className="w-3.5 h-3.5 mr-1" />Tambah Field Mapping
                     </Button>
                   }
@@ -603,7 +603,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
                     <Button
                       type="submit"
                       disabled={fmSaving}
-                      className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                      className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
                     >
                       {fmSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Simpan
@@ -699,7 +699,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
               <Dialog open={vmOpen} onOpenChange={(v) => { setVmOpen(v); if (!v) { setVmForm(initialValueForm); setVmEditId(null) } }}>
                 <DialogTrigger
                   render={
-                    <Button onClick={openAddValue} size="sm" className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white">
+                    <Button onClick={openAddValue} size="sm" className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white">
                       <Plus className="w-3.5 h-3.5 mr-1" />Tambah Value Mapping
                     </Button>
                   }
@@ -748,7 +748,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
                     <Button
                       type="submit"
                       disabled={vmSaving}
-                      className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                      className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
                     >
                       {vmSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Simpan
@@ -855,7 +855,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
                   <Button
                     onClick={runTestParser}
                     disabled={testRunning || (isWaPaste ? !testText.trim() : !testFile)}
-                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                    className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
                   >
                     {testRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
                     Parse Preview
@@ -932,7 +932,7 @@ export default function ConverterProfileDetailPage({ params }: { params: Promise
       </Tabs>
 
       {!canManage && (
-        <Card className="border-blue-500/20 bg-blue-500/5">
+        <Card className="border-zinc-500/20 bg-zinc-500/5">
           <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
             ℹ️ Mode read-only. Hanya Owner/Admin yang bisa edit field & value mappings.
           </CardContent>

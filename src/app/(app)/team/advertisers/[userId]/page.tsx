@@ -239,7 +239,7 @@ export default function AdvertiserDetailPage() {
                         <TableCell>
                           <Badge variant="outline" className={
                             c.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-700' :
-                            c.status === 'EARNED' ? 'bg-blue-500/15 text-blue-700' :
+                            c.status === 'EARNED' ? 'bg-zinc-500/15 text-zinc-700' :
                             c.status === 'CANCELLED' ? 'bg-red-500/15 text-red-700' :
                             'bg-zinc-500/15 text-zinc-700'
                           }>

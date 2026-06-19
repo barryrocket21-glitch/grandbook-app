@@ -47,7 +47,7 @@ export function CashflowSummaryWidget() {
 
   if (loading) {
     return (
-      <Card className="bg-gradient-to-br from-violet-500/5 to-blue-500/5 border-violet-500/20">
+      <Card className="bg-gradient-to-br from-zinc-500/5 to-zinc-500/5 border-zinc-500/20">
         <CardContent className="pt-4 pb-4">
           <div className="text-xs text-muted-foreground">Memuat saldo SPX...</div>
         </CardContent>
@@ -60,11 +60,11 @@ export function CashflowSummaryWidget() {
   const hasSaldo = !!data && data.saldo_terakhir != null
 
   return (
-    <Card className="bg-gradient-to-br from-violet-500/5 to-blue-500/5 border-violet-500/20">
+    <Card className="bg-gradient-to-br from-zinc-500/5 to-zinc-500/5 border-zinc-500/20">
       <CardContent className="pt-4 pb-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-violet-500" />
+            <Wallet className="w-4 h-4 text-zinc-500" />
             <h3 className="text-sm font-semibold">Saldo SPX &amp; Cashflow</h3>
           </div>
           <Button variant="ghost" size="sm" onClick={() => void load(true)} disabled={refreshing} className="h-7 px-2">
@@ -78,10 +78,10 @@ export function CashflowSummaryWidget() {
             value={formatRupiah(Number(payout?.cair_total ?? 0))} valueClass="text-emerald-600" />
           <Metric icon={<AlertCircle className="w-3.5 h-3.5 text-amber-500" />} label="Belum cair (delivered)"
             value={formatRupiah(Number(payout?.uncair_total ?? 0))} valueClass="text-amber-600" />
-          <Metric icon={<Wallet className="w-3.5 h-3.5 text-violet-500" />} label="Saldo terakhir"
-            value={hasSaldo ? formatRupiah(Number(data!.saldo_terakhir)) : '—'} valueClass="text-violet-600" />
+          <Metric icon={<Wallet className="w-3.5 h-3.5 text-zinc-500" />} label="Saldo terakhir"
+            value={hasSaldo ? formatRupiah(Number(data!.saldo_terakhir)) : '—'} valueClass="text-zinc-600" />
         </div>
-        <p className="text-[10px] text-muted-foreground">{Number(payout?.uncair_count ?? 0)} order delivered belum cair · update via <a href="/reconciliation/ekspedisi" className="text-violet-500 hover:underline">Rekonsiliasi Ekspedisi</a>.</p>
+        <p className="text-[10px] text-muted-foreground">{Number(payout?.uncair_count ?? 0)} order delivered belum cair · update via <a href="/reconciliation/ekspedisi" className="text-zinc-500 hover:underline">Rekonsiliasi Ekspedisi</a>.</p>
       </CardContent>
     </Card>
   )

@@ -180,7 +180,7 @@ export default function CourierRatesPage() {
         actions={
           <PermissionGuard role={role} allowedRoles={['owner','admin']}>
             <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
-              <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}>
+              <DialogTrigger render={<Button className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" />}>
                 <Plus className="w-4 h-4 mr-2" />Tambah Rate
               </DialogTrigger>
               <DialogContent className="max-w-md">
@@ -230,7 +230,7 @@ export default function CourierRatesPage() {
                     <Label className="text-xs">Notes</Label>
                     <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} />
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={saving}>
+                  <Button type="submit" className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" disabled={saving}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan
                   </Button>
                 </form>
@@ -328,7 +328,7 @@ export default function CourierRatesPage() {
       </Card>
 
       {!canManage && (
-        <Card className="border-blue-500/20 bg-blue-500/5">
+        <Card className="border-zinc-500/20 bg-zinc-500/5">
           <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
             ℹ️ Mode read-only. Hanya Owner/Admin yang bisa edit rates.
           </CardContent>
@@ -463,10 +463,10 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
   }, [bundle, preview, billingModel, codFeeBase, codFeeRounding, ppnAppliedTo])
 
   return (
-    <Card className="border-violet-500/30 bg-violet-500/5">
+    <Card className="border-zinc-500/30 bg-zinc-500/5">
       <CardContent className="pt-4 pb-4 space-y-4">
         <div className="flex items-center gap-2">
-          <Settings2 className="w-4 h-4 text-violet-500" />
+          <Settings2 className="w-4 h-4 text-zinc-500" />
           <h3 className="text-sm font-semibold">Per-Channel Billing Configuration (Phase 4C)</h3>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -495,7 +495,7 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Channel meta + numeric rates summary */}
             <div className="space-y-3">
-              <div className="text-xs font-semibold text-violet-500 border-b pb-1">Channel Meta + Numeric Rates</div>
+              <div className="text-xs font-semibold text-zinc-500 border-b pb-1">Channel Meta + Numeric Rates</div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Billing Model *</Label>
                 <Select value={billingModel} onValueChange={(v) => v && setBillingModel(v as BillingModel)}>
@@ -555,7 +555,7 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
 
             {/* Categorical config */}
             <div className="space-y-3">
-              <div className="text-xs font-semibold text-violet-500 border-b pb-1">Categorical Config (per period)</div>
+              <div className="text-xs font-semibold text-zinc-500 border-b pb-1">Categorical Config (per period)</div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Fee COD Base *</Label>
                 <Select value={codFeeBase} onValueChange={(v) => v && setCodFeeBase(v as CodFeeBase)}>
@@ -619,9 +619,9 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
 
         {/* Preview Calculator */}
         {bundle && previewBreakdown && (
-          <div className="pt-4 border-t border-violet-500/20">
+          <div className="pt-4 border-t border-zinc-500/20">
             <div className="flex items-center gap-2 mb-3">
-              <Calculator className="w-4 h-4 text-violet-500" />
+              <Calculator className="w-4 h-4 text-zinc-500" />
               <h4 className="text-sm font-semibold">Preview Cost Calculator</h4>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -674,7 +674,7 @@ function BillingConfigPanel({ channels, canManage }: BillingConfigPanelProps) {
                 <div className="flex justify-between"><span className="text-muted-foreground">COD Fee Raw ({Number(bundle.cod_fee_rate).toFixed(2)}% × base)</span><span className="font-mono">{formatRupiah(previewBreakdown.cod_fee_raw)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">COD Fee ({codFeeRounding})</span><span className="font-mono font-semibold">{formatRupiah(previewBreakdown.cod_fee)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">PPN ({Number(bundle.ppn_rate).toFixed(0)}%)</span><span className="font-mono font-semibold">{formatRupiah(previewBreakdown.ppn)}</span></div>
-                <div className="flex justify-between border-t pt-1 text-orange-600"><span className="font-medium">Total Cost ke Ekspedisi</span><span className="font-mono font-bold">{formatRupiah(previewBreakdown.total_cost)}</span></div>
+                <div className="flex justify-between border-t pt-1 text-amber-600"><span className="font-medium">Total Cost ke Ekspedisi</span><span className="font-mono font-bold">{formatRupiah(previewBreakdown.total_cost)}</span></div>
                 <div className="flex justify-between border-t pt-1"><span className="text-muted-foreground">HPP</span><span className="font-mono">{formatRupiah(previewBreakdown.hpp)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Commission</span><span className="font-mono">{formatRupiah(previewBreakdown.commission)}</span></div>
                 <div className="flex justify-between border-t pt-1 text-emerald-600"><span className="font-medium">Estimated Cash In ({BILLING_MODEL_LABEL[billingModel].split(' (')[0]})</span><span className="font-mono font-bold">{formatRupiah(previewBreakdown.cash_in)}</span></div>

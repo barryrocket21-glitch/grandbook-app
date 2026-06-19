@@ -73,7 +73,7 @@ export default function PerformaPage() {
       <Card>
         <CardContent className="pt-4 pb-4">
           {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto my-6" /> : perf.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-6">Belum ada spend/atribusi. Input di <Link href="/ad-spend" className="text-violet-500 hover:underline">Input Harian</Link> + Resolve di <Link href="/marketing/ad-setup" className="text-violet-500 hover:underline">Setup Iklan</Link>.</p>
+            <p className="text-xs text-muted-foreground text-center py-6">Belum ada spend/atribusi. Input di <Link href="/ad-spend" className="text-zinc-500 hover:underline">Input Harian</Link> + Resolve di <Link href="/marketing/ad-setup" className="text-zinc-500 hover:underline">Setup Iklan</Link>.</p>
           ) : (
             <div className="border rounded-md overflow-x-auto">
               <Table>

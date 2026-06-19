@@ -509,7 +509,7 @@ export type OrderPriority = 'LOW' | 'NORMAL' | 'URGENT'
 
 export const ORDER_PRIORITIES: { value: OrderPriority; label: string; color: string }[] = [
   { value: 'LOW',    label: 'Low',    color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400' },
-  { value: 'NORMAL', label: 'Normal', color: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+  { value: 'NORMAL', label: 'Normal', color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400' },
   { value: 'URGENT', label: 'Urgent', color: 'bg-red-500/15 text-red-600 dark:text-red-400' },
 ]
 
@@ -1651,8 +1651,8 @@ export const CRM_PROBLEM_TYPE_LABEL: Record<CrmProblemType, string> = {
   EKSPEDISI: 'Ekspedisi',
 }
 export const CRM_PROBLEM_TYPE_COLOR: Record<CrmProblemType, string> = {
-  PEMBELI: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
-  EKSPEDISI: 'bg-purple-500/15 text-purple-700 dark:text-purple-400',
+  PEMBELI: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400',
+  EKSPEDISI: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400',
 }
 export const CRM_STATUS_LABEL: Record<CrmStatus, string> = {
   OPEN: 'Open',
@@ -1662,7 +1662,7 @@ export const CRM_STATUS_LABEL: Record<CrmStatus, string> = {
 }
 export const CRM_STATUS_COLOR: Record<CrmStatus, string> = {
   OPEN: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  IN_PROGRESS: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  IN_PROGRESS: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400',
   RESOLVED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
   ESCALATED: 'bg-red-500/15 text-red-700 dark:text-red-400',
 }

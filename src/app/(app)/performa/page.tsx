@@ -19,8 +19,8 @@ import { formatRupiah } from '@/lib/format'
 
 const supabase = createClient()
 const n = (v: unknown) => Number(v) || 0
-const money = (v: number) => <span className={`tabular-nums ${v < 0 ? 'text-rose-600 font-semibold' : v > 0 ? 'text-emerald-600' : 'text-muted-foreground'}`}>{formatRupiah(v)}</span>
-const ret = (v: number) => <span className={`tabular-nums ${v >= 20 ? 'text-rose-600 font-semibold' : v >= 10 ? 'text-amber-600' : ''}`}>{v}%</span>
+const money = (v: number) => <span className={`tabular-nums ${v < 0 ? 'text-red-600 font-semibold' : v > 0 ? 'text-emerald-600' : 'text-muted-foreground'}`}>{formatRupiah(v)}</span>
+const ret = (v: number) => <span className={`tabular-nums ${v >= 20 ? 'text-red-600 font-semibold' : v >= 10 ? 'text-amber-600' : ''}`}>{v}%</span>
 
 // rupiah ringkas buat sel matriks (2.1jt / -600rb)
 const rpShort = (v: number): string => {
@@ -33,17 +33,17 @@ type ProdMetric = 'net' | 'roi' | 'retur' | 'order'
 const cellVal = (r: Record<string, unknown> | undefined, m: ProdMetric) => {
   const dot = <span className="text-muted-foreground/30">·</span>
   if (!r) return dot
-  if (m === 'roi') { if (r.roi == null) return dot; const v = n(r.roi); return <span className={v > 0 ? 'text-emerald-600 font-medium' : 'text-rose-600 font-medium'}>{v.toFixed(0)}%</span> }
-  if (m === 'retur') { if (n(r.delivered) + n(r.retur) === 0) return dot; const rr = n(r.return_rate); return <span className={rr >= 20 ? 'text-rose-600 font-semibold' : rr >= 10 ? 'text-amber-600' : ''}>{rr}%</span> }
+  if (m === 'roi') { if (r.roi == null) return dot; const v = n(r.roi); return <span className={v > 0 ? 'text-emerald-600 font-medium' : 'text-red-600 font-medium'}>{v.toFixed(0)}%</span> }
+  if (m === 'retur') { if (n(r.delivered) + n(r.retur) === 0) return dot; const rr = n(r.return_rate); return <span className={rr >= 20 ? 'text-red-600 font-semibold' : rr >= 10 ? 'text-amber-600' : ''}>{rr}%</span> }
   if (m === 'order') { const o = n(r.total_order); return o > 0 ? <span>{o}</span> : dot }
-  const v = n(r.net_profit); return <span className={v > 0 ? 'text-emerald-600 font-medium' : v < 0 ? 'text-rose-600 font-medium' : 'text-muted-foreground'}>{rpShort(v)}</span>
+  const v = n(r.net_profit); return <span className={v > 0 ? 'text-emerald-600 font-medium' : v < 0 ? 'text-red-600 font-medium' : 'text-muted-foreground'}>{rpShort(v)}</span>
 }
 interface PTotal { net: number; spend: number; order: number; deliv: number; ret: number }
 const totalCell = (t: PTotal, m: ProdMetric) => {
-  if (m === 'roi') { if (t.spend <= 0) return <span className="text-muted-foreground/30">·</span>; const v = (t.net / t.spend) * 100; return <span className={v > 0 ? 'text-emerald-600' : 'text-rose-600'}>{v.toFixed(0)}%</span> }
-  if (m === 'retur') { const d = t.deliv + t.ret; if (d === 0) return <span className="text-muted-foreground/30">·</span>; const rr = Math.round((t.ret / d) * 100); return <span className={rr >= 20 ? 'text-rose-600' : ''}>{rr}%</span> }
+  if (m === 'roi') { if (t.spend <= 0) return <span className="text-muted-foreground/30">·</span>; const v = (t.net / t.spend) * 100; return <span className={v > 0 ? 'text-emerald-600' : 'text-red-600'}>{v.toFixed(0)}%</span> }
+  if (m === 'retur') { const d = t.deliv + t.ret; if (d === 0) return <span className="text-muted-foreground/30">·</span>; const rr = Math.round((t.ret / d) * 100); return <span className={rr >= 20 ? 'text-red-600' : ''}>{rr}%</span> }
   if (m === 'order') return <span>{t.order}</span>
-  return <span className={t.net > 0 ? 'text-emerald-600' : t.net < 0 ? 'text-rose-600' : ''}>{rpShort(t.net)}</span>
+  return <span className={t.net > 0 ? 'text-emerald-600' : t.net < 0 ? 'text-red-600' : ''}>{rpShort(t.net)}</span>
 }
 
 // Header tabel + tooltip hover (underline titik = ada keterangan)
@@ -130,7 +130,7 @@ export default function PerformaPage() {
       <Card><CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-md border p-0.5">
           {((advOnly ? [['campaign', 'Campaign']] : [['campaign', 'Campaign'], ['cs', 'CS Scorecard'], ['produk', 'Produk × Platform']]) as [Tab, string][]).map(([k, lbl]) => (
-            <button key={k} onClick={() => setTab(k)} className={`px-3 h-8 text-sm rounded ${tab === k ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>{lbl}</button>
+            <button key={k} onClick={() => setTab(k)} className={`px-3 h-8 text-sm rounded ${tab === k ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>{lbl}</button>
           ))}
         </div>
         <Button variant={allTime ? 'default' : 'outline'} size="sm" onClick={() => setAllTime(true)}>Semua</Button>
@@ -141,7 +141,7 @@ export default function PerformaPage() {
       <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
         <div className="overflow-x-auto">
           {loading ? <div className="py-10 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
-          : err ? <div className="py-10 text-center text-sm text-rose-600">⚠️ Gagal memuat data — klik Refresh atau cek koneksi.</div>
+          : err ? <div className="py-10 text-center text-sm text-red-600">⚠️ Gagal memuat data — klik Refresh atau cek koneksi.</div>
           : tab === 'campaign' ? (
             <>
               {/* Summary bar — aggregate semua campaign */}
@@ -152,10 +152,10 @@ export default function PerformaPage() {
                   <span className="text-muted-foreground">Total Order: <span className="font-semibold text-foreground">{campTotals.orders}</span></span>
                   <span className="text-muted-foreground">Sampai: <span className="font-semibold text-foreground">{campTotals.delivered}</span></span>
                   <span className="text-muted-foreground">Total Laba Bersih:
-                    <span className={`ml-1 font-bold tabular-nums ${campTotals.net < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatRupiah(campTotals.net)}</span>
+                    <span className={`ml-1 font-bold tabular-nums ${campTotals.net < 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatRupiah(campTotals.net)}</span>
                   </span>
                   {campTotals.spend > 0 && (
-                    <span className="text-muted-foreground">ROI: <span className={`font-semibold ${campTotals.net / campTotals.spend * 100 > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{((campTotals.net / campTotals.spend) * 100).toFixed(0)}%</span></span>
+                    <span className="text-muted-foreground">ROI: <span className={`font-semibold ${campTotals.net / campTotals.spend * 100 > 0 ? 'text-emerald-600' : 'text-red-600'}`}>{((campTotals.net / campTotals.spend) * 100).toFixed(0)}%</span></span>
                   )}
                 </div>
               )}
@@ -192,7 +192,7 @@ export default function PerformaPage() {
                     <TableCell className="text-right text-xs tabular-nums">{n(r.cpa) ? formatRupiah(n(r.cpa)) : '—'}</TableCell>
                     <TableCell className="text-right text-xs tabular-nums">{n(r.cpa_final) ? formatRupiah(n(r.cpa_final)) : '—'}</TableCell>
                     <TableCell className="text-right text-xs tabular-nums">{n(r.roas) ? n(r.roas).toFixed(2) + 'x' : '—'}</TableCell>
-                    <TableCell className="text-right text-xs"><span className={n(r.roi) < 0 ? 'text-rose-600 font-semibold' : n(r.roi) > 0 ? 'text-emerald-600' : ''}>{n(r.spend) ? n(r.roi) + '%' : '—'}</span></TableCell>
+                    <TableCell className="text-right text-xs"><span className={n(r.roi) < 0 ? 'text-red-600 font-semibold' : n(r.roi) > 0 ? 'text-emerald-600' : ''}>{n(r.spend) ? n(r.roi) + '%' : '—'}</span></TableCell>
                     <TableCell className="text-right text-xs">{money(n(r.net_profit))}</TableCell>
                   </TableRow>
                 ))}
@@ -246,7 +246,7 @@ export default function PerformaPage() {
                 <span className="text-xs text-muted-foreground">Tampilkan:</span>
                 <div className="inline-flex rounded-md border p-0.5 text-xs">
                   {([['net', 'Laba Bersih'], ['roi', 'ROI'], ['retur', 'Retur%'], ['order', 'Order']] as [ProdMetric, string][]).map(([k, l]) => (
-                    <button key={k} onClick={() => setProdMetric(k)} className={`px-2.5 h-7 rounded ${prodMetric === k ? 'bg-violet-500 text-white' : 'text-muted-foreground'}`}>{l}</button>
+                    <button key={k} onClick={() => setProdMetric(k)} className={`px-2.5 h-7 rounded ${prodMetric === k ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>{l}</button>
                   ))}
                 </div>
               </div>

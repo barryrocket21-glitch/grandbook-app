@@ -156,7 +156,7 @@ function ChannelsContent() {
         actions={
           <PermissionGuard role={role} allowedRoles={['owner','admin']}>
             <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
-              <DialogTrigger render={<Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" />}>
+              <DialogTrigger render={<Button className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" />}>
                 <Plus className="w-4 h-4 mr-2" />Tambah Channel
               </DialogTrigger>
               <DialogContent className="max-w-md">
@@ -185,7 +185,7 @@ function ChannelsContent() {
                     <Label className="text-xs">Code *</Label>
                     <Input value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SPX_DIRECT, NINJA_VIA_LINCAH" required />
                     {suggestedCode && form.code !== suggestedCode && (
-                      <button type="button" onClick={() => setForm({ ...form, code: suggestedCode })} className="text-[10px] text-violet-400 hover:underline">
+                      <button type="button" onClick={() => setForm({ ...form, code: suggestedCode })} className="text-[10px] text-zinc-400 hover:underline">
                         Pakai saran: <span className="font-mono">{suggestedCode}</span>
                       </button>
                     )}
@@ -202,7 +202,7 @@ function ChannelsContent() {
                     <Checkbox checked={form.active} onCheckedChange={v => setForm({ ...form, active: !!v })} id="active" />
                     <Label htmlFor="active" className="cursor-pointer text-sm">Aktif</Label>
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20" disabled={saving}>
+                  <Button type="submit" className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" disabled={saving}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan
                   </Button>
                 </form>
@@ -304,7 +304,7 @@ function ChannelsContent() {
       </Card>
 
       {!canManage && (
-        <Card className="border-blue-500/20 bg-blue-500/5">
+        <Card className="border-zinc-500/20 bg-zinc-500/5">
           <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
             ℹ️ Mode read-only. Hanya Owner/Admin yang bisa edit channels.
           </CardContent>

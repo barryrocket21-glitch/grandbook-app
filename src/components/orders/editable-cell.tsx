@@ -205,7 +205,7 @@ function StatusEditor({ row, onUpdated, renderDisplay }: Omit<EditorBaseProps, '
   }
   return (
     <Select value={row.status} onValueChange={handleChange} disabled={saving}>
-      <SelectTrigger className="h-7 w-full text-xs border-transparent hover:border-border focus:border-violet-500/50 px-2">
+      <SelectTrigger className="h-7 w-full text-xs border-transparent hover:border-border focus:border-zinc-500/50 px-2">
         <SelectValue>
           {() => renderDisplay ? renderDisplay(row.status) : defaultRender('status', row.status)}
         </SelectValue>
@@ -239,7 +239,7 @@ function PriorityEditor({ row, onUpdated, renderDisplay }: Omit<EditorBaseProps,
   }
   return (
     <Select value={row.priority} onValueChange={handleChange} disabled={saving}>
-      <SelectTrigger className="h-7 w-full text-xs border-transparent hover:border-border focus:border-violet-500/50 px-2">
+      <SelectTrigger className="h-7 w-full text-xs border-transparent hover:border-border focus:border-zinc-500/50 px-2">
         <SelectValue>
           {() => renderDisplay ? renderDisplay(row.priority) : defaultRender('priority', row.priority)}
         </SelectValue>

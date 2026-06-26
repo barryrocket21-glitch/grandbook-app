@@ -38,13 +38,25 @@ export async function fetchReconExportRows(
   supabase: SupabaseClient,
   args: { from: string; to: string; statuses?: string[] | null }
 ): Promise<ReconExportRow[]> {
-  const { data, error } = await supabase.rpc('export_reconciliation_rows', {
+  const params = {
     p_from: args.from,
     p_to: args.to,
     p_status: args.statuses && args.statuses.length ? args.statuses : null,
-  })
-  if (error) throw error
-  return (data ?? []) as ReconExportRow[]
+  }
+  // PostgREST motong per-request (default 1000 baris). Paginasi via .range()
+  // biar export gak kepotong diam-diam pas order > 1000 sebulan.
+  const PAGE = 1000
+  const all: ReconExportRow[] = []
+  for (let offset = 0; offset < 200_000; offset += PAGE) {
+    const { data, error } = await supabase
+      .rpc('export_reconciliation_rows', params)
+      .range(offset, offset + PAGE - 1)
+    if (error) throw error
+    const batch = (data ?? []) as ReconExportRow[]
+    all.push(...batch)
+    if (batch.length < PAGE) break
+  }
+  return all
 }
 
 // Kolom export: header bhs Indonesia + getter. Numeric → number (XLSX nyimpen

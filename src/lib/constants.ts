@@ -130,6 +130,7 @@ export const NAV_ITEMS: NavItem[] = [
       // Input Order digabung jadi 1 menu — di halaman ada tab (Ketik Manual /
       // Upload CSV / Tempel WA). Sebelumnya 3 menu kepisah.
       { title: 'Input Order', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Import Mengantar', href: '/import-mengantar', badge: 'BARU', roles: ['owner', 'admin'] },
       // Kirim Order — 1 menu, tab di dalam: Antrian Kerja → Export → Post-Export
       // (alur kirim berurutan). Sebelumnya 3 menu kepisah.
       { title: 'Kirim Order', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },

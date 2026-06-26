@@ -163,6 +163,7 @@ export const NAV_ITEMS: NavItem[] = [
       // Rekonsiliasi jadi 1 hub — tab di dalam: Ekspedisi / Sync Status SPX /
       // Cashflow SPX (lihat reconciliation/layout.tsx).
       { title: 'Rekonsiliasi', href: '/reconciliation/ekspedisi' },
+      { title: 'Export Rekonsiliasi', href: '/export-rekonsiliasi', badge: 'BARU' },
       { title: 'Selisih Ongkir', href: '/shipping-diff', roles: ['owner', 'admin'] },
       { title: 'Biaya Operasional', href: '/expenses' },
       // 'Cross-check Platform Iklan' (/reconciliation) dibuang dari nav (peninggalan lama). Routable.

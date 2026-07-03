@@ -80,12 +80,27 @@ export default function PembukuanPage() {
     const p_from = allTime ? null : range.from
     const p_to = allTime ? null : range.to
     try {
-      const [lp, lr] = await Promise.all([
-        supabase.rpc('list_pembukuan', { p_from, p_to, p_status: status === 'all' ? null : status, p_search: search.trim() || null, p_limit: 5000, p_offset: 0 }).range(0, 4999),
+      const params = { p_from, p_to, p_status: status === 'all' ? null : status, p_search: search.trim() || null }
+      const PAGE = 1000
+      // Page pertama + P&L summary paralel. PostgREST cap 1000/req → ambil sisanya.
+      const [first, lr] = await Promise.all([
+        supabase.rpc('list_pembukuan', { ...params, p_limit: PAGE, p_offset: 0 }).range(0, PAGE - 1),
         canFinance ? supabase.rpc('laba_rugi_summary', { p_from, p_to }) : Promise.resolve({ data: null, error: null }),
       ])
-      if (lp.error) throw lp.error
-      setRows((lp.data || []) as Row[])
+      if (first.error) throw first.error
+      const firstRows = (first.data || []) as Row[]
+      const totalRows = firstRows[0]?.total_count ?? firstRows.length
+      let allRows = firstRows
+      if (firstRows.length >= PAGE && totalRows > PAGE) {
+        const pages = Math.ceil(totalRows / PAGE)
+        const rest = await Promise.all(
+          Array.from({ length: pages - 1 }, (_, k) =>
+            supabase.rpc('list_pembukuan', { ...params, p_limit: PAGE, p_offset: (k + 1) * PAGE }).range(0, PAGE - 1))
+        )
+        allRows = [...firstRows]
+        for (const r of rest) { if (r.error) throw r.error; allRows.push(...((r.data || []) as Row[])) }
+      }
+      setRows(allRows)
       setSummary(lr.error ? null : ((lr.data?.[0] ?? null) as LabaRugi | null))
     } catch (e) { console.warn('pembukuan load:', e); setErr(true) } finally { setLoading(false) }
   }, [status, search, allTime, range.from, range.to, canFinance])
@@ -112,42 +127,17 @@ export default function PembukuanPage() {
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
   // Export spreadsheet — dump `displayed` (semua row terfilter, ikut filter aktif)
-  // Fetch SEMUA baris (PostgREST cap 1000/request → loop pagination) biar export
-  // dapet full data, bukan cuma yang ke-load di halaman.
-  const fetchAllRows = async (): Promise<Row[]> => {
-    const p_from = allTime ? null : range.from
-    const p_to = allTime ? null : range.to
-    const PAGE = 1000
-    const all: Row[] = []
-    for (let offset = 0; ; offset += PAGE) {
-      const { data, error } = await supabase
-        .rpc('list_pembukuan', {
-          p_from, p_to, p_status: status === 'all' ? null : status,
-          p_search: search.trim() || null, p_limit: PAGE, p_offset: offset,
-        })
-        .range(0, PAGE - 1)
-      if (error) throw error
-      const batch = (data || []) as Row[]
-      all.push(...batch)
-      if (batch.length < PAGE || offset > 200000) break
-    }
-    return all
-  }
-
-  const exportSheet = async (fmt: 'xlsx' | 'csv') => {
-    const tid = toast.loading('Ngumpulin semua data...')
+  // Export = `displayed` (semua data terfilter, sesuai yang dipilih di layar).
+  // Halaman udah load semua baris (bukan cuma 1000), jadi tinggal pakai.
+  const exportSheet = (fmt: 'xlsx' | 'csv') => {
     try {
-      let all = await fetchAllRows()
-      if (zoneFilter) all = all.filter(r => r.zone === zoneFilter)
-      if (all.length === 0) { toast.dismiss(tid); toast.info('Nggak ada data buat di-export.'); return }
-      const list = all as PembukuanExportRow[]
+      if (displayed.length === 0) { toast.info('Nggak ada data buat di-export.'); return }
+      const list = displayed as PembukuanExportRow[]
       const ts = new Date().toISOString().slice(0, 10)
       const blob = fmt === 'xlsx' ? buildPembukuanXlsxBlob(list) : buildPembukuanCsvBlob(list)
       downloadBlob(blob, `pembukuan_${ts}.${fmt}`)
-      toast.dismiss(tid)
       toast.success(`${list.length} baris + TOTAL di-export (${fmt.toUpperCase()})`)
     } catch (e) {
-      toast.dismiss(tid)
       toast.error('Gagal export', { description: getErrorMessage(e) })
     }
   }

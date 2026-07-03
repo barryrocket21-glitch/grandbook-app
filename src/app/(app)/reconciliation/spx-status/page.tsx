@@ -112,15 +112,22 @@ export default function SpxStatusSyncPage() {
     setApplying(true)
     try {
       const acc: ApplyResult = { matched: 0, updated: 0, skipped_no_ref: 0, skipped_no_match: 0 }
-      // chunk biar payload gak kegedean
-      for (let i = 0; i < parsed.rows.length; i += 400) {
-        const chunk = parsed.rows.slice(i, i + 400)
+      // Chunk KECIL (150) — tiap baris yang jadi terminal (DITERIMA/RETUR/CANCEL)
+      // trigger promote draft→arsip yang berat, jadi chunk gede bikin statement
+      // timeout. 150 nahan tiap call di bawah batas waktu.
+      const CHUNK = 150
+      const totalChunks = Math.ceil(parsed.rows.length / CHUNK)
+      const tid = toast.loading(`Sync 0/${totalChunks} batch...`)
+      for (let i = 0; i < parsed.rows.length; i += CHUNK) {
+        const chunk = parsed.rows.slice(i, i + CHUNK)
         const { data, error } = await supabase.rpc('apply_spx_status_sync', { p_rows: chunk })
-        if (error) throw error
+        if (error) { toast.dismiss(tid); throw error }
         const d = (data || {}) as ApplyResult
         acc.matched += d.matched || 0; acc.updated += d.updated || 0
         acc.skipped_no_ref += d.skipped_no_ref || 0; acc.skipped_no_match += d.skipped_no_match || 0
+        toast.loading(`Sync ${Math.floor(i / CHUNK) + 1}/${totalChunks} batch... (${acc.updated} ke-update)`, { id: tid })
       }
+      toast.dismiss(tid)
       setResult(acc)
       // PART 2: catat riwayat batch (best-effort, gak gagalin sync)
       try {

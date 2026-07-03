@@ -20,6 +20,7 @@ interface Row {
   source: string; id: number; order_number: string; order_date: string
   status: string; zone: string; customer_name: string; customer_city: string | null
   cs_name: string | null; channel_name: string | null; product_summary: string | null
+  campaign_name: string | null; campaign_platform: string | null
   total: number; penjualan: number; ongkir: number; actual_shipping_fee: number | null; selisih_ongkir: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
   delivered_at: string | null; returned_at: string | null; exported_at: string | null
   payment_method: string | null; qty: number
@@ -113,7 +114,7 @@ export default function PembukuanPage() {
     ? Math.round(returCount / (deliveredCount + returCount) * 100)
     : null
 
-  const cols = view === 'keuangan' && canFinance ? 17 : 11
+  const cols = view === 'keuangan' && canFinance ? 17 : 12
   const fmtShort = (d: string) => { const x = new Date(d); const p = (v: number) => String(v).padStart(2, '0'); return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)}` }
   const FROZEN = [{ left: 0, width: 82 }, { left: 82, width: 148 }, { left: 230, width: 120 }, { left: 350, width: 110 }]
   const fzTh = (i: number): React.CSSProperties => ({ position: 'sticky', top: 0, left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 30 })
@@ -275,6 +276,7 @@ export default function PembukuanPage() {
                 <>
                   <TableHead>Kota</TableHead>
                   <TableHead>CS</TableHead>
+                  <TableHead>Atribusi</TableHead>
                   <TableHead>Produk</TableHead>
                   <TableHead className="text-center">Qty</TableHead>
                   <TableHead>Bayar</TableHead>
@@ -314,6 +316,18 @@ export default function PembukuanPage() {
                     <>
                       <TableCell className="text-sm">{r.customer_city || '—'}</TableCell>
                       <TableCell className="text-sm">{r.cs_name || '—'}</TableCell>
+                      <TableCell className="text-sm max-w-[180px]">
+                        {r.campaign_name ? (
+                          <span className="inline-flex items-center gap-1.5 min-w-0">
+                            <span className="truncate" title={r.campaign_name}>{r.campaign_name}</span>
+                            {r.campaign_platform && (
+                              <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground uppercase">{r.campaign_platform}</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm max-w-[200px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
                       <TableCell className="text-center text-sm">{r.qty || '—'}</TableCell>
                       <TableCell className="text-sm">{r.payment_method || '—'}</TableCell>

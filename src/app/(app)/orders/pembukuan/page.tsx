@@ -9,10 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
-import { BookOpen, Loader2, Search, RefreshCw, Wand2, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react'
+import { BookOpen, Loader2, Search, RefreshCw, Wand2, ChevronDown, ChevronUp, BarChart2, FileSpreadsheet } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah } from '@/lib/format'
 import { OrderDetailSheet } from '@/components/orders/order-detail-sheet'
+import { buildPembukuanExportTable, type PembukuanExportRow } from '@/lib/orders/pembukuan-export'
+import { serializeXlsx, serializeCsv, downloadBlob } from '@/lib/converter/serializer'
+import { toast } from 'sonner'
 
 const supabase = createClient()
 
@@ -107,6 +110,18 @@ export default function PembukuanPage() {
     dicair: a.dicair + n(r.dicairkan),
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
+  // Export spreadsheet — dump `displayed` (semua row terfilter, ikut filter aktif)
+  const exportSheet = (fmt: 'xlsx' | 'csv') => {
+    if (displayed.length === 0) { toast.info('Nggak ada data buat di-export.'); return }
+    const { headers, data } = buildPembukuanExportTable(displayed as PembukuanExportRow[])
+    const ts = new Date().toISOString().slice(0, 10)
+    const blob = fmt === 'xlsx'
+      ? serializeXlsx(data, headers, 'Pembukuan')
+      : serializeCsv(data, headers, ',', 'utf-8-sig')
+    downloadBlob(blob, `pembukuan_${ts}.${fmt}`)
+    toast.success(`${data.length} baris di-export (${fmt.toUpperCase()})`)
+  }
+
   // Hitung retur rate dari row yang ada
   const deliveredCount = counts['Arsip (Delivered)'] || 0
   const returCount = counts['Retur'] || 0
@@ -125,7 +140,15 @@ export default function PembukuanPage() {
       <PageHeader icon={BookOpen} title="Pembukuan (Satu Tampilan)"
         description="Semua order dari draft sampai selesai — dalam satu ledger."
         actions={
-          <a href="/marketing/distribusi" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-sm hover:bg-muted"><Wand2 className="w-3.5 h-3.5" /> Distribusi Atribusi</a>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => exportSheet('xlsx')} disabled={loading || displayed.length === 0}>
+              <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => exportSheet('csv')} disabled={loading || displayed.length === 0}>
+              CSV
+            </Button>
+            <a href="/marketing/distribusi" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-sm hover:bg-muted"><Wand2 className="w-3.5 h-3.5" /> Distribusi Atribusi</a>
+          </div>
         } />
 
       {/* Filter bar */}

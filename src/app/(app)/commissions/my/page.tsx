@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -78,10 +79,10 @@ export default function MyCommissionsPage() {
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Forecast (masih jalan)" value={formatRupiah(stats.estimatedTotal)} sub={`${stats.estimatedCount} order`} color="blue" />
-        <StatCard label="Belum Dibayar" value={formatRupiah(stats.earnedTotal)} sub={`${stats.earnedCount} order`} color="amber" />
-        <StatCard label="Sudah Dibayar" value={formatRupiah(stats.paidTotal)} sub={`${stats.paidCount} order`} color="emerald" />
-        <StatCard label="Hangus" value={String(stats.cancelledCount)} sub="order (Retur/Cancel/Fake)" color="zinc" />
+        <StatCard label="Forecast (masih jalan)" value={formatRupiah(stats.estimatedTotal)} sub={`${stats.estimatedCount} order`} tone="zinc" />
+        <StatCard label="Belum Dibayar" value={formatRupiah(stats.earnedTotal)} sub={`${stats.earnedCount} order`} tone="amber" />
+        <StatCard label="Sudah Dibayar" value={formatRupiah(stats.paidTotal)} sub={`${stats.paidCount} order`} tone="emerald" />
+        <StatCard label="Hangus" value={String(stats.cancelledCount)} sub="order (Retur/Cancel/Fake)" tone="zinc" />
       </div>
 
       <Card>
@@ -222,27 +223,6 @@ export default function MyCommissionsPage() {
       <p className="text-[11px] text-muted-foreground flex items-center gap-1">
         <ChevronRight className="w-3 h-3" /> <strong>Forecast</strong> = order belum sampai (mungkin berubah). <strong>Belum Dibayar</strong> = udah Diterima, owner belum transfer. <strong>Sudah Dibayar</strong> = udah masuk rekening. <strong>Hangus</strong> = Retur/Cancel/Fake.
       </p>
-    </div>
-  )
-}
-
-function StatCard({ label, value, sub, color }: {
-  label: string
-  value: string
-  sub: string
-  color: 'blue' | 'amber' | 'emerald' | 'zinc'
-}) {
-  const colorMap: Record<string, string> = {
-    blue: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-    amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
-    zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-  }
-  return (
-    <div className={`p-3 rounded border ${colorMap[color]}`}>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-xl font-bold mt-1">{value}</div>
-      <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>
     </div>
   )
 }

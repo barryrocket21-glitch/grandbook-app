@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -237,10 +238,10 @@ export default function ManageCommissionsPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Belum Dibayar" value={formatRupiah(totals.earnedUnpaid)} sub={`${totals.ordersUnpaid} order`} color="amber" />
-        <StatCard label="Sudah Dibayar" value={formatRupiah(totals.paid)} sub="Periode ini" color="emerald" />
-        <StatCard label="Hangus" value={String(totals.cancelled)} sub="komisi (Retur/Cancel/Fake)" color="zinc" />
-        <StatCard label="Total Earned" value={formatRupiah(totals.earnedUnpaid + totals.paid)} sub="Sebelum dibayar" color="violet" />
+        <StatCard label="Belum Dibayar" value={formatRupiah(totals.earnedUnpaid)} sub={`${totals.ordersUnpaid} order`} tone="amber" />
+        <StatCard label="Sudah Dibayar" value={formatRupiah(totals.paid)} sub="Periode ini" tone="emerald" />
+        <StatCard label="Hangus" value={String(totals.cancelled)} sub="komisi (Retur/Cancel/Fake)" tone="zinc" />
+        <StatCard label="Total Earned" value={formatRupiah(totals.earnedUnpaid + totals.paid)} sub="Sebelum dibayar" tone="zinc" />
       </div>
 
       {/* Per-CS table */}
@@ -377,27 +378,6 @@ export default function ManageCommissionsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-function StatCard({ label, value, sub, color }: {
-  label: string
-  value: string
-  sub: string
-  color: 'amber' | 'emerald' | 'zinc' | 'violet'
-}) {
-  const colorMap: Record<string, string> = {
-    amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
-    zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-500',
-    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-  }
-  return (
-    <div className={`p-3 rounded border ${colorMap[color]}`}>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-xl font-bold mt-1 tabular-nums">{value}</div>
-      <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>
     </div>
   )
 }

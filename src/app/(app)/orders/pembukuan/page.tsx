@@ -16,6 +16,7 @@ import { OrderDetailSheet } from '@/components/orders/order-detail-sheet'
 import { buildPembukuanXlsxBlob, buildPembukuanCsvBlob, type PembukuanExportRow } from '@/lib/orders/pembukuan-export'
 import { downloadBlob } from '@/lib/converter/serializer'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
 
 const supabase = createClient()
 
@@ -111,13 +112,44 @@ export default function PembukuanPage() {
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
   // Export spreadsheet — dump `displayed` (semua row terfilter, ikut filter aktif)
-  const exportSheet = (fmt: 'xlsx' | 'csv') => {
-    if (displayed.length === 0) { toast.info('Nggak ada data buat di-export.'); return }
-    const list = displayed as PembukuanExportRow[]
-    const ts = new Date().toISOString().slice(0, 10)
-    const blob = fmt === 'xlsx' ? buildPembukuanXlsxBlob(list) : buildPembukuanCsvBlob(list)
-    downloadBlob(blob, `pembukuan_${ts}.${fmt}`)
-    toast.success(`${list.length} baris + TOTAL di-export (${fmt.toUpperCase()})`)
+  // Fetch SEMUA baris (PostgREST cap 1000/request → loop pagination) biar export
+  // dapet full data, bukan cuma yang ke-load di halaman.
+  const fetchAllRows = async (): Promise<Row[]> => {
+    const p_from = allTime ? null : range.from
+    const p_to = allTime ? null : range.to
+    const PAGE = 1000
+    const all: Row[] = []
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await supabase
+        .rpc('list_pembukuan', {
+          p_from, p_to, p_status: status === 'all' ? null : status,
+          p_search: search.trim() || null, p_limit: PAGE, p_offset: offset,
+        })
+        .range(0, PAGE - 1)
+      if (error) throw error
+      const batch = (data || []) as Row[]
+      all.push(...batch)
+      if (batch.length < PAGE || offset > 200000) break
+    }
+    return all
+  }
+
+  const exportSheet = async (fmt: 'xlsx' | 'csv') => {
+    const tid = toast.loading('Ngumpulin semua data...')
+    try {
+      let all = await fetchAllRows()
+      if (zoneFilter) all = all.filter(r => r.zone === zoneFilter)
+      if (all.length === 0) { toast.dismiss(tid); toast.info('Nggak ada data buat di-export.'); return }
+      const list = all as PembukuanExportRow[]
+      const ts = new Date().toISOString().slice(0, 10)
+      const blob = fmt === 'xlsx' ? buildPembukuanXlsxBlob(list) : buildPembukuanCsvBlob(list)
+      downloadBlob(blob, `pembukuan_${ts}.${fmt}`)
+      toast.dismiss(tid)
+      toast.success(`${list.length} baris + TOTAL di-export (${fmt.toUpperCase()})`)
+    } catch (e) {
+      toast.dismiss(tid)
+      toast.error('Gagal export', { description: getErrorMessage(e) })
+    }
   }
 
   // Hitung retur rate dari row yang ada

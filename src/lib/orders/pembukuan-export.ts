@@ -2,6 +2,12 @@
 // Dump PERSIS apa yang tampil di /orders/pembukuan (draft + arsip, ikut filter
 // aktif), lengkap atribusi (campaign + platform) + angka duit est/aktual +
 // beberapa kolom KOSONG buat diisi manual saat cocokin.
+//
+// Angka = cell NUMBER beneran (bisa =SUM/formula). Baris TOTAL paling bawah:
+// XLSX pakai formula =SUM() live (recompute pas diedit); CSV pakai nilai sum
+// (CSV gak support formula).
+import * as XLSX from 'xlsx'
+import { serializeCsv } from '@/lib/converter/serializer'
 
 export interface PembukuanExportRow {
   source: string; order_number: string; order_date: string; status: string; zone: string
@@ -21,7 +27,8 @@ const num = (v: unknown): number => Number(v) || 0
 // nullable: kosong kalau belum ada (bedain "belum" vs "0") — penting buat cross-check
 const numN = (v: unknown): number | '' => (v === null || v === undefined ? '' : Number(v) || 0)
 
-type Col = { header: string; get: (r: PembukuanExportRow) => unknown }
+// numeric: true → kolom angka yang di-SUM di baris TOTAL
+type Col = { header: string; numeric?: boolean; get: (r: PembukuanExportRow) => unknown }
 
 const COLUMNS: Col[] = [
   { header: 'Sumber', get: (r) => (r.source === 'draft' ? 'Antrian' : 'Arsip') },
@@ -36,23 +43,23 @@ const COLUMNS: Col[] = [
   { header: 'Platform', get: (r) => r.campaign_platform ?? '' },
   { header: 'Channel', get: (r) => r.channel_name ?? '' },
   { header: 'Produk', get: (r) => r.product_summary ?? '' },
-  { header: 'Qty', get: (r) => num(r.qty) },
+  { header: 'Qty', numeric: true, get: (r) => num(r.qty) },
   { header: 'Pembayaran', get: (r) => r.payment_method ?? '' },
   { header: 'Resi', get: (r) => r.tracking_no ?? r.resi ?? '' },
-  { header: 'Penjualan', get: (r) => num(r.penjualan) },
-  { header: 'Ongkir', get: (r) => num(r.ongkir) },
-  { header: 'Selisih Ongkir', get: (r) => num(r.selisih_ongkir) },
-  { header: 'COD Amount', get: (r) => numN(r.cod_amount) },
-  { header: 'Fee Admin (Est)', get: (r) => num(r.est_fee_admin) },
-  { header: 'Omset (Est)', get: (r) => num(r.est_omset) },
-  { header: 'HPP (Est)', get: (r) => num(r.est_hpp) },
-  { header: 'Fee CS (Est)', get: (r) => num(r.est_fee_cs) },
-  { header: 'GP Proyeksi', get: (r) => num(r.est_gross_profit) },
-  { header: 'Omset (Aktual)', get: (r) => numN(r.act_omset) },
-  { header: 'HPP (Aktual)', get: (r) => numN(r.act_hpp) },
-  { header: 'Fee CS (Aktual)', get: (r) => numN(r.act_fee_cs) },
-  { header: 'GP Realisasi', get: (r) => numN(r.act_gross_profit) },
-  { header: 'Dicairkan (GrandBook)', get: (r) => numN(r.dicairkan) },
+  { header: 'Penjualan', numeric: true, get: (r) => num(r.penjualan) },
+  { header: 'Ongkir', numeric: true, get: (r) => num(r.ongkir) },
+  { header: 'Selisih Ongkir', numeric: true, get: (r) => num(r.selisih_ongkir) },
+  { header: 'COD Amount', numeric: true, get: (r) => numN(r.cod_amount) },
+  { header: 'Fee Admin (Est)', numeric: true, get: (r) => num(r.est_fee_admin) },
+  { header: 'Omset (Est)', numeric: true, get: (r) => num(r.est_omset) },
+  { header: 'HPP (Est)', numeric: true, get: (r) => num(r.est_hpp) },
+  { header: 'Fee CS (Est)', numeric: true, get: (r) => num(r.est_fee_cs) },
+  { header: 'GP Proyeksi', numeric: true, get: (r) => num(r.est_gross_profit) },
+  { header: 'Omset (Aktual)', numeric: true, get: (r) => numN(r.act_omset) },
+  { header: 'HPP (Aktual)', numeric: true, get: (r) => numN(r.act_hpp) },
+  { header: 'Fee CS (Aktual)', numeric: true, get: (r) => numN(r.act_fee_cs) },
+  { header: 'GP Realisasi', numeric: true, get: (r) => numN(r.act_gross_profit) },
+  { header: 'Dicairkan (GrandBook)', numeric: true, get: (r) => numN(r.dicairkan) },
   { header: 'Tgl Cair', get: (r) => dateOnly(r.cod_settled_at) },
   { header: 'Tgl Diterima', get: (r) => dateOnly(r.delivered_at) },
   { header: 'Tgl Retur', get: (r) => dateOnly(r.returned_at) },
@@ -62,11 +69,51 @@ const COLUMNS: Col[] = [
   { header: 'Status Cek', get: () => '' },
 ]
 
-export function buildPembukuanExportTable(rows: PembukuanExportRow[]): {
-  headers: string[]
-  data: Record<string, unknown>[]
-} {
-  const headers = COLUMNS.map((c) => c.header)
-  const data = rows.map((r) => Object.fromEntries(COLUMNS.map((c) => [c.header, c.get(r)])))
-  return { headers, data }
+const HEADERS = COLUMNS.map((c) => c.header)
+const colSum = (rows: PembukuanExportRow[], c: Col): number =>
+  rows.reduce((a, r) => { const v = c.get(r); return a + (typeof v === 'number' ? v : 0) }, 0)
+
+/**
+ * XLSX dengan baris TOTAL pakai formula =SUM() live (recompute pas diedit).
+ */
+export function buildPembukuanXlsxBlob(rows: PembukuanExportRow[]): Blob {
+  const aoa: unknown[][] = [
+    HEADERS,
+    ...rows.map((r) => COLUMNS.map((c) => c.get(r))),
+  ]
+  const ws = XLSX.utils.aoa_to_sheet(aoa as XLSX.CellObject[][])
+  const dataEnd = 1 + rows.length          // baris data terakhir (1-based Excel)
+  const totalRow = dataEnd + 1             // baris TOTAL
+
+  COLUMNS.forEach((c, i) => {
+    const L = XLSX.utils.encode_col(i)
+    if (i === 0) {
+      ws[`${L}${totalRow}`] = { t: 's', v: 'TOTAL' }
+    } else if (c.numeric && rows.length > 0) {
+      ws[`${L}${totalRow}`] = { t: 'n', f: `SUM(${L}2:${L}${dataEnd})`, v: colSum(rows, c) }
+    }
+  })
+
+  const range = XLSX.utils.decode_range(ws['!ref'] as string)
+  range.e.r = totalRow - 1                 // extend ref biar baris TOTAL kebaca (0-based)
+  ws['!ref'] = XLSX.utils.encode_range(range)
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Pembukuan')
+  const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+}
+
+/**
+ * CSV dengan baris TOTAL berisi nilai sum (CSV gak support formula).
+ */
+export function buildPembukuanCsvBlob(rows: PembukuanExportRow[]): Blob {
+  const data: Record<string, unknown>[] = rows.map((r) =>
+    Object.fromEntries(COLUMNS.map((c) => [c.header, c.get(r)])))
+  if (rows.length > 0) {
+    const total = Object.fromEntries(COLUMNS.map((c, i) =>
+      [c.header, i === 0 ? 'TOTAL' : c.numeric ? colSum(rows, c) : '']))
+    data.push(total)
+  }
+  return serializeCsv(data, HEADERS, ',', 'utf-8-sig')
 }

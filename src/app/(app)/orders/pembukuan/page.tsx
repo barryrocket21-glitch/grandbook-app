@@ -13,8 +13,8 @@ import { BookOpen, Loader2, Search, RefreshCw, Wand2, ChevronDown, ChevronUp, Ba
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah } from '@/lib/format'
 import { OrderDetailSheet } from '@/components/orders/order-detail-sheet'
-import { buildPembukuanExportTable, type PembukuanExportRow } from '@/lib/orders/pembukuan-export'
-import { serializeXlsx, serializeCsv, downloadBlob } from '@/lib/converter/serializer'
+import { buildPembukuanXlsxBlob, buildPembukuanCsvBlob, type PembukuanExportRow } from '@/lib/orders/pembukuan-export'
+import { downloadBlob } from '@/lib/converter/serializer'
 import { toast } from 'sonner'
 
 const supabase = createClient()
@@ -113,13 +113,11 @@ export default function PembukuanPage() {
   // Export spreadsheet — dump `displayed` (semua row terfilter, ikut filter aktif)
   const exportSheet = (fmt: 'xlsx' | 'csv') => {
     if (displayed.length === 0) { toast.info('Nggak ada data buat di-export.'); return }
-    const { headers, data } = buildPembukuanExportTable(displayed as PembukuanExportRow[])
+    const list = displayed as PembukuanExportRow[]
     const ts = new Date().toISOString().slice(0, 10)
-    const blob = fmt === 'xlsx'
-      ? serializeXlsx(data, headers, 'Pembukuan')
-      : serializeCsv(data, headers, ',', 'utf-8-sig')
+    const blob = fmt === 'xlsx' ? buildPembukuanXlsxBlob(list) : buildPembukuanCsvBlob(list)
     downloadBlob(blob, `pembukuan_${ts}.${fmt}`)
-    toast.success(`${data.length} baris di-export (${fmt.toUpperCase()})`)
+    toast.success(`${list.length} baris + TOTAL di-export (${fmt.toUpperCase()})`)
   }
 
   // Hitung retur rate dari row yang ada

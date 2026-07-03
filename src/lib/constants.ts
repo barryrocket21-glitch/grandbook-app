@@ -190,6 +190,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: 'Performa Bisnis', href: '/performa', badge: 'BARU' },
       { title: 'Analytics', href: '/analytics' },
+      { title: 'Cross-check Iklan', href: '/reconciliation' },
     ],
   },
   {

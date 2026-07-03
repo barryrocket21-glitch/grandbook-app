@@ -7,6 +7,7 @@ import { Megaphone, ShieldOff, ChevronRight, ArrowUpDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -113,9 +114,9 @@ export default function AdvertiserTeamListPage() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <StatCard label="ADV aktif" value={String(summary.activeCount)} hint={`dari ${rows.length} terdaftar`} />
-        <StatCard label="Total spend (periode)" value={formatRupiah(summary.totalSpend)} hint="semua campaign" />
-        <StatCard label="Komisi unpaid" value={formatRupiah(summary.unpaidCommission)} hint="EARNED, belum PAID" />
+        <StatCard label="ADV aktif" value={String(summary.activeCount)} sub={`dari ${rows.length} terdaftar`} />
+        <StatCard label="Total spend (periode)" value={formatRupiah(summary.totalSpend)} sub="semua campaign" />
+        <StatCard label="Komisi unpaid" value={formatRupiah(summary.unpaidCommission)} sub="EARNED, belum PAID" />
       </div>
 
       <Card>
@@ -195,18 +196,6 @@ function TopProductPill({ name, count }: { name: string | null; count: number })
     <span title={name} className="text-sm">
       {truncated} <span className="text-muted-foreground tabular-nums">({count})</span>
     </span>
-  )
-}
-
-function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-bold tabular-nums mt-1">{value}</p>
-        {hint && <p className="text-[11px] text-muted-foreground mt-0.5">{hint}</p>}
-      </CardContent>
-    </Card>
   )
 }
 

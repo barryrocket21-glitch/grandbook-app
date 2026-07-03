@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import { PageHeader } from '@/components/ui/page-header'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -110,9 +111,9 @@ export default function AdvertiserDetailPage() {
         <StatCard
           label="ROAS"
           value={stats ? `${stats.roas.toFixed(2)}x` : '—'}
-          valueClass={stats && stats.roas >= 2 ? 'text-emerald-500' : stats && stats.roas >= 1 ? 'text-amber-500' : 'text-red-500'}
+          tone={stats && stats.roas >= 2 ? 'emerald' : stats && stats.roas >= 1 ? 'amber' : 'red'}
         />
-        <StatCard label="Komisi unpaid" value={stats ? formatRupiah(stats.commission_unpaid) : '—'} hint="EARNED, belum PAID" />
+        <StatCard label="Komisi unpaid" value={stats ? formatRupiah(stats.commission_unpaid) : '—'} sub="EARNED, belum PAID" />
       </div>
 
       {/* Daily spend chart */}
@@ -259,17 +260,5 @@ export default function AdvertiserDetailPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
-}
-
-function StatCard({ label, value, hint, valueClass }: { label: string; value: string; hint?: string; valueClass?: string }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-        <p className={cn('text-2xl font-bold tabular-nums mt-1', valueClass)}>{value}</p>
-        {hint && <p className="text-[11px] text-muted-foreground mt-0.5">{hint}</p>}
-      </CardContent>
-    </Card>
   )
 }

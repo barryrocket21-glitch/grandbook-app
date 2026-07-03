@@ -156,7 +156,7 @@ function ChannelsContent() {
         actions={
           <PermissionGuard role={role} allowedRoles={['owner','admin']}>
             <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
-              <DialogTrigger render={<Button className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" />}>
+              <DialogTrigger render={<Button className="" />}>
                 <Plus className="w-4 h-4 mr-2" />Tambah Channel
               </DialogTrigger>
               <DialogContent className="max-w-md">
@@ -202,7 +202,7 @@ function ChannelsContent() {
                     <Checkbox checked={form.active} onCheckedChange={v => setForm({ ...form, active: !!v })} id="active" />
                     <Label htmlFor="active" className="cursor-pointer text-sm">Aktif</Label>
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" disabled={saving}>
+                  <Button type="submit" className="w-full " disabled={saving}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan
                   </Button>
                 </form>

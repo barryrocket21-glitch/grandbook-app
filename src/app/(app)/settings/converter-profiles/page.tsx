@@ -263,7 +263,7 @@ export default function ConverterProfilesPage() {
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
               <DialogTrigger
                 render={
-                  <Button className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20" />
+                  <Button className="" />
                 }
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -533,7 +533,7 @@ export default function ConverterProfilesPage() {
                   </label>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20"
+                    className="w-full "
                     disabled={saving}
                   >
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

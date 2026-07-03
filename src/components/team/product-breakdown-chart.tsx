@@ -62,7 +62,7 @@ export function ProductBreakdownChart({ rows, topN = 10 }: Props) {
           labelFormatter={(_, payload) => payload?.[0]?.payload?.fullName ?? ''}
         />
         <Legend wrapperStyle={{ fontSize: 11 }} />
-        <Bar dataKey="total_orders" name="Total order"   fill="#a78bfa" radius={[0, 4, 4, 0]} />
+        <Bar dataKey="total_orders" name="Total order"   fill="#3f6fd1" radius={[0, 4, 4, 0]} />
         <Bar dataKey="closing"      name="Closing"        fill="#10b981" radius={[0, 4, 4, 0]} />
       </BarChart>
     </ResponsiveContainer>

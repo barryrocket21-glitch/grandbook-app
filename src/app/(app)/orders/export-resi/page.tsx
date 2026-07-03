@@ -748,7 +748,7 @@ function OrdersExportResiInner() {
             <Button
               onClick={goToProfile}
               disabled={selectedIds.size === 0}
-              className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+              className=""
             >
               Lanjutkan ({selectedIds.size} dipilih) <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
@@ -805,7 +805,7 @@ function OrdersExportResiInner() {
               <Button
                 onClick={goToPreview}
                 disabled={!selectedProfileId || previewLoading}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 {previewLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
                 Lanjut ke Preview
@@ -910,7 +910,7 @@ function OrdersExportResiInner() {
             <Button
               onClick={startGenerate}
               disabled={preview.errors.length > 0 || preview.totalOrdersRequested === 0 || generating}
-              className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+              className=""
             >
               <Download className="w-3.5 h-3.5 mr-1" />
               Lanjut Generate ({preview.totalOrdersRequested} order)
@@ -1011,7 +1011,7 @@ function OrdersExportResiInner() {
                   <Button
                     onClick={finishWithStatusUpdate}
                     disabled={marking}
-                    className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                    className=""
                   >
                     {marking ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
                     Update Status &amp; Selesai
@@ -1033,7 +1033,7 @@ function OrdersExportResiInner() {
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Button
                     onClick={() => router.push('/orders/list')}
-                    className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                    className=""
                   >Lihat Daftar Order</Button>
                   <Button variant="outline" onClick={reset}>Export Lagi</Button>
                 </div>

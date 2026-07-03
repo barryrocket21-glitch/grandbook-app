@@ -265,7 +265,7 @@ export default function AdSpendPage() {
                 </Button>
                 <Button
                   onClick={() => { reset(); setOpen(true) }}
-                  className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20"
+                  className=""
                 >
                   <Plus className="w-4 h-4 mr-2" />Tambah Manual
                 </Button>
@@ -617,7 +617,7 @@ export default function AdSpendPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+              className="w-full "
               disabled={saving}
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -911,7 +911,7 @@ function CsvUploadDialog({
                   matchResult.matched_rows.length === 0 ||
                   (parseResult.mode === 'SNAPSHOT_DATE_RANGE_AGGREGATE' && !forceImportAggregate)
                 }
-                className="ml-auto bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className="ml-auto "
               >
                 {parseResult.mode === 'SNAPSHOT_DATE_RANGE_AGGREGATE' && forceImportAggregate
                   ? `Force import ${matchResult.matched_rows.length} rows`
@@ -953,7 +953,7 @@ function CsvUploadDialog({
                 {importResult.errors.map((e, i) => <p key={i} className="text-red-600">{e}</p>)}
               </div>
             )}
-            <Button onClick={onComplete} className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white">
+            <Button onClick={onComplete} className="w-full ">
               Selesai
             </Button>
           </div>

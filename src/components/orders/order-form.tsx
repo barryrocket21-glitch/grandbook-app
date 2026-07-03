@@ -647,7 +647,7 @@ export function OrderForm({ defaults, onSubmit, submitLabel = 'Simpan Order', su
         <Button
           type="submit"
           disabled={submitting || repBlocked}
-          className="w-full bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+          className="w-full "
         >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {repBlocked ? 'Nomor diblacklist — centang override dulu' : submitLabel}

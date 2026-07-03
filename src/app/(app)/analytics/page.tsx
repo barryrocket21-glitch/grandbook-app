@@ -37,15 +37,17 @@ import { ReturSection } from '@/components/analytics/retur-section'
 
 const supabase = createClient()
 
+// Palet in-brand: emerald/amber/red/zinc + aksen biru. Beda shade biar 8 status
+// tetap kebedain di pie tanpa keluar palet.
 const STATUS_COLORS: Record<string, string> = {
-  BARU: '#3f6fd1',
-  SIAP_KIRIM: '#eab308',
-  DIKIRIM: '#71717a',
-  DITERIMA: '#10b981',
-  PROBLEM: '#f59e0b',
-  RETUR: '#f97316',
-  CANCEL: '#71717a',
-  FAKE: '#ef4444',
+  BARU: '#3f6fd1',       // aksen biru (baru)
+  SIAP_KIRIM: '#fbbf24', // amber-400 (siap)
+  DIKIRIM: '#a1a1aa',    // zinc-400 (transit)
+  DITERIMA: '#10b981',   // emerald (sukses)
+  PROBLEM: '#f59e0b',    // amber-500 (warning)
+  RETUR: '#f87171',      // red-400 (retur)
+  CANCEL: '#71717a',     // zinc-500 (batal)
+  FAKE: '#ef4444',       // red-500 (fake)
 }
 
 type SortField = 'orders' | 'revenue' | 'conv' | 'commission'

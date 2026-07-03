@@ -203,7 +203,7 @@ export default function SpxStatusSyncPage() {
             </div>
             <div className="flex justify-between">
               <Button variant="outline" onClick={reset}><RotateCcw className="w-3.5 h-3.5 mr-1" /> Ganti File</Button>
-              <Button onClick={apply} disabled={applying} className="bg-gradient-to-r from-zinc-600 to-zinc-600 text-white">
+              <Button onClick={apply} disabled={applying} className="">
                 {applying ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
                 Apply Sync ({parsed.withGb} ber-GB-)
               </Button>

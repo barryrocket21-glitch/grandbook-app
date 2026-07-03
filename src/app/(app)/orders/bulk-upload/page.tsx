@@ -253,7 +253,7 @@ export default function BulkUploadPage() {
               <Button
                 onClick={goToFileStep}
                 disabled={!selectedProfileId}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 Lanjut <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
@@ -312,7 +312,7 @@ export default function BulkUploadPage() {
               <Button
                 onClick={goToPreview}
                 disabled={!file || previewLoading}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 {previewLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
                 Preview
@@ -407,7 +407,7 @@ export default function BulkUploadPage() {
             <Button
               onClick={startIngest}
               disabled={preview.totalRowsDetected === 0 || preview.errors.length > 0}
-              className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+              className=""
             >
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
               Lanjutkan Import {preview.totalRowsDetected} order
@@ -468,7 +468,7 @@ export default function BulkUploadPage() {
             <div className="flex flex-wrap gap-2 pt-2">
               <Button
                 onClick={() => router.push('/orders/draft')}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 Lihat Antrian Kerja
               </Button>

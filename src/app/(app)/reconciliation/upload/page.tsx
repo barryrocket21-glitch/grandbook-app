@@ -18,6 +18,7 @@ import {
 import { PageHeader } from '@/components/ui/page-header'
 import { canApproveOrders } from '@/lib/auth/permissions'
 import { previewRekonsil, type RekonsilPreviewResult } from '@/lib/converter/preview'
+import { formatRupiah } from '@/lib/format'
 import { ingestRekonsil, type RekonsilResult } from '@/lib/converter/engine-rekonsil'
 import { STATUS_BADGE_COLOR, STATUS_LABEL } from '@/lib/schemas/settings'
 import type {
@@ -227,7 +228,7 @@ export default function ReconciliationUploadPage() {
               <Button
                 onClick={goToFileStep}
                 disabled={!selectedProfileId}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >Lanjut <ArrowRight className="w-3.5 h-3.5 ml-1" /></Button>
             </div>
           </CardContent>
@@ -259,7 +260,7 @@ export default function ReconciliationUploadPage() {
               <Button
                 onClick={goToPreview}
                 disabled={!file || previewLoading}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 {previewLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
                 Preview
@@ -324,13 +325,13 @@ export default function ReconciliationUploadPage() {
                         row.costUpdates.cod_amount !== undefined) && (
                         <div className="text-muted-foreground space-x-3">
                           {row.costUpdates.shipping_cost_actual !== undefined && (
-                            <span>shipping_cost_actual=<span className="text-foreground">Rp {row.costUpdates.shipping_cost_actual.toLocaleString('id-ID')}</span></span>
+                            <span>shipping_cost_actual=<span className="text-foreground">{formatRupiah(row.costUpdates.shipping_cost_actual)}</span></span>
                           )}
                           {row.costUpdates.payout_amount !== undefined && (
-                            <span>payout=<span className="text-foreground">Rp {row.costUpdates.payout_amount.toLocaleString('id-ID')}</span></span>
+                            <span>payout=<span className="text-foreground">{formatRupiah(row.costUpdates.payout_amount)}</span></span>
                           )}
                           {row.costUpdates.cod_amount !== undefined && (
-                            <span>cod=<span className="text-foreground">Rp {row.costUpdates.cod_amount.toLocaleString('id-ID')}</span></span>
+                            <span>cod=<span className="text-foreground">{formatRupiah(row.costUpdates.cod_amount)}</span></span>
                           )}
                         </div>
                       )}
@@ -354,7 +355,7 @@ export default function ReconciliationUploadPage() {
             <Button
               onClick={startIngest}
               disabled={preview.totalRowsDetected === 0 || preview.errors.length > 0}
-              className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+              className=""
             >
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
               Proses {preview.totalRowsDetected} row rekonsil
@@ -429,7 +430,7 @@ export default function ReconciliationUploadPage() {
               )}
               <Button
                 onClick={() => router.push('/orders/list')}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >Lihat Daftar Order</Button>
               <Button variant="outline" onClick={reset}>Upload Lagi</Button>
             </div>

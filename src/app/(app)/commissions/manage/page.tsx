@@ -292,7 +292,7 @@ export default function ManageCommissionsPage() {
                       size="sm"
                       disabled={agg.earned_unpaid_count === 0}
                       onClick={() => openPayDialog(agg)}
-                      className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white disabled:opacity-30 disabled:bg-none disabled:bg-zinc-500/20 disabled:text-muted-foreground"
+                      className=" disabled:opacity-30 disabled:bg-none disabled:bg-zinc-500/20 disabled:text-muted-foreground"
                     >
                       <BadgeDollarSign className="w-3.5 h-3.5 mr-1" />
                       Bayar {agg.earned_unpaid_count > 0 ? `${agg.earned_unpaid_count} order` : ''}
@@ -367,7 +367,7 @@ export default function ManageCommissionsPage() {
                 <Button
                   onClick={submitPayment}
                   disabled={submitting}
-                  className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                  className=""
                 >
                   {submitting && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                   Konfirmasi Bayar {formatRupiah(dialogTarget.earned_unpaid_total)}

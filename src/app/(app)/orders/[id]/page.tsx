@@ -685,7 +685,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <Button
                 onClick={submitStatus}
                 disabled={statusRunning}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 {statusRunning && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}Update
               </Button>

@@ -155,7 +155,7 @@ export default function ReconciliationPage() {
         actions={
           <div className="flex items-center gap-2">
             <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-40" />
-            <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20">
+            <Button onClick={handleSave} disabled={saving} className="">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Simpan
             </Button>

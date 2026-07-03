@@ -154,7 +154,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <div className="flex items-center gap-2 p-2">
               <Avatar className="size-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-gradient-to-br from-zinc-600 to-zinc-600 text-white text-xs">
+                <AvatarFallback className="rounded-lg bg-zinc-600 text-white text-xs">
                   {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                 </AvatarFallback>
               </Avatar>

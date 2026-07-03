@@ -363,7 +363,7 @@ function PreviewSection({
         <Button
           onClick={onApply}
           disabled={totalApplyable === 0}
-          className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white gap-1.5"
+          className=" gap-1.5"
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
           Apply ke Database ({result.cod_matched_count + result.cod_variance_count} COD + {result.withdrawal_count} penarikan)

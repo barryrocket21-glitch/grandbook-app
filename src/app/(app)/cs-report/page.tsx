@@ -564,7 +564,7 @@ export default function CsReportPage() {
               <Button
                 onClick={handleSaveAll}
                 disabled={saving || rows.length === 0 || hasErrors}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white shadow-lg shadow-zinc-500/20"
+                className=""
               >
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Save All ({rows.length})

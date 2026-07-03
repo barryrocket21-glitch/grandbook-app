@@ -282,7 +282,7 @@ export default function WaPastePage() {
               <Button
                 onClick={handleParse}
                 disabled={!text.trim() || !channelId || busy || !refData}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
                 Parse & Preview <ArrowRight className="w-3.5 h-3.5 ml-1" />
@@ -330,7 +330,7 @@ export default function WaPastePage() {
                 onClick={handleSubmit}
                 disabled={adapted.length === 0}
                 size="sm"
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Submit {adapted.length} Order
               </Button>
@@ -408,7 +408,7 @@ export default function WaPastePage() {
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
                 onClick={() => router.push('/orders/draft')}
-                className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                className=""
               >
                 Lihat Antrian Kerja <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>

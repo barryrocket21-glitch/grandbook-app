@@ -448,7 +448,7 @@ export default function UnmatchedResiPage() {
                 <Button
                   onClick={submitResolve}
                   disabled={submitting || (action === 'link' && !pickedOrderId)}
-                  className="bg-gradient-to-r from-zinc-600 to-zinc-600 hover:from-zinc-700 hover:to-zinc-700 text-white"
+                  className=""
                 >
                   {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Konfirmasi
                 </Button>

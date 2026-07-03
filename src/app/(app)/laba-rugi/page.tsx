@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
@@ -160,11 +161,11 @@ export default function LabaRugiPage() {
 
           {/* Order breakdown */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            <Stat label="Total Order" value={String(data.order_count)} tone="blue" />
-            <Stat label="Diterima" value={String(data.diterima_count)} tone="emerald" />
-            <Stat label="Retur" value={String(data.retur_count)} sub={`${n(data.retur_pct)}%`} tone="red" />
-            <Stat label="Batal" value={String(data.batal_count)} tone="zinc" />
-            <Stat label="Masih Jalan" value={String(data.inflight_count)} tone="amber" />
+            <StatCard label="Total Order" value={String(data.order_count)} tone="zinc" />
+            <StatCard label="Diterima" value={String(data.diterima_count)} tone="emerald" />
+            <StatCard label="Retur" value={String(data.retur_count)} sub={`${n(data.retur_pct)}%`} tone="red" />
+            <StatCard label="Batal" value={String(data.batal_count)} tone="zinc" />
+            <StatCard label="Masih Jalan" value={String(data.inflight_count)} tone="amber" />
           </div>
 
           {/* P&L cascade */}
@@ -213,29 +214,6 @@ export default function LabaRugiPage() {
   )
 }
 
-function Stat({ label, value, sub, tone }: {
-  label: string
-  value: string
-  sub?: string
-  tone: 'blue' | 'emerald' | 'red' | 'amber' | 'zinc'
-}) {
-  const toneMap: Record<string, string> = {
-    blue: 'text-zinc-600',
-    emerald: 'text-emerald-600',
-    red: 'text-red-600',
-    amber: 'text-amber-600',
-    zinc: 'text-zinc-500',
-  }
-  return (
-    <div className="rounded-lg border p-2.5">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`text-lg font-bold ${toneMap[tone]}`}>
-        {value}
-        {sub && <span className="text-xs font-normal text-muted-foreground ml-1">{sub}</span>}
-      </div>
-    </div>
-  )
-}
 
 function PnlRow({ label, est, act, kind }: {
   label: string

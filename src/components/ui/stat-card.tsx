@@ -39,6 +39,8 @@ export function StatCard({
   className?: string
 }) {
   const t = TONE[tone]
+  // Number → auto-format ribuan (id-ID) biar call-site cukup pass angka mentah
+  const display = typeof value === 'number' ? value.toLocaleString('id-ID') : value
   return (
     <div className={cn('rounded-lg border p-3', t.box, className)}>
       <div className="flex items-start justify-between gap-2">
@@ -46,7 +48,7 @@ export function StatCard({
         {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
       </div>
       <p className={cn('mt-1 font-bold tabular-nums', size === 'lg' ? 'text-3xl' : 'text-2xl', t.value)}>
-        {value}
+        {display}
       </p>
       {sub != null && sub !== '' && (
         <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>

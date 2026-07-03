@@ -10,6 +10,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -182,7 +183,7 @@ export default function CustomerDetailPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Total Order" value={String(cust.total_orders)} />
         <StatCard label="Delivery Rate" value={pct(cust.delivery_rate)} sub={`${cust.delivered_count} diterima`} />
-        <StatCard label="Return Rate" value={pct(cust.return_rate)} sub={`${cust.returned_count} retur · ${cust.fake_count} fake`} danger={Number(cust.return_rate) >= 0.3} />
+        <StatCard label="Return Rate" value={pct(cust.return_rate)} sub={`${cust.returned_count} retur · ${cust.fake_count} fake`} tone={Number(cust.return_rate) >= 0.3 ? 'red' : 'default'} />
         <StatCard label="LTV Omset" value={formatRupiah(cust.ltv_omset)} sub={`Profit ${formatRupiah(cust.ltv_profit)}`} />
       </div>
 
@@ -259,14 +260,3 @@ export default function CustomerDetailPage() {
   )
 }
 
-function StatCard({ label, value, sub, danger }: { label: string; value: string; sub?: string; danger?: boolean }) {
-  return (
-    <Card>
-      <CardContent className="pt-4 pb-3">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`text-lg font-bold ${danger ? 'text-red-600' : ''}`}>{value}</p>
-        {sub && <p className="text-[11px] text-muted-foreground">{sub}</p>}
-      </CardContent>
-    </Card>
-  )
-}

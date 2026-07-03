@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { Truck, Loader2, Upload, AlertTriangle, CheckCircle2, Info } from 'lucide-react'
@@ -29,14 +30,6 @@ interface Parsed {
   unknownStatuses: string[]
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: string }) {
-  return (
-    <div className="rounded-lg border p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={'text-xl font-semibold ' + (tone ?? '')}>{value}</p>
-    </div>
-  )
-}
 
 export default function SyncMengantarPage() {
   const { role, loading: authLoading } = useAuth()
@@ -152,10 +145,10 @@ export default function SyncMengantarPage() {
         <Card>
           <CardContent className="p-5 space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <Stat label="Ketemu (akan di-update)" value={preview.matched} tone="text-emerald-600 dark:text-emerald-400" />
-              <Stat label="Status berubah" value={preview.status_changes} />
-              <Stat label="Ambigu (skip)" value={preview.ambiguous} tone={preview.ambiguous ? 'text-amber-600' : ''} />
-              <Stat label="Gak ketemu (skip)" value={preview.unmatched} tone={preview.unmatched ? 'text-amber-600' : ''} />
+              <StatCard label="Ketemu (akan di-update)" value={preview.matched} tone="emerald" />
+              <StatCard label="Status berubah" value={preview.status_changes} />
+              <StatCard label="Ambigu (skip)" value={preview.ambiguous} tone={preview.ambiguous ? 'amber' : 'default'} />
+              <StatCard label="Gak ketemu (skip)" value={preview.unmatched} tone={preview.unmatched ? 'amber' : 'default'} />
             </div>
 
             <div className="overflow-x-auto rounded-lg border">

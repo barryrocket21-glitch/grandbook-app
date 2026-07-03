@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -190,17 +191,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <>
           {/* 1. Stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <MiniStatCard label="Spend" value={funnel.has_meta_data ? formatRupiah(spend) : '—'} color="orange" />
-            <MiniStatCard label="Revenue" value={funnel.has_system_data ? formatRupiah(revenue) : '—'} color="emerald" />
-            <MiniStatCard
+            <StatCard label="Spend" value={funnel.has_meta_data ? formatRupiah(spend) : '—'} tone="amber" />
+            <StatCard label="Revenue" value={funnel.has_system_data ? formatRupiah(revenue) : '—'} tone="emerald" />
+            <StatCard
               label="Close Rate"
               value={funnel.has_cs_data && csLead > 0 ? `${closeRate.toFixed(1)}%` : '—'}
-              color={closeRate >= 30 ? 'emerald' : closeRate >= 10 ? 'amber' : 'red'}
+              tone={closeRate >= 30 ? 'emerald' : closeRate >= 10 ? 'amber' : 'red'}
             />
-            <MiniStatCard
+            <StatCard
               label="ROAS"
               value={spend > 0 && roas > 0 ? `${roas.toFixed(2)}x` : '—'}
-              color={roas >= 2 ? 'emerald' : roas >= 1 ? 'amber' : 'red'}
+              tone={roas >= 2 ? 'emerald' : roas >= 1 ? 'amber' : 'red'}
             />
           </div>
 
@@ -387,26 +388,6 @@ function PerPlatformTable({ rows }: { rows: ProfitPerPlatformRow[] }) {
 }
 
 // --- Sub: stat card ------------------------------------------------------
-function MiniStatCard({ label, value, color }: {
-  label: string
-  value: string
-  color: 'orange' | 'emerald' | 'amber' | 'red' | 'violet' | 'blue'
-}) {
-  const cls: Record<typeof color, string> = {
-    orange: 'border-amber-500/30 bg-amber-500/5',
-    emerald: 'border-emerald-500/30 bg-emerald-500/5',
-    amber: 'border-amber-500/30 bg-amber-500/5',
-    red: 'border-red-500/30 bg-red-500/5',
-    violet: 'border-zinc-500/30 bg-zinc-500/5',
-    blue: 'border-zinc-500/30 bg-zinc-500/5',
-  }
-  return (
-    <div className={`p-3 rounded border ${cls[color]}`}>
-      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
-      <div className="text-xl font-bold mt-1">{value}</div>
-    </div>
-  )
-}
 
 // --- Sub: funnel box ------------------------------------------------------
 function FunnelBox({

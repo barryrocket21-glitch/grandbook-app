@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
+import { StatCard } from '@/components/ui/stat-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -388,12 +389,12 @@ export default function ReconciliationUploadPage() {
               <h3 className="text-lg font-bold">Rekonsil Selesai</h3>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
-              <Stat label="matched" value={result.matched} color="emerald" />
-              <Stat label="status updated" value={result.status_updated} color="blue" />
-              <Stat label="cost updated" value={result.cost_updated} color="violet" />
-              <Stat label="unmatched" value={result.inbox_unmatched} color="amber" />
-              <Stat label="status unmapped" value={result.inbox_unmapped_status} color="amber" />
-              <Stat label="error" value={result.errors.length} color="red" />
+              <StatCard label="matched" value={result.matched} tone="emerald" />
+              <StatCard label="status updated" value={result.status_updated} tone="zinc" />
+              <StatCard label="cost updated" value={result.cost_updated} tone="zinc" />
+              <StatCard label="unmatched" value={result.inbox_unmatched} tone="amber" />
+              <StatCard label="status unmapped" value={result.inbox_unmapped_status} tone="amber" />
+              <StatCard label="error" value={result.errors.length} tone="red" />
             </div>
 
             {result.errors.length > 0 && (
@@ -441,21 +442,6 @@ export default function ReconciliationUploadPage() {
   )
 }
 
-function Stat({ label, value, color }: { label: string; value: number; color: 'emerald' | 'blue' | 'red' | 'amber' | 'violet' }) {
-  const colorMap: Record<string, string> = {
-    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
-    blue: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-    red: 'bg-red-500/10 border-red-500/30 text-red-600',
-    amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-  }
-  return (
-    <div className={`p-3 rounded border ${colorMap[color]}`}>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-    </div>
-  )
-}
 
 function StepIndicator({ current }: { current: StepKey }) {
   const steps: Array<{ key: StepKey; label: string }> = [

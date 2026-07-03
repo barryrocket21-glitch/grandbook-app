@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -294,11 +295,11 @@ function PreviewSection({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Stat label="Total Rows" value={result.total_rows} color="violet" />
-        <Stat label="COD Matched" value={result.cod_matched_count} color="emerald" />
-        <Stat label="Variance" value={result.cod_variance_count} color="amber" />
-        <Stat label="Unmatched" value={result.cod_unmatched_count} color="red" />
-        <Stat label="Withdrawals" value={result.withdrawal_count} color="blue" />
+        <StatCard label="Total Rows" value={result.total_rows} tone="zinc" />
+        <StatCard label="COD Matched" value={result.cod_matched_count} tone="emerald" />
+        <StatCard label="Variance" value={result.cod_variance_count} tone="amber" />
+        <StatCard label="Unmatched" value={result.cod_unmatched_count} tone="red" />
+        <StatCard label="Withdrawals" value={result.withdrawal_count} tone="zinc" />
       </div>
 
       <Card>
@@ -394,10 +395,10 @@ function DoneSection({
           Batch #{apply.batch_id} APPLIED · {apply.cod_updated} COD updated, {apply.withdrawals_created} penarikan inserted, {apply.unmatched_to_inbox} unmatched ke inbox.
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-          <Stat label="COD updated" value={apply.cod_updated} color="emerald" />
-          <Stat label="Penarikan" value={apply.withdrawals_created} color="blue" />
-          <Stat label="Unmatched logged" value={apply.unmatched_to_inbox} color="red" />
-          <Stat label="Total COD" value={Number(preview.total_cod_amount)} color="violet" rupiah />
+          <StatCard label="COD updated" value={apply.cod_updated} tone="emerald" />
+          <StatCard label="Penarikan" value={apply.withdrawals_created} tone="zinc" />
+          <StatCard label="Unmatched logged" value={apply.unmatched_to_inbox} tone="red" />
+          <StatCard label="Total COD" value={formatRupiah(Number(preview.total_cod_amount))} tone="zinc" />
         </div>
         <div className="flex flex-wrap gap-2 pt-2">
           <Button variant="outline" onClick={onReset}>Upload Lagi</Button>
@@ -421,25 +422,6 @@ function DoneSection({
   )
 }
 
-function Stat({
-  label, value, color, rupiah,
-}: { label: string; value: number; color: 'emerald' | 'red' | 'amber' | 'violet' | 'blue'; rupiah?: boolean }) {
-  const colorMap = {
-    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
-    red: 'bg-red-500/10 border-red-500/30 text-red-600',
-    amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-    blue: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-  }
-  return (
-    <div className={`p-3 rounded border ${colorMap[color]}`}>
-      <div className="text-2xl font-bold tabular-nums">
-        {rupiah ? formatRupiah(value) : value.toLocaleString('id-ID')}
-      </div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-    </div>
-  )
-}
 
 // =============================================================
 // Tab tables

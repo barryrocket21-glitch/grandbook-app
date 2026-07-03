@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
+import { StatCard } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -222,10 +223,10 @@ export default function SpxStatusSyncPage() {
           <CardContent className="pt-4 pb-4 space-y-3">
             <div className="flex items-center gap-2"><CheckCircle2 className="w-6 h-6 text-emerald-500" /><h3 className="text-lg font-bold">Sync selesai</h3></div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <Stat label="ke-update" value={result.updated} color="emerald" />
-              <Stat label="match GB-" value={result.matched} color="violet" />
-              <Stat label="skip (no GB-)" value={result.skipped_no_ref} color="zinc" />
-              <Stat label="skip (no match)" value={result.skipped_no_match} color="amber" />
+              <StatCard label="ke-update" value={result.updated} tone="emerald" />
+              <StatCard label="match GB-" value={result.matched} tone="zinc" />
+              <StatCard label="skip (no GB-)" value={result.skipped_no_ref} tone="zinc" />
+              <StatCard label="skip (no match)" value={result.skipped_no_match} tone="amber" />
             </div>
             <p className="text-xs text-muted-foreground">Order ke-update tetap di <b>Post-Export</b> — status & resi-nya berubah. Terkirim = filter selesai; Retur = alasan kesimpen.</p>
             <Button variant="outline" onClick={reset}>Import Lagi</Button>
@@ -236,12 +237,3 @@ export default function SpxStatusSyncPage() {
   )
 }
 
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
-  const c: Record<string, string> = {
-    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600',
-    violet: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-600',
-    zinc: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-500',
-    amber: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-  }
-  return <div className={`p-3 rounded border ${c[color]}`}><div className="text-2xl font-bold">{value}</div><div className="text-xs text-muted-foreground">{label}</div></div>
-}

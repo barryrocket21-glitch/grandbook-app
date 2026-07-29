@@ -68,7 +68,7 @@ export default function PembukuanPage() {
   const [status, setStatus] = useState('all')
   const [view, setView] = useState<'ringkas' | 'keuangan'>('ringkas')
   const [range, setRange] = useState<DateRange>(thisMonth)
-  const [allTime, setAllTime] = useState(true)
+  const [allTime, setAllTime] = useState(false)
   const [zoneFilter, setZoneFilter] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ source: 'draft' | 'final'; id: number } | null>(null)
   const [page, setPage] = useState(0)
@@ -81,31 +81,23 @@ export default function PembukuanPage() {
     const p_to = allTime ? null : range.to
     try {
       const params = { p_from, p_to, p_status: status === 'all' ? null : status, p_search: search.trim() || null }
-      const PAGE = 1000
-      // Page pertama + P&L summary paralel. PostgREST cap 1000/req → ambil sisanya.
+      // Server-side pagination: jangan scan semua ledger di initial load.
       const [first, lr] = await Promise.all([
-        supabase.rpc('list_pembukuan', { ...params, p_limit: PAGE, p_offset: 0 }).range(0, PAGE - 1),
-        canFinance ? supabase.rpc('laba_rugi_summary', { p_from, p_to }) : Promise.resolve({ data: null, error: null }),
+        supabase.rpc('list_pembukuan', { ...params, p_limit: pageSize, p_offset: page * pageSize }).range(0, pageSize - 1),
+        pnlOpen && canFinance && !allTime
+          ? supabase.rpc('laba_rugi_summary', { p_from, p_to })
+          : Promise.resolve({ data: null, error: null }),
       ])
       if (first.error) throw first.error
-      const firstRows = (first.data || []) as Row[]
-      const totalRows = firstRows[0]?.total_count ?? firstRows.length
-      let allRows = firstRows
-      if (firstRows.length >= PAGE && totalRows > PAGE) {
-        const pages = Math.ceil(totalRows / PAGE)
-        const rest = await Promise.all(
-          Array.from({ length: pages - 1 }, (_, k) =>
-            supabase.rpc('list_pembukuan', { ...params, p_limit: PAGE, p_offset: (k + 1) * PAGE }).range(0, PAGE - 1))
-        )
-        allRows = [...firstRows]
-        for (const r of rest) { if (r.error) throw r.error; allRows.push(...((r.data || []) as Row[])) }
-      }
-      setRows(allRows)
+      setRows((first.data || []) as Row[])
       setSummary(lr.error ? null : ((lr.data?.[0] ?? null) as LabaRugi | null))
-    } catch (e) { console.warn('pembukuan load:', e); setErr(true) } finally { setLoading(false) }
-  }, [status, search, allTime, range.from, range.to, canFinance])
+    } catch (e) { console.warn('pembukuan load:', e); setErr(true); setRows([]); if (pnlOpen) setSummary(null) } finally { setLoading(false) }
+  }, [status, search, allTime, range.from, range.to, canFinance, pnlOpen, page, pageSize])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load() }, 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
 
   const total = rows[0]?.total_count ?? rows.length
   const counts = useMemo(() => {
@@ -115,9 +107,9 @@ export default function PembukuanPage() {
   }, [rows])
 
   const displayed = useMemo(() => zoneFilter ? rows.filter(r => r.zone === zoneFilter) : rows, [rows, zoneFilter])
-  const totalPages = Math.max(1, Math.ceil(displayed.length / pageSize))
-  const paged = useMemo(() => displayed.slice(page * pageSize, (page + 1) * pageSize), [displayed, page, pageSize])
-  useEffect(() => { setPage(0) }, [zoneFilter, status, search, allTime, range.from, range.to, view, pageSize])
+  const totalPages = Math.max(1, Math.ceil((zoneFilter ? displayed.length : total) / pageSize))
+  const paged = displayed
+  const resetToFirstPage = () => { setPage(0) }
 
   const totals = useMemo(() => displayed.reduce((a, r) => ({
     n: a.n + 1, total: a.total + n(r.penjualan),
@@ -176,13 +168,13 @@ export default function PembukuanPage() {
         <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari order# / customer..." className="pl-9" />
+            <Input value={search} onChange={e => { resetToFirstPage(); setSearch(e.target.value) }} placeholder="Cari order# / customer..." className="pl-9" />
           </div>
-          <Button variant={allTime ? 'default' : 'outline'} size="sm" onClick={() => setAllTime(true)}>Semua</Button>
+          <Button variant={allTime ? 'default' : 'outline'} size="sm" onClick={() => { resetToFirstPage(); setAllTime(true) }}>Semua</Button>
           <div className={allTime ? 'opacity-60' : ''}>
-            <DateRangePicker value={range} onChange={v => { setRange(v); setAllTime(false) }} />
+            <DateRangePicker value={range} onChange={v => { resetToFirstPage(); setRange(v); setAllTime(false) }} />
           </div>
-          <Select value={status} onValueChange={v => setStatus(v || 'all')}>
+          <Select value={status} onValueChange={v => { resetToFirstPage(); setStatus(v || 'all') }}>
             <SelectTrigger className="w-44"><SelectValue placeholder="Semua status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua status</SelectItem>
@@ -231,8 +223,8 @@ export default function PembukuanPage() {
           {/* Toggle view Ringkas/Keuangan */}
           {canFinance && (
             <div className="inline-flex rounded-md border p-0.5">
-              <button onClick={() => setView('ringkas')} className={`px-3 h-7 text-xs rounded ${view === 'ringkas' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>Ringkas</button>
-              <button onClick={() => setView('keuangan')} className={`px-3 h-7 text-xs rounded flex items-center gap-1 ${view === 'keuangan' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>
+              <button onClick={() => { resetToFirstPage(); setView('ringkas') }} className={`px-3 h-7 text-xs rounded ${view === 'ringkas' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>Ringkas</button>
+              <button onClick={() => { resetToFirstPage(); setView('keuangan') }} className={`px-3 h-7 text-xs rounded flex items-center gap-1 ${view === 'keuangan' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>
                 <BarChart2 className="w-3 h-3" /> Keuangan
               </button>
             </div>
@@ -252,6 +244,12 @@ export default function PembukuanPage() {
       {canFinance && pnlOpen && (
         <Card>
           <CardContent className="pt-4 pb-3">
+            {allTime ? (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                Ringkasan P&L all-time sengaja tidak dihitung otomatis supaya halaman tidak timeout. Pilih periode tanggal dulu kalau mau lihat P&L.
+              </div>
+            ) : (
+              <>
             <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 gap-y-1 text-sm max-w-xl">
               <div className="text-xs font-medium text-muted-foreground col-span-1"></div>
               <div className="text-xs font-medium text-muted-foreground text-right">Proyeksi</div>
@@ -272,18 +270,20 @@ export default function PembukuanPage() {
               Realisasi = akrual (revenue diakui pas delivered). Proyeksi = kalau semua order sukses.{' '}
               <a href="/laba-rugi" className="text-zinc-500 hover:underline">Laporan lengkap →</a>
             </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Zone chips (klik = filter) */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <button onClick={() => setZoneFilter(null)}
+        <button onClick={() => { resetToFirstPage(); setZoneFilter(null) }}
           className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === null ? 'bg-zinc-500 text-white border-zinc-500' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
           Semua · {total.toLocaleString('id-ID')}{rows.length < total ? ` (loaded ${rows.length.toLocaleString('id-ID')})` : ''}
         </button>
         {Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([z, c]) => (
-          <button key={z} onClick={() => setZoneFilter(zoneFilter === z ? null : z)}
+          <button key={z} onClick={() => { resetToFirstPage(); setZoneFilter(zoneFilter === z ? null : z) }}
             className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === z ? `ring-2 ring-zinc-400 ${ZONE_COLOR[z] || 'bg-muted'}` : (ZONE_COLOR[z] || 'bg-muted text-muted-foreground')} hover:opacity-80`}>
             {z} · {c}
           </button>
@@ -408,7 +408,7 @@ export default function PembukuanPage() {
       {!loading && displayed.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="flex items-center gap-2">
-            <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="h-8 rounded-md border bg-background px-2 text-sm">
+            <select value={pageSize} onChange={e => { resetToFirstPage(); setPageSize(Number(e.target.value)) }} className="h-8 rounded-md border bg-background px-2 text-sm">
               <option value={50}>50 / halaman</option>
               <option value={100}>100 / halaman</option>
               <option value={500}>500 / halaman</option>

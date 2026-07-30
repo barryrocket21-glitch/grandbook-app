@@ -41,7 +41,6 @@ export default function ReconSpxCashflowPage() {
   const [uploading, setUploading] = useState(false)
   const [previewResult, setPreviewResult] = useState<CashflowPreviewResult | null>(null)
   const [applyResult, setApplyResult] = useState<CashflowApplyResult | null>(null)
-  const [applying, setApplying] = useState(false)
 
   const handleFile = useCallback(async (f: File | null) => {
     if (!f) return
@@ -106,7 +105,6 @@ export default function ReconSpxCashflowPage() {
       `Lanjutkan?`
     )) return
 
-    setApplying(true)
     setStep('applying')
     try {
       const { data, error } = await supabase.rpc('apply_spx_cashflow_recon', { p_batch_id: previewResult.batch_id })
@@ -123,8 +121,6 @@ export default function ReconSpxCashflowPage() {
       const msg = getErrorMessage(err)
       toast.error('Gagal apply', { description: msg })
       setStep('preview')
-    } finally {
-      setApplying(false)
     }
   }
 
@@ -205,6 +201,8 @@ export default function ReconSpxCashflowPage() {
 
       <StepIndicator current={step} />
 
+      {step === 'upload' && <OwnerSafetyNote />}
+
       {step === 'upload' && (
         <Card>
           <CardContent className="pt-4 pb-6 space-y-4">
@@ -278,6 +276,41 @@ export default function ReconSpxCashflowPage() {
   )
 }
 
+function OwnerSafetyNote() {
+  return (
+    <Card>
+      <CardContent className="pt-3 pb-3 text-xs text-muted-foreground space-y-1.5">
+        <div className="font-semibold text-foreground">Kontrol owner sebelum COD dianggap cair</div>
+        <div>Upload file SPX cuma bikin <strong>Preview</strong>. Data baru berubah setelah lu klik <strong>Apply</strong> dan konfirmasi manual.</div>
+        <div>Tidak mengubah parser/apply logic — ini hanya panduan supaya matched, variance, unmatched, dan penarikan rekening gampang dibaca.</div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ApplyReadinessSummary({ result }: { result: CashflowPreviewResult }) {
+  const codReady = result.cod_matched_count
+  const needsReview = result.cod_variance_count
+  const toInbox = result.cod_unmatched_count
+  const withdrawals = result.withdrawal_count
+  return (
+    <Card>
+      <CardContent className="pt-3 pb-3 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-xs font-semibold">Ringkasan sebelum Apply</div>
+          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Yang akan jadi COD cair: {codReady}</Badge>
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300">Yang perlu dicek dulu: {needsReview}</Badge>
+          <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-300">Yang masuk Antrian Masalah: {toInbox}</Badge>
+          <Badge variant="outline" className="bg-zinc-500/10 text-zinc-700 dark:text-zinc-300">Penarikan rekening: {withdrawals}</Badge>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Apply tetap harus konfirmasi manual. Variance berarti order sudah punya payout lama tapi nominal SPX beda; unmatched tidak mengubah order, hanya dicatat ke inbox_unmatched_resi.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 // =============================================================
 // Preview section — 4 tabs (Matched / Variance / Unmatched / Withdrawals)
 // =============================================================
@@ -301,6 +334,8 @@ function PreviewSection({
         <StatCard label="Unmatched" value={result.cod_unmatched_count} tone="red" />
         <StatCard label="Withdrawals" value={result.withdrawal_count} tone="zinc" />
       </div>
+
+      <ApplyReadinessSummary result={result} />
 
       <Card>
         <CardContent className="pt-4 pb-4 space-y-2">

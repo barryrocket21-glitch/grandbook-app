@@ -143,6 +143,32 @@ export default function WaPastePage() {
     return { total, matched, validPhone, csMatched, incomplete }
   }, [adapted])
 
+  const issueStats = useMemo(() => {
+    const total = adapted.length
+    const requiredMissing = adapted.filter(
+      (a) => !a.parsed.nama || !a.parsed.hp || !a.parsed.alamat || !a.parsed.produk || a.parsed.hargaTotal == null,
+    ).length
+    const productUnmatched = adapted.filter((a) => !a.productId).length
+    const phoneInvalid = adapted.filter((a) => !a.phoneValid).length
+    const csUnmatched = adapted.filter((a) => a.parsed.csName && !a.csMatched).length
+    const attributionWarnings = adapted.filter((a) => a.warnings.some((w) => w.toLowerCase().includes('atribusi'))).length
+    const mustFix = requiredMissing + productUnmatched + phoneInvalid
+    const needCheck = csUnmatched + attributionWarnings + parseWarnings.length
+    const safe = Math.max(0, total - Math.min(total, mustFix))
+    return {
+      total,
+      mustFix,
+      needCheck,
+      safe,
+      requiredMissing,
+      productUnmatched,
+      phoneInvalid,
+      csUnmatched,
+      attributionWarnings,
+      parserWarnings: parseWarnings.length,
+    }
+  }, [adapted, parseWarnings.length])
+
   const channelLabel = useMemo(() => {
     const c = channels.find((c) => String(c.id) === channelId)
     if (!c) return '—'
@@ -337,6 +363,8 @@ export default function WaPastePage() {
             </div>
           </div>
 
+          <IssueSummary stats={issueStats} />
+
           {parseWarnings.length > 0 && (
             <details className="text-xs rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
               <summary className="cursor-pointer px-3 py-2 font-semibold flex items-center gap-1.5">
@@ -472,6 +500,59 @@ function Stat({
     <div className={`p-3 rounded border ${colorMap[color]}`}>
       <div className="text-xl font-bold">{value}</div>
       <div className="text-[10px] text-muted-foreground">{label}</div>
+    </div>
+  )
+}
+
+
+function IssueSummary({ stats }: { stats: {
+  total: number
+  mustFix: number
+  needCheck: number
+  safe: number
+  requiredMissing: number
+  productUnmatched: number
+  phoneInvalid: number
+  csUnmatched: number
+  attributionWarnings: number
+  parserWarnings: number
+} }) {
+  if (stats.total === 0) return null
+  return (
+    <Card>
+      <CardContent className="pt-3 pb-3 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-xs font-semibold">Ringkasan Cek Admin</div>
+          <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-300">Wajib Fix: {stats.mustFix}</Badge>
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300">Perlu Dicek: {stats.needCheck}</Badge>
+          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Aman Diproses: {stats.safe}</Badge>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+          <IssueLine label="Field wajib kosong" value={stats.requiredMissing} tone={stats.requiredMissing > 0 ? 'red' : 'emerald'} />
+          <IssueLine label="Produk belum match master" value={stats.productUnmatched} tone={stats.productUnmatched > 0 ? 'red' : 'emerald'} />
+          <IssueLine label="HP invalid/kosong" value={stats.phoneInvalid} tone={stats.phoneInvalid > 0 ? 'red' : 'emerald'} />
+          <IssueLine label="CS belum match" value={stats.csUnmatched} tone={stats.csUnmatched > 0 ? 'amber' : 'emerald'} />
+          <IssueLine label="Atribusi perlu dicek" value={stats.attributionWarnings} tone={stats.attributionWarnings > 0 ? 'amber' : 'emerald'} />
+          <IssueLine label="Parser warning" value={stats.parserWarnings} tone={stats.parserWarnings > 0 ? 'amber' : 'emerald'} />
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Tidak mengubah parser atau cara submit — ini cuma ringkasan baca masalah sebelum admin klik Submit Order.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function IssueLine({ label, value, tone }: { label: string; value: number; tone: 'emerald' | 'amber' | 'red' }) {
+  const toneClass = tone === 'red'
+    ? 'text-red-700 dark:text-red-300'
+    : tone === 'amber'
+      ? 'text-amber-700 dark:text-amber-300'
+      : 'text-emerald-700 dark:text-emerald-300'
+  return (
+    <div className="flex items-center justify-between rounded border px-2 py-1 bg-muted/20">
+      <span>{label}</span>
+      <span className={`font-semibold tabular-nums ${toneClass}`}>{value}</span>
     </div>
   )
 }

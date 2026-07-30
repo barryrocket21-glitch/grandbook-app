@@ -21,6 +21,8 @@ const requiredLabels = [
   'Cashflow SPX',
   'Aturan Fee Tim',
   'Distribusi Lead/CS',
+  'Laporan CS / Input Lead',
+  'Performa CS / Closing Rate',
   'Finance Audit Pack',
   'Kontrak Ekspedisi',
   'Wilayah & Coverage',
@@ -34,6 +36,8 @@ const requiredRoutes = [
   '/commissions/manage',
   '/settings/commission-rules',
   '/marketing/distribusi',
+  '/cs-report',
+  '/cs-ringkasan',
   '/orders/pembukuan',
   '/settings/master-kurir',
 ]

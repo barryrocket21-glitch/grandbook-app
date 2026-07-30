@@ -211,6 +211,19 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    // Laporan CS — jangan disembunyikan: lead harian CS adalah input utama
+    // closing rate CS = closing/order CS ÷ lead_reported. Ini dipisah dari
+    // Gajian CS supaya owner/admin tetap bisa cek performa, dan CS tetap bisa input lead.
+    title: 'Laporan CS',
+    href: '/cs-ringkasan',
+    icon: UserRound,
+    roles: ['owner', 'admin', 'cs'],
+    children: [
+      { title: 'Performa CS / Closing Rate', href: '/cs-ringkasan', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Laporan CS / Input Lead', href: '/cs-report', roles: ['owner', 'admin', 'cs'] },
+    ],
+  },
+  {
     // Pembukuan & Finance Check — ledger, P&L, export audit/crosscheck Excel.
     title: 'Pembukuan & Finance Check',
     href: '/orders/pembukuan',

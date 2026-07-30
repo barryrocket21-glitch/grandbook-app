@@ -8,7 +8,6 @@ import {
   Scale,
   UserRound,
   LineChart,
-  Users,
 } from 'lucide-react'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
@@ -113,128 +112,140 @@ export interface NavChild {
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    title: 'Dashboard',
+    // Dashboard Owner — control room Barry: order hari ini, profit estimasi vs real,
+    // COD belum cair, problem order, campaign/produk/CS performance.
+    title: 'Dashboard Owner',
     href: '/dashboard',
     icon: LayoutDashboard,
     roles: ['owner', 'admin'],
   },
   {
-    // Order — pipeline utama. Submenu urut alur kerja:
-    // 3 cara input → numpuk di Antrian Kerja → Export → pindah ke Arsip.
-    title: 'Order',
-    href: '/orders',
+    // Input Order — semua cara masuk order/admin validation digabung sebagai 1 workflow.
+    title: 'Input Order',
+    href: '/orders/new',
     icon: ShoppingCart,
-    roles: ['owner', 'admin', 'cs', 'akunting'],
+    roles: ['owner', 'admin', 'cs'],
     children: [
-      { title: 'Pembukuan (Satu Tampilan)', href: '/orders/pembukuan', roles: ['owner', 'admin', 'cs', 'akunting'] },
-      // Input Order digabung jadi 1 menu — di halaman ada tab (Ketik Manual /
-      // Upload CSV / Tempel WA). Sebelumnya 3 menu kepisah.
       { title: 'Input Order', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Sync Status Mengantar', href: '/import-mengantar', badge: 'BARU', roles: ['owner', 'admin'] },
-      // Kirim Order — 1 menu, tab di dalam: Antrian Kerja → Export → Post-Export
-      // (alur kirim berurutan). Sebelumnya 3 menu kepisah.
-      { title: 'Kirim Order', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Sync Status SPX', href: '/reconciliation/spx-status', roles: ['owner', 'admin'] },
-      // Inbox (benerin data nyangkut) masuk grup Order — masih bagian pipeline.
-      // Sub-antrian jadi tab di dalam halaman (inbox/layout.tsx). 'Arsip' dibuang
-      // (Pembukuan udah superset). Halaman lama tetap routable.
-      { title: 'Inbox', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
+      { title: 'Tempel Laporan WA', href: '/orders/wa-paste', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Upload Order', href: '/orders/bulk-upload', roles: ['owner', 'admin'] },
+      { title: 'Antrian Validasi', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
     ],
   },
   {
-    // Pelanggan — gabung Daftar Pelanggan (blacklist/VIP) + Follow Up (CRM).
-    title: 'Pelanggan',
-    href: '/customers',
+    // Order Problem / Rescue — order masih bisa diselamatkan: buyer unreachable,
+    // alamat/no HP, resi/status nyangkut, atribusi kosong, dll.
+    title: 'Order Problem / Rescue',
+    href: '/crm',
     icon: UserRound,
-    roles: ['owner', 'admin', 'akunting', 'cs'],
+    roles: ['owner', 'admin', 'cs'],
     children: [
-      { title: 'Daftar Pelanggan', href: '/customers', roles: ['owner', 'admin', 'akunting'] },
-      { title: 'Follow Up', href: '/crm', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Rescue Order', href: '/crm', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Antrian Masalah', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
+      { title: 'Atribusi Kosong', href: '/inbox/atribusi-required', roles: ['owner', 'admin'] },
+      { title: 'Resi Nyangkut', href: '/inbox/unmatched-resi', roles: ['owner', 'admin'] },
+      { title: 'Status Asing', href: '/inbox/unmapped-statuses', roles: ['owner', 'admin'] },
+      { title: 'Alamat Bermasalah', href: '/inbox/address-review', roles: ['owner', 'admin'] },
+      { title: 'No HP Bermasalah', href: '/inbox/phone-review', roles: ['owner', 'admin'] },
     ],
   },
   {
-    // Keuangan — gabungan Reconciliation + Biaya Operasional.
-    title: 'Keuangan',
-    href: '/financial-position',
+    // Pengiriman & Rekonsiliasi — kirim order, export, sync status ekspedisi,
+    // preview matched/unmatched/ambiguous, apply status.
+    title: 'Pengiriman & Rekonsiliasi',
+    href: '/orders/draft',
+    icon: ShoppingCart,
+    roles: ['owner', 'admin', 'cs'],
+    children: [
+      { title: 'Antrian Kirim', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Export Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
+      { title: 'Setelah Export', href: '/orders/post-export', roles: ['owner', 'admin'] },
+      { title: 'Sync Mengantar/JNE', href: '/import-mengantar', badge: 'BARU', roles: ['owner', 'admin'] },
+      { title: 'Sync SPX', href: '/reconciliation/spx-status', roles: ['owner', 'admin'] },
+      { title: 'Rekonsiliasi Status', href: '/reconciliation/ekspedisi', roles: ['owner', 'admin'] },
+      { title: 'Upload File Status', href: '/reconciliation/upload', roles: ['owner', 'admin'] },
+      { title: 'Export File Ekspedisi', href: '/export-rekonsiliasi', roles: ['owner', 'admin'] },
+    ],
+  },
+  {
+    // COD Cair — fokus uang real: payout SPX, COD belum cair, cash-in, selisih ongkir.
+    title: 'COD Cair',
+    href: '/reconciliation/spx-cashflow',
     icon: Scale,
     roles: ['owner', 'admin', 'akunting'],
     children: [
-      { title: 'Posisi Keuangan', href: '/financial-position' },
-      { title: 'Laporan Laba Rugi', href: '/laba-rugi', badge: 'BARU' },
-      // Rekonsiliasi jadi 1 hub — tab di dalam: Ekspedisi / Sync Status SPX /
-      // Cashflow SPX (lihat reconciliation/layout.tsx).
-      { title: 'Rekonsiliasi', href: '/reconciliation/ekspedisi' },
-      { title: 'Export Rekonsiliasi', href: '/export-rekonsiliasi', badge: 'BARU' },
-      { title: 'Selisih Ongkir', href: '/shipping-diff', roles: ['owner', 'admin'] },
-      { title: 'Biaya Operasional', href: '/expenses' },
-      // 'Cross-check Platform Iklan' (/reconciliation) dibuang dari nav (peninggalan lama). Routable.
+      { title: 'Cashflow SPX', href: '/reconciliation/spx-cashflow' },
+      { title: 'Payout SPX', href: '/reconciliation/spx' },
+      { title: 'Posisi Uang', href: '/financial-position' },
+      { title: 'Selisih Ongkir/COD', href: '/shipping-diff', roles: ['owner', 'admin'] },
     ],
   },
   {
-    title: 'Komisi',
-    href: '/commissions',
+    // Gajian CS — komisi/fee tim + aturan fee. Payroll cycle/carry-over akan
+    // dibangun di sprint lanjutan, route existing tetap dipakai dulu.
+    title: 'Gajian CS',
+    href: '/commissions/manage',
     icon: Coins,
     roles: ['owner', 'admin', 'cs', 'advertiser'],
     children: [
-      { title: 'Komisi Saya', href: '/commissions/my' },
-      { title: 'Kelola Komisi', href: '/commissions/manage', roles: ['owner', 'admin'] },
-      { title: 'Aturan Komisi', href: '/settings/commission-rules', roles: ['owner'] },
+      { title: 'Gajian CS', href: '/commissions/manage', roles: ['owner', 'admin'] },
+      { title: 'Aturan Fee Tim', href: '/settings/commission-rules', roles: ['owner'] },
+      { title: 'Komisi Saya', href: '/commissions/my', roles: ['cs', 'advertiser', 'owner', 'admin'] },
     ],
   },
   {
-    // Marketing — analisa strategis (owner/admin).
-    title: 'Marketing',
+    // Advertiser Cockpit — keputusan scale/watch/kill campaign/produk/platform.
+    title: 'Advertiser Cockpit',
     href: '/performa',
-    icon: LineChart,
-    roles: ['owner', 'admin'],
-    children: [
-      { title: 'Performa Bisnis', href: '/performa', badge: 'BARU' },
-      { title: 'Analytics', href: '/analytics' },
-      { title: 'Cross-check Iklan', href: '/reconciliation' },
-    ],
-  },
-  {
-    // Advertiser — workspace iklan (setup + input spend + performa iklan).
-    title: 'Advertiser',
-    href: '/marketing/ad-setup',
     icon: Megaphone,
     roles: ['owner', 'admin', 'advertiser'],
     children: [
-      { title: 'Setup Iklan', href: '/marketing/ad-setup' },
-      { title: 'Input Harian', href: '/ad-spend' },
-      // Performa Iklan digabung ke Performa Bisnis (tab Campaign). Advertiser
-      // diarahkan ke /performa; route lama /marketing/performa tetap reachable.
-      { title: 'Performa Campaign', href: '/performa', roles: ['advertiser'] },
-      { title: 'Margin Simulator', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
+      { title: 'Performa Campaign', href: '/performa' },
+      { title: 'Distribusi Lead/CS', href: '/marketing/distribusi' },
+      { title: 'Input Spend Iklan', href: '/ad-spend' },
+      { title: 'Setup Campaign', href: '/marketing/ad-setup' },
+      { title: 'Analytics Produk', href: '/analytics', roles: ['owner', 'admin'] },
+      { title: 'Performa Iklan Lama', href: '/marketing/performa', roles: ['owner', 'admin'] },
+      { title: 'Dashboard Advertiser', href: '/adv-dashboard', roles: ['advertiser', 'owner', 'admin'] },
+      { title: 'Simulasi Margin/CPR', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
     ],
   },
   {
-    // CS — workspace customer service (input lead/closing + performa).
-    title: 'CS',
-    href: '/cs-ringkasan',
-    icon: Users,
-    roles: ['owner', 'admin', 'cs'],
+    // Pembukuan & Finance Check — ledger, P&L, export audit/crosscheck Excel.
+    title: 'Pembukuan & Finance Check',
+    href: '/orders/pembukuan',
+    icon: LineChart,
+    roles: ['owner', 'admin', 'akunting'],
     children: [
-      // Ringkasan CS = gabungan Dashboard CS + Performa CS (liat semua CS + drill
-      // per produk). Dashboard/Performa lama tetap reachable via URL.
-      { title: 'Ringkasan CS', href: '/cs-ringkasan', badge: 'BARU' },
-      { title: 'Laporan Harian', href: '/cs-report' },
+      { title: 'Pembukuan Ledger', href: '/orders/pembukuan' },
+      { title: 'Laba Rugi', href: '/laba-rugi', badge: 'BARU' },
+      { title: 'Posisi Keuangan', href: '/financial-position' },
+      { title: 'Biaya/Gaji/OPEX', href: '/expenses' },
+      { title: 'Finance Audit Pack', href: '/reports/export', badge: 'NANTI' },
+      { title: 'Laporan Keuangan', href: '/reports/financial' },
+      { title: 'Laporan Iklan', href: '/reports/ads' },
     ],
   },
   {
-    // Pengaturan — gabung Master Data (produk/kurir/wilayah) + Sistem (users/audit/reset).
-    title: 'Pengaturan',
+    // Master Data — konfigurasi, bukan kerja harian.
+    title: 'Master Data',
     href: '/products',
     icon: Settings,
     roles: ['owner', 'admin', 'akunting'],
     children: [
       { title: 'Produk', href: '/products', roles: ['owner', 'admin', 'akunting'] },
-      { title: 'Stok / Inventory', href: '/inventory', roles: ['owner', 'admin'], badge: 'BARU' },
+      { title: 'Stok', href: '/inventory', roles: ['owner', 'admin'] },
       { title: 'Supplier', href: '/settings/suppliers', roles: ['owner', 'admin', 'akunting'] },
-      { title: 'Setup Kurir', href: '/settings/master-kurir', roles: ['owner', 'admin'] },
-      { title: 'Converter Profiles', href: '/settings/converter-profiles', roles: ['owner', 'admin'] },
-      { title: 'Master Wilayah', href: '/settings/wilayah', roles: ['owner', 'admin', 'akunting'] },
-      { title: 'Users & Roles', href: '/settings/users', roles: ['owner', 'admin'] },
+      { title: 'Kontrak Ekspedisi', href: '/settings/master-kurir', roles: ['owner', 'admin'] },
+      { title: 'Master Kurir', href: '/settings/couriers', roles: ['owner', 'admin'] },
+      { title: 'Channel/Aggregator', href: '/settings/courier-channels', roles: ['owner', 'admin'] },
+      { title: 'Rate Ekspedisi', href: '/settings/courier-rates', roles: ['owner', 'admin'] },
+      { title: 'Mapping Status Ekspedisi', href: '/settings/status-mapping', roles: ['owner', 'admin'] },
+      { title: 'Template Import/Export', href: '/settings/converter-profiles', roles: ['owner', 'admin'] },
+      { title: 'Wilayah & Coverage', href: '/settings/wilayah', roles: ['owner', 'admin', 'akunting'] },
+      { title: 'Tim CS', href: '/team/cs', roles: ['owner', 'admin'] },
+      { title: 'Tim Advertiser', href: '/team/advertisers', roles: ['owner', 'admin'] },
+      { title: 'Tim & Akses', href: '/settings/users', roles: ['owner', 'admin'] },
       { title: 'Audit Log', href: '/settings/audit-log', roles: ['owner', 'admin'] },
       { title: 'Reset Data', href: '/settings/reset-data', roles: ['owner'] },
     ],

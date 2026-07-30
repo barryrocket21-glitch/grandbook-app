@@ -118,14 +118,14 @@ export default function PerformaPage() {
     <Card className="max-w-md mx-auto mt-8"><CardContent className="pt-6 text-center space-y-2">
       <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
       <h2 className="text-lg font-semibold">Akses Dibatasi</h2>
-      <p className="text-sm text-muted-foreground">Performa Bisnis untuk owner, admin & advertiser.</p>
+      <p className="text-sm text-muted-foreground">Advertiser Cockpit untuk owner, admin & advertiser.</p>
     </CardContent></Card>
   )
 
   return (
     <div className="space-y-4">
-      <PageHeader icon={BarChart3} title="Performa Bisnis"
-        description="Keputusan berbasis data: campaign mana untung, CS mana perform, produk × platform terbaik. Winning = LABA BERSIH, bukan CPR termurah." />
+      <PageHeader icon={BarChart3} title="Advertiser Cockpit"
+        description="Scale, watch, atau matiin campaign berdasarkan produk, platform, CS, estimasi profit, dan profit real. Winning = profit real, bukan CPR termurah." />
 
       <Card><CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-md border p-0.5">
@@ -276,7 +276,7 @@ export default function PerformaPage() {
           )}
         </div>
       </div>
-      <p className="text-[11px] text-muted-foreground">Winning = <b>Laba Bersih</b> tertinggi (bukan CPR termurah). ROI = (Gross Profit − Iklan) ÷ Iklan. "tanpa platform" = order lama belum ber-kode atribusi.</p>
+      <p className="text-[11px] text-muted-foreground">Winning = <b>Laba Bersih</b> tertinggi (bukan CPR termurah). ROI = (Gross Profit − Iklan) ÷ Iklan. &quot;tanpa platform&quot; = order lama belum ber-kode atribusi.</p>
     </div>
   )
 }

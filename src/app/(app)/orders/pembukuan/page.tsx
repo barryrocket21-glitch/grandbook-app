@@ -149,8 +149,8 @@ export default function PembukuanPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader icon={BookOpen} title="Pembukuan (Satu Tampilan)"
-        description="Semua order dari draft sampai selesai — dalam satu ledger."
+      <PageHeader icon={BookOpen} title="Pembukuan Ledger"
+        description="Finance Check: semua order dari draft sampai selesai dalam satu ledger untuk audit/crosscheck estimasi profit vs profit real."
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => exportSheet('xlsx')} disabled={loading || displayed.length === 0}>

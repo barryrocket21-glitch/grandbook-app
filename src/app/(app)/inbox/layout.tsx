@@ -3,12 +3,12 @@
 import { PageTabs, type PageTab } from '@/components/ui/page-tabs'
 
 const TABS: PageTab[] = [
-  { label: 'Pending Review', href: '/inbox/pending-review' },
-  { label: 'Atribusi', href: '/inbox/atribusi-required' },
+  { label: 'Antrian Masalah', href: '/inbox/pending-review' },
+  { label: 'Atribusi Kosong', href: '/inbox/atribusi-required' },
   { label: 'Resi Nyangkut', href: '/inbox/unmatched-resi' },
   { label: 'Status Asing', href: '/inbox/unmapped-statuses' },
-  { label: 'Alamat', href: '/inbox/address-review' },
-  { label: 'No HP', href: '/inbox/phone-review' },
+  { label: 'Alamat Bermasalah', href: '/inbox/address-review' },
+  { label: 'No HP Bermasalah', href: '/inbox/phone-review' },
 ]
 
 export default function InboxLayout({ children }: { children: React.ReactNode }) {

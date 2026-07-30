@@ -68,7 +68,7 @@ export default function CrmPage() {
   if (!allowed) {
     return (
       <div className="space-y-4">
-        <PageHeader icon={Headset} title="Follow Up (CRM)" />
+        <PageHeader icon={Headset} title="Rescue Order" />
         <EmptyState icon={ShieldAlert} title="Akses Dibatasi" description="Hanya owner, admin & CS." />
       </div>
     )
@@ -76,8 +76,8 @@ export default function CrmPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader icon={Headset} title="Follow Up (CRM)"
-        description="Antrian order bermasalah. Hubungi pembeli (kasus Pembeli) atau ekspedisi (kasus Ekspedisi), catat hasilnya, lalu resolve." />
+      <PageHeader icon={Headset} title="Rescue Order"
+        description="Antrian order bermasalah yang masih bisa diselamatkan. Follow up pembeli/ekspedisi, catat hasilnya, lalu dorong supaya delivered, bukan retur." />
 
       <Card>
         <CardContent className="pt-4 pb-4 space-y-3">

@@ -180,9 +180,9 @@ export default function ReconSpxCashflowPage() {
   if (!canManage) {
     return (
       <div className="space-y-6">
-        <PageHeader icon={Wallet} title="SPX Cashflow Harian" />
+        <PageHeader icon={Wallet} title="COD Cair SPX" />
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
-          Hanya owner/admin/akunting yang bisa mengelola cashflow reconciliation.
+          Hanya owner/admin/akunting yang bisa mengelola COD cair + penarikan rekening.
         </CardContent></Card>
       </div>
     )
@@ -192,8 +192,8 @@ export default function ReconSpxCashflowPage() {
     <div className="space-y-6">
       <PageHeader
         icon={Wallet}
-        title="SPX Cashflow Harian"
-        description="Upload file Account Transaction List dari Shopee Seller Center → preview COD + penarikan → klik Apply untuk update payout + record withdrawals."
+        title="COD Cair SPX"
+        description="Upload file pencairan SPX / Account Transaction List → preview COD cair + penarikan rekening → Apply untuk update payout dan record withdrawals."
         actions={
           step !== 'upload' ? (
             <Button variant="outline" size="sm" onClick={reset} className="gap-1.5">

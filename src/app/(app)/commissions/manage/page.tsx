@@ -188,7 +188,7 @@ export default function ManageCommissionsPage() {
   if (!authLoading && !canManage) {
     return (
       <div className="space-y-6">
-        <PageHeader icon={Coins} title="Kelola Komisi" />
+        <PageHeader icon={Coins} title="Gajian CS" />
         <Card><CardContent className="p-6 text-sm text-muted-foreground">
           Hanya owner &amp; admin yang bisa kelola pencairan komisi.
           Untuk lihat komisi Anda sendiri, buka{' '}
@@ -212,8 +212,8 @@ export default function ManageCommissionsPage() {
     <div className="space-y-5">
       <PageHeader
         icon={Coins}
-        title="Kelola Komisi"
-        description="Komisi auto-follow status order. 1 klik per CS per gajian — tinggal pilih periode."
+        title="Gajian CS"
+        description="Gaji/fee tim berdasarkan order sukses terkirim. Order masih di jalan belum dibayar, dan Carry-over bulan lalu ikut kebaca saat akhirnya delivered."
         actions={
           <div className="flex items-center gap-2">
             <DateRangePicker value={range} onChange={setRange} />
@@ -221,7 +221,7 @@ export default function ManageCommissionsPage() {
               href="/settings/commission-rules"
               className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 text-sm transition-colors"
             >
-              <Settings className="w-3.5 h-3.5" />Aturan Komisi
+              <Settings className="w-3.5 h-3.5" />Aturan Fee Tim
             </Link>
           </div>
         }
@@ -231,8 +231,8 @@ export default function ManageCommissionsPage() {
       <div className="text-xs bg-zinc-500/5 border border-zinc-500/20 rounded-lg p-3 flex gap-2 items-start">
         <Info className="w-4 h-4 mt-0.5 shrink-0 text-zinc-600" />
         <div className="space-y-0.5 text-muted-foreground">
-          <div>Order <strong className="text-foreground">DITERIMA</strong> → komisi auto-EARNED (perlu dibayar). <strong className="text-foreground">RETUR/CANCEL/FAKE</strong> → auto-HANGUS. Order masih di jalan belum keitung.</div>
-          <div>Klik tombol <strong className="text-foreground">Bayar</strong> di baris CS untuk batch-tandai semua komisi belum dibayar di periode ini → "Sudah Dibayar."</div>
+          <div>Order <strong className="text-foreground">DITERIMA</strong> → fee auto-EARNED (perlu dibayar). <strong className="text-foreground">RETUR/CANCEL/FAKE</strong> → auto-HANGUS. Order masih di jalan belum dibayar.</div>
+          <div>Klik tombol <strong className="text-foreground">Bayar</strong> di baris CS untuk batch-tandai fee belum dibayar. Carry-over order bulan lalu yang baru delivered tetap ikut kebaca sebagai fee berjalan.</div>
         </div>
       </div>
 
@@ -268,7 +268,7 @@ export default function ManageCommissionsPage() {
                   <EmptyState
                     icon={Coins}
                     title="Belum ada komisi di periode ini"
-                    description="Komisi auto-terhitung saat order DITERIMA. Pastikan Aturan Komisi sudah di-setup di Aturan Komisi → atau cek status order."
+                    description="Fee auto-terhitung saat order DITERIMA. Pastikan Aturan Fee Tim sudah di-setup → atau cek status order/carry-over."
                   />
                 </TableCell></TableRow>
               ) : aggregates.map((agg) => (

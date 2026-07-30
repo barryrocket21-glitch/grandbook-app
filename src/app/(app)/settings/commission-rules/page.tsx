@@ -237,7 +237,7 @@ export default function CommissionRulesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-500"><ShieldOff className="size-5"/>Akses ditolak</CardTitle>
-            <CardDescription>Manage aturan komisi hanya untuk owner.</CardDescription>
+            <CardDescription>Aturan Fee Tim hanya bisa dikelola owner.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -247,10 +247,10 @@ export default function CommissionRulesPage() {
   return (
     <div className="p-4 md:p-6 space-y-5">
       <PageHeader
-        title="Aturan Komisi"
-        description="Setting komisi per role (CS / Advertiser) per produk. NULL produk = default catch-all."
+        title="Aturan Fee Tim"
+        description="Setting fee CS / Advertiser per user, produk, dan periode. Dipakai untuk gajian, komisi, dan rule khusus produk."
         icon={Coins}
-        actions={<Button onClick={openNewDialog}><Plus className="size-4 mr-2"/>Tambah Rule</Button>}
+        actions={<Button onClick={openNewDialog}><Plus className="size-4 mr-2"/>Tambah Aturan Fee</Button>}
       />
 
       <Card>
@@ -260,8 +260,8 @@ export default function CommissionRulesPage() {
           ) : sortedRules.length === 0 ? (
             <EmptyState
               icon={Coins}
-              title="Belum ada aturan komisi"
-              description="Tambah rule pertama. Tanpa rule, commission compute akan return 0 untuk semua role."
+              title="Belum ada aturan fee tim"
+              description="Tambah aturan fee pertama. Tanpa aturan, fee/komisi akan bernilai 0 untuk semua role."
             />
           ) : (
             <Table>
@@ -334,9 +334,9 @@ export default function CommissionRulesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{form.id ? 'Edit aturan komisi' : 'Tambah aturan komisi'}</DialogTitle>
+            <DialogTitle>{form.id ? 'Edit aturan fee tim' : 'Tambah aturan fee tim'}</DialogTitle>
             <DialogDescription>
-              Set rule komisi: pilih 1 / banyak produk sekaligus, atau "Semua Produk" sebagai catch-all default. Rule product-specific override default. Tipe NONE = role itu tidak dapat komisi untuk produk tsb.
+              Set aturan fee tim: pilih CS / Advertiser, user spesifik atau default, produk tertentu atau semua produk, lalu periode berlaku. Rule product-specific override default. Tipe NONE = role itu tidak dapat fee untuk produk tsb.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

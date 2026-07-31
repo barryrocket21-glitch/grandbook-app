@@ -16,6 +16,8 @@ import { canApproveOrders } from '@/lib/auth/permissions'
 
 const supabase = createClient()
 
+type RescuePriority = 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+
 interface SyncRow {
   ref: string
   tracking_no: string | null
@@ -24,6 +26,9 @@ interface SyncRow {
   return_fee: number | null
   delivered_at: string | null
   retur_reason: string | null
+  cod_amount: number | null
+  create_time: string | null
+  rescue_priority: RescuePriority
 }
 interface ParseResult { rows: SyncRow[]; total: number; withGb: number; noGb: number; fileName: string; fileSize: number }
 interface ApplyResult { matched: number; updated: number; skipped_no_ref: number; skipped_no_match: number }
@@ -48,6 +53,22 @@ function parseDate(v: unknown): string | null {
   return Number.isNaN(dt.getTime()) ? null : dt.toISOString()
 }
 
+function rescuePriority(status: string | null, reason: string | null): RescuePriority {
+  const s = String(status || '').trim().toLowerCase()
+  const hasReason = !!String(reason || '').trim()
+  if (hasReason || ['on hold', 'pending pickup', 'returning', 'damaged', 'lost'].includes(s)) return 'HIGH'
+  if (['in transit', 'delivering'].includes(s)) return 'MEDIUM'
+  if (['cancelled', 'returned'].includes(s)) return 'LOW'
+  return 'NONE'
+}
+
+function rescueLabel(priority: RescuePriority) {
+  if (priority === 'HIGH') return 'Prioritas Tinggi'
+  if (priority === 'MEDIUM') return 'Monitor'
+  if (priority === 'LOW') return 'Sudah final/low'
+  return 'Normal'
+}
+
 function parseSpxFile(data: ArrayBuffer, fileName: string, fileSize: number): ParseResult {
   const wb = XLSX.read(data, { type: 'array' })
   const ws = wb.Sheets[wb.SheetNames[0]]
@@ -68,6 +89,8 @@ function parseSpxFile(data: ArrayBuffer, fileName: string, fileSize: number): Pa
   const iDeliv = col(/^delivered time$/i)
   const iFail = col(/^delivery failed reason$/i)
   const iHold = col(/^delivery onhold reason$/i)
+  const iCod = col(/^COD Amount$/i)
+  const iCreate = col(/^Create Time$/i)
 
   const rows: SyncRow[] = []
   let withGb = 0, noGb = 0
@@ -75,19 +98,76 @@ function parseSpxFile(data: ArrayBuffer, fileName: string, fileSize: number): Pa
     const r = aoa[i] as unknown[]
     if (!r || r.every((c) => c == null || String(c).trim() === '')) continue
     const ref = String(r[iRef] ?? '').trim()
+    const status = iStat >= 0 ? (String(r[iStat] ?? '').trim() || null) : null
+    const reason = ((iFail >= 0 ? String(r[iFail] ?? '').trim() : '') || (iHold >= 0 ? String(r[iHold] ?? '').trim() : '')) || null
     const isGb = ref.startsWith('GB-')
     if (isGb) withGb++; else noGb++
     rows.push({
       ref,
       tracking_no: iTrk >= 0 ? (String(r[iTrk] ?? '').trim() || null) : null,
-      tracking_status: iStat >= 0 ? (String(r[iStat] ?? '').trim() || null) : null,
+      tracking_status: status,
       actual_fee: iActual >= 0 ? num(r[iActual]) : null,
       return_fee: iReturn >= 0 ? num(r[iReturn]) : null,
       delivered_at: iDeliv >= 0 ? parseDate(r[iDeliv]) : null,
-      retur_reason: ((iFail >= 0 ? String(r[iFail] ?? '').trim() : '') || (iHold >= 0 ? String(r[iHold] ?? '').trim() : '')) || null,
+      retur_reason: reason,
+      cod_amount: iCod >= 0 ? num(r[iCod]) : null,
+      create_time: iCreate >= 0 ? parseDate(r[iCreate]) : null,
+      rescue_priority: rescuePriority(status, reason),
     })
   }
   return { rows, total: rows.length, withGb, noGb, fileName, fileSize }
+}
+
+function RescueQueuePreview({ rows }: { rows: SyncRow[] }) {
+  const rescueRows = rows
+    .filter((r) => r.ref.startsWith('GB-') && r.rescue_priority !== 'NONE')
+    .sort((a, b) => {
+      const score = (p: RescuePriority) => p === 'HIGH' ? 0 : p === 'MEDIUM' ? 1 : 2
+      return score(a.rescue_priority) - score(b.rescue_priority)
+    })
+  const high = rescueRows.filter((r) => r.rescue_priority === 'HIGH')
+  const medium = rescueRows.filter((r) => r.rescue_priority === 'MEDIUM')
+  const potentialCod = rescueRows.reduce((sum, r) => sum + (r.cod_amount || 0), 0)
+
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600" />
+          <div className="text-sm font-semibold">Rescue Queue Preview</div>
+          <Badge variant="outline" className="bg-red-500/10 text-red-600">Prioritas Tinggi: {high.length}</Badge>
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-600">Monitor: {medium.length}</Badge>
+          <Badge variant="outline">potensi COD diselamatkan: {potentialCod.toLocaleString('id-ID')}</Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Follow-up admin/CS fokus ke On Hold, Pending Pickup, Returning, Delivery failed Reason, Damaged/Lost, lalu monitor In Transit/Delivering yang lama. Preview ini cuma baca file; Apply Sync tetap butuh klik manual.
+        </p>
+        {rescueRows.length === 0 ? (
+          <div className="text-xs text-muted-foreground rounded border p-3">Tidak ada kandidat rescue dari baris ber-GB- di file ini.</div>
+        ) : (
+          <div className="border rounded-md overflow-x-auto max-h-64 overflow-y-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-card"><tr className="text-left text-muted-foreground">
+                <th className="p-2">Prioritas</th><th className="p-2">GB Order</th><th className="p-2">Resi</th><th className="p-2">Status SPX</th><th className="p-2">Alasan</th><th className="p-2 text-right">COD</th>
+              </tr></thead>
+              <tbody>
+                {rescueRows.slice(0, 20).map((r, i) => (
+                  <tr key={`${r.ref}-${i}`}>
+                    <td className="p-2"><Badge variant="outline" className={r.rescue_priority === 'HIGH' ? 'bg-red-500/10 text-red-600' : 'bg-amber-500/10 text-amber-600'}>{rescueLabel(r.rescue_priority)}</Badge></td>
+                    <td className="p-2 font-mono">{r.ref}</td>
+                    <td className="p-2 font-mono">{r.tracking_no || '—'}</td>
+                    <td className="p-2">{r.tracking_status || '—'}</td>
+                    <td className="p-2 max-w-[260px] truncate">{r.retur_reason || '—'}</td>
+                    <td className="p-2 text-right tabular-nums">{r.cod_amount != null ? r.cod_amount.toLocaleString('id-ID') : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function SpxStatusSyncPage() {
@@ -185,6 +265,7 @@ export default function SpxStatusSyncPage() {
                 <div className="text-xs text-muted-foreground">tanpa GB- (di-SKIP total)</div>
               </div>
             </div>
+            <RescueQueuePreview rows={parsed.rows} />
             {parsed.withGb === 0 && (
               <div className="text-xs rounded bg-amber-500/10 border border-amber-500/20 p-2.5 text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> Gak ada baris ber-GB- — semua bakal di-skip (gak ada yang ke-update). Ini normal buat file lama/legacy.

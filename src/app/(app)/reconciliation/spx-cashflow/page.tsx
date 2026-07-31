@@ -98,11 +98,12 @@ export default function ReconSpxCashflowPage() {
     const wTotal = previewResult.withdrawal_count
     const codTotal = previewResult.cod_matched_count + previewResult.cod_variance_count
     if (!confirm(
-      `KONFIRMASI: apply batch #${previewResult.batch_id}?\n\n` +
+      `KONFIRMASI OWNER: apply batch #${previewResult.batch_id}?\n\n` +
       `${codTotal} order COD akan ke-update (payout_amount + cod_settled_at).\n` +
+      `Komisi EARNED untuk order yang cair akan ikut ditandai PAID.\n` +
       `${wTotal} penarikan akan masuk ke bank_withdrawals.\n` +
       `${previewResult.cod_unmatched_count} unmatched akan masuk inbox_unmatched_resi.\n\n` +
-      `Lanjutkan?`
+      `Ini titik approval terakhir. Lanjutkan?`
     )) return
 
     setStep('applying')
@@ -115,6 +116,7 @@ export default function ReconSpxCashflowPage() {
       toast.success(
         `Applied! ${result?.cod_updated ?? 0} COD updated, ` +
         `${result?.withdrawals_created ?? 0} penarikan inserted, ` +
+        `${result?.commissions_paid ?? 0} komisi PAID, ` +
         `${result?.unmatched_to_inbox ?? 0} unmatched logged`
       )
     } catch (err) {
@@ -280,9 +282,10 @@ function OwnerSafetyNote() {
   return (
     <Card>
       <CardContent className="pt-3 pb-3 text-xs text-muted-foreground space-y-1.5">
-        <div className="font-semibold text-foreground">Kontrol owner sebelum COD dianggap cair</div>
-        <div>Upload file SPX cuma bikin <strong>Preview</strong>. Data baru berubah setelah lu klik <strong>Apply</strong> dan konfirmasi manual.</div>
-        <div>Tidak mengubah parser/apply logic — ini hanya panduan supaya matched, variance, unmatched, dan penarikan rekening gampang dibaca.</div>
+        <div className="font-semibold text-foreground">Owner approval checkpoint sebelum COD dianggap cair</div>
+        <div>Upload file SPX cuma bikin <strong>Preview</strong>. Tidak ada data live yang berubah sebelum <strong>Apply</strong> dikonfirmasi manual.</div>
+        <div>Guard apply sudah diperketat: hitung cuma row yang benar-benar update/insert, match resi/tracking_no, dan Komisi EARNED ikut ditandai PAID setelah COD cair.</div>
+        <div className="text-muted-foreground/80">Benchmark sample Barry: Account Transaction List matched 99,92% ke order GrandBook, jadi halaman ini difokuskan buat approval owner + review 2 unmatched.</div>
       </CardContent>
     </Card>
   )
@@ -304,7 +307,7 @@ function ApplyReadinessSummary({ result }: { result: CashflowPreviewResult }) {
           <Badge variant="outline" className="bg-zinc-500/10 text-zinc-700 dark:text-zinc-300">Penarikan rekening: {withdrawals}</Badge>
         </div>
         <p className="text-[10px] text-muted-foreground">
-          Apply tetap harus konfirmasi manual. Variance berarti order sudah punya payout lama tapi nominal SPX beda; unmatched tidak mengubah order, hanya dicatat ke inbox_unmatched_resi.
+          Apply tetap harus konfirmasi manual. Variance berarti order sudah punya payout lama tapi nominal SPX beda; unmatched tidak mengubah order, hanya dicatat ke inbox_unmatched_resi. Setelah apply, komisi EARNED pada order yang COD-nya cair ikut menjadi PAID supaya payroll tanggal 23 bisa ditarik dari data final.
         </p>
       </CardContent>
     </Card>
@@ -427,11 +430,12 @@ function DoneSection({
           <h3 className="text-lg font-bold">Cashflow reconciliation berhasil diterapkan</h3>
         </div>
         <div className="text-xs text-muted-foreground">
-          Batch #{apply.batch_id} APPLIED · {apply.cod_updated} COD updated, {apply.withdrawals_created} penarikan inserted, {apply.unmatched_to_inbox} unmatched ke inbox.
+          Batch #{apply.batch_id} APPLIED · {apply.cod_updated} COD updated, {apply.withdrawals_created} penarikan inserted, {apply.commissions_paid ?? 0} komisi PAID, {apply.unmatched_to_inbox} unmatched ke inbox.
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
           <StatCard label="COD updated" value={apply.cod_updated} tone="emerald" />
           <StatCard label="Penarikan" value={apply.withdrawals_created} tone="zinc" />
+          <StatCard label="Komisi PAID" value={apply.commissions_paid ?? 0} tone="emerald" />
           <StatCard label="Unmatched logged" value={apply.unmatched_to_inbox} tone="red" />
           <StatCard label="Total COD" value={formatRupiah(Number(preview.total_cod_amount))} tone="zinc" />
         </div>

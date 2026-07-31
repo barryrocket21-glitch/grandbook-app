@@ -10,7 +10,8 @@ const mustHave = [
   'Yang masuk Antrian Masalah',
   'Penarikan rekening',
   'Apply tetap harus konfirmasi manual',
-  'Tidak mengubah parser/apply logic',
+  'Tidak ada data live yang berubah sebelum',
+  'Komisi EARNED ikut ditandai PAID',
 ]
 
 const mustKeep = [

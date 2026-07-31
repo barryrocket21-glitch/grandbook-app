@@ -894,6 +894,7 @@ export interface CashflowApplyResult {
   cod_updated: number
   withdrawals_created: number
   unmatched_to_inbox: number
+  commissions_paid: number
 }
 
 export interface CashflowSummary {

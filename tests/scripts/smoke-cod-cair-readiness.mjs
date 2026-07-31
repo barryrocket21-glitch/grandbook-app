@@ -10,7 +10,7 @@ page.on('console', msg => { if (msg.type() === 'error') errors.push(`console: ${
 await page.goto(`${baseURL}/reconciliation/spx-cashflow`, { waitUntil: 'domcontentloaded', timeout: 60000 })
 await page.waitForTimeout(3000)
 const body = await page.locator('body').innerText({ timeout: 10000 })
-const required = ['COD Cair SPX', 'Kontrol owner sebelum COD dianggap cair', 'Upload File Account Transaction List', 'Tidak mengubah parser/apply logic']
+const required = ['COD Cair SPX', 'Owner approval checkpoint sebelum COD dianggap cair', 'Upload File Account Transaction List', 'Tidak ada data live yang berubah sebelum Apply dikonfirmasi manual']
 const missing = required.filter(t => !body.includes(t))
 await page.screenshot({ path: '/tmp/grandbook-cod-cair-readiness.png', fullPage: true })
 await browser.close()

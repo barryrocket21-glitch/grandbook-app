@@ -9,12 +9,13 @@ import { StatCard } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/ui/page-header'
 import {
   Wallet, Upload, Loader2, CheckCircle2, AlertTriangle,
-  XCircle, RotateCcw, ArrowRight, Banknote,
+  XCircle, RotateCcw, ArrowRight, Banknote, RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { parseAccountTransactionXlsx } from '@/lib/recon/spx-cashflow-parser'
@@ -39,6 +40,11 @@ export default function ReconSpxCashflowPage() {
   const [step, setStep] = useState<StepKey>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [syncingApi, setSyncingApi] = useState(false)
+  const [apiFrom, setApiFrom] = useState(() => new Date().toISOString().slice(0, 10))
+  const [apiTo, setApiTo] = useState(() => new Date().toISOString().slice(0, 10))
+  const [apiBizAccountId, setApiBizAccountId] = useState('6182855474')
+  const [apiCookie, setApiCookie] = useState('')
   const [previewResult, setPreviewResult] = useState<CashflowPreviewResult | null>(null)
   const [applyResult, setApplyResult] = useState<CashflowApplyResult | null>(null)
 
@@ -93,6 +99,41 @@ export default function ReconSpxCashflowPage() {
     }
   }, [])
 
+  const handleApiSync = async () => {
+    if (!apiFrom || !apiTo) {
+      toast.error('Tanggal dari/sampai wajib diisi')
+      return
+    }
+    setSyncingApi(true)
+    try {
+      const res = await fetch('/api/reconciliation/spx-cashflow/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: apiFrom,
+          to: apiTo,
+          bizAccountId: apiBizAccountId.trim(),
+          spxCookie: apiCookie.trim() || undefined,
+        }),
+      })
+      const payload = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(payload?.hint ? `${payload.error}. ${payload.hint}` : payload?.error || `HTTP ${res.status}`)
+
+      setPreviewResult(payload.preview as CashflowPreviewResult)
+      setStep('preview')
+      setApiCookie('') // jangan simpan cookie SPX di state lebih lama dari perlu
+      toast.success(
+        `Preview API siap: ${payload.normalized_rows ?? 0} row SPX ` +
+        `(${payload.preview?.cod_matched_count ?? 0} match, ${payload.preview?.cod_variance_count ?? 0} variance, ` +
+        `${payload.preview?.cod_unmatched_count ?? 0} unmatch)`
+      )
+    } catch (err) {
+      toast.error('Gagal sync SPX API', { description: getErrorMessage(err) })
+    } finally {
+      setSyncingApi(false)
+    }
+  }
+
   const handleApply = async () => {
     if (!previewResult) return
     const wTotal = previewResult.withdrawal_count
@@ -140,6 +181,7 @@ export default function ReconSpxCashflowPage() {
   const reset = () => {
     setStep('upload')
     setFile(null)
+    setApiCookie('')
     setPreviewResult(null)
     setApplyResult(null)
   }
@@ -206,49 +248,29 @@ export default function ReconSpxCashflowPage() {
       {step === 'upload' && <OwnerSafetyNote />}
 
       {step === 'upload' && (
-        <Card>
-          <CardContent className="pt-4 pb-6 space-y-4">
-            <div className="text-sm space-y-1">
-              <div className="font-medium">Upload File Account Transaction List</div>
-              <div className="text-xs text-muted-foreground">
-                Format: .xlsx dari SPX Seller Center → Saldo → Riwayat Transaksi → Export. Header di row 1.
-              </div>
-            </div>
-            <label className="block">
-              <div className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors
-                ${uploading ? 'bg-zinc-500/5 border-zinc-500/40' : 'border-border hover:bg-muted/30 cursor-pointer'}`}>
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-zinc-500" />
-                    <div className="text-sm font-medium mt-2">Memproses {file?.name}...</div>
-                    <div className="text-xs text-muted-foreground mt-1">Parsing XLSX + categorize COD/withdrawals/duplicates</div>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-8 h-8 text-muted-foreground mx-auto" />
-                    <div className="text-sm font-medium mt-2">Klik untuk pilih file</div>
-                    <div className="text-xs text-muted-foreground mt-1">atau drag &amp; drop .xlsx</div>
-                  </>
-                )}
-                <Input
-                  type="file"
-                  accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                  onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
-                  disabled={uploading}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-              </div>
-            </label>
-            <div className="text-xs text-muted-foreground space-y-0.5">
-              <div className="font-medium text-foreground">2 tipe transaksi yang di-process:</div>
-              <div>• <strong>COD</strong> → match ke <code>orders.resi</code> via Tracking Number, set <code>payout_amount</code> + <code>cod_settled_at</code></div>
-              <div>• <strong>Penarikan</strong> → insert ke <code>bank_withdrawals</code> dengan dedupe via <code>external_id</code> unique index</div>
-              <div className="text-muted-foreground/80 italic mt-1">
-                Penarikan dengan status &ne; Berhasil (Ditolak/Pending) di-skip oleh parser.
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="manual" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="manual">Sync Manual / Upload XLSX</TabsTrigger>
+            <TabsTrigger value="api">Auto Sync SPX API Beta</TabsTrigger>
+          </TabsList>
+          <TabsContent value="manual">
+            <ManualUploadCard file={file} uploading={uploading} onFile={handleFile} />
+          </TabsContent>
+          <TabsContent value="api">
+            <AutoSyncCard
+              from={apiFrom}
+              to={apiTo}
+              bizAccountId={apiBizAccountId}
+              cookie={apiCookie}
+              syncing={syncingApi}
+              onFrom={setApiFrom}
+              onTo={setApiTo}
+              onBizAccountId={setApiBizAccountId}
+              onCookie={setApiCookie}
+              onSync={handleApiSync}
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       {step === 'preview' && previewResult && (
@@ -286,6 +308,139 @@ function OwnerSafetyNote() {
         <div>Upload file SPX cuma bikin <strong>Preview</strong>. Tidak ada data live yang berubah sebelum <strong>Apply</strong> dikonfirmasi manual.</div>
         <div>Guard apply sudah diperketat: hitung cuma row yang benar-benar update/insert, match resi/tracking_no, dan Komisi EARNED ikut ditandai PAID setelah COD cair.</div>
         <div className="text-muted-foreground/80">Benchmark sample Barry: Account Transaction List matched 99,92% ke order GrandBook, jadi halaman ini difokuskan buat approval owner + review 2 unmatched.</div>
+      </CardContent>
+    </Card>
+  )
+}
+
+type ManualUploadCardProps = {
+  file: File | null
+  uploading: boolean
+  onFile: (file: File | null) => void
+}
+
+function ManualUploadCard({ file, uploading, onFile }: ManualUploadCardProps) {
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-6 space-y-4">
+        <div className="text-sm space-y-1">
+          <div className="font-medium">Upload File Account Transaction List</div>
+          <div className="text-xs text-muted-foreground">
+            Format: .xlsx dari SPX Seller Center → Saldo → Riwayat Transaksi → Export. Header di row 1.
+          </div>
+        </div>
+        <label className="block">
+          <div className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors
+            ${uploading ? 'bg-zinc-500/5 border-zinc-500/40' : 'border-border hover:bg-muted/30 cursor-pointer'}`}>
+            {uploading ? (
+              <>
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-zinc-500" />
+                <div className="text-sm font-medium mt-2">Memproses {file?.name}...</div>
+                <div className="text-xs text-muted-foreground mt-1">Parsing XLSX + categorize COD/withdrawals/duplicates</div>
+              </>
+            ) : (
+              <>
+                <Upload className="w-8 h-8 text-muted-foreground mx-auto" />
+                <div className="text-sm font-medium mt-2">Klik untuk pilih file</div>
+                <div className="text-xs text-muted-foreground mt-1">atau drag &amp; drop .xlsx</div>
+              </>
+            )}
+            <Input
+              type="file"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+              disabled={uploading}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+            />
+          </div>
+        </label>
+        <div className="text-xs text-muted-foreground space-y-0.5">
+          <div className="font-medium text-foreground">Manual sync tetap aktif:</div>
+          <div>• <strong>COD</strong> → match ke <code>orders.resi</code> / <code>orders.tracking_no</code>, set <code>payout_amount</code> + <code>cod_settled_at</code></div>
+          <div>• <strong>Penarikan</strong> → insert ke <code>bank_withdrawals</code> dengan dedupe via <code>external_id</code> unique index</div>
+          <div className="text-muted-foreground/80 italic mt-1">
+            Ini fallback utama kalau SPX API expired/OTP/error. Tidak dihapus.
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+type AutoSyncCardProps = {
+  from: string
+  to: string
+  bizAccountId: string
+  cookie: string
+  syncing: boolean
+  onFrom: (value: string) => void
+  onTo: (value: string) => void
+  onBizAccountId: (value: string) => void
+  onCookie: (value: string) => void
+  onSync: () => void
+}
+
+function AutoSyncCard({
+  from,
+  to,
+  bizAccountId,
+  cookie,
+  syncing,
+  onFrom,
+  onTo,
+  onBizAccountId,
+  onCookie,
+  onSync,
+}: AutoSyncCardProps) {
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="rounded-full bg-blue-500/10 p-2 text-blue-600 dark:text-blue-300">
+            <RefreshCw className="w-4 h-4" />
+          </div>
+          <div className="text-sm space-y-1">
+            <div className="font-medium">Auto Sync dari SPX API Beta</div>
+            <div className="text-xs text-muted-foreground">
+              Ambil Transaction History langsung dari SPX, lalu masuk ke preview yang sama dengan upload manual. Tidak auto-apply.
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label className="text-xs space-y-1">
+            <span className="font-medium">Dari tanggal</span>
+            <Input type="date" value={from} onChange={(e) => onFrom(e.target.value)} disabled={syncing} />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="font-medium">Sampai tanggal</span>
+            <Input type="date" value={to} onChange={(e) => onTo(e.target.value)} disabled={syncing} />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="font-medium">SPX Biz Account ID</span>
+            <Input value={bizAccountId} onChange={(e) => onBizAccountId(e.target.value)} disabled={syncing} placeholder="6182855474" />
+          </label>
+        </div>
+
+        <label className="text-xs space-y-1 block">
+          <span className="font-medium">SPX session cookie sementara / kosongkan kalau env SPX_ADMIN_COOKIE sudah diset</span>
+          <Textarea
+            value={cookie}
+            onChange={(e) => onCookie(e.target.value)}
+            disabled={syncing}
+            placeholder="Paste cookie dari sesi SPX login. GrandBook tidak menyimpan cookie ini."
+            className="min-h-24 font-mono text-[11px]"
+          />
+        </label>
+
+        <div className="rounded-lg border bg-amber-500/5 border-amber-500/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+          Auto Sync hanya membuat <strong>Preview batch</strong>. Update order, COD cair, bank withdrawals, dan komisi PAID tetap harus klik <strong>Apply</strong> manual seperti flow lama.
+        </div>
+
+        <Button onClick={onSync} disabled={syncing || !from || !to || !bizAccountId.trim()} className="gap-1.5">
+          {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          {syncing ? 'Sync SPX...' : 'Ambil dari SPX API → Preview'}
+        </Button>
       </CardContent>
     </Card>
   )

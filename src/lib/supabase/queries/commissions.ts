@@ -137,7 +137,7 @@ export function computeStats(rows: CommissionRow[]): CommissionStats {
         stats.paidTotal += amt
         stats.paidCount++
         break
-      case 'CANCELLED':
+      case 'VOIDED':
         stats.cancelledCount++
         break
     }

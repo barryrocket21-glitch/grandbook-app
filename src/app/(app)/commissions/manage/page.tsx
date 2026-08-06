@@ -70,8 +70,11 @@ export default function ManageCommissionsPage() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    setRange(thisMonth())
-    setRangeReady(true)
+    const timer = window.setTimeout(() => {
+      setRange(thisMonth())
+      setRangeReady(true)
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
 
   const load = useCallback(async () => {
@@ -92,7 +95,10 @@ export default function ManageCommissionsPage() {
   }, [canManage, rangeReady, range.from, range.to])
 
   useEffect(() => {
-    if (!authLoading && canManage) void load()
+    if (!authLoading && canManage) {
+      const timer = window.setTimeout(() => { void load() }, 0)
+      return () => window.clearTimeout(timer)
+    }
   }, [authLoading, canManage, load])
 
   // Aggregate per CS — drives the main table.
@@ -133,7 +139,7 @@ export default function ManageCommissionsPage() {
       } else if (r.status === 'PAID') {
         agg.paid_total += amt
         agg.paid_count++
-      } else if (r.status === 'CANCELLED') {
+      } else if (r.status === 'VOIDED') {
         agg.cancelled_count++
       }
     }

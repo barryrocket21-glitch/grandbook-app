@@ -231,6 +231,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin', 'akunting'],
     children: [
       { title: 'Pembukuan Ledger', href: '/orders/pembukuan' },
+      { title: 'Owner Profit Cockpit', href: '/reports/owner-profit', badge: 'BARU' },
       { title: 'Laba Rugi', href: '/laba-rugi', badge: 'BARU' },
       { title: 'Posisi Keuangan', href: '/financial-position' },
       { title: 'Biaya/Gaji/OPEX', href: '/expenses' },

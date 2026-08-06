@@ -4,12 +4,20 @@ Storage Playwright JSON state untuk smoke test auto-login. Files di folder ini *
 
 ## Cara capture session
 
+**Pakai env vars, jangan taruh password literal di command history.**
+
 ```bash
 # Owner
-npm run capture-session -- owner barry@owner.com 'GrandBook2026!'
+GB_EMAIL='owner-email@domain.com' GB_PASSWORD='[REDACTED]' npm run capture-session -- owner
 
 # Indra (admin)
-npm run capture-session -- indra indra@mbc.com 'INDRA_PASSWORD_HERE'
+GB_EMAIL='admin-email@domain.com' GB_PASSWORD='[REDACTED]' npm run capture-session -- indra
+```
+
+Optional kalau memang perlu argumen langsung:
+
+```bash
+npm run capture-session -- owner '<email>' '<password>'
 ```
 
 Script `scripts/capture-session.mjs` akan:

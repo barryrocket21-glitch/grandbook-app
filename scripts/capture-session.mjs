@@ -28,9 +28,12 @@ const BASE_URL = process.env.SMOKE_BASE_URL || 'https://grandbook-app.vercel.app
 const HEADLESS = process.env.HEADLESS === '1'
 
 async function main() {
-  const [, , slot, email, password] = process.argv
+  const [, , slot, emailArg, passwordArg] = process.argv
+  const email = emailArg || process.env.GB_EMAIL || ''
+  const password = passwordArg || process.env.GB_PASSWORD || ''
   if (!slot || !email || !password) {
-    console.error('Usage: node scripts/capture-session.mjs <slot> <email> <password>')
+    console.error('Usage: node scripts/capture-session.mjs <slot> [email] [password]')
+    console.error('Or set GB_EMAIL and GB_PASSWORD env vars to avoid putting creds in shell history.')
     process.exit(1)
   }
 

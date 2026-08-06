@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "env:doctor": "node scripts/doctor-local-env.mjs",
     "import:wilayah": "tsx scripts/import_master_wilayah.ts",
     "seed:wilayah-extra": "node scripts/seed-master-wilayah-extra.mjs",
     "capture-session": "node scripts/capture-session.mjs",

@@ -12,7 +12,8 @@ const SPX_ORIGIN = 'https://spx.co.id'
 const DEFAULT_BUSINESS_ENTITY = '4'
 const DEFAULT_PRODUCT_LINE = '7'
 const DEFAULT_PAGE_SIZE = 100
-const MAX_PAGES = 20
+// Keep a safety ceiling, but high enough for busy months.
+const MAX_PAGES = 100
 
 type RequestBody = {
   from?: string

@@ -12,6 +12,7 @@ import { serializeCsv } from '@/lib/converter/serializer'
 export interface PembukuanExportRow {
   source: string; order_number: string; order_date: string; status: string; zone: string
   customer_name: string; customer_city: string | null; cs_name: string | null
+  attribution_code_raw: string | null
   campaign_name: string | null; campaign_platform: string | null
   channel_name: string | null; product_summary: string | null; qty: number
   payment_method: string | null; penjualan: number; ongkir: number; selisih_ongkir: number
@@ -39,6 +40,7 @@ const COLUMNS: Col[] = [
   { header: 'Customer', get: (r) => r.customer_name ?? '' },
   { header: 'Kota', get: (r) => r.customer_city ?? '' },
   { header: 'CS', get: (r) => r.cs_name ?? '' },
+  { header: 'Kode Atribusi', get: (r) => r.attribution_code_raw ?? '' },
   { header: 'Campaign', get: (r) => r.campaign_name ?? '' },
   { header: 'Platform', get: (r) => r.campaign_platform ?? '' },
   { header: 'Channel', get: (r) => r.channel_name ?? '' },

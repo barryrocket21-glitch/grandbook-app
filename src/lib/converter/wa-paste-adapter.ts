@@ -55,6 +55,10 @@ export interface OrderDraftPayload {
   cs_name: string | null
   created_by: string | null
   customer_note: string | null
+  attribution_code_raw: string | null
+  attribution_platform: string | null
+  attribution_account_code: string | null
+  attribution_campaign_marker: string | null
   meta: Record<string, unknown> | null
   // Single-item for now (1 order = 1 product di WA paste). Future: multi-item.
   _item: {
@@ -205,6 +209,10 @@ export function adaptOrder(
     cs_name: parsed.csName,
     created_by: ctx.createdBy,
     customer_note: parsed.catatan,
+    attribution_code_raw: parsed.atribusiCodeRaw,
+    attribution_platform: parsed.platform,
+    attribution_account_code: parsed.atribusiAccount,
+    attribution_campaign_marker: parsed.atribusiCampaign,
     meta: Object.keys(meta).length > 0 ? meta : null,
     _item: {
       organization_id: ctx.organizationId,

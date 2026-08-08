@@ -24,6 +24,7 @@ interface Row {
   source: string; id: number; order_number: string; order_date: string
   status: string; zone: string; customer_name: string; customer_city: string | null
   cs_name: string | null; channel_name: string | null; product_summary: string | null
+  attribution_code_raw: string | null
   campaign_name: string | null; campaign_platform: string | null
   total: number; penjualan: number; ongkir: number; actual_shipping_fee: number | null; selisih_ongkir: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
   delivered_at: string | null; returned_at: string | null; exported_at: string | null
@@ -319,7 +320,7 @@ export default function PembukuanPage() {
                 <>
                   <TableHead>Kota</TableHead>
                   <TableHead>CS</TableHead>
-                  <TableHead>Atribusi</TableHead>
+                  <TableHead>Kode Atribusi</TableHead>
                   <TableHead>Produk</TableHead>
                   <TableHead className="text-center">Qty</TableHead>
                   <TableHead>Bayar</TableHead>
@@ -359,14 +360,29 @@ export default function PembukuanPage() {
                     <>
                       <TableCell className="text-sm">{r.customer_city || '—'}</TableCell>
                       <TableCell className="text-sm">{r.cs_name || '—'}</TableCell>
-                      <TableCell className="text-sm max-w-[180px]">
-                        {r.campaign_name ? (
-                          <span className="inline-flex items-center gap-1.5 min-w-0">
-                            <span className="truncate" title={r.campaign_name}>{r.campaign_name}</span>
-                            {r.campaign_platform && (
-                              <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground uppercase">{r.campaign_platform}</span>
+                      <TableCell className="text-sm max-w-[220px]">
+                        {r.attribution_code_raw ? (
+                          <div className="min-w-0">
+                            <div className="truncate font-medium" title={r.attribution_code_raw}>{r.attribution_code_raw}</div>
+                            {r.campaign_name && (
+                              <div className="inline-flex items-center gap-1.5 min-w-0 text-[11px] text-muted-foreground">
+                                <span className="truncate" title={r.campaign_name}>{r.campaign_name}</span>
+                                {r.campaign_platform && (
+                                  <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground uppercase">{r.campaign_platform}</span>
+                                )}
+                              </div>
                             )}
-                          </span>
+                          </div>
+                        ) : r.campaign_name ? (
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground/50">—</div>
+                            <div className="inline-flex items-center gap-1.5 min-w-0 text-[11px] text-muted-foreground">
+                              <span className="truncate" title={r.campaign_name}>{r.campaign_name}</span>
+                              {r.campaign_platform && (
+                                <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground uppercase">{r.campaign_platform}</span>
+                              )}
+                            </div>
+                          </div>
                         ) : (
                           <span className="text-muted-foreground/50">—</span>
                         )}

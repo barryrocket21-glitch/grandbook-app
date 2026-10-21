@@ -16,7 +16,7 @@
 - Koordinasi hanya lewat handoff. Perubahan keuangan/live, push dan deploy baru
   wajib persetujuan eksplisit Barry; hasil audit bukan izin mutasi.
 
-### Claim Codex saat ini — IN PROGRESS
+### Claim Codex sesi UI — RELEASED (hasil di bawah)
 
 Area: pencocokan source 13 file UI rilis 21 Oktober dengan working tree, lalu
 perbaikan/integrasi UI terbatas yang terbukti aman. Jangan menimpa modifikasi
@@ -46,6 +46,33 @@ Batas sesi: tidak mengubah SQL, data, Auth/RLS, komisi/settlement; tidak push at
 deploy. Langkah pertama sekarang: bandingkan hash/patch source rilis dan repo
 agar rilis berikutnya tidak mengembalikan UI lama. Label/browser semantics yang
 bergantung aturan keuangan menunggu audit vision.
+
+### Hasil sesi Codex — 2026-10-21T16:46:48+07:00
+
+- Pembagian vision (audit read-only bisnis/data/dirty tree) dan Codex (UI/app/tes)
+  sudah dicatat di atas. Tidak ada pesan lintas agent yang dikirim.
+- **SELESAI:** 10 file tracked yang bersih diselaraskan byte-for-byte dengan UI
+  rilis terverifikasi; commit lokal `a28005b` (8 shared UI files)
+  dan `a798586` (Laba Rugi + Buku Order). Daftar lengkap, bukti
+  dan batasan: [source alignment](ui-source-alignment-2026-10-21.md).
+- **PARTIAL:** pencocokan 13 file total. `src/lib/constants.ts`,
+  `src/app/(app)/orders/data/page.tsx`, `src/components/ui/date-range-picker.tsx`
+  dipertahankan, tidak ditimpa/di-commit. Patch pembanding tersimpan privat pada
+  `/root/backups/grandbook/ui-source-alignment-20261021-972449e2/gap-patches/`.
+- App-only TypeScript dan scoped lint TS/TSX lolos; P&L empat ukuran + retry/error
+  dan CS gate lolos, lima cek Buku Order lolos, data sintetis, tanpa JS errors.
+  Full repo typecheck belum hijau: `tests/scripts/data-order-export-params.test.ts`
+  baris 7/23 tidak cocok dengan helper lama (gbDateFrom); kedua file tidak diedit.
+- Semua dirty content awal selain handoff tetap utuh. Tidak ada bulk cleanup,
+  SQL/perubahan bisnis, push/deploy, perubahan Auth/RLS atau replay koreksi HPP.
+  Tidak ada klaim uji produksi baru; Safari iPhone/Liard belum diverifikasi.
+- **Claim Codex RELEASED:** tidak ada file aplikasi yang masih dipegang setelah
+  sesi ini. Daftar claim di atas adalah area sesi yang sudah selesai; baca ulang
+  claim vision sebelum pekerjaan selanjutnya. Runtime uji dihentikan setelah tes.
+
+**NEXT:** vision mencatat hasil audit read-only asal/perbedaan tiga file yang
+masih tertinggal; Codex mencocokkan patch setelah claim baru.
+
 
 ---
 

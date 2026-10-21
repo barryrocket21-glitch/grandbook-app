@@ -54,7 +54,7 @@ const n = (v: unknown) => Number(v) || 0
 function Money({ v, bold }: { v: number | null | undefined; bold?: boolean }) {
   if (v === null || v === undefined) return <span className="text-muted-foreground/50">—</span>
   const neg = v < 0
-  return <span className={`tabular-nums ${bold ? 'font-semibold' : ''} ${neg ? 'text-red-600' : v > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{formatRupiah(v)}</span>
+  return <span className={`whitespace-nowrap tabular-nums ${bold ? 'font-semibold' : ''} ${neg ? 'text-red-600' : v > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{formatRupiah(v)}</span>
 }
 
 export default function PembukuanPage() {
@@ -144,16 +144,18 @@ export default function PembukuanPage() {
 
   const cols = view === 'keuangan' && canFinance ? 17 : 12
   const fmtShort = (d: string) => { const x = new Date(d); const p = (v: number) => String(v).padStart(2, '0'); return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)}` }
-  const FROZEN = [{ left: 0, width: 82 }, { left: 82, width: 148 }, { left: 230, width: 120 }, { left: 350, width: 110 }]
-  const fzTh = (i: number): React.CSSProperties => ({ position: 'sticky', top: 0, left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 30 })
-  const fzTd = (i: number): React.CSSProperties => ({ position: 'sticky', left: FROZEN[i].left, width: FROZEN[i].width, minWidth: FROZEN[i].width, maxWidth: FROZEN[i].width, zIndex: 20 })
+  const columnWidths = view === 'keuangan' && canFinance
+    ? [90, 190, 190, 170, 240, ...Array(12).fill(170)]
+    : [90, 190, 190, 170, 160, 150, 250, 240, 70, 110, 170, 190]
+  const frozenStyle = (i: number) => ({ '--ledger-left': i === 1 ? '90px' : '0px' }) as React.CSSProperties
+
 
   return (
-    <div className="space-y-4">
-      <PageHeader icon={BookOpen} title="Pembukuan Ledger"
-        description="Finance Check: semua order dari draft sampai selesai dalam satu ledger untuk audit/crosscheck estimasi profit vs profit real."
+    <div className="flex min-w-0 flex-col gap-5">
+      <PageHeader icon={BookOpen} title="Buku Order"
+        description="Periksa order, atribusi, dan nilai keuangan. Pilih Ringkas atau Keuangan sesuai kebutuhan."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => exportSheet('xlsx')} disabled={loading || displayed.length === 0}>
               <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
             </Button>
@@ -167,22 +169,22 @@ export default function PembukuanPage() {
       {/* Filter bar */}
       <Card>
         <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-[200px] relative">
+          <div className="relative min-w-0 basis-full sm:basis-auto sm:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input value={search} onChange={e => { resetToFirstPage(); setSearch(e.target.value) }} placeholder="Cari order# / customer..." className="pl-9" />
+            <Input value={search} onChange={e => { resetToFirstPage(); setSearch(e.target.value) }} aria-label="Cari nomor order atau pelanggan" placeholder="Cari nomor order atau pelanggan…" className="pl-9" />
           </div>
           <Button variant={allTime ? 'default' : 'outline'} size="sm" onClick={() => { resetToFirstPage(); setAllTime(true) }}>Semua</Button>
           <div className={allTime ? 'opacity-60' : ''}>
             <DateRangePicker value={range} onChange={v => { resetToFirstPage(); setRange(v); setAllTime(false) }} />
           </div>
           <Select value={status} onValueChange={v => { resetToFirstPage(); setStatus(v || 'all') }}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Semua status" /></SelectTrigger>
+            <SelectTrigger aria-label="Filter status order" className="w-44"><SelectValue>{status === 'all' ? 'Semua status' : status.replaceAll('_', ' ')}</SelectValue></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua status</SelectItem>
               {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></Button>
+          <Button variant="outline" size="sm" aria-label="Muat ulang Buku Order" onClick={load} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></Button>
         </CardContent>
       </Card>
 
@@ -220,12 +222,12 @@ export default function PembukuanPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {/* Toggle view Ringkas/Keuangan */}
           {canFinance && (
             <div className="inline-flex rounded-md border p-0.5">
-              <button onClick={() => { resetToFirstPage(); setView('ringkas') }} className={`px-3 h-7 text-xs rounded ${view === 'ringkas' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>Ringkas</button>
-              <button onClick={() => { resetToFirstPage(); setView('keuangan') }} className={`px-3 h-7 text-xs rounded flex items-center gap-1 ${view === 'keuangan' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>
+              <button onClick={() => { resetToFirstPage(); setView('ringkas') }} aria-pressed={view === 'ringkas'} className={`px-3 h-7 text-xs rounded ${view === 'ringkas' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>Ringkas</button>
+              <button onClick={() => { resetToFirstPage(); setView('keuangan') }} aria-pressed={view === 'keuangan'} className={`px-3 h-7 text-xs rounded flex items-center gap-1 ${view === 'keuangan' ? 'bg-zinc-500 text-white' : 'text-muted-foreground hover:text-foreground'}`}>
                 <BarChart2 className="w-3 h-3" /> Keuangan
               </button>
             </div>
@@ -251,7 +253,7 @@ export default function PembukuanPage() {
               </div>
             ) : (
               <>
-            <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 gap-y-1 text-sm max-w-xl">
+            <div className="overflow-x-auto"><div className="grid min-w-[540px] grid-cols-[1fr_auto_auto] gap-x-6 gap-y-1 text-sm max-w-xl">
               <div className="text-xs font-medium text-muted-foreground col-span-1"></div>
               <div className="text-xs font-medium text-muted-foreground text-right">Proyeksi</div>
               <div className="text-xs font-medium text-muted-foreground text-right">Realisasi</div>
@@ -266,7 +268,7 @@ export default function PembukuanPage() {
               <PnlRow label="− Biaya Operasional" est={summary?.total_opex} act={summary?.total_opex} sub />
               <div className="col-span-3 border-t border-foreground/10 mt-1" />
               <PnlRow label="LABA BERSIH" est={summary?.laba_bersih_est} act={summary?.laba_bersih_act} strong big />
-            </div>
+            </div></div>
             <div className="mt-2 text-[11px] text-muted-foreground">
               Realisasi = akrual (revenue diakui pas delivered). Proyeksi = kalau semua order sukses.{' '}
               <a href="/laba-rugi" className="text-zinc-500 hover:underline">Laporan lengkap →</a>
@@ -292,14 +294,15 @@ export default function PembukuanPage() {
       </div>
 
       {/* Ledger table */}
-      <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
-        <div className="overflow-auto max-h-[70vh]">
-          <Table>
+      <div className="min-w-0 overflow-hidden rounded-xl border bg-card">
+        <div className="border-b px-4 py-3 text-xs text-muted-foreground">Geser tabel untuk melihat semua kolom. Ringkasan di bawah menjumlahkan baris pada halaman ini.</div>
+          <Table className="ledger-table table-fixed" style={{ width: columnWidths.reduce((sum, width) => sum + width, 0) }} containerClassName="max-h-[65vh]" containerLabel="Tabel Buku Order, geser untuk melihat semua kolom">
+            <colgroup>{columnWidths.map((width, i) => <col key={i} style={{ width }} />)}</colgroup>
             <TableHeader className="[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:bg-card [&>tr>th]:z-10"><TableRow>
-              <TableHead style={fzTh(0)} className="bg-card">Tgl</TableHead>
-              <TableHead style={fzTh(1)} className="bg-card">Order#</TableHead>
-              <TableHead style={fzTh(2)} className="bg-card">Nama</TableHead>
-              <TableHead style={fzTh(3)} className="bg-card border-r">Status</TableHead>
+              <TableHead style={frozenStyle(0)} className="bg-card">Tgl</TableHead>
+              <TableHead style={frozenStyle(1)} className="bg-card">Order#</TableHead>
+              <TableHead style={frozenStyle(2)} className="bg-card">Nama</TableHead>
+              <TableHead style={frozenStyle(3)} className="bg-card border-r">Status</TableHead>
               {view === 'keuangan' && canFinance ? (
                 <>
                   <TableHead className="max-w-[160px]">Produk</TableHead>
@@ -336,13 +339,13 @@ export default function PembukuanPage() {
                 <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-red-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
               ) : paged.map(r => (
                 <TableRow key={`${r.source}-${r.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetail({ source: r.source as 'draft' | 'final', id: r.id })}>
-                  <TableCell style={fzTd(0)} className="bg-card text-sm whitespace-nowrap">{fmtShort(r.order_date)}</TableCell>
-                  <TableCell style={fzTd(1)} className="bg-card font-mono text-xs whitespace-nowrap overflow-hidden">{r.order_number}</TableCell>
-                  <TableCell style={fzTd(2)} className="bg-card text-sm font-medium truncate" title={r.customer_name || ''}>{r.customer_name || '—'}</TableCell>
-                  <TableCell style={fzTd(3)} className="bg-card border-r"><Badge variant="outline" className={`${ZONE_COLOR[r.zone] || 'bg-muted'} text-[11px] whitespace-nowrap`}>{r.zone}</Badge></TableCell>
+                  <TableCell style={frozenStyle(0)} className="bg-card text-sm whitespace-nowrap">{fmtShort(r.order_date)}</TableCell>
+                  <TableCell style={frozenStyle(1)} className="bg-card font-mono text-xs whitespace-nowrap overflow-hidden">{r.order_number}</TableCell>
+                  <TableCell style={frozenStyle(2)} className="bg-card whitespace-normal break-words text-sm font-medium" title={r.customer_name || ''}>{r.customer_name || '—'}</TableCell>
+                  <TableCell style={frozenStyle(3)} className="bg-card border-r"><Badge variant="outline" className={`${ZONE_COLOR[r.zone] || 'bg-muted'} text-[11px] whitespace-nowrap`}>{r.zone}</Badge></TableCell>
                   {view === 'keuangan' && canFinance ? (
                     <>
-                      <TableCell className="text-sm max-w-[160px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
+                      <TableCell className="whitespace-normal break-words text-sm leading-relaxed" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.penjualan)} /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.ongkir)} /></TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.actual_shipping_fee)} /></TableCell>
@@ -358,14 +361,14 @@ export default function PembukuanPage() {
                     </>
                   ) : (
                     <>
-                      <TableCell className="text-sm">{r.customer_city || '—'}</TableCell>
-                      <TableCell className="text-sm">{r.cs_name || '—'}</TableCell>
-                      <TableCell className="text-sm max-w-[220px]">
+                      <TableCell className="whitespace-normal break-words text-sm">{r.customer_city || '—'}</TableCell>
+                      <TableCell className="whitespace-normal break-words text-sm">{r.cs_name || '—'}</TableCell>
+                      <TableCell className="whitespace-normal break-words text-sm">
                         {r.attribution_code_raw ? (
                           <div className="min-w-0">
                             <div className="truncate font-medium" title={r.attribution_code_raw}>{r.attribution_code_raw}</div>
                             {r.campaign_name && (
-                              <div className="inline-flex items-center gap-1.5 min-w-0 text-[11px] text-muted-foreground">
+                              <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                                 <span className="truncate" title={r.campaign_name}>{r.campaign_name}</span>
                                 {r.campaign_platform && (
                                   <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground uppercase">{r.campaign_platform}</span>
@@ -376,7 +379,7 @@ export default function PembukuanPage() {
                         ) : r.campaign_name ? (
                           <div className="min-w-0">
                             <div className="text-muted-foreground/50">—</div>
-                            <div className="inline-flex items-center gap-1.5 min-w-0 text-[11px] text-muted-foreground">
+                            <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                               <span className="truncate" title={r.campaign_name}>{r.campaign_name}</span>
                               {r.campaign_platform && (
                                 <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground uppercase">{r.campaign_platform}</span>
@@ -387,7 +390,7 @@ export default function PembukuanPage() {
                           <span className="text-muted-foreground/50">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm max-w-[200px] truncate" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
+                      <TableCell className="whitespace-normal break-words text-sm leading-relaxed" title={r.product_summary || ''}>{r.product_summary || '—'}</TableCell>
                       <TableCell className="text-center text-sm">{r.qty || '—'}</TableCell>
                       <TableCell className="text-sm">{r.payment_method || '—'}</TableCell>
                       <TableCell className="text-right text-sm tabular-nums">{formatRupiah(n(r.penjualan))}</TableCell>
@@ -397,10 +400,10 @@ export default function PembukuanPage() {
                 </TableRow>
               ))}
               {!loading && displayed.length > 0 && (
-                <TableRow className="bg-muted/50 font-semibold border-t-2 border-foreground/15">
+                <TableRow data-ledger-total className="bg-muted/50 font-semibold border-t-2 border-foreground/15">
                   {view === 'keuangan' && canFinance ? (
                     <>
-                      <TableCell colSpan={5} className="text-sm">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
+                      <TableCell colSpan={5} className="text-sm">TOTAL HALAMAN ({totals.n.toLocaleString('id-ID')} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
                       <TableCell className="text-right text-sm"><Money v={totals.total} bold /></TableCell>
                       <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
                       <TableCell className="text-right text-sm"><Money v={totals.est_gp} bold /></TableCell>
@@ -409,7 +412,7 @@ export default function PembukuanPage() {
                     </>
                   ) : (
                     <>
-                      <TableCell colSpan={9} className="text-sm">TOTAL ({totals.n} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
+                      <TableCell colSpan={10} className="text-sm">TOTAL HALAMAN ({totals.n.toLocaleString('id-ID')} order{zoneFilter ? ` · ${zoneFilter}` : ''})</TableCell>
                       <TableCell className="text-right text-sm tabular-nums">{formatRupiah(totals.total)}</TableCell>
                       <TableCell />
                     </>
@@ -418,13 +421,12 @@ export default function PembukuanPage() {
               )}
             </TableBody>
           </Table>
-        </div>
       </div>
 
       {!loading && displayed.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <div className="flex items-center gap-2">
-            <select value={pageSize} onChange={e => { resetToFirstPage(); setPageSize(Number(e.target.value)) }} className="h-8 rounded-md border bg-background px-2 text-sm">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <select aria-label="Jumlah order per halaman" value={pageSize} onChange={e => { resetToFirstPage(); setPageSize(Number(e.target.value)) }} className="h-8 rounded-md border bg-background px-2 text-sm">
               <option value={50}>50 / halaman</option>
               <option value={100}>100 / halaman</option>
               <option value={500}>500 / halaman</option>
@@ -433,8 +435,8 @@ export default function PembukuanPage() {
             <span className="text-muted-foreground tabular-nums">{displayed.length.toLocaleString('id-ID')} order · Hal {page + 1} / {totalPages}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="sm" className="h-8" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>‹ Prev</Button>
-            <Button variant="outline" size="sm" className="h-8" disabled={page >= totalPages - 1} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}>Next ›</Button>
+            <Button variant="outline" size="sm" className="h-8" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>‹ Sebelumnya</Button>
+            <Button variant="outline" size="sm" className="h-8" disabled={page >= totalPages - 1} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}>Berikutnya ›</Button>
           </div>
         </div>
       )}
@@ -448,7 +450,7 @@ function PnlRow({ label, est, act, strong, big, sub }: { label: string; est?: nu
   const cls = `${big ? 'text-base' : 'text-sm'} ${strong ? 'font-semibold' : sub ? 'text-muted-foreground' : ''}`
   const money = (v?: number) => {
     const x = Number(v) || 0
-    return <span className={`tabular-nums ${x < 0 ? 'text-red-600' : strong && x > 0 ? 'text-emerald-600' : ''}`}>{formatRupiah(x)}</span>
+    return <span className={`whitespace-nowrap tabular-nums ${x < 0 ? 'text-red-600' : strong && x > 0 ? 'text-emerald-600' : ''}`}>{formatRupiah(x)}</span>
   }
   return (
     <>

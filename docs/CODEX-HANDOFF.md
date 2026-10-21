@@ -1,5 +1,33 @@
 # GrandBook Codex Handoff
 
+## Codex — penyelesaian UI/source alignment — 2026-10-21T16:49:17+07:00
+
+**Status IN PROGRESS.** Barry meminta "lanjutkan sampai selesai" untuk sisa
+UI/source alignment dan error tes ekspor. Audit vision sudah dibaca; vision
+menandai sesi RELEASED. Bagian vision tetap dipertahankan, tidak ditimpa.
+
+Claim file sesi ini:
+
+- `src/lib/constants.ts`
+- `src/app/(app)/orders/data/page.tsx`
+- `src/components/ui/date-range-picker.tsx`
+- `src/lib/orders/data-order-export-params.ts`
+- `src/lib/date/ranges.ts`
+- `tests/scripts/data-order-export-params.test.ts`
+- `tests/scripts/date-ranges.test.ts` — regresi kalender WIB, sebelum file dibuat.
+- `docs/ui-source-alignment-2026-10-21.md`
+- `docs/CODEX-HANDOFF.md`
+
+Rencana: review tiga gap terhadap snapshot rilis terverifikasi; integrasikan
+source dan dependensi kalender/ekspor yang diperlukan; cocokkan tes kontrak
+ekspor; jalankan full typecheck, lint, build terisolasi dan smoke fixture UI.
+Tidak mencakup pembersihan seluruh dirty tree, perubahan komisi/settlement/SQL,
+Auth/RLS, push atau deploy. Temuan keuangan vision tetap read-only/pending
+keputusan Barry. Hasil audit bukan izin mengubah data live.
+
+---
+
+
 ## Pembagian tugas aktif — Barry / Codex / vision — 2026-10-21T16:38:44+07:00
 
 **Barry sudah mengirim penugasan ke vision dan meminta pembagian ini dicatat.**
@@ -372,6 +400,116 @@ read-only kode).
   pun setelah sesi ini. **NEXT (satu langkah):** Barry putuskan rekonsiliasi
   working tree ↔ rilis produksi sebagai pekerjaan berikutnya.
 
+
+### Sesi verifikasi vision — 21 Oktober 2026 (RELEASED)
+
+- **Agent:** vision (Muse AI). **Claim:** 2026-10-21T16:49:30+07:00 (WIB). **Ruang lingkup:**
+  verifikasi read-only pasca-alignment UI Codex (sesi Codex RELEASED
+  16:46:48): ukur ulang divergensi working tree terhadap manifest rilis
+  produksi `dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ` (453 file,
+  `release-sha256.json`), verifikasi 11 file yang sebelumnya hilang di
+  working tree, dan ringkasan diff read-only 3 file yang ditahan Codex
+  (`src/lib/constants.ts`, `src/app/(app)/orders/data/page.tsx`,
+  `src/components/ui/date-range-picker.tsx`). Satu-satunya file yang diubah
+  vision sesi ini adalah handoff ini. Tidak ada source/SQL/data live yang
+  diubah, tidak ada query database live, tidak ada
+  reset/stash/clean/checkout/bulk-commit/push/deploy, dan koreksi APPLIED
+  tidak diulang. Backup handoff pra-sesi (sementara, di VPS):
+  `/tmp/CODEX-HANDOFF-before-vision-verify-20261021.md`.
+- **Hasil verifikasi:**
+
+  **Divergensi working tree terhadap manifest rilis produksi (453 file):**
+
+  | Pengukuran | Cocok | Beda | Hilang | Divergen |
+  |---|---|---|---|---|
+  | Audit vision, pasca-sinkron (21 Okt 16:44) | 411 | 31 | 11 | 42/453 |
+  | Sesi ini, pengukuran pertama (±16:50) | 411 | 31 | 11 | 42/453 |
+  | Sesi ini, pengukuran akhir (setelah peristiwa di bawah) | **416** | **27** | **10** | **37/453** |
+
+  Sesi alignment Codex sendiri tidak mengubah byte src terhadap produksi
+  (10 file memang sudah sama sejak sinkronisasi di tengah sesi audit);
+  kontribusinya adalah status Git — 10 file itu kini ter-commit
+  (`a28005b`, `a798586`). Penurunan divergensi 42 → 37 sesi ini berasal
+  dari peristiwa berikut.
+
+  **Peristiwa di tengah sesi (bukan oleh vision):** lima file src berubah
+  serentak di working tree — mtime kelimanya identik
+  2026-10-21T16:50:42+07:00, terdeteksi ±16:51 — menjadi byte-for-byte
+  sama dengan produksi: tiga file tertahan (`src/lib/constants.ts`,
+  `src/app/(app)/orders/data/page.tsx`,
+  `src/components/ui/date-range-picker.tsx`) ditambah
+  `src/lib/date/ranges.ts` dan `src/lib/orders/data-order-export-params.ts`.
+  Seluruh operasi vision sesi ini read-only kecuali handoff ini; pelaku
+  dan mekanisme sinkronisasi **NOT VERIFIED** (tidak ada claim baru yang
+  terlihat di handoff saat sesi ini ditutup). Barry/Codex perlu
+  mengonfirmasi siapa yang menjalankannya dan apakah iterasi working
+  tree yang tertimpa masih tersimpan (patch pembanding privat Codex:
+  `/root/backups/grandbook/ui-source-alignment-20261021-972449e2/gap-patches/`).
+
+  **11 file yang sebelumnya hilang:** 10 masih hilang —
+  `src/lib/analytics/complete-report-read.ts`,
+  `src/lib/analytics/profit-cost-evidence.ts`,
+  `src/lib/analytics/ads-coverage.ts`,
+  `src/app/(app)/commissions/spx/page.tsx`,
+  `src/lib/commissions/spx-preview.ts`,
+  `src/app/api/commissions/spx-preview/route.ts`,
+  `src/lib/orders/export-groups.ts`, `src/lib/orders/phone-warning.ts`,
+  `src/components/team/cs-regions.tsx`, `.vercelignore`. Satu file
+  kembali dan hash-nya cocok dengan produksi: `src/lib/date/ranges.ts`
+  (bagian dari lima file di atas).
+
+  **27 file masih beda isi:** converter WA Paste (`wa-paste-phone-dup.ts`,
+  `preview.ts`, `engine.ts`, `schemas/wa-paste-request.ts`,
+  `orders/wa-paste/page.tsx`, API `existing-phones` + `submit`), komisi
+  (`queries/commissions.ts`, `commissions/my/page.tsx`,
+  `commissions/manage/page.tsx`), laporan/keuangan
+  (`reports/owner-profit/page.tsx`, `api/reports/owner-profit/route.ts`,
+  `lib/reports/owner-profit-export.ts`, `financial-position/page.tsx`,
+  `reconciliation/spx-cashflow/page.tsx` + API sync-nya,
+  `cashflow-summary-widget.tsx`), tim CS (`team/cs/page.tsx`,
+  `team/cs/[userId]/page.tsx`, `queries/team.ts`, `queries/crm.ts`), dan
+  sisanya (`orders/export-resi`, `orders/new`, `orders/bulk-upload`,
+  `format.ts`, `types.ts`, `product-variant-form.tsx`).
+
+  **Tiga file tertahan — sifat perbedaan versi working tree LAMA**
+  (didokumentasikan dari diff read-only ±16:50, sebelum tertimpa
+  sinkronisasi di atas; kini ketiganya byte-for-byte sama dengan rilis):
+  1. `src/lib/constants.ts` (WT lama: modified, 287 vs 280 baris rilis,
+     diff +21/−14, mtime 2 Sep 2026): seluruh perbedaan pada `NAV_ITEMS` —
+     label/struktur navigasi varian WT ("Antrian Validasi",
+     "Order Problem / Rescue", "Data Orderan", entri ekstra
+     "Data Orderan Sandbox" dan "Performa Iklan Lama") vs label rilis
+     ("Validasi Order", "Penanganan Masalah", "Data Order"). Bukan
+     parameter bisnis.
+  2. `src/app/(app)/orders/data/page.tsx` (WT lama: untracked, 474 vs
+     482 baris, diff +113/−121 menyebar ±24 hunk, mtime 8 Okt 2026):
+     beda pada impor, `CATEGORY_TABS`, tipe `DataOrderSummary`,
+     `XLS_HEADERS`, `downloadDataOrdersXls`, dan banyak titik badan
+     komponen (nama komponen WT `DataOrderanPage`). Iterasi paralel
+     halaman Data Order yang berbeda secara substansi, bukan sekadar
+     poles UI 21 Oktober; kedua sisi memuat isi unik.
+  3. `src/components/ui/date-range-picker.tsx` (WT lama: bersih terhadap
+     HEAD, 189 vs 149 baris, diff +74/−34, mtime 4 Agt 2026): WT memuat
+     blok tambahan ±30 baris di dekat impor dan perbedaan menyebar di
+     badan komponen; versi rilis lebih ringkas.
+
+  vision tidak memutuskan versi mana yang seharusnya menang; bukti di
+  atas untuk keputusan Barry. Pertanyaan itu kini tertutup oleh
+  sinkronisasi di tengah sesi untuk isi working tree, dan terbuka lagi
+  hanya bila iterasi lama ternyata masih dibutuhkan.
+
+  **Kesimpulan:** src kini lebih dekat ke produksi secara byte
+  (37/453 divergen, dari 42/453), dan tidak ada lagi file rilis 21
+  Oktober yang tertinggal. Sisa divergensi bukan lagi soal rilis UI:
+  27 file iterasi kerja lain + 10 file produksi yang belum ada di
+  working tree. Status pohon kerja saat sesi ditutup: 576 path
+  (45 modified + 531 untracked).
+
+- **Status akhir sesi verifikasi vision: RELEASED** (selesai 2026-10-21T16:52:54+07:00 WIB).
+  vision tidak memegang area apa pun setelah sesi ini. **NEXT (satu
+  langkah):** Barry konfirmasi pelaku sinkronisasi lima file di atas;
+  setelah itu putuskan scope rekonsiliasi 27 file beda + 10 file hilang
+  sebagai pekerjaan terpisah (implementasi di jalur Codex).
 
 ---
 

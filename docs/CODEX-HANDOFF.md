@@ -2,7 +2,7 @@
 
 ## Codex — penyelesaian UI/source alignment — 2026-10-21T16:49:17+07:00
 
-**Status IN PROGRESS.** Barry meminta "lanjutkan sampai selesai" untuk sisa
+**Status SELESAI / RELEASED untuk scope UI dan ekspor.** Barry meminta "lanjutkan sampai selesai" untuk sisa
 UI/source alignment dan error tes ekspor. Audit vision sudah dibaca; vision
 menandai sesi RELEASED. Bagian vision tetap dipertahankan, tidak ditimpa.
 
@@ -13,6 +13,8 @@ Claim file sesi ini:
 - `src/components/ui/date-range-picker.tsx`
 - `src/lib/orders/data-order-export-params.ts`
 - `src/lib/date/ranges.ts`
+- `src/lib/date/jakarta.ts` — dependensi WIB rilis yang sudah ada; review/commit tanpa perubahan isi.
+- `tests/scripts/jakarta-date.test.ts` — tes dependensi yang sudah ada; review/commit tanpa perubahan isi.
 - `tests/scripts/data-order-export-params.test.ts`
 - `tests/scripts/date-ranges.test.ts` — regresi kalender WIB, sebelum file dibuat.
 - `docs/ui-source-alignment-2026-10-21.md`
@@ -24,6 +26,31 @@ ekspor; jalankan full typecheck, lint, build terisolasi dan smoke fixture UI.
 Tidak mencakup pembersihan seluruh dirty tree, perubahan komisi/settlement/SQL,
 Auth/RLS, push atau deploy. Temuan keuangan vision tetap read-only/pending
 keputusan Barry. Hasil audit bukan izin mengubah data live.
+
+### Hasil akhir Codex — 2026-10-21T17:02:09+07:00
+
+- Tiga gap terakhir (`constants.ts`, `orders/data/page.tsx`, date-range-picker)
+  dan dependensi WIB/ekspor selesai diselaraskan. **13/13 file UI kini match
+  rilis terverifikasi**, bukan lagi PARTIAL untuk scope ini.
+- Commit lokal `30e8d9e` (kalender/picker/tes WIB),
+  `1120299` (Data Order/helper/tes ekspor),
+  `cb5a5d6` (menu sesuai role, tanpa duplikat).
+- **VERIFIED baru:** full repo TypeScript, scoped lint, build terisolasi,
+  sembilan run unit tiga timezone, 13 cek layout, P&L error/retry/stale/CS gate.
+  XLS fixture **1.005 baris lengkap**; periode SPX dan no-resi periode GB tepat;
+  data berubah antarbatch menghentikan ekspor. Tidak ada JS errors.
+- [Detail dan daftar file](ui-source-alignment-2026-10-21.md). Bukti privat:
+  `/root/backups/grandbook/ui-alignment-finish-20261021-65f0f5c8/`. Semua dirty content di luar claim dipertahankan;
+  bagian audit vision tidak diubah. Runtime uji dihentikan.
+- **NOT VERIFIED:** browser produksi baru, Safari fisik dan Liard. Tidak ada
+  push/deploy/SQL/perubahan data/komisi/settlement/Auth/RLS/replay koreksi HPP.
+- **Di luar scope selesai ini:** overall repo masih 27 file berbeda + 10 hilang
+  terhadap rilis, meski 416/453 cocok. Jangan deploy seluruh dirty checkout dari
+  keberhasilan build ini. Artefak recovery dan gap finansial audit vision tetap
+  tercatat; perubahan live memerlukan persetujuan Barry. Bukan alasan replay.
+- **Claim Codex RELEASED** untuk seluruh daftar sesi ini.
+
+**NEXT:** vision membaca hasil/bukti UI ini untuk review terhadap auditnya.
 
 ---
 

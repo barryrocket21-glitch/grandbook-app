@@ -1,5 +1,71 @@
 # Source alignment UI — 21 Oktober 2026 WIB
 
+## Penyelesaian scope UI — 2026-10-21T17:02:09+07:00
+
+**SELESAI untuk 13 file UI dan dependensi kalender/ekspor yang direview.**
+Audit vision sudah dibaca dan RELEASED; tidak ada area vision yang ditimpa.
+Tiga gap terakhir kini match byte-for-byte dengan source rilis terverifikasi.
+Kalender memakai WIB/validasi tanggal; ekspor memakai parameter/filter yang sama
+dengan produksi, batch 1000 dengan pemeriksaan jumlah/duplikasi/perubahan data.
+
+Commit lokal penyelesaian:
+
+- `30e8d9e` — fix: align date picker and presets with deployed WIB calendar
+- `1120299` — fix: align data order filters and complete XLS export
+- `cb5a5d6` — fix: preserve deployed role menus without duplicate links
+
+Source yang diselaraskan: `src/lib/constants.ts`,
+`src/app/(app)/orders/data/page.tsx`, `src/components/ui/date-range-picker.tsx`,
+`src/lib/orders/data-order-export-params.ts`, `src/lib/date/ranges.ts`.
+`src/lib/date/jakarta.ts` dan tes sebelumnya direview dan diamankan di Git tanpa
+mengubah isinya. `tests/scripts/data-order-export-params.test.ts` dipertahankan
+assertion lamanya serta ditambah no-resi/pagination/batas tanggal WIB;
+`tests/scripts/date-ranges.test.ts` baru menguji rollover bulan/tahun, leap day,
+minggu WIB dan batas timestamp inklusif. Tidak ada lookup/biaya/komisi berubah.
+
+Verifikasi baru pada mixed working tree saat ini:
+
+- **Full repo TypeScript PASS**; dua error gbDateFrom sebelumnya sudah hilang.
+- Scoped ESLint PASS; sembilan run tes tanggal/ekspor/Jakarta di UTC,
+  Asia/Jakarta dan America/Los_Angeles PASS.
+- Build produksi terisolasi dari current source PASS (94 static pages,
+  BUILD_ID + route summary tersedia); bukan deployment.
+- 13 cek layout Data Order/Buku Order PASS pada 320/390/768/1440, scroll/frozen
+  totals, date picker, error/empty dan dark mode. P&L empat ukuran, angka besar,
+  timeout/retry/empty, stale-response guard dan CS gate PASS; tidak ada JS errors.
+- Download XLS browser sungguhan dengan fixture **1.005 baris** PASS (dua batch,
+  termasuk baris terakhir), periode SPX pilihan PASS, GB_NO_RESI mengikuti periode
+  GB dan mengabaikan SPX PASS; perubahan data antarbatch ditolak tanpa download.
+  Browser tes ekspor memakai timezone America/Los_Angeles.
+- Semua RPC browser diintersep fixture sintetis; tidak ada ekspor/data pelanggan
+  produksi yang dipakai. Normal-owner auth hanya untuk middleware uji lokal.
+- Seluruh 13 UI source dan dependensi kalender/ekspor match manifest rilis.
+  Query/export handlers dibanding pre-UI production baseline tidak berubah;
+  nav owner 62→55, admin 59→52, CS tetap 1, advertiser tetap 7, akunting 14→10;
+  tidak ada duplicate href atau perluasan role.
+
+Bukti privat: `/root/backups/grandbook/ui-alignment-finish-20261021-65f0f5c8/`, termasuk checks.json, regression.json,
+runtime.json, pnl-browser.json, export-browser.json, build.log, source parity,
+backup/diff file lama. Isolated dev runtime dihentikan setelah tes. Semua dirty
+content di luar claim tetap utuh; hanya file yang direview di-stage/commit.
+
+**Batas klaim:** produksi/Liard/Safari iPhone fisik tidak dicek ulang dan tidak
+berubah pada sesi ini; tidak push/deploy/SQL/mutasi bisnis/replay HPP. Seluruh
+repo bukan mirror produksi: 416/453 file match, 27 berbeda, 10 hilang di luar
+scope UI/dependensi ini. Full build PASS tidak membuktikan perilaku finansial
+semua gap itu aman. Jangan deploy seluruh dirty checkout tanpa rekonsiliasi
+scope terpisah dan izin eksplisit Barry. Gap settled-cash/manual commission serta
+artefak recovery yang belum ter-commit dari audit vision tetap terpisah; tidak
+diubah hanya karena status proyek sebelumnya PARTIAL.
+
+**NEXT:** vision membaca bukti penyelesaian UI di handoff untuk review terhadap
+auditnya. Claim Codex RELEASED; pekerjaan berikutnya harus claim baru.
+
+---
+
+## Checkpoint awal sesi UI — superseded oleh penyelesaian di atas
+
+
 Updated 2026-10-21T16:46:48+07:00. Barry assigned vision read-only financial/business/dirty-tree audit and Codex UI implementation/testing, coordinated only through CODEX-HANDOFF.md. Codex claimed 13 UI files before editing.
 
 ## Result

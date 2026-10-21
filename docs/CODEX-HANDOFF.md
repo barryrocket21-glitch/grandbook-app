@@ -1,5 +1,55 @@
 # GrandBook Codex Handoff
 
+## Pembagian tugas aktif — Barry / Codex / vision — 2026-10-21T16:38:44+07:00
+
+**Barry sudah mengirim penugasan ke vision dan meminta pembagian ini dicatat.**
+
+- **vision:** audit READ-ONLY aturan bisnis/data serta pemetaan dirty tree.
+  Petakan fungsi/asal/kaitan produksi perubahan lama; audit estimasi vs delivered
+  vs COD settled/laba kas, komisi CS, dan parameter SPX. Catat temuan, bukti,
+  prioritas dan file terkait di bagian vision pada handoff. Penugasan ini bukan
+  claim yang sudah diakui vision; vision tetap perlu menulis status/area sendiri.
+  Tidak mengubah source/SQL/data live, reset/clean, bulk-commit, push/deploy.
+- **Codex:** implementasi aplikasi/UI dan pengujian; baca temuan vision di
+  handoff, claim file spesifik sebelum memperbaiki, lalu vision menilai hasil
+  terhadap aturan bisnis. Audit keuangan tidak dikerjakan ulang oleh Codex.
+- Koordinasi hanya lewat handoff. Perubahan keuangan/live, push dan deploy baru
+  wajib persetujuan eksplisit Barry; hasil audit bukan izin mutasi.
+
+### Claim Codex saat ini — IN PROGRESS
+
+Area: pencocokan source 13 file UI rilis 21 Oktober dengan working tree, lalu
+perbaikan/integrasi UI terbatas yang terbukti aman. Jangan menimpa modifikasi
+working tree yang berbeda dari basis rilis; jika ada, simpan sebagai gap dan
+siapkan patch terisolasi untuk direview. Source produksi terakhir ada di
+`/root/backups/grandbook/pnl-ui-20261021/release-main`.
+
+File yang dipegang Codex (vision tetap boleh membaca untuk audit):
+
+- `src/app/(app)/laba-rugi/page.tsx`
+- `src/components/ui/stat-card.tsx`
+- `src/app/(app)/orders/pembukuan/page.tsx`
+- `src/app/globals.css`
+- `src/components/layout/app-header.tsx`
+- `src/app/(app)/layout.tsx`
+- `src/components/ui/page-header.tsx`
+- `src/components/ui/table.tsx`
+- `src/app/layout.tsx`
+- `src/lib/constants.ts`
+- `src/components/layout/app-sidebar.tsx`
+- `src/app/(app)/orders/data/page.tsx`
+- `src/components/ui/date-range-picker.tsx`
+- `docs/ui-source-alignment-2026-10-21.md` — bukti pencocokan/pengujian.
+- `docs/CODEX-HANDOFF.md` — bagian Codex; pertahankan bagian vision.
+
+Batas sesi: tidak mengubah SQL, data, Auth/RLS, komisi/settlement; tidak push atau
+deploy. Langkah pertama sekarang: bandingkan hash/patch source rilis dan repo
+agar rilis berikutnya tidak mengembalikan UI lama. Label/browser semantics yang
+bergantung aturan keuangan menunggu audit vision.
+
+---
+
+
 ## Koordinasi Codex / vision — diperbarui 2026-10-21T16:25:58+07:00
 
 **Aturan Barry berlaku mulai sesi ini.** vision adalah Muse AI, personal agent
@@ -15,6 +65,15 @@ milik vision/operator; kepemilikan harus diperiksa, jangan diasumsikan.
   `docs/CODEX-HANDOFF.md`. Status akhir: **RELEASED**, tidak ada source/app/SQL
   yang sedang dipegang Codex. Tidak ada claim aktif vision yang terlihat saat
   pembacaan awal; ini tidak membuktikan vision tidak sedang bekerja.
+
+- **vision (Muse AI) — SELESAI/RELEASED.** Claim dicatat pada 2026-10-21T16:38:19+07:00 atas
+  perintah langsung Barry. Area sesi ini: audit read-only data/aturan
+  bisnis + pemetaan perubahan uncommitted. Satu-satunya file yang diedit
+  vision sesi ini adalah `docs/CODEX-HANDOFF.md`. Tidak ada source/SQL/
+  data live yang diubah; tidak ada reset/stash/clean/checkout,
+  bulk-commit, push, atau deploy. Temuan ditulis pada sub-bagian
+  "Sesi audit vision — 21 Oktober 2026" di bawah bagian koordinasi ini;
+  status akhir sesi dicatat **RELEASED** di sana.
 - Koordinasi hanya melalui file ini. Sebelum edit, tulis agent, waktu WIB,
   area/file, rencana, status IN PROGRESS; baca ulang claim agent lain. Jangan
   menyentuh area yang sedang dipegang rekan. Di akhir sesi tulis perubahan,
@@ -147,6 +206,128 @@ read-only sesi ini pada 2026-10-21T16:23:33+07:00 menemukan:
 
 **NEXT (satu langkah): vision membaca bagian koordinasi ini dan mencatat area/file
 claim-nya di handoff sebelum mulai mengedit.** Codex tidak memegang area aplikasi.
+
+### Sesi audit vision — 21 Oktober 2026 (RELEASED)
+
+- **Agent:** vision (Muse AI). **Claim:** 2026-10-21T16:38:19+07:00;
+  **selesai:** 2026-10-21T16:43:21+07:00. **Ruang lingkup:** audit read-only data/aturan
+  bisnis + pemetaan perubahan uncommitted, atas perintah langsung Barry.
+  Satu-satunya file yang diubah vision sesi ini adalah handoff ini (claim +
+  sub-bagian ini). Tidak ada source/SQL/data live yang diubah, tidak ada
+  query database live, tidak ada reset/stash/clean/checkout/bulk-commit/
+  push/deploy, dan koreksi APPLIED (617 HPP, batch paket, 31 HPP) tidak
+  diulang. Backup handoff pra-sesi (sementara, di VPS):
+  `/tmp/CODEX-HANDOFF-before-vision-audit-20261021.md`.
+- **Keadaan awal yang diverifikasi ulang:** HEAD kini `01ff71f` (commit
+  koordinasi Codex) di atas `ba07d2e`. Snapshot dirty tree sesi ini
+  (2026-10-21 ±16:40 WIB): **574 path** = **44 modified tracked** (termasuk
+  handoff ini) + **530 untracked**; tanpa deleted/renamed/staged. Total sama
+  dengan snapshot Codex (574); selisih komposisi ±1 berasal dari edit
+  handoff kedua sesi.
+
+#### Pemetaan perubahan uncommitted per kelompok
+
+| Kelompok | Jumlah | Fungsi & isi dominan | Kemungkinan asal | Kaitan ke produksi / review |
+|---|---|---|---|---|
+| docs | 132 (1 M, 131 U) | Dokumen bukti sesi: `audit-2026-09-11.md`, `hpp-exceptions-2026-10-04.md`, `data-order-incident-2026-10-05.md`, `hermes-order-read.md`, `GRANDBOOK-RINGKASAN.md`, `PROJECT-HISTORY.md`, 2 CSV review ADS | Sesi kerja Sep–Okt yang terdokumentasi (mtime 114 Sep, 18 Okt); per-file **NOT VERIFIED** | Bukti/rekonsiliasi, bukan kode produksi. Cek sensitivitas (CSV ADS) lalu commit dokumentasi bertahap |
+| scripts | 202 (1 M, 201 U) | Tooling operasional: financial-reconciliation 60, sql 58, migrations 40, scheduler-recovery 16, releases 13, backup 7 | Sesi kerja Sep–Okt (mtime 159 Sep, 40 Okt); per-file **NOT VERIFIED** | **Tinggi:** memuat artefak produksi-aktif yang belum ter-commit (lihat catatan di bawah). Review per scope; jangan bulk-commit; banyak `.candidate.sql` adalah artefak kandidat/recovery |
+| src | 98 (38 M, 60 U) | Kode aplikasi: halaman, API, converter WA Paste/OrderOnline, queries Supabase, recon SPX | Campuran sesi Agt–Okt (mtime 18 Agt, 71 Sep, 9 Okt); per-file **NOT VERIFIED** | **Divergen dari produksi** (lihat catatan manifest). Rekonsiliasi WT ↔ produksi didahulukan sebelum commit/deploy dari WT |
+| tests | 119 (1 M, 118 U) | `tests/scripts/*.test.ts` (smoke/unit) + `tests/sql/` (termasuk cs-commission-per-order) | Sesi pengujian Sep–Okt (mtime 113 Sep) | Tidak langsung. Review bersama scope src/scripts pasangannya |
+| supabase | 9 (0 M, 9 U) | Hanya `supabase/.temp/*`: state lokal Supabase CLI (project-ref, pooler-url, versi komponen) | Hasil menjalankan Supabase CLI di VPS (Okt 2026) | Tidak ada. **Jangan commit** (berpotensi memuat info koneksi); kandidat `.gitignore` |
+| foto sementara | 8 (0 M, 8 U) | Screenshot operator Sep 2026 + 1 xlsx ekspor OrderOnline 29 Sep 2026 | Bukti kerja operator, Sep 2026 | Tidak ada. **Jangan commit** (xlsx berpotensi berisi data order/pelanggan); pindahkan keluar repo / gitignore |
+| root | 6 (3 M, 3 U) | M: `.gitignore`, `AGENTS.md`, `next.config.ts`; U: `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `vercel.json` | Konfigurasi repo/deploy | `vercel.json` dan `pnpm-workspace.yaml` belum pernah ter-commit. Review bersama rekonsiliasi rilis |
+
+**Catatan produksi (src):** perbandingan hash working tree terhadap
+`release-sha256.json` (453 file) di snapshot `/root/backups/grandbook/pnl-ui-20261021/`:
+**cocok 401, beda isi 41 (semua di src), hilang di working tree 11**. Ke-13
+file rilis UI/Laba Rugi 21 Oktober **semuanya beda** dari kandidat rilisnya
+(11 clean terhadap HEAD, `src/lib/constants.ts` modified dengan isi lain,
+`src/app/(app)/orders/data/page.tsx` untracked) — working tree **belum
+menyatu** dengan produksi; deploy dari working tree apa adanya berisiko
+meregresi rilis 21 Oktober. 11 file yang ada di manifest produksi tetapi
+hilang di working tree: `src/lib/analytics/complete-report-read.ts`,
+`src/lib/analytics/profit-cost-evidence.ts`, `src/lib/analytics/ads-coverage.ts`,
+`src/app/(app)/commissions/spx/page.tsx`, `src/lib/commissions/spx-preview.ts`,
+`src/app/api/commissions/spx-preview/route.ts`, `src/lib/date/ranges.ts`,
+`src/lib/orders/export-groups.ts`, `src/lib/orders/phone-warning.ts`,
+`src/components/team/cs-regions.tsx`, `.vercelignore`.
+
+**Catatan artefak produksi-aktif yang masih untracked:**
+`scripts/sql/pnl-performance/20261021000100-materialized-summary.sql`
+(definisi penerus `laba_rugi_summary` yang aktif) dan
+`scripts/migrations/pnl-ui-2026-10-21.json` (manifest recovery current)
+belum ter-commit; salinan lain tersimpan di snapshot privat rilis. Prioritas
+amankan lewat review + commit terpisah (di luar sesi audit ini).
+
+#### Audit semantik laporan & aturan bisnis (read-only: kode/SQL/docs)
+
+**(a) Laba Rugi — estimasi vs delivered vs COD settled vs laba kas.**
+Fungsi `public.laba_rugi_summary` (SQL penerus
+`scripts/sql/pnl-performance/20261021000100-materialized-summary.sql`,
+25 field): `est_*` adalah agregat **semua** order pada periode dengan
+komponen `estimated_*`; `act_*` hanya order berstatus `DITERIMA`
+(RETUR mengurangi sebesar `rts_loss`). UI kandidat rilis (= produksi)
+melabeli keduanya "Proyeksi" vs "Realisasi"; "Realisasi" didefinisikan
+sebagai accrual basis (komentar `src/app/(app)/laba-rugi/page.tsx:6` pada
+kandidat, banner `:155`, catatan `:204`) dan ada peringatan agar tidak
+dipakai sebagai laba bersih final sebelum biaya/rekonsiliasi lengkap.
+**Tidak ada dimensi COD settled / laba kas di reader ini** — bahkan
+`act_fee_admin` berasal dari `estimated_cod_fee + estimated_ppn` order
+delivered. **Vonis: ADA GAP.** Estimasi vs delivered terpisah jelas dan
+jujur, tetapi "Realisasi" bukan laba kas terealisasi; dimensi kas hidup di
+jalur terpisah (Cashflow SPX / payout recon), bukan di Laba Rugi. Risiko
+salah baca sesuai peringatan aturan Barry.
+
+**(b) Komisi CS Rp2.500 & EARNED→PAID setelah settlement COD.**
+`compute_commissions` (kandidat
+`scripts/sql/cs-commission-per-order/20260917000100-cs-per-order.candidate.sql:45-55`):
+status awal EARNED hanya bila order `DITERIMA` dan atribusi CS ada;
+RETUR/CANCEL/FAKE menjadi VOIDED; PAID tidak ditimpa recompute. Nominal
+berasal dari tabel aturan `commission_rules` bertipe `FLAT_PER_ORDER`
+(data yang dapat diubah lewat aturan, bukan konstanta kode) — **nilai live
+Rp2.500 NOT VERIFIED** dari kode saja. Transisi EARNED→PAID punya dua jalur:
+(i) jalur pencairan SPX menerapkan `cod_settled_at` lalu membalik komisi
+EARNED→PAID (`src/components/reconciliation/payout-recon-section.tsx:101`)
+— sesuai aturan Barry; (ii) jalur manual `mark_commission_paid` /
+`bulk_mark_commission_paid` (kandidat
+`scripts/sql/commission-payment-access/20260917000200-owner-admin-payment.candidate.sql`)
+hanya mensyaratkan komisi berstatus EARNED dan aktor owner/admin aktif,
+**tanpa pemeriksaan settlement COD** di level fungsi. **Vonis: ADA GAP
+parsial.** Mekanisme yang sesuai aturan ada di jalur pencairan; jalur
+manual bertumpu pada kedisiplinan prosedural owner/admin. Definisi fungsi
+live di database **NOT VERIFIED** (audit ini tanpa query live; catatan
+rilis historis di handoff adalah bukti sekunder).
+
+**(c) Parameter SPX: cashback 40%, fee COD 1%, PPN 12%, RTS Rp0.**
+Parameter berupa rate berversi per channel (`public.courier_channel_rates`
++ `get_active_rate(channel, key, order_date)`), bukan konstanta aplikasi.
+Seed `src/lib/supabase/migrations/018_billing_models.sql:538-540`:
+`shipping_discount_rate` 0.40 ("SPX cashback 40%"), `cod_fee_rate` 0.01
+("SPX fee COD 1%"), `ppn_rate` 0.12 atas fee COD;
+`src/lib/supabase/migrations/056_bookkeeping_arsip_columns.sql:11`:
+`rts_shipping_rate` 0 untuk SPX. Kalkulator biaya memakai parameter yang
+sama (`src/lib/cost/calculator.ts:27-29`). **Vonis: SESUAI** dengan
+ketetapan Barry pada level definisi/seed; nilai rate efektif yang berlaku
+di database produksi saat ini **NOT VERIFIED** (data live, di luar audit
+read-only kode).
+
+#### Prioritas temuan
+
+1. Rekonsiliasi working tree ↔ produksi (52 dari 453 file divergen) sebelum
+   ada deploy atau commit src dari working tree.
+2. Amankan dua artefak recovery produksi-aktif yang masih untracked (SQL
+   materialized summary + manifest pnl-ui) lewat review dan commit terpisah.
+3. Keluarkan dari pelacakan Git: `supabase/.temp/*` dan `foto sementara/`
+   (gitignore); jangan commit xlsx ekspor order.
+4. Commit bertahap kelompok docs/tests/scripts per scope setelah cek
+   sensitivitas dan asal.
+5. Keputusan Barry (implementasi di jalur Codex): label/dimensi kas pada
+   Laba Rugi, dan apakah jalur manual komisi perlu gerbang settlement.
+
+- **Status akhir sesi vision: RELEASED.** vision tidak memegang area apa
+  pun setelah sesi ini. **NEXT (satu langkah):** Barry putuskan rekonsiliasi
+  working tree ↔ rilis produksi sebagai pekerjaan berikutnya.
+
 
 ---
 

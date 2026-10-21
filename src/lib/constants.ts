@@ -120,28 +120,33 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'admin'],
   },
   {
+    title: 'Resi Saya',
+    href: '/cs/resi',
+    icon: ShoppingCart,
+    roles: ['cs'],
+  },
+  {
     // Input Order — semua cara masuk order/admin validation digabung sebagai 1 workflow.
     title: 'Input Order',
     href: '/orders/new',
     icon: ShoppingCart,
-    roles: ['owner', 'admin', 'cs'],
+    roles: ['owner', 'admin'],
     children: [
-      { title: 'Input Order', href: '/orders/new', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Tempel Laporan WA', href: '/orders/wa-paste', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Input Order', href: '/orders/new', roles: ['owner', 'admin'] },
+      { title: 'Tempel Laporan WA', href: '/orders/wa-paste', roles: ['owner', 'admin'] },
       { title: 'Upload Order', href: '/orders/bulk-upload', roles: ['owner', 'admin'] },
-      { title: 'Antrian Validasi', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
+      { title: 'Validasi Order', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
     ],
   },
   {
     // Order Problem / Rescue — order masih bisa diselamatkan: buyer unreachable,
     // alamat/no HP, resi/status nyangkut, atribusi kosong, dll.
-    title: 'Order Problem / Rescue',
+    title: 'Penanganan Masalah',
     href: '/crm',
     icon: UserRound,
-    roles: ['owner', 'admin', 'cs'],
+    roles: ['owner', 'admin'],
     children: [
-      { title: 'Rescue Order', href: '/crm', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Antrian Masalah', href: '/inbox/pending-review', roles: ['owner', 'admin'] },
+      { title: 'Rescue Order', href: '/crm', roles: ['owner', 'admin'] },
       { title: 'Atribusi Kosong', href: '/inbox/atribusi-required', roles: ['owner', 'admin'] },
       { title: 'Resi Nyangkut', href: '/inbox/unmatched-resi', roles: ['owner', 'admin'] },
       { title: 'Status Asing', href: '/inbox/unmapped-statuses', roles: ['owner', 'admin'] },
@@ -152,19 +157,20 @@ export const NAV_ITEMS: NavItem[] = [
   {
     // Pengiriman & Rekonsiliasi — kirim order, export, sync status ekspedisi,
     // preview matched/unmatched/ambiguous, apply status.
-    title: 'Pengiriman & Rekonsiliasi',
+    title: 'Pengiriman',
     href: '/orders/draft',
     icon: ShoppingCart,
-    roles: ['owner', 'admin', 'cs'],
+    roles: ['owner', 'admin'],
     children: [
-      { title: 'Antrian Kirim', href: '/orders/draft', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Export Ekspedisi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
+      { title: 'Antrian Kirim', href: '/orders/draft', roles: ['owner', 'admin'] },
+      { title: 'Ekspor Resi', href: '/orders/export-resi', roles: ['owner', 'admin'] },
       { title: 'Setelah Export', href: '/orders/post-export', roles: ['owner', 'admin'] },
-      { title: 'Sync Mengantar/JNE', href: '/import-mengantar', badge: 'BARU', roles: ['owner', 'admin'] },
+      { title: 'Data Order', href: '/orders/data', badge: 'BARU', roles: ['owner', 'admin'] },
+      { title: 'Sync Mengantar', href: '/import-mengantar', badge: 'BARU', roles: ['owner', 'admin'] },
       { title: 'Sync SPX', href: '/reconciliation/spx-status', roles: ['owner', 'admin'] },
       { title: 'Rekonsiliasi Status', href: '/reconciliation/ekspedisi', roles: ['owner', 'admin'] },
       { title: 'Upload File Status', href: '/reconciliation/upload', roles: ['owner', 'admin'] },
-      { title: 'Export File Ekspedisi', href: '/export-rekonsiliasi', roles: ['owner', 'admin'] },
+      { title: 'Ekspor Rekonsiliasi', href: '/export-rekonsiliasi', roles: ['owner', 'admin'] },
     ],
   },
   {
@@ -186,16 +192,16 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Gajian CS',
     href: '/commissions/manage',
     icon: Coins,
-    roles: ['owner', 'admin', 'cs', 'advertiser'],
+    roles: ['owner', 'admin', 'advertiser'],
     children: [
       { title: 'Gajian CS', href: '/commissions/manage', roles: ['owner', 'admin'] },
       { title: 'Aturan Fee Tim', href: '/settings/commission-rules', roles: ['owner'] },
-      { title: 'Komisi Saya', href: '/commissions/my', roles: ['cs', 'advertiser', 'owner', 'admin'] },
+      { title: 'Komisi Saya', href: '/commissions/my', roles: ['advertiser', 'owner', 'admin'] },
     ],
   },
   {
     // Advertiser Cockpit — keputusan scale/watch/kill campaign/produk/platform.
-    title: 'Advertiser Cockpit',
+    title: 'Iklan & Campaign',
     href: '/performa',
     icon: Megaphone,
     roles: ['owner', 'admin', 'advertiser'],
@@ -205,39 +211,33 @@ export const NAV_ITEMS: NavItem[] = [
       { title: 'Input Spend Iklan', href: '/ad-spend' },
       { title: 'Setup Campaign', href: '/marketing/ad-setup' },
       { title: 'Analytics Produk', href: '/analytics', roles: ['owner', 'admin'] },
-      { title: 'Performa Iklan Lama', href: '/marketing/performa', roles: ['owner', 'admin'] },
       { title: 'Dashboard Advertiser', href: '/adv-dashboard', roles: ['advertiser', 'owner', 'admin'] },
       { title: 'Simulasi Margin/CPR', href: '/adv/margin-simulator', roles: ['owner', 'advertiser'] },
     ],
   },
   {
-    // Laporan CS — jangan disembunyikan: lead harian CS adalah input utama
-    // closing rate CS = closing/order CS ÷ lead_reported. Ini dipisah dari
-    // Gajian CS supaya owner/admin tetap bisa cek performa, dan CS tetap bisa input lead.
+    // Laporan CS — lead harian CS dipantau owner/admin.
+    // Untuk akses CS operasional di Liard, CS hanya lihat menu Resi Saya.
     title: 'Laporan CS',
     href: '/cs-ringkasan',
     icon: UserRound,
-    roles: ['owner', 'admin', 'cs'],
+    roles: ['owner', 'admin'],
     children: [
-      { title: 'Performa CS / Closing Rate', href: '/cs-ringkasan', roles: ['owner', 'admin', 'cs'] },
-      { title: 'Laporan CS / Input Lead', href: '/cs-report', roles: ['owner', 'admin', 'cs'] },
+      { title: 'Performa CS', href: '/cs-ringkasan', roles: ['owner', 'admin'] },
+      { title: 'Input Lead CS', href: '/cs-report', roles: ['owner', 'admin'] },
     ],
   },
   {
     // Pembukuan & Finance Check — ledger, P&L, export audit/crosscheck Excel.
-    title: 'Pembukuan & Finance Check',
+    title: 'Pembukuan',
     href: '/orders/pembukuan',
     icon: LineChart,
     roles: ['owner', 'admin', 'akunting'],
     children: [
-      { title: 'Pembukuan Ledger', href: '/orders/pembukuan' },
-      { title: 'Owner Profit Cockpit', href: '/reports/owner-profit', badge: 'BARU' },
+      { title: 'Buku Order', href: '/orders/pembukuan' },
+      { title: 'Ringkasan Profit', href: '/reports/owner-profit', badge: 'BARU' },
       { title: 'Laba Rugi', href: '/laba-rugi', badge: 'BARU' },
-      { title: 'Posisi Keuangan', href: '/financial-position' },
-      { title: 'Biaya/Gaji/OPEX', href: '/expenses' },
-      { title: 'Finance Audit Pack', href: '/reports/export', badge: 'NANTI' },
-      { title: 'Laporan Keuangan', href: '/reports/financial' },
-      { title: 'Laporan Iklan', href: '/reports/ads' },
+      { title: 'Biaya & Gaji', href: '/expenses' },
     ],
   },
   {

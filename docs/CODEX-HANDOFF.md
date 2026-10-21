@@ -252,6 +252,23 @@ hilang di working tree: `src/lib/analytics/complete-report-read.ts`,
 `src/lib/orders/export-groups.ts`, `src/lib/orders/phone-warning.ts`,
 `src/components/team/cs-regions.tsx`, `.vercelignore`.
 
+**Addendum 16:44 WIB (pohon kerja berubah saat sesi berjalan):** pada
+2026-10-21 16:40 WIB — setelah pengukuran di atas, dan **bukan oleh
+vision** — 10 dari 13 file rilis tersinkron ke working tree dan kini
+hash-nya **sama** dengan kandidat rilis: `laba-rugi/page.tsx`,
+`stat-card.tsx`, `orders/pembukuan/page.tsx`, `globals.css`,
+`app-header.tsx`, `(app)/layout.tsx`, `page-header.tsx`, `table.tsx`,
+`app/layout.tsx`, `app-sidebar.tsx` (status kini modified tracked). Tiga
+file belum tersinkron: `src/lib/constants.ts` (modified, isi lain),
+`src/app/(app)/orders/data/page.tsx` (untracked, isi lain), dan
+`src/components/ui/date-range-picker.tsx` (clean terhadap HEAD, isi lain
+dari kandidat). Pelaku sinkronisasi **NOT VERIFIED**. Pengukuran ulang
+terhadap manifest rilis setelah sinkronisasi: **cocok 411, beda 31,
+hilang 11** — divergensi kini **42 dari 453 file**. Angka 401/41/11 pada
+catatan produksi di atas adalah keadaan saat diukur (±16:39–16:41 WIB).
+Modified tracked keseluruhan kini 53 (43 awal sesi Codex + 10 file
+tersinkron ini; handoff vision sudah ter-commit).
+
 **Catatan artefak produksi-aktif yang masih untracked:**
 `scripts/sql/pnl-performance/20261021000100-materialized-summary.sql`
 (definisi penerus `laba_rugi_summary` yang aktif) dan

@@ -1,45 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export interface DateRange {
-  from: string  // YYYY-MM-DD
-  to: string    // YYYY-MM-DD
-  label?: string
-}
-
-const fmtDate = (d: Date) => d.toISOString().split('T')[0]
-const today = () => new Date()
-const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d }
-const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1)
-const endOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0)
-const startOfWeek = (d: Date) => { const x = new Date(d); const day = x.getDay() || 7; x.setDate(x.getDate() - day + 1); return x }
-const endOfWeek = (d: Date) => { const x = startOfWeek(d); x.setDate(x.getDate() + 6); return x }
-
-const PRESETS: { label: string; getValue: () => { from: string; to: string } }[] = [
-  { label: 'Hari ini', getValue: () => ({ from: fmtDate(today()), to: fmtDate(today()) }) },
-  { label: 'Kemarin', getValue: () => ({ from: fmtDate(daysAgo(1)), to: fmtDate(daysAgo(1)) }) },
-  { label: 'Hari ini dan kemarin', getValue: () => ({ from: fmtDate(daysAgo(1)), to: fmtDate(today()) }) },
-  { label: '7 hari terakhir', getValue: () => ({ from: fmtDate(daysAgo(6)), to: fmtDate(today()) }) },
-  { label: '14 hari terakhir', getValue: () => ({ from: fmtDate(daysAgo(13)), to: fmtDate(today()) }) },
-  { label: '28 hari terakhir', getValue: () => ({ from: fmtDate(daysAgo(27)), to: fmtDate(today()) }) },
-  { label: '30 hari terakhir', getValue: () => ({ from: fmtDate(daysAgo(29)), to: fmtDate(today()) }) },
-  { label: 'Minggu ini', getValue: () => ({ from: fmtDate(startOfWeek(today())), to: fmtDate(today()) }) },
-  { label: 'Minggu lalu', getValue: () => {
-    const lastWeek = daysAgo(7)
-    return { from: fmtDate(startOfWeek(lastWeek)), to: fmtDate(endOfWeek(lastWeek)) }
-  }},
-  { label: 'Bulan ini', getValue: () => ({ from: fmtDate(startOfMonth(today())), to: fmtDate(today()) }) },
-  { label: 'Bulan lalu', getValue: () => {
-    const lastMonth = new Date(); lastMonth.setMonth(lastMonth.getMonth() - 1)
-    return { from: fmtDate(startOfMonth(lastMonth)), to: fmtDate(endOfMonth(lastMonth)) }
-  }},
-]
+import { DATE_PRESETS, dateRangePreset, isCalendarDate, type DateRange } from '@/lib/date/ranges'
+import { jakartaDateString } from '@/lib/date/jakarta'
+export type { DateRange } from '@/lib/date/ranges'
 
 const formatDisplay = (from: string, to: string, label?: string): string => {
   if (label) return `${label}: ${from === to ? formatRange(from) : `${formatRange(from)} – ${formatRange(to)}`}`
@@ -48,9 +18,10 @@ const formatDisplay = (from: string, to: string, label?: string): string => {
 }
 
 const formatRange = (iso: string): string => {
-  const d = new Date(iso)
+  if (!isCalendarDate(iso)) return '—'
+  const [year, month, day] = iso.split('-').map(Number)
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+  return `${day} ${months[month - 1]} ${year}`
 }
 
 interface Props {
@@ -60,27 +31,33 @@ interface Props {
 }
 
 export function DateRangePicker({ value, onChange, className }: Props) {
+  const id = useId()
   const [open, setOpen] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<string | null>(value.label || null)
   const [customFrom, setCustomFrom] = useState(value.from)
   const [customTo, setCustomTo] = useState(value.to)
 
   useEffect(() => {
+    // Synchronize the edit buffer after the parent changes the selected range.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCustomFrom(value.from)
     setCustomTo(value.to)
     setSelectedPreset(value.label || null)
   }, [value.from, value.to, value.label])
 
   const pickPreset = (label: string) => {
-    const p = PRESETS.find(p => p.label === label)
+    const p = DATE_PRESETS.find(p => p.label === label)
     if (!p) return
-    const v = p.getValue()
+    const v = dateRangePreset(p.id)
     setSelectedPreset(label)
     setCustomFrom(v.from)
     setCustomTo(v.to)
   }
 
+  const validRange = isCalendarDate(customFrom) && isCalendarDate(customTo) && customFrom <= customTo
+
   const apply = () => {
+    if (!validRange) return
     onChange({ from: customFrom, to: customTo, label: selectedPreset || undefined })
     setOpen(false)
   }
@@ -95,17 +72,17 @@ export function DateRangePicker({ value, onChange, className }: Props) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger render={
-        <Button variant="outline" className={cn('gap-2 font-normal justify-start min-w-[240px]', className)}>
+        <Button variant="outline" className={cn('gap-2 font-normal justify-start min-w-0 max-w-full', className)}>
           <Calendar className="w-4 h-4 text-zinc-400 shrink-0" />
           <span className="truncate">{formatDisplay(value.from, value.to, value.label)}</span>
         </Button>
       } />
-      <PopoverContent className="w-[420px] p-0" align="end">
+      <PopoverContent className="w-[min(420px,calc(100vw-2rem))] p-0" align="end">
         <div className="flex flex-col">
-          <div className="flex">
+          <div className="flex flex-col sm:flex-row">
             {/* Preset list */}
-            <div className="w-[180px] border-r p-2 max-h-[400px] overflow-y-auto">
-              {PRESETS.map(p => (
+            <div className="grid grid-cols-2 gap-1 border-b p-2 sm:block sm:w-[170px] sm:shrink-0 sm:border-r sm:border-b-0 max-h-[240px] overflow-y-auto">
+              {DATE_PRESETS.map(p => (
                 <button
                   key={p.label}
                   type="button"
@@ -113,7 +90,7 @@ export function DateRangePicker({ value, onChange, className }: Props) {
                   className={cn(
                     'w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors',
                     selectedPreset === p.label
-                      ? 'bg-zinc-500/15 text-zinc-300 font-medium'
+                      ? 'bg-accent text-accent-foreground font-medium'
                       : 'hover:bg-muted text-foreground/80'
                   )}
                 >
@@ -123,10 +100,11 @@ export function DateRangePicker({ value, onChange, className }: Props) {
             </div>
 
             {/* Custom inputs */}
-            <div className="flex-1 p-4 space-y-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-4 p-4">
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">Dari tanggal</label>
+                <label htmlFor={`${id}-from`} className="text-xs text-muted-foreground">Dari tanggal</label>
                 <Input
+                  id={`${id}-from`}
                   type="date"
                   value={customFrom}
                   onChange={e => { setCustomFrom(e.target.value); setSelectedPreset(null) }}
@@ -134,13 +112,14 @@ export function DateRangePicker({ value, onChange, className }: Props) {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">Sampai tanggal</label>
+                <label htmlFor={`${id}-to`} className="text-xs text-muted-foreground">Sampai tanggal</label>
                 <Input
+                  id={`${id}-to`}
                   type="date"
                   value={customTo}
                   onChange={e => { setCustomTo(e.target.value); setSelectedPreset(null) }}
                   min={customFrom}
-                  max={fmtDate(today())}
+                  max={jakartaDateString()}
                 />
               </div>
               <p className="text-[10px] text-muted-foreground pt-2">
@@ -151,10 +130,10 @@ export function DateRangePicker({ value, onChange, className }: Props) {
 
           {/* Footer */}
           <div className="flex items-center justify-between border-t p-3 bg-muted/20">
-            <p className="text-[11px] text-muted-foreground">Tanggal dalam zona waktu kamu</p>
+            <p className="text-[11px] text-muted-foreground">Tanggal menggunakan WIB</p>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={cancel}>Batal</Button>
-              <Button size="sm" onClick={apply} className="bg-zinc-600 hover:bg-zinc-700 text-white">Update</Button>
+              <Button size="sm" disabled={!validRange} onClick={apply}>Terapkan</Button>
             </div>
           </div>
         </div>
@@ -163,27 +142,8 @@ export function DateRangePicker({ value, onChange, className }: Props) {
   )
 }
 
-// Helper: get default range (today)
-export const defaultRange = (): DateRange => ({
-  from: fmtDate(today()),
-  to: fmtDate(today()),
-  label: 'Hari ini',
-})
-
-export const last7Days = (): DateRange => ({
-  from: fmtDate(daysAgo(6)),
-  to: fmtDate(today()),
-  label: '7 hari terakhir',
-})
-
-export const last30Days = (): DateRange => ({
-  from: fmtDate(daysAgo(29)),
-  to: fmtDate(today()),
-  label: '30 hari terakhir',
-})
-
-export const thisMonth = (): DateRange => ({
-  from: fmtDate(startOfMonth(today())),
-  to: fmtDate(today()),
-  label: 'Bulan ini',
-})
+// Existing imports keep working; every preset uses the same WIB calendar.
+export const defaultRange = (): DateRange => dateRangePreset('today')
+export const last7Days = (): DateRange => dateRangePreset('last7')
+export const last30Days = (): DateRange => dateRangePreset('last30')
+export const thisMonth = (): DateRange => dateRangePreset('month')

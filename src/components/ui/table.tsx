@@ -4,11 +4,14 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({ className, containerClassName, containerLabel, ...props }: React.ComponentProps<"table"> & { containerClassName?: string; containerLabel?: string }) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className={cn("relative min-w-0 w-full max-w-full overflow-auto", containerClassName)}
+      role={containerLabel ? "region" : undefined}
+      aria-label={containerLabel}
+      tabIndex={containerLabel ? 0 : undefined}
     >
       <table
         data-slot="table"
@@ -23,7 +26,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b bg-muted/30 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-muted-foreground", className)}
+      className={cn("[&_tr]:border-b bg-muted/30 [&_th]:text-xs [&_th]:font-semibold [&_th]:tracking-normal [&_th]:text-muted-foreground", className)}
       {...props}
     />
   )

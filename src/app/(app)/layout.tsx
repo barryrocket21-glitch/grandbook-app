@@ -14,9 +14,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <TooltipProvider>
           <SidebarProvider>
             <AppSidebar />
-            <SidebarInset>
+            <SidebarInset className="min-w-0">
               <AppHeader />
-              <main className="flex-1 p-5 md:p-8 overflow-auto">
+              <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
                 {children}
               </main>
             </SidebarInset>

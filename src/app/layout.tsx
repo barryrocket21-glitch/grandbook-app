@@ -4,7 +4,8 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
 const inter = Inter({
-  variable: '--font-sans',
+  variable: '--font-inter',
+  display: 'swap',
   subsets: ['latin'],
 })
 

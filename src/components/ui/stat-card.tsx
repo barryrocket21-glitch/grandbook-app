@@ -42,16 +42,16 @@ export function StatCard({
   // Number → auto-format ribuan (id-ID) biar call-site cukup pass angka mentah
   const display = typeof value === 'number' ? value.toLocaleString('id-ID') : value
   return (
-    <div className={cn('rounded-lg border p-3', t.box, className)}>
+    <div className={cn('min-w-0 rounded-xl border p-4', t.box, className)}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+        <p className="min-w-0 text-xs font-medium leading-relaxed text-muted-foreground">{label}</p>
         {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
       </div>
-      <p className={cn('mt-1 font-bold tabular-nums', size === 'lg' ? 'text-3xl' : 'text-2xl', t.value)}>
+      <p title={typeof display === 'string' || typeof display === 'number' ? String(display) : undefined} className={cn('mt-2 max-w-full overflow-x-auto whitespace-nowrap font-semibold leading-snug tracking-tight tabular-nums', size === 'lg' ? 'text-[clamp(1.25rem,2.3vw,1.875rem)]' : 'text-[clamp(1.125rem,2vw,1.5rem)]', t.value)}>
         {display}
       </p>
       {sub != null && sub !== '' && (
-        <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>
+        <p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground">{sub}</p>
       )}
     </div>
   )

@@ -19,7 +19,14 @@ function BreadcrumbNav() {
 
   const breadcrumbMap: Record<string, string> = {
     dashboard: 'Dashboard',
-    orders: 'Orders',
+    orders: 'Order',
+    data: 'Data Order',
+    pembukuan: 'Buku Order',
+    'laba-rugi': 'Laba Rugi',
+    draft: 'Antrean Kirim',
+    'post-export': 'Setelah Ekspor',
+    'export-resi': 'Ekspor Ekspedisi',
+    'wa-paste': 'Tempel Laporan WA',
     new: 'Input Baru',
     list: 'Daftar',
     campaigns: 'Campaigns',
@@ -39,19 +46,19 @@ function BreadcrumbNav() {
   }
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
+    <Breadcrumb className="min-w-0 flex-1 overflow-hidden">
+      <BreadcrumbList className="flex-nowrap">
         {segments.map((segment, index) => {
           const isLast = index === segments.length - 1
           const href = '/' + segments.slice(0, index + 1).join('/')
           const label = breadcrumbMap[segment] || segment
 
           return (
-            <span key={segment} className="flex items-center gap-1.5">
+            <span key={segment} className="flex min-w-0 items-center gap-1.5">
               {index > 0 && <BreadcrumbSeparator />}
               <BreadcrumbItem>
                 {isLast ? (
-                  <BreadcrumbPage>{label}</BreadcrumbPage>
+                  <BreadcrumbPage className="truncate">{label}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink href={href}>{label}</BreadcrumbLink>
                 )}
@@ -66,11 +73,11 @@ function BreadcrumbNav() {
 
 export function AppHeader() {
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+    <header className="flex min-w-0 h-14 shrink-0 items-center gap-2 border-b px-4">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-2 !h-4" />
       <BreadcrumbNav />
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         <NotificationBell />
       </div>
     </header>

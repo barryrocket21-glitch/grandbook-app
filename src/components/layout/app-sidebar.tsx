@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -22,10 +22,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth } from '@/components/providers/auth-provider'
 import { getNavItemsForRole, ROLE_LABELS } from '@/lib/constants'
 import { useSidebarCounts, getCountForHref } from '@/lib/hooks/use-sidebar-counts'
-import { BookOpen, ChevronUp, LogOut, Moon, Sun } from 'lucide-react'
+import { BookOpen, LogOut, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronRight } from 'lucide-react'
+
+const subscribeToMount = () => () => {}
 
 export function AppSidebar() {
   const { user, profile, role, signOut } = useAuth()
@@ -33,8 +35,7 @@ export function AppSidebar() {
   const { theme, setTheme } = useTheme()
   // next-themes resolves the theme only on the client; rendering theme-
   // dependent UI during SSR causes a hydration mismatch. Gate it on mount.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useSyncExternalStore(subscribeToMount, () => true, () => false)
 
   const navItems = role ? getNavItemsForRole(role) : []
   const counts = useSidebarCounts(user?.id ?? null)
@@ -54,11 +55,11 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
-              <div className="bg-gradient-to-br from-zinc-500 via-zinc-600 to-zinc-600 text-white rounded-xl flex aspect-square size-9 items-center justify-center shadow-lg shadow-zinc-500/30 ring-1 ring-white/10">
+              <div className="bg-primary text-primary-foreground rounded-xl flex aspect-square size-9 shrink-0 items-center justify-center">
                 <BookOpen className="size-4.5" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-bold text-base bg-gradient-to-r from-zinc-300 to-zinc-300 bg-clip-text text-transparent">
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                <span className="truncate text-base font-semibold text-foreground">
                   GrandBook
                 </span>
                 <span className="truncate text-[11px] text-muted-foreground tracking-wide">
@@ -91,11 +92,12 @@ export function AppSidebar() {
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           render={<CollapsibleTrigger />}
+                          className="h-auto min-h-10"
                           tooltip={item.title}
                           isActive={groupActive}
                         >
                           <Icon className="size-4" />
-                          <span>{item.title}</span>
+                          <span className="min-w-0 flex-1 truncate">{item.title}</span>
                           <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                         </SidebarMenuButton>
                         <CollapsibleContent>
@@ -108,15 +110,15 @@ export function AppSidebar() {
                                   render={<Link href={child.href} />}
                                   isActive={pathname === child.href}
                                 >
-                                  <span className="flex items-center gap-1.5 w-full">
-                                    <span className="truncate">{child.title}</span>
+                                  <span className="flex min-w-0 w-full items-center gap-2">
+                                    <span className="min-w-0 flex-1 truncate" title={child.title}>{child.title}</span>
                                     {count > 0 && (
-                                      <span className="ml-auto rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums min-w-[20px] text-center">
+                                      <span className="ml-auto shrink-0 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums min-w-[20px] text-center">
                                         {count > 99 ? '99+' : count}
                                       </span>
                                     )}
                                     {!count && child.badge && (
-                                      <span className="ml-auto rounded bg-zinc-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
+                                      <span className="ml-auto shrink-0 rounded bg-zinc-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
                                         {child.badge}
                                       </span>
                                     )}
@@ -139,7 +141,7 @@ export function AppSidebar() {
                       isActive={isActive}
                     >
                       <Icon className="size-4" />
-                      <span>{item.title}</span>
+                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
@@ -158,7 +160,7 @@ export function AppSidebar() {
                   {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold text-sm">
                   {profile?.full_name || 'User'}
                 </span>

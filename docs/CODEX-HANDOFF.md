@@ -1,5 +1,134 @@
 # GrandBook Codex Handoff
 
+## Codex — repo siap deploy, tanpa push/deploy — 22 Oktober 2026 WIB
+
+**SELESAI / RELEASED**. Claim awal dicatat 2026-10-22T13:24:51+07:00. Barry memberi izin eksplisit untuk
+membereskan 37 perbedaan source sampai repo siap deploy; **jangan push/deploy**.
+Handoff vision sudah dibaca, audit/verifikasi vision RELEASED. Bagian vision
+tidak akan diubah. Konfirmasi untuk catatan vision: sinkronisasi lima file pada
+21 Oktober 16:50 WIB dilakukan Codex; backup/diff lama ada pada
+`/root/backups/grandbook/ui-alignment-finish-20261021-65f0f5c8/` dan snapshot
+sebelumnya, bukan tindakan vision.
+
+### Claim area Codex saat ini
+
+37 path hasil inventaris baru (dibanding snapshot rilis utama yang akan
+diverifikasi ulang read-only lewat Vercel):
+
+- `src/lib/converter/wa-paste-phone-dup.ts` — different
+- `src/lib/supabase/queries/commissions.ts` — different
+- `src/components/dashboard/cashflow-summary-widget.tsx` — different
+- `src/app/(app)/orders/export-resi/page.tsx` — different
+- `src/lib/schemas/wa-paste-request.ts` — different
+- `src/app/(app)/orders/new/page.tsx` — different
+- `src/app/api/orders/wa-paste/existing-phones/route.ts` — different
+- `src/app/api/orders/wa-paste/submit/route.ts` — different
+- `src/app/(app)/team/cs/[userId]/page.tsx` — different
+- `src/lib/analytics/complete-report-read.ts` — missing
+- `src/lib/format.ts` — different
+- `src/lib/analytics/profit-cost-evidence.ts` — missing
+- `src/components/products/product-variant-form.tsx` — different
+- `src/lib/converter/preview.ts` — different
+- `src/app/(app)/commissions/spx/page.tsx` — missing
+- `src/lib/converter/engine.ts` — different
+- `src/app/(app)/reconciliation/spx-cashflow/page.tsx` — different
+- `src/lib/orders/export-groups.ts` — missing
+- `src/components/team/cs-regions.tsx` — missing
+- `.vercelignore` — missing
+- `src/lib/commissions/spx-preview.ts` — missing
+- `src/app/(app)/commissions/my/page.tsx` — different
+- `src/app/(app)/team/cs/page.tsx` — different
+- `src/lib/types.ts` — different
+- `src/lib/supabase/queries/team.ts` — different
+- `src/app/(app)/reports/owner-profit/page.tsx` — different
+- `src/app/(app)/orders/wa-paste/page.tsx` — different
+- `src/app/api/reconciliation/spx-cashflow/sync/route.ts` — different
+- `src/app/(app)/financial-position/page.tsx` — different
+- `src/lib/supabase/queries/crm.ts` — different
+- `src/app/api/commissions/spx-preview/route.ts` — missing
+- `src/app/(app)/orders/bulk-upload/page.tsx` — different
+- `src/app/(app)/commissions/manage/page.tsx` — different
+- `src/lib/reports/owner-profit-export.ts` — different
+- `src/app/api/reports/owner-profit/route.ts` — different
+- `src/lib/orders/phone-warning.ts` — missing
+- `src/lib/analytics/ads-coverage.ts` — missing
+
+Pendukung yang diclaim untuk kesiapan rilis: `.gitignore`, `.vercelignore`,
+`scripts/releases/repo-readiness/`, `tests/releases/repo-readiness/`,
+`docs/repo-readiness-2026-10-22.md`, `docs/CODEX-HANDOFF.md`. Review/stage per
+scope hanya source/dependensi yang masuk manifest rilis terverifikasi; byte file
+yang sudah match tidak diubah. File tes relevan boleh direview/dijalankan; bila
+perlu diedit, path tambahan akan diclaim dulu. Tidak melakukan bulk cleanup,
+reset/stash/clean, perubahan SQL/DB/komisi/settlement, Auth/RLS relaxation,
+Git push atau Vercel deploy. Semua versi working tree awal disimpan privat.
+
+Rencana: validasi source produksi terbaru; review 27 diff dan 10 file hilang;
+integrasikan per domain; amankan pengecualian data/temp/credential dan siapkan
+rilis dari Git yang bisa direproduksi; typecheck/lint/build + regresi/runtime
+fixture; commit kecil; update hasil di handoff. Claim vision yang baru akan
+dibaca sebelum mengubah area; jangan menimpa penulisan handoff concurrent.
+
+### Claim tambahan setelah review dependensi
+
+Review/commit enam tes sintetis di bawah; tambahan claim
+`tests/scripts/wa-paste-phone-dup.test.ts` untuk mencocokkan pesan duplikat
+hari ini (WIB) dan memakai fixture telepon sintetis. Tiga effect pemuatan
+(`financial-position`, `spx-cashflow`, `cashflow-summary-widget`) akan dijadwalkan
+melalui timer yang dibersihkan saat unmount untuk lolos lint tanpa mengubah
+rumus, izin, atau payload RPC. Perbedaan terencana akan dicatat di manifest.
+
+Enam tes yang direview tanpa perubahan isi:
+
+- `tests/scripts/profit-orders-completeness.test.ts`
+- `tests/scripts/profit-cost-evidence.test.ts`
+- `tests/scripts/payroll-completeness.test.ts`
+- `tests/scripts/spx-cs-commission-candidate.test.ts`
+- `tests/scripts/actual-cost-report.test.ts`
+- `tests/scripts/p0-environment-safety.test.ts`
+
+Hanya fixture sintetis yang akan masuk Git; sesi/auth/ekspor pelanggan tetap
+privat. Seluruh 37 gap sudah diselaraskan; 452 hash produksi dipertahankan,
+`.vercelignore` sengaja diperketat. Template next-env menggantikan ketergantungan
+pada file generated yang diabaikan Git. 67 input manifest belum tracked pada
+awal sesi sedang direview per domain untuk memastikan fresh checkout lengkap.
+Varian engine auto-provision CS lama, UI pencairan lama, dan implementasi lokal
+lain tersimpan utuh di backup/diff privat, bukan dihapus atau dijalankan.
+
+Checkpoint sebelumnya selesai; hasil final di bawah.
+
+### Hasil akhir — 2026-10-22T19:18:18+07:00
+
+- **READY untuk rilis aplikasi main dari Git, BELUM push/deploy.** 37 gap
+  terselesaikan; 0 hilang/0 perbedaan tak terjelaskan. 453 input rilis berasal
+  dari Git; 449 identik produksi + 4 perubahan terencana (ignore upload dan
+  tiga timer pemuatan awal), tercatat di manifest.
+- Source diuji pada `e943053`. Commit lokal per domain dari
+  `a22987b` sampai `e943053`; daftar lengkap,
+  file/diff dan batasan di [repo readiness](repo-readiness-2026-10-22.md).
+- **VERIFIED:** fresh Git clone + npm ci locked, full TypeScript, scoped lint
+  0 errors, optimized build, 11 suite Node pada clone (18 di source awal),
+  12 tes keamanan packager; 13 cek layout + P&L + XLS 1.005 baris + 10 cek
+  browser domain. Seluruh respons bisnis browser sintetis; tidak ada JS errors
+  atau Apply/payment/submit. Versi kerja lama tetap privat; 465 path dirty
+  di luar claim tidak berubah. Tidak ada bulk cleanup atau replay SQL.
+- Metadata DB produksi masih cocok contract `8c93820be367235647016c2aa3de335f74d80d905e46a14508f384867f5caaeb`
+  (222 fungsi); tidak membaca order atau mengubah data/schema. Main masih
+  `dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ`, READY/bom1, 453 source verified via Vercel.
+  Tidak ada push/deploy, perubahan Auth/RLS, atau koreksi HPP/komisi/settlement.
+- Paket siap review: `/root/backups/grandbook/repo-readiness-20261022-3cb68d37/certified-package`. Input digest `2d93a10276ce76f412232aa1520e44fda0e4247a56c1ba13dcd2d870c253c086`.
+  Gunakan tool `scripts/releases/repo-readiness/release.py`; jangan deploy folder
+  kerja mentah/local vercel.json/.vercel. Main harus project terverifikasi/bom1;
+  Liard tetap terpisah. Artefak operator/temp/credential dikecualikan, tidak dihapus.
+- **NOT VERIFIED:** rilis Vercel baru, browser produksi baru, Safari fisik/Liard.
+  Gap kebijakan finansial dan recovery dari audit vision tetap terpisah, bukan
+  izin perubahan live. Semua catatan vision dipertahankan. **Claim RELEASED**;
+  server fixture dihentikan setelah tes.
+
+**NEXT:** tunggu persetujuan eksplisit Barry sebelum push/deploy paket Git ini.
+
+---
+
+
 ## Codex — penyelesaian UI/source alignment — 2026-10-21T16:49:17+07:00
 
 **Status SELESAI / RELEASED untuk scope UI dan ekspor.** Barry meminta "lanjutkan sampai selesai" untuk sisa

@@ -5,8 +5,9 @@ publishes, deploys, reads credentials, or applies SQL. Barry must separately
 authorize any later push/deployment. Main and Liard are independent.
 
 The manifest contains the 453 source inputs verified against main Vercel
-`dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ`, bom1. The sole source deviation is a stronger
-.vercelignore. Generated next-env.d.ts is reconstructed from a committed template;
+`dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ`, bom1. Reviewed deviations are a stronger .vercelignore and cleaned-up zero-delay
+timers for three initial remote reads. Query payloads, formulas and roles are
+unchanged; the exact deviation list is in manifest.json. Generated next-env.d.ts is reconstructed from a committed template;
 the ignored working copy is not a source of truth. Historical SQL is retained
 without replay. Private operator work stays outside this application release.
 
@@ -32,3 +33,20 @@ the package or Git. Do not replace source/project settings with the dirty shared
 working directory, or copy local vercel.json/pnpm files into this npm-lock release.
 Do not use the package as a database migration runner. Preserve all completed
 financial corrections, Auth/RLS, and operator data.
+
+For a later approved main release, retain the explicit bom1 region and the
+existing main project identity. Do not assume Liard shares main's version or
+settings. This tool deliberately has no push/deploy/promote command. Never run
+the Vercel CLI from the shared dirty working directory; it can read an unrelated
+local vercel.json before upload exclusions are applied.
+
+The snapshot-specific 453-file gate must be reviewed and updated when adding new
+application source. Do not bypass a failed source check by copying untracked
+files into the package. A later docs-only commit may share the same input digest;
+`verify` checks package bytes against the requested immutable Git revision.
+
+The committed regression tests use fabricated data and no business database
+requests. When invoking the candidate-root unit tests, set
+GB_PROFIT_CANDIDATE_ROOT, GB_PAYROLL_CANDIDATE_ROOT and
+GB_COMMISSION_CANDIDATE_ROOT to the committed checkout directory. Private browser
+smoke evidence and its fixture harnesses are linked in the dated readiness doc.

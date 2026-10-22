@@ -40,11 +40,18 @@ export default function LoginPage() {
       if (signInData.user) {
         const { data: prof } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, active, organization_id')
           .eq('id', signInData.user.id)
           .maybeSingle()
+        if (!prof?.active || !prof.organization_id) {
+          await supabase.auth.signOut({ scope: 'local' })
+          toast.error('Akun belum aktif atau profil belum tersedia. Hubungi owner.')
+          return
+        }
         switch (prof?.role) {
           case 'cs':
+            landing = '/cs/resi'
+            break
           case 'admin':
             landing = '/orders/draft'
             break

@@ -77,7 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut()
+    const response = await fetch('/api/auth/logout', { method: 'POST' })
+    if (!response.ok) throw new Error('Logout belum berhasil. Coba lagi.')
+    await supabase.auth.signOut({ scope: 'local' })
     window.location.href = '/login'
   }, [])
 

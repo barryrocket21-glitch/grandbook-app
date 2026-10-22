@@ -1,82 +1,40 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { z } from 'zod'
+import { adminClient, accountRoles, requireUserManager } from '@/lib/server/admin-users'
 
-// Phase 8H audit — extend ke admin. UPDATE/DELETE operasional CRUD users
-// (toggle active, ganti password, dst).
-async function requireOwner() {
-  const sb = await createServerClient()
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) return { error: 'Unauthorized', status: 401 as const, callerId: '' }
-  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'owner' && profile?.role !== 'admin') {
-    return { error: 'Hanya Owner atau Admin yang dapat mengakses', status: 403 as const, callerId: user.id }
-  }
-  return { ok: true as const, callerId: user.id }
-}
+const patchSchema = z.object({
+  full_name: z.string().trim().min(1).max(200).optional(),
+  role: z.enum(accountRoles).optional(), active: z.boolean().optional(),
+  email: z.email().max(254).optional(), password: z.string().min(8).max(128).optional(),
+}).strict().refine(value => Object.keys(value).length > 0)
 
-function getAdmin() {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!serviceKey) return null
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
-
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireOwner()
-  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-  const { id } = await params
-  if (id === auth.callerId) {
-    return NextResponse.json({ error: 'Tidak bisa menghapus akun sendiri' }, { status: 400 })
-  }
-
-  const admin = getAdmin()
-  if (!admin) return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum di-set' }, { status: 500 })
-
-  // Delete profile first (FK cascade may handle this, but be explicit)
-  await admin.from('profiles').delete().eq('id', id)
-  const { error } = await admin.auth.admin.deleteUser(id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
-  return NextResponse.json({ ok: true })
+export async function DELETE(request: Request) {
+  const auth = await requireUserManager(request, true)
+  if (auth.response) return auth.response
+  return NextResponse.json({ error: 'Penghapusan permanen akun dinonaktifkan. Gunakan Nonaktifkan untuk mempertahankan riwayat transaksi.' }, { status: 405 })
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireOwner()
-  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
+  const auth = await requireUserManager(request, true)
+  if (auth.response) return auth.response
   const { id } = await params
-  const body = await request.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Body kosong' }, { status: 400 })
-
-  const admin = getAdmin()
-  if (!admin) return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum di-set' }, { status: 500 })
-
-  // Allowed updates: password, email, full_name, role, active
-  const authUpdate: Record<string, unknown> = {}
-  if (body.password) {
-    if (body.password.length < 8) return NextResponse.json({ error: 'Password minimal 8 karakter' }, { status: 400 })
-    authUpdate.password = body.password
+  const parsed = patchSchema.safeParse(await request.json().catch(() => null))
+  if (!z.uuid().safeParse(id).success || !parsed.success) return NextResponse.json({ error: 'Perubahan user tidak valid.' }, { status: 400 })
+  const { data: target, error } = await auth.sb.from('profiles').select('id, role')
+    .eq('id', id).eq('organization_id', auth.profile.organization_id).maybeSingle()
+  if (error) return NextResponse.json({ error: 'User belum dapat diverifikasi.' }, { status: 503 })
+  if (!target) return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 })
+  const { email, password, ...profile } = parsed.data
+  if (email !== undefined || password !== undefined) {
+    if (auth.profile.role !== 'owner') return NextResponse.json({ error: 'Perubahan email/password dilakukan oleh Owner.' }, { status: 403 })
+    if (Object.keys(profile).length) return NextResponse.json({ error: 'Simpan perubahan profil dan email/password secara terpisah.' }, { status: 400 })
+    const admin = adminClient()
+    if (!admin) return NextResponse.json({ error: 'Layanan akun belum tersedia.' }, { status: 503 })
+    const { error: updateError } = await admin.auth.admin.updateUserById(id, { ...(email !== undefined ? { email } : {}), ...(password !== undefined ? { password } : {}) })
+    return updateError ? NextResponse.json({ error: updateError.message }, { status: 400 }) : NextResponse.json({ ok: true })
   }
-  if (body.email) authUpdate.email = body.email
-  if (Object.keys(authUpdate).length > 0) {
-    const { error } = await admin.auth.admin.updateUserById(id, authUpdate)
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
-  const profileUpdate: Record<string, unknown> = {}
-  if (body.full_name !== undefined) profileUpdate.full_name = body.full_name
-  if (body.role !== undefined) profileUpdate.role = body.role
-  if (body.active !== undefined) profileUpdate.active = body.active
-
-  if (Object.keys(profileUpdate).length > 0) {
-    const { error } = await admin.from('profiles').update(profileUpdate).eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
+  // Database rechecks the actor and target under an organization lock, preventing role races.
+  const { error: updateError } = await auth.sb.rpc('manage_org_profile', { p_target: id, p_patch: profile })
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: updateError.code === '42501' ? 403 : updateError.code === 'P0002' ? 404 : 400 })
   return NextResponse.json({ ok: true })
 }

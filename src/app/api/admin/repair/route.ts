@@ -1,13 +1,18 @@
+import { serverEnvironmentResponse } from '@/lib/server/environment-guard'
+import { isAllowedRequestOrigin } from '@/lib/server/request-origin'
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!isAllowedRequestOrigin(request)) return NextResponse.json({ error: 'Origin tidak diizinkan.' }, { status: 403 })
+  const environmentResponse = serverEnvironmentResponse('POST', '/api/admin/repair')
+  if (environmentResponse) return environmentResponse
   const sb = await createServerClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'owner') return NextResponse.json({ error: 'Hanya Owner' }, { status: 403 })
+  const { data: profile } = await sb.from('profiles').select('role, active, organization_id').eq('id', user.id).single()
+  if (!profile?.active || !profile.organization_id || profile.role !== 'owner') return NextResponse.json({ error: 'Hanya Owner' }, { status: 403 })
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceKey) return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum di-set' }, { status: 500 })

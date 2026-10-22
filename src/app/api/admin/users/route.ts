@@ -1,90 +1,62 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { z } from 'zod'
+import { adminClient, accountRoles, canAssignRole, requireUserManager } from '@/lib/server/admin-users'
 
-// Phase 8H audit — extend ke admin. Critical role changes (e.g. demote owner)
-// tetap perlu owner-only nanti kalau Barry minta restrict di operation-level.
-async function requireOwner() {
-  const sb = await createServerClient()
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) return { error: 'Unauthorized', status: 401 as const }
-  const { data: profile } = await sb.from('profiles').select('role, organization_id').eq('id', user.id).single()
-  if (profile?.role !== 'owner' && profile?.role !== 'admin') {
-    return { error: 'Hanya Owner atau Admin yang dapat mengakses', status: 403 as const }
+const createSchema = z.object({
+  email: z.email().max(254), password: z.string().min(8).max(128),
+  full_name: z.string().trim().min(1).max(200), role: z.enum(accountRoles),
+}).strict()
+
+export async function GET(request: Request) {
+  const auth = await requireUserManager(request)
+  if (auth.response) return auth.response
+  const admin = adminClient()
+  if (!admin) return NextResponse.json({ error: 'Layanan akun belum tersedia.' }, { status: 503 })
+  const { data: profiles, error } = await auth.sb.from('profiles')
+    .select('id, full_name, role, active, organization_id, created_at')
+    .eq('organization_id', auth.profile.organization_id).order('created_at')
+  if (error) return NextResponse.json({ error: 'Daftar user belum dapat dimuat.' }, { status: 503 })
+  // Fetch only users selected through the caller's organization, never the global Auth directory.
+  const users = []
+  for (const profile of profiles ?? []) {
+    const { data, error: authError } = await admin.auth.admin.getUserById(profile.id)
+    if (authError) return NextResponse.json({ error: 'Email user belum dapat dimuat.' }, { status: 503 })
+    users.push({ ...profile, email: data.user.email ?? '' })
   }
-  return { ok: true as const, orgId: profile.organization_id as number | null }
-}
-
-function getAdmin() {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!serviceKey) return null
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
-
-export async function GET() {
-  const auth = await requireOwner()
-  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-  const admin = getAdmin()
-  if (!admin) return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum di-set di env Vercel' }, { status: 500 })
-
-  const [{ data: profiles }, { data: authList, error: authErr }] = await Promise.all([
-    admin.from('profiles').select('*').order('created_at'),
-    admin.auth.admin.listUsers({ perPage: 200 }),
-  ])
-  if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 })
-
-  const emailById = new Map((authList?.users ?? []).map(u => [u.id, u.email ?? '']))
-  const users = (profiles ?? []).map(p => ({ ...p, email: emailById.get(p.id) ?? '' }))
   return NextResponse.json({ users })
 }
 
 export async function POST(request: Request) {
-  const auth = await requireOwner()
-  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
-
-  const body = await request.json().catch(() => null)
-  if (!body?.email || !body?.password || !body?.full_name || !body?.role) {
-    return NextResponse.json({ error: 'Field wajib: email, password, full_name, role' }, { status: 400 })
-  }
-
-  const admin = getAdmin()
-  if (!admin) return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum di-set di env Vercel' }, { status: 500 })
-
-  // Don't send user_metadata — many Supabase projects have a handle_new_user
-  // trigger that reads metadata and crashes the insert if cast fails.
-  // We upsert the profile ourselves below.
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email: body.email,
-    password: body.password,
-    email_confirm: true,
+  const auth = await requireUserManager(request, true)
+  if (auth.response) return auth.response
+  const parsed = createSchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ error: 'Nama, email, password minimal 8 karakter, dan role wajib valid.' }, { status: 400 })
+  const body = parsed.data
+  if (!canAssignRole(auth.profile.role, body.role)) return NextResponse.json({ error: 'Admin hanya dapat membuat CS, Advertiser, dan Akunting.' }, { status: 403 })
+  const admin = adminClient()
+  if (!admin) return NextResponse.json({ error: 'Layanan akun belum tersedia.' }, { status: 503 })
+  // New accounts cannot sign in while their organization/profile is being provisioned.
+  const { data: created, error } = await admin.auth.admin.createUser({
+    email: body.email, password: body.password, email_confirm: true, ban_duration: '876000h',
   })
-  if (createErr || !created.user) {
-    console.error('createUser failed:', createErr)
-    return NextResponse.json({
-      error: createErr?.message || 'Gagal membuat user',
-      hint: 'Jika pesan "Database error creating new user", cek trigger handle_new_user di Supabase SQL editor — biasanya ada baris yang assume role enum atau full_name NOT NULL.',
-    }, { status: 400 })
+  if (error || !created.user) return NextResponse.json({ error: error?.message ?? 'Gagal membuat akun.' }, { status: 400 })
+  const id = created.user.id
+  const latest = await requireUserManager(request, true)
+  if (latest.response || latest.profile.organization_id !== auth.profile.organization_id || !canAssignRole(latest.profile.role, body.role)) {
+    await admin.auth.admin.deleteUser(id)
+    return NextResponse.json({ error: 'Hak akses berubah. Muat ulang sebelum mencoba lagi.' }, { status: 403 })
   }
-
-  // Upsert (handles both: trigger already inserted a row, or no trigger).
-  // organization_id wajib di-set — tanpa ini RLS current_org_id() mismatch
-  // dan user baru ke-block dari semua data (blank state).
-  const { error: profileErr } = await admin.from('profiles').upsert({
-    id: created.user.id,
-    full_name: body.full_name,
-    role: body.role,
-    active: true,
-    organization_id: auth.orgId,
+  const { error: profileError } = await admin.from('profiles').upsert({
+    id, full_name: body.full_name, role: body.role, active: true, organization_id: auth.profile.organization_id,
   }, { onConflict: 'id' })
-  if (profileErr) {
-    await admin.auth.admin.deleteUser(created.user.id)
-    return NextResponse.json({ error: `Gagal simpan profile: ${profileErr.message}` }, { status: 400 })
+  if (profileError) {
+    await admin.auth.admin.deleteUser(id)
+    return NextResponse.json({ error: 'Gagal menyiapkan profil; akun belum diaktifkan.' }, { status: 400 })
   }
-
-  return NextResponse.json({ id: created.user.id, email: created.user.email })
+  const { error: activationError } = await admin.auth.admin.updateUserById(id, { ban_duration: 'none' })
+  if (activationError) {
+    await admin.auth.admin.deleteUser(id)
+    return NextResponse.json({ error: 'Gagal mengaktifkan akun baru.' }, { status: 503 })
+  }
+  return NextResponse.json({ id, email: created.user.email })
 }

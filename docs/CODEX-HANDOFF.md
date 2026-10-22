@@ -1,5 +1,40 @@
 # GrandBook Codex Handoff
 
+### Codex continuation claim — current recovery references
+
+IN PROGRESS: scripts/migrations/pnl-ui-2026-10-21.json,
+scripts/sql/pnl-performance/20261021000100-materialized-summary.sql,
+docs/recovery-references-2026-10-22.md. Review existing exact bytes/hashes,
+version as historical references only. No SQL execution, recovery rehearsal,
+financial recalculation or provider recovery claim. Other historical dependency
+references remain in place and will be reported accurately if untracked.
+
+
+### Additional Codex claim — upload-ignore correction
+
+Vercel candidate dpl_5XajREAtTuFAh3KPzK2ne8s7ZFua failed before promotion:
+unanchored supabase ignore omitted src/lib/supabase, 272 instead of 453 inputs.
+Claim .vercelignore, scripts/releases/repo-readiness/manifest.json,
+scripts/releases/repo-readiness/README.md,
+tests/releases/repo-readiness/test_release.py, docs/main-release-2026-10-22.md.
+Fix root-directory anchoring, test source/private ignore paths, run actual CLI
+upload inventory parity, prepare a new immutable package. Business code unchanged.
+Main alias unchanged. Temporary ignored-build command exit0 must be restored.
+
+## Codex — approved main push/deploy and acceptance — 2026-10-22T19:26:36.411662+07:00
+
+**IN PROGRESS.** Barry explicitly authorized push and deploy now, then continuation.
+Claim: main Git push (fast-forward only), isolated verified application release to
+grandbook-app only/bom1, normal-auth read-only production acceptance,
+docs/CODEX-HANDOFF.md (Codex section only), and docs/main-release-2026-10-22.md.
+vision audit/verification are RELEASED; all vision sections preserved.
+453 inputs/digest from readiness commit 2500847 must remain unchanged.
+Do not deploy dirty shared checkout, Liard, SQL, or financial corrections.
+After acceptance continue by reviewing/versioning the two current recovery
+artifacts identified by vision, without applying SQL. Extra file claims will
+be recorded before edits. No blanket financial-policy mutation is inferred.
+
+
 ## Codex — repo siap deploy, tanpa push/deploy — 22 Oktober 2026 WIB
 
 **SELESAI / RELEASED**. Claim awal dicatat 2026-10-22T13:24:51+07:00. Barry memberi izin eksplisit untuk

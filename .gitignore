@@ -40,3 +40,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 CLAUDE.md.bak
+
+# Python backup tooling
+__pycache__/
+*.py[cod]
+
+# Private operator/CLI artifacts are not application source.
+/supabase/.temp/
+/foto sementara/
+*.private.json
+*.private.txt
+*.private.png
+*.private.sql
+/tests/auth/*session*.json

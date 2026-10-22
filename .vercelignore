@@ -1,0 +1,25 @@
+.git
+.next
+node_modules
+.env*
+.vercel
+.gitignore
+AGENTS.md
+CLAUDE.md
+.agents
+.codex
+docs
+tests
+scripts
+supabase
+foto sementara
+pnpm-lock.yaml
+pnpm-workspace.yaml
+vercel.json
+*.private.*
+src/lib/supabase/migrations/157_auto_provision_cs_from_production.sql
+src/lib/supabase/schema.sql
+src/lib/supabase/seed-part2.sql
+src/lib/supabase/seed.sql
+src/lib/supabase/seed_phase1.sql
+src/lib/supabase/seed_phase8a_suppliers.sql

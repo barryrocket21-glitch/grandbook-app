@@ -13,7 +13,7 @@
   },
   "record_date_wib": "2026-10-22",
   "intentional_deviations": {
-    ".vercelignore": "Exclude private/operator/local-config artifacts from uploads.",
+    ".vercelignore": "Root-anchored private/operator/local-config exclusions preserve nested application source during CLI upload.",
     "src/app/(app)/financial-position/page.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change.",
     "src/components/dashboard/cashflow-summary-widget.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change.",
     "src/app/(app)/reconciliation/spx-cashflow/page.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change."
@@ -791,7 +791,7 @@
       "sha256": "936ae8cd93e1d00cc6812aec2c5cb674bad76eb96bd524c0178d6767785be542"
     },
     ".vercelignore": {
-      "sha256": "82739838dda660e8709fafec71d0c465e24889e177eb7388f042ae1cdd58dd71"
+      "sha256": "2114068a3e3cd45d8c3b4b79fda16a1f64fa8a7e5799b3b77566de459349b851"
     },
     "src/lib/supabase/queries/customers.ts": {
       "sha256": "8489531743fcb73bb06142fc53ff4daff0591fe51b88092fcdcf374bf19c381c"

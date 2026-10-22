@@ -50,3 +50,10 @@ requests. When invoking the candidate-root unit tests, set
 GB_PROFIT_CANDIDATE_ROOT, GB_PAYROLL_CANDIDATE_ROOT and
 GB_COMMISSION_CANDIDATE_ROOT to the committed checkout directory. Private browser
 smoke evidence and its fixture harnesses are linked in the dated readiness doc.
+
+Before an approved upload, run the installed Vercel CLI's dry-run file inventory
+in an isolated package copy and compare every uploaded path/hash with the manifest.
+Directory exclusions are anchored to the project root: unanchored supabase
+also excludes src/lib/supabase. Filesystem package parity alone cannot verify
+the uploader's ignore semantics. Do not promote a candidate unless all 453 uploaded
+source files match the current manifest; region must still be bom1.

@@ -108,5 +108,28 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(release.InvalidRelease): release.prepare(self.repo, 'HEAD', self.base/'output')
         self.assertFalse((self.base/'output').exists())
 
+
+class UploadIgnoreTests(unittest.TestCase):
+    def check_paths(self, paths):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, capture_output=True)
+            (root/'.gitignore').write_bytes((TOOL.parents[3]/'.vercelignore').read_bytes())
+            p = subprocess.run(['git', '-C', str(root), 'check-ignore', '--no-index', '--stdin', '-z'],
+                               input=('\0'.join(paths)+'\0').encode(), capture_output=True)
+            self.assertIn(p.returncode, [0, 1], p.stderr.decode())
+            return set(p.stdout.decode().strip('\0').split('\0')) - {''}
+
+    def test_every_reviewed_source_survives_upload_exclusions(self):
+        manifest = json.loads((TOOL.parent/'manifest.json').read_text())
+        self.assertEqual(self.check_paths(list(manifest['files'])), set())
+
+    def test_private_operator_material_still_excluded(self):
+        paths = ['.env.local', 'supabase/.temp/pooler-url',
+                 'docs/customer-export.xlsx', 'tests/auth/owner-session.json',
+                 'foto sementara/orders.xlsx', 'src/lib/audit.private.json',
+                 '.vercel/project.json', 'vercel.json']
+        self.assertEqual(self.check_paths(paths), set(paths))
+
 if __name__ == '__main__':
     unittest.main()

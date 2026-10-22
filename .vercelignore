@@ -1,18 +1,18 @@
-.git
-.next
-node_modules
+/.git/
+/.next/
+/node_modules/
 .env*
-.vercel
+/.vercel/
 .gitignore
 AGENTS.md
 CLAUDE.md
-.agents
-.codex
-docs
-tests
-scripts
-supabase
-foto sementara
+/.agents/
+/.codex/
+/docs/
+/tests/
+/scripts/
+/supabase/
+/foto sementara/
 pnpm-lock.yaml
 pnpm-workspace.yaml
 vercel.json

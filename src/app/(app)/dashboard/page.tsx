@@ -55,7 +55,7 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
-  const { profile, role } = useAuth()
+  const { profile, role, loading: authLoading } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -215,8 +215,10 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [fetchDashboardData])
+    if (authLoading || (role !== 'owner' && role !== 'admin')) return
+    const timer = setTimeout(() => { void fetchDashboardData() }, 0)
+    return () => clearTimeout(timer)
+  }, [authLoading, role, fetchDashboardData])
 
   const handleRefresh = () => {
     setRefreshing(true)
@@ -224,7 +226,9 @@ export default function DashboardPage() {
   }
 
   // Phase 8H audit — Admin Indra perlu KPI overview operasional.
-  if (role && role !== 'owner' && role !== 'admin') {
+  if (authLoading) return <DashboardSkeleton />
+
+  if (role !== 'owner' && role !== 'admin') {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="max-w-md">

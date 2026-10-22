@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { getRoleLanding } from '@/lib/auth/landing'
 import { getErrorMessage } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -33,38 +34,17 @@ export default function LoginPage() {
         return
       }
 
-      // Phase 8H — role-aware default landing. CS + Admin landing ke
-      // Antrian Kerja supaya langsung lihat draft yang perlu di-print resi
-      // (bukan ke Arsip yang isinya 1067 order historic).
-      let landing = '/dashboard'
-      if (signInData.user) {
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('role, active, organization_id')
-          .eq('id', signInData.user.id)
-          .maybeSingle()
-        if (!prof?.active || !prof.organization_id) {
-          await supabase.auth.signOut({ scope: 'local' })
-          toast.error('Akun belum aktif atau profil belum tersedia. Hubungi owner.')
-          return
-        }
-        switch (prof?.role) {
-          case 'cs':
-            landing = '/cs/resi'
-            break
-          case 'admin':
-            landing = '/orders/draft'
-            break
-          case 'advertiser':
-            landing = '/adv-dashboard'
-            break
-          case 'akunting':
-            landing = '/reconciliation/spx'
-            break
-          case 'owner':
-          default:
-            landing = '/dashboard'
-        }
+      if (!signInData.user) throw new Error('Sesi login belum tersedia. Coba lagi.')
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('role, active, organization_id')
+        .eq('id', signInData.user.id)
+        .maybeSingle()
+      const landing = getRoleLanding(prof?.role)
+      if (!prof?.active || !prof.organization_id || !landing) {
+        await supabase.auth.signOut({ scope: 'local' })
+        toast.error('Akun belum aktif atau profil belum tersedia. Hubungi owner.')
+        return
       }
 
       toast.success('Login berhasil!')

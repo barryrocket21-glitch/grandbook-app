@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { clearLegacyOwnerCookies, LEGACY_OWNER_COOKIES } from '@/lib/server/fallback-owner'
+import { getEntryRedirect } from '@/lib/auth/landing'
 import { environmentError, isBlockedWrite } from '@/lib/environment-safety'
 
 export async function updateSession(request: NextRequest) {
@@ -60,9 +61,11 @@ export async function updateSession(request: NextRequest) {
   if (!active && !publicPage) {
     return finish(NextResponse.json({ error: 'Profil akun tidak aktif atau belum dapat diverifikasi.' }, { status: error ? 503 : 403 }))
   }
-  if (active && pathname === '/login') {
+  const landing = active ? getEntryRedirect(pathname, profile.role) : null
+  if (landing) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = landing
+    url.search = ''
     return finish(NextResponse.redirect(url))
   }
   return finish(response)

@@ -1,5 +1,6 @@
 'use client'
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import { isCalendarDate } from '@/lib/date/ranges'
 import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -10,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { StatCard } from '@/components/ui/stat-card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DateRangePicker, thisMonth, type DateRange } from '@/components/ui/date-range-picker'
 import { createClient } from '@/lib/supabase/client'
@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils'
 
 const supabase = createClient()
 
-type SortKey = 'full_name' | 'total_orders' | 'closing_count' | 'conv_rate' | 'retur_rate' | 'revenue_handled' | 'commission_unpaid'
+type SortKey = 'full_name' | 'leads_reported' | 'total_orders' | 'closing_count' | 'retur_count' | 'gross_profit' | 'retur_rate' | 'conv_rate' | 'delivered_rate'
 type SortDir = 'asc' | 'desc'
 
 export default function CsTeamListPage() {
@@ -31,29 +31,39 @@ export default function CsTeamListPage() {
   const { role, loading: authLoading } = useAuth()
   const allowed = canViewTeamPerformance(role)
 
-  const [range, setRange] = useState<DateRange>(thisMonth)
+  const [range, setRange] = useState<DateRange>(() => thisMonth())
   const [rangeReady, setRangeReady] = useState(false)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const from = params.get('from') || '', to = params.get('to') || ''
+    // Read browser URL after SSR to keep hydration stable.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (isCalendarDate(from) && isCalendarDate(to) && from <= to) setRange({ from, to })
+    setRangeReady(true)
+  }, [])
   const [rows, setRows] = useState<CsPerformance[]>([])
   const [loading, setLoading] = useState(true)
   const [sortKey, setSortKey] = useState<SortKey>('total_orders')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
-  useEffect(() => { setRange(thisMonth()); setRangeReady(true) }, [])
-
+  const requestRef = useRef(0)
   const load = useCallback(async () => {
-    if (!rangeReady || !allowed) return
+    const request = ++requestRef.current
+    if (!allowed || !rangeReady) return
     setLoading(true)
     try {
       const data = await fetchCsTeamSummary(supabase, range.from, range.to)
-      setRows(data)
+      if (request === requestRef.current) setRows(data)
     } catch (err) {
-      toast.error('Gagal load data', { description: getErrorMessage(err) })
+      if (request === requestRef.current) toast.error('Gagal load data', { description: getErrorMessage(err) })
     } finally {
-      setLoading(false)
+      if (request === requestRef.current) setLoading(false)
     }
   }, [allowed, rangeReady, range.from, range.to])
 
-  useEffect(() => { load() }, [load])
+  // Fetching remote CS metrics is an effect; targeted lint disable avoids React 19 false-positive on async load().
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); return () => { requestRef.current++ } }, [load])
 
   const sorted = useMemo(() => {
     const arr = [...rows]
@@ -70,9 +80,16 @@ export default function CsTeamListPage() {
 
   const summary = useMemo(() => {
     const activeCount = rows.filter(r => r.is_active).length
-    const totalOrders = rows.reduce((s, r) => s + r.total_orders, 0)
-    const unpaidCommission = rows.reduce((s, r) => s + r.commission_unpaid, 0)
-    return { activeCount, totalOrders, unpaidCommission }
+    const totalLeads = rows.reduce((s, r) => s + Number(r.leads_reported || 0), 0)
+    const totalOrderResi = rows.reduce((s, r) => s + r.total_orders, 0)
+    const totalDelivered = rows.reduce((s, r) => s + r.closing_count, 0)
+    const totalClosingReported = rows.reduce((s, r) => s + Number(r.closing_reported || 0), 0)
+    const totalReturned = rows.reduce((s, r) => s + Number(r.retur_count || 0), 0)
+    const grossProfit = rows.reduce((s, r) => s + Number(r.gross_profit || 0), 0)
+    const closingRate = totalLeads > 0 ? (totalClosingReported / totalLeads) * 100 : 0
+    const returnRate = totalOrderResi > 0 ? (totalReturned / totalOrderResi) * 100 : 0
+    const deliveredRate = totalOrderResi > 0 ? (totalDelivered / totalOrderResi) * 100 : 0
+    return { activeCount, totalLeads, totalOrderResi, totalDelivered, totalClosingReported, totalReturned, grossProfit, closingRate, returnRate, deliveredRate }
   }, [rows])
 
   function clickSort(key: SortKey) {
@@ -102,16 +119,38 @@ export default function CsTeamListPage() {
     <div className="p-4 md:p-6 space-y-5">
       <PageHeader
         title="Daftar CS"
-        description="Performance per CS — orders, closing rate, revenue, komisi."
+        description="Performance per CS — leads, order resi, closing, return, gross profit."
         icon={Users}
         actions={<DateRangePicker value={range} onChange={setRange} />}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
         <StatCard label="CS aktif" value={String(summary.activeCount)} sub={`dari ${rows.length} terdaftar`} />
-        <StatCard label="Total order (periode)" value={summary.totalOrders.toLocaleString('id-ID')} sub="semua status" />
-        <StatCard label="Komisi unpaid" value={formatRupiah(summary.unpaidCommission)} sub="EARNED, belum PAID" />
+        <StatCard label="Total leads" value={summary.totalLeads.toLocaleString('id-ID')} sub="laporan CS periode ini" />
+        <StatCard label="Total resi" value={summary.totalOrderResi.toLocaleString('id-ID')} sub="unique resi dari Tanggal Create SPX" />
+        <StatCard label="Total delivered" value={summary.totalDelivered.toLocaleString('id-ID')} sub={`${summary.deliveredRate.toFixed(1)}% dari total resi`} />
+        <StatCard label="Total returned" value={summary.totalReturned.toLocaleString('id-ID')} sub={`${summary.returnRate.toFixed(1)}% dari total resi`} />
+        <StatCard label="Gross profit closing" value={formatRupiah(summary.grossProfit)} sub="hanya status DITERIMA" />
       </div>
+
+      <p className="text-sm text-muted-foreground">Periode pengiriman: tanggal dibuat di SPX, {range.from} – {range.to} WIB. Klik nama CS untuk detail produk dan wilayah.</p>
+      {rows.some(r => (r.incomplete_hpp_orders || 0) > 0) && <p role="status" className="text-sm text-amber-600">Ada order delivered dengan HPP belum lengkap. Lengkapi pemeriksaan biaya sebelum memakai profit untuk keputusan pencairan.</p>}
+      <Card className="bg-muted/20">
+        <CardContent className="grid gap-3 p-4 text-xs text-muted-foreground md:grid-cols-3">
+          <div>
+            <div className="font-semibold text-foreground">Gross Profit Closing</div>
+            <div>Hanya resi berstatus akhir <span className="font-medium text-foreground">Delivered</span>, bukan semua resi. HPP mencakup modal barang dan biaya packing per item, dikali jumlah barang. Nilai profit masih estimasi biaya pengiriman.</div>
+          </div>
+          <div>
+            <div className="font-semibold text-foreground">Rate utama</div>
+            <div>Closing Rate = closing dari laporan CS ÷ Leads. Delivered % = Total Delivered ÷ Total Resi.</div>
+          </div>
+          <div>
+            <div className="font-semibold text-foreground">Return</div>
+            <div>Return % = Returned ÷ Total Resi. Returned tidak masuk Gross Profit Closing.</div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0 overflow-x-auto">
@@ -134,14 +173,14 @@ export default function CsTeamListPage() {
                 <TableRow>
                   <SortableHead label="Nama" col="full_name" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} />
                   <TableHead>Status</TableHead>
-                  <TableHead>Top Produk</TableHead>
-                  <SortableHead label="Orders"   col="total_orders"      sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
-                  <SortableHead label="Closing"  col="closing_count"     sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
-                  <TableHead className="text-right">Closing (lapor)</TableHead>
-                  <SortableHead label="Conv %"   col="conv_rate"         sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
-                  <SortableHead label="Retur %"  col="retur_rate"        sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
-                  <SortableHead label="Revenue"  col="revenue_handled"   sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
-                  <SortableHead label="Unpaid"   col="commission_unpaid" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Leads" col="leads_reported" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Order Resi" col="total_orders" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Resi Delivered" col="closing_count" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Returned" col="retur_count" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Gross Profit" col="gross_profit" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Return %" col="retur_rate" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Closing Rate" col="conv_rate" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
+                  <SortableHead label="Delivered %" col="delivered_rate" sortKey={sortKey} sortDir={sortDir} onClick={clickSort} align="right" />
                   <TableHead className="w-8" />
                 </TableRow>
               </TableHeader>
@@ -150,7 +189,7 @@ export default function CsTeamListPage() {
                   <TableRow
                     key={r.user_id}
                     className="cursor-pointer hover:bg-muted/40"
-                    onClick={() => router.push(`/team/cs/${r.user_id}`)}
+                    onClick={() => router.push(`/team/cs/${r.user_id}?from=${range.from}&to=${range.to}`)}
                   >
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
@@ -163,18 +202,20 @@ export default function CsTeamListPage() {
                         {r.is_active ? 'Aktif' : 'Nonaktif'}
                       </Badge>
                     </TableCell>
-                    <TableCell><TopProductPill name={r.top_product_name} count={r.top_product_orders} /></TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(r.leads_reported || 0).toLocaleString('id-ID')}</TableCell>
                     <TableCell className="text-right tabular-nums">{r.total_orders.toLocaleString('id-ID')}</TableCell>
                     <TableCell className="text-right tabular-nums">{r.closing_count.toLocaleString('id-ID')}</TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">{(r.closing_reported ?? 0).toLocaleString('id-ID')}</TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(r.retur_count || 0).toLocaleString('id-ID')}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatRupiah(Number(r.gross_profit || 0))}</TableCell>
+                    <TableCell className={cn('text-right tabular-nums', Number(r.retur_rate || 0) >= 30 ? 'text-red-500' : Number(r.retur_rate || 0) >= 15 ? 'text-amber-500' : 'text-emerald-600')}>
+                      {Number(r.retur_rate || 0).toFixed(1)}%
+                    </TableCell>
                     <TableCell className={cn('text-right tabular-nums', r.conv_rate >= 50 ? 'text-emerald-500' : r.conv_rate >= 30 ? 'text-amber-500' : 'text-muted-foreground')}>
                       {r.conv_rate.toFixed(1)}%
                     </TableCell>
-                    <TableCell className={cn('text-right tabular-nums', (r.retur_rate ?? 0) >= 30 ? 'text-red-500' : (r.retur_rate ?? 0) >= 15 ? 'text-amber-500' : 'text-emerald-600')}>
-                      {(r.retur_rate ?? 0).toFixed(1)}%
+                    <TableCell className={cn('text-right tabular-nums', Number(r.delivered_rate || 0) >= 50 ? 'text-emerald-500' : Number(r.delivered_rate || 0) >= 30 ? 'text-amber-500' : 'text-muted-foreground')}>
+                      {Number(r.delivered_rate || 0).toFixed(1)}%
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{formatRupiah(r.revenue_handled)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatRupiah(r.commission_unpaid)}</TableCell>
                     <TableCell><ChevronRight className="size-4 text-muted-foreground" /></TableCell>
                   </TableRow>
                 ))}
@@ -184,16 +225,6 @@ export default function CsTeamListPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function TopProductPill({ name, count }: { name: string | null; count: number }) {
-  if (!name) return <span className="text-muted-foreground">—</span>
-  const truncated = name.length > 20 ? name.slice(0, 18) + '…' : name
-  return (
-    <span title={name} className="text-sm">
-      {truncated} <span className="text-muted-foreground tabular-nums">({count})</span>
-    </span>
   )
 }
 

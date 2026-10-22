@@ -1,40 +1,20 @@
-// =============================================================
-// Team Performance query helpers (/team/cs + /team/advertisers)
-// =============================================================
+// Owner/admin report uses one server-side cohort for overview and drilldown.
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type {
-  CsPerformance,
-  AdvertiserPerformance,
-  CsDetailResponse,
-  AdvertiserDetailResponse,
-} from '@/lib/types'
+import type { CsPerformance, AdvertiserPerformance, CsDetailResponse, AdvertiserDetailResponse } from '@/lib/types'
+import { wibTimestampBounds } from '@/lib/date/ranges'
 
-export async function fetchCsTeamSummary(
-  supabase: SupabaseClient,
-  from: string,
-  to: string
-): Promise<CsPerformance[]> {
-  const { data, error } = await supabase.rpc('team_cs_summary', {
-    p_date_from: from,
-    p_date_to: to,
-  })
-  if (error) throw new Error(`fetchCsTeamSummary: ${error.message}`)
-  return (data || []) as CsPerformance[]
+export async function fetchCsTeamSummary(supabase: SupabaseClient, from: string, to: string): Promise<CsPerformance[]> {
+  wibTimestampBounds(from, to)
+  const { data, error } = await supabase.rpc('operations_cs_report', { p_date_from: from, p_date_to: to })
+  if (error) throw new Error(error.message)
+  return data.summary
 }
 
-export async function fetchCsTeamDetail(
-  supabase: SupabaseClient,
-  userId: string,
-  from: string,
-  to: string
-): Promise<CsDetailResponse> {
-  const { data, error } = await supabase.rpc('team_cs_detail', {
-    p_user_id: userId,
-    p_date_from: from,
-    p_date_to: to,
-  })
-  if (error) throw new Error(`fetchCsTeamDetail: ${error.message}`)
-  return (data || { stats: null, daily_trend: [], recent_orders: [], commission_history: [], product_breakdown: [] }) as CsDetailResponse
+export async function fetchCsTeamDetail(supabase: SupabaseClient, userId: string, from: string, to: string): Promise<CsDetailResponse> {
+  wibTimestampBounds(from, to)
+  const { data, error } = await supabase.rpc('operations_cs_report', { p_date_from: from, p_date_to: to, p_user_id: userId })
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function fetchAdvertiserTeamSummary(

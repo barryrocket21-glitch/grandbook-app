@@ -1,7 +1,12 @@
+import { readProfitCostEvidence, profitShippingCost } from '@/lib/analytics/profit-cost-evidence'
+import { completeReportRead, assertReportRelations } from '@/lib/analytics/complete-report-read'
+import { allocateAds, type Spend, type Allocation, type AdsBucket } from '@/lib/analytics/ads-coverage'
+import { serverEnvironmentResponse } from '@/lib/server/environment-guard'
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 
 type OrderLite = {
+  order_number: string
   id: number
   status: string
   total: number | null
@@ -36,18 +41,11 @@ type CampaignLite = {
 }
 
 type CommissionLite = {
+  id: number
   order_id: number
   order_item_id: number | null
   amount: number | null
   status: string | null
-}
-
-type PlatformBreakdownRow = {
-  platform: string
-  total_ad_spend: number | null
-  net_profit: number | null
-  gross_profit: number | null
-  roas: number | null
 }
 
 type ProductPlatformRow = {
@@ -112,11 +110,11 @@ async function requireManager() {
 
   const { data: profile } = await sb
     .from('profiles')
-    .select('role')
+    .select('role, active, organization_id')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'owner' && profile?.role !== 'admin' && profile?.role !== 'akunting') {
+  if (!profile?.active || !profile.organization_id || !['owner', 'admin', 'akunting'].includes(profile.role)) {
     return { error: 'Hanya owner/admin/akunting yang bisa buka Owner Profit Cockpit', status: 403 as const }
   }
 
@@ -124,6 +122,8 @@ async function requireManager() {
 }
 
 export async function GET(request: Request) {
+  const environmentResponse = serverEnvironmentResponse('GET', '/api/reports/owner-profit')
+  if (environmentResponse) return environmentResponse
   const auth = await requireManager()
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
   const { sb } = auth
@@ -134,44 +134,55 @@ export async function GET(request: Request) {
   const range = monthRange(month)
   if (!range) return NextResponse.json({ error: 'Format month wajib YYYY-MM' }, { status: 400 })
 
-  const ordersRes = await sb
-    .from('orders')
-    .select('id,status,total,shipping_cost,shipping_cost_actual,cod_amount,payout_amount,campaign_id,meta,estimated_shipping_net,estimated_cod_fee')
-    .gte('order_date', range.from)
-    .lte('order_date', range.to)
+  let orders: OrderLite[]
+  let items: OrderItemLite[]
+  let commissions: CommissionLite[]
+  try {
+    [orders, items, commissions] = await Promise.all([
+      completeReportRead<OrderLite>(after => sb.from('orders')
+        .select('id,order_number,status,total,shipping_cost,shipping_cost_actual,cod_amount,payout_amount,campaign_id,meta,estimated_shipping_net,estimated_cod_fee', { count: 'exact' })
+        .gte('order_date', range.from).lte('order_date', range.to).gt('id', after).order('id').limit(500)),
+      completeReportRead<OrderItemLite>(after => sb.from('order_items')
+        .select('id,order_id,product_id,product_name_raw,qty,hpp_snapshot,order:orders!inner(order_date)', { count: 'exact' })
+        .gte('order.order_date', range.from).lte('order.order_date', range.to).gt('id', after).order('id').limit(500)),
+      completeReportRead<CommissionLite>(after => sb.from('commissions')
+        .select('id,order_id,order_item_id,amount,status,order:orders!inner(order_date)', { count: 'exact' })
+        .gte('order.order_date', range.from).lte('order.order_date', range.to).in('status', ['EARNED', 'PAID'])
+        .gt('id', after).order('id').limit(500)),
+    ])
+    assertReportRelations(orders, items, commissions)
+  } catch {
+    return NextResponse.json({ error: 'Gagal memverifikasi kelengkapan order, item, atau komisi. Muat ulang laporan.' }, { status: 503 })
+  }
 
-  if (ordersRes.error) return NextResponse.json({ error: ordersRes.error.message }, { status: 400 })
-  const orders = (ordersRes.data || []) as OrderLite[]
+  let shippingCosts: Map<number, ReturnType<typeof profitShippingCost>>
+  try {
+    const delivered = orders.filter(o => o.status === 'DITERIMA')
+    const evidence = await readProfitCostEvidence(delivered.map(o => o.order_number),
+      (table, refs) => sb.from(table).select('order_number', { count: 'exact' }).in('order_number', refs).limit(500),
+      refs => sb.rpc('order_shipping_cost_evidence', { p_order_numbers: refs }))
+    shippingCosts = new Map(delivered.map(o => [o.id, profitShippingCost(o, evidence)]))
+  } catch {
+    return NextResponse.json({ error: 'Gagal memverifikasi bukti biaya pengiriman. Muat ulang laporan.' }, { status: 503 })
+  }
 
-  const orderIds = orders.map((o) => o.id)
-  const campaignIds = [...new Set(orders.map((o) => o.campaign_id).filter(Boolean) as number[])]
-
-  const [itemsRes, campaignsRes, commissionsRes] = await Promise.all([
-    orderIds.length
-      ? sb.from('order_items').select('id,order_id,product_id,product_name_raw,qty,hpp_snapshot').in('order_id', orderIds)
-      : Promise.resolve({ data: [], error: null }),
-    campaignIds.length
-      ? sb.from('campaigns').select('id,platform').in('id', campaignIds)
-      : Promise.resolve({ data: [], error: null }),
-    orderIds.length
-      ? sb.from('commissions').select('order_id,order_item_id,amount,status').in('order_id', orderIds).in('status', ['EARNED', 'PAID'])
-      : Promise.resolve({ data: [], error: null }),
-  ])
-
-  if (itemsRes.error) return NextResponse.json({ error: itemsRes.error.message }, { status: 400 })
-  if (campaignsRes.error) return NextResponse.json({ error: campaignsRes.error.message }, { status: 400 })
-  if (commissionsRes.error) return NextResponse.json({ error: commissionsRes.error.message }, { status: 400 })
-
-  const items = (itemsRes.data || []) as OrderItemLite[]
-  const campaigns = (campaignsRes.data || []) as CampaignLite[]
-  const commissions = (commissionsRes.data || []) as CommissionLite[]
-
-  const productIds = [...new Set(items.map((i) => i.product_id).filter(Boolean) as number[])]
-  const productsRes = productIds.length
-    ? await sb.from('products').select('id,name,display_name').in('id', productIds)
-    : { data: [], error: null }
-  if (productsRes.error) return NextResponse.json({ error: productsRes.error.message }, { status: 400 })
-  const products = (productsRes.data || []) as ProductLite[]
+  const pages = completeReportRead
+  let campaigns: CampaignLite[]
+  let ads: AdsBucket[]
+  let products: ProductLite[]
+  try {
+    const [spending, allCampaigns, allocations, allProducts] = await Promise.all([
+      pages<Spend>(after => sb.from('ad_spend').select('id,campaign_id,spend_total', { count: 'exact' }).gte('spend_date', range.from).lte('spend_date', range.to).gt('id', after).order('id').limit(500)),
+      pages<CampaignLite>(after => sb.from('campaigns').select('id,platform', { count: 'exact' }).gt('id', after).order('id').limit(500)),
+      pages<Allocation & { id: number }>(after => sb.from('campaign_products').select('id,campaign_id,product_id,allocation_pct', { count: 'exact' }).gt('id', after).order('id').limit(500)),
+      pages<ProductLite>(after => sb.from('products').select('id,name,display_name', { count: 'exact' }).gt('id', after).order('id').limit(500)),
+    ])
+    ads = allocateAds(spending, allCampaigns, allocations)
+    products = allProducts
+    campaigns = allCampaigns
+  } catch {
+    return NextResponse.json({ error: 'Gagal memverifikasi kelengkapan ADS. Muat ulang laporan.' }, { status: 503 })
+  }
 
   const campaignMap = new Map(campaigns.map((c) => [c.id, c]))
   const productMap = new Map(products.map((p) => [p.id, p]))
@@ -193,21 +204,9 @@ export async function GET(request: Request) {
     }
   }
 
-  const productSpendMap = new Map<string, number>()
-  for (const productId of productIds) {
-    const { data, error } = await sb.rpc('analytics_profit_per_product_per_platform', {
-      p_product_id: productId,
-      p_from: range.from,
-      p_to: range.to,
-    })
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-    for (const row of (data || []) as PlatformBreakdownRow[]) {
-      productSpendMap.set(`${productId}__${String(row.platform || UNKNOWN_PLATFORM).toUpperCase()}`, n(row.total_ad_spend))
-    }
-  }
-
   const rowMap = new Map<string, ProductPlatformRow>()
   const allPlatforms = new Set<string>()
+  const costCoverage = { verified: 0, legacy: 0, estimate: 0, missing: 0 }
 
   for (const order of orders) {
     const itemsForOrder = itemsByOrder.get(order.id) || []
@@ -219,7 +218,9 @@ export async function GET(request: Request) {
     const delivered = order.status === 'DITERIMA'
     const retur = order.status === 'RETUR'
     const revenueBase = n(order.payout_amount) || n(order.cod_amount) || n(order.total)
-    const shippingActualOrder = n(order.shipping_cost_actual) || (n(order.estimated_shipping_net) + n(order.estimated_cod_fee))
+    const shipping = shippingCosts.get(order.id)
+    const shippingActualOrder = shipping?.amount ?? 0
+    if (delivered && shipping && (platformFilter === 'ALL' || platform === platformFilter)) costCoverage[shipping.basis]++
     const shippingChargedOrder = n(order.shipping_cost)
     const orderRemainderCommission = n(commissionByOrderRemainder.get(order.id))
 
@@ -228,7 +229,7 @@ export async function GET(request: Request) {
       const share = qty / Math.max(1, totalQty)
       const product = item.product_id ? productMap.get(item.product_id) : null
       const productName = product?.display_name || product?.name || item.product_name_raw || 'Produk Tanpa Nama'
-      const key = `${item.product_id || 0}__${platform}__${productName}`
+      const key = item.product_id ? `${item.product_id}__${platform}` : `unknown__${platform}__${productName}`
       const existing = rowMap.get(key) || {
         product_id: item.product_id,
         product_name: productName,
@@ -266,8 +267,23 @@ export async function GET(request: Request) {
     }
   }
 
+  for (const bucket of ads) {
+    const key = `${bucket.product_id ?? 'unallocated'}__${bucket.platform}`
+    const product = bucket.product_id ? productMap.get(bucket.product_id) : null
+    const row = rowMap.get(key) || {
+      product_id: bucket.product_id,
+      product_name: bucket.product_id ? (product?.display_name || product?.name || `Produk #${bucket.product_id}`) : 'ADS belum dialokasikan',
+      platform: bucket.platform, total_orders: 0, qty: 0, delivered: 0, retur: 0,
+      delivered_rate: 0, return_rate: 0, omset: 0, gross_profit_before_ads: 0,
+      ads_allocated: 0, profit_after_ads: 0, shipping_diff: 0,
+    }
+    row.ads_allocated = bucket.amount
+    rowMap.set(key, row)
+    allPlatforms.add(bucket.platform)
+  }
+
   const rows = [...rowMap.values()].map((row) => {
-    const spend = row.product_id ? n(productSpendMap.get(`${row.product_id}__${row.platform}`)) : 0
+    const spend = row.ads_allocated
     const deliveredRate = row.total_orders > 0 ? (row.delivered / row.total_orders) * 100 : 0
     const finalCount = row.delivered + row.retur
     const returnRate = finalCount > 0 ? (row.retur / finalCount) * 100 : 0
@@ -359,6 +375,7 @@ export async function GET(request: Request) {
     month,
     platformFilter,
     readOnlyMode: 'READ_ONLY_OWNER_PROFIT_COCKPIT',
+    shippingCostCoverage: costCoverage,
     filters: {
       month,
       platform: platformFilter,
@@ -377,7 +394,11 @@ export async function GET(request: Request) {
       shipping_diff: round2(totals.shipping_diff),
     },
     notes: [
-      'Read-only. Tidak ada data live yang berubah sebelum Apply dikonfirmasi.',
+      'Read-only. ADS menggunakan input GrandBook; ekspor platform terverifikasi menjadi acuan koreksi.',
+      'Alokasi memakai pengaturan kampanye saat ini, bukan bukti alokasi historis. ADS tanpa order tetap disertakan.',
+      'Laba aktual belum terverifikasi: laporan mencakup order final; biaya operasional dan bukti biaya historis belum lengkap. ADS input advertiser sudah termasuk pajak.',
+      `Biaya pengiriman order Delivered: ${costCoverage.verified} bukti SPX terverifikasi, ${costCoverage.legacy} biaya tersimpan tanpa bukti terpisah, ${costCoverage.estimate} estimasi, ${costCoverage.missing} belum tersedia. Biaya yang belum tersedia belum dikurangkan.`,
+      'Biaya SPX terverifikasi menggantikan biaya lama/estimasi dan dikurangkan sekali, termasuk fee COD. Selisih nominal dan saldo tetap tersimpan; ini bukan bukti saldo bank.',
       'Profit Setelah Ads = omset delivered/payout available - HPP - shipping actual/estimated - komisi - ads allocated.',
       'Bucket UNKNOWN dipertahankan kalau platform order tidak kebaca dari meta/campaign.',
     ],

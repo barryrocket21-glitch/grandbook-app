@@ -26,24 +26,29 @@ export function CashflowSummaryWidget() {
     if (!silent) setLoading(true)
     else setRefreshing(true)
     try {
-      const [{ data: rows, error }, { data: pay }] = await Promise.all([
+      const [{ data: rows, error }, { data: pay, error: payError }] = await Promise.all([
         supabase.rpc('get_cashflow_summary'),
         supabase.rpc('get_payout_position'),
       ])
       if (error) throw error
+      if (payError) throw payError
       const first = Array.isArray(rows) ? rows[0] : rows
       setData(first as CashflowSummary | null)
       setPayout((Array.isArray(pay) ? pay[0] : pay) ?? null)
     } catch (err) {
       console.warn('get_cashflow_summary failed:', err)
       setData(null)
+      setPayout(null)
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
   }, [])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load() }, 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
 
   if (loading) {
     return (
@@ -74,14 +79,15 @@ export function CashflowSummaryWidget() {
 
         {/* Sub-brief #17 — angka cair real dari payout recon */}
         <div className="grid grid-cols-3 gap-3">
-          <Metric icon={<Wallet className="w-3.5 h-3.5 text-emerald-500" />} label="COD sudah cair"
-            value={formatRupiah(Number(payout?.cair_total ?? 0))} valueClass="text-emerald-600" />
+          <Metric icon={<Wallet className="w-3.5 h-3.5 text-emerald-500" />} label="COD tercatat cair"
+            value={payout ? formatRupiah(Number(payout.cair_total)) : '—'} valueClass="text-emerald-600" />
           <Metric icon={<AlertCircle className="w-3.5 h-3.5 text-amber-500" />} label="Belum cair (delivered)"
-            value={formatRupiah(Number(payout?.uncair_total ?? 0))} valueClass="text-amber-600" />
-          <Metric icon={<Wallet className="w-3.5 h-3.5 text-zinc-500" />} label="Saldo terakhir"
+            value={payout ? formatRupiah(Number(payout.uncair_total)) : '—'} valueClass="text-amber-600" />
+          <Metric icon={<Wallet className="w-3.5 h-3.5 text-zinc-500" />} label="Saldo saat penarikan terakhir"
             value={hasSaldo ? formatRupiah(Number(data!.saldo_terakhir)) : '—'} valueClass="text-zinc-600" />
         </div>
-        <p className="text-[10px] text-muted-foreground">{Number(payout?.uncair_count ?? 0)} order delivered belum cair · update via <a href="/reconciliation/ekspedisi" className="text-zinc-500 hover:underline">Rekonsiliasi Ekspedisi</a>.</p>
+        {payout && <p className="text-[10px] text-muted-foreground">{Number(payout?.uncair_count ?? 0)} order delivered belum cair · termasuk pencairan draft tercatat; bukan verifikasi saldo bank · update via <a href="/reconciliation/spx-cashflow" className="text-zinc-500 hover:underline">Rekonsiliasi Ekspedisi</a>.</p>}
+        {!payout && <p className="text-xs text-muted-foreground">Data pencairan belum tersedia.</p>}
       </CardContent>
     </Card>
   )

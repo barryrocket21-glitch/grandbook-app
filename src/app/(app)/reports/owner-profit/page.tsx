@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BarChart3, Download, Loader2, RefreshCw } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { Card, CardContent } from '@/components/ui/card'
@@ -86,27 +86,39 @@ export default function OwnerProfitCockpitPage() {
   const [data, setData] = useState<ApiPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const currentRead = useRef<AbortController | null>(null)
 
   const load = useCallback(async () => {
+    currentRead.current?.abort()
+    const controller = new AbortController()
+    currentRead.current = controller
+    setData(null)
     setLoading(true)
     setError('')
     try {
       const res = await fetch(`/api/reports/owner-profit?month=${encodeURIComponent(month)}&platform=${encodeURIComponent(platform)}`, {
         cache: 'no-store',
+        signal: controller.signal,
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || 'Gagal memuat Owner Profit Cockpit')
-      setData(json)
+      if (!controller.signal.aborted) setData(json)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal memuat Owner Profit Cockpit')
+      if (!controller.signal.aborted) {
+        setData(null)
+        setError(err instanceof Error ? err.message : 'Gagal memuat Owner Profit Cockpit')
+      }
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) setLoading(false)
     }
   }, [month, platform])
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0)
-    return () => window.clearTimeout(timer)
+    return () => {
+      window.clearTimeout(timer)
+      currentRead.current?.abort()
+    }
   }, [load])
 
   const availablePlatforms = useMemo(() => data?.filters.availablePlatforms || ['ALL'], [data])
@@ -114,6 +126,7 @@ export default function OwnerProfitCockpitPage() {
   function exportOwnerProfitWorkbook() {
     if (!data) return
     const blob = buildOwnerProfitWorkbook({
+      notes: data.notes,
       month: data.month,
       platformFilter: data.platformFilter,
       summary: data.summary,
@@ -163,7 +176,10 @@ export default function OwnerProfitCockpitPage() {
           </div>
           <div className="rounded-lg border bg-amber-500/5 border-amber-500/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
             <div className="font-medium">Mode {READ_ONLY_OWNER_PROFIT_COCKPIT}</div>
-            <div>Tidak ada data live yang berubah sebelum Apply dikonfirmasi.</div>
+            <div>Laba aktual belum terverifikasi: laporan memakai order final dan campuran biaya aktual/estimasi. Biaya operasional dan biaya historis masih perlu ditinjau. ADS input advertiser sudah termasuk pajak.</div>
+            <div>ADS memakai input GrandBook; ekspor platform terverifikasi menjadi acuan koreksi. Biaya tanpa order tetap dihitung.</div>
+            <div>Alokasi produk memakai pengaturan kampanye saat ini, bukan bukti alokasi historis.</div>
+            {data?.notes.filter(note => note.startsWith('Biaya pengiriman order Delivered:') || note.startsWith('Biaya SPX terverifikasi')).map(note => <div key={note}>{note}</div>)}
           </div>
         </CardContent>
       </Card>

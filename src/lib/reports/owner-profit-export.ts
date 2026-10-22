@@ -32,6 +32,7 @@ export interface OwnerProfitProductPlatformRow {
 }
 
 export interface OwnerProfitExportPayload {
+  notes?: string[]
   month: string
   platformFilter: string
   summary: OwnerProfitSummaryRow[]
@@ -87,7 +88,10 @@ export function buildOwnerProfitWorkbook(payload: OwnerProfitExportPayload): Blo
     ['Filter Platform', payload.platformFilter],
     [],
     ['Catatan'],
-    ['Read-only export. Tidak ada data live yang berubah sebelum Apply dikonfirmasi.'],
+    ...(payload.notes ?? []).filter(note => note.startsWith('Biaya pengiriman order Delivered:') || note.startsWith('Biaya SPX terverifikasi')).map(note => [note]),
+    ['Laba aktual belum terverifikasi. Laporan mencakup order final; biaya operasional dan biaya historis masih perlu ditinjau. ADS input advertiser sudah termasuk pajak.'],
+    ['ADS memakai input GrandBook; ekspor platform terverifikasi menjadi acuan koreksi. Biaya tanpa order tetap dihitung.'],
+    ['Alokasi produk memakai pengaturan kampanye saat ini, bukan bukti alokasi historis.'],
     ['Profit Setelah Ads = omset delivered/payout available - HPP - shipping actual/estimated - komisi - ads allocated.'],
     ['Selisih Ongkir = ongkir customer - shipping actual/estimated.'],
     ['Bucket UNKNOWN dipertahankan kalau platform order tidak kebaca dari meta/campaign.'],

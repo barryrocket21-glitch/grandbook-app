@@ -17,6 +17,7 @@ import {
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah } from '@/lib/format'
+import { ActualCostReport } from '@/components/reconciliation/actual-cost-report'
 import { SupplierPayableSheet } from './_components/supplier-payable-sheet'
 
 const supabase = createClient()
@@ -81,11 +82,12 @@ export default function FinancialPositionPage() {
     if (silent) setRefreshing(true)
     else setLoading(true)
     try {
-      const [{ data, error }, { data: pay }] = await Promise.all([
+      const [{ data, error }, { data: pay, error: payError }] = await Promise.all([
         supabase.rpc('get_financial_position'),
         supabase.rpc('get_payout_position'),
       ])
       if (error) throw error
+      if (payError) throw payError
       setPosition((data?.[0] ?? null) as FinancialPosition | null)
       setPayout((pay?.[0] ?? null) as PayoutPosition | null)
     } catch (err) {
@@ -97,7 +99,10 @@ export default function FinancialPositionPage() {
     }
   }, [])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load() }, 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
 
   const allowed = role === 'owner' || role === 'admin' || role === 'akunting'
   if (role && !allowed) {
@@ -128,7 +133,7 @@ export default function FinancialPositionPage() {
       <PageHeader
         icon={Wallet}
         title="Posisi Keuangan"
-        description="Peta duit COD — di perjalanan, di SPX, vs utang ke supplier &amp; ekspedisi."
+        description="Estimasi posisi COD dan kewajiban; pencairan tercatat terpisah dari verifikasi saldo bank."
         actions={
           <Button variant="outline" size="sm" onClick={() => void load(true)} disabled={refreshing} className="gap-1.5">
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -146,7 +151,7 @@ export default function FinancialPositionPage() {
           {/* Sub-brief #17 — Pencairan COD (cair vs belum cair) + aging */}
           <Card className="border-emerald-500/30 bg-emerald-500/5">
             <CardContent className="pt-5 pb-5 space-y-3">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">Pencairan COD (dari payout SPX)</div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Pencairan COD tercatat — order final dan draft</div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <div className="text-[10px] text-muted-foreground">Sudah Cair</div>
@@ -176,7 +181,7 @@ export default function FinancialPositionPage() {
                   <AgingBucket label="15+ hari" tone="text-red-600" count={n(payout?.aging_15plus_count)} amount={n(payout?.aging_15plus_amount)} />
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground">Upload payout di <a href="/reconciliation/ekspedisi" className="text-zinc-500 hover:underline">Rekonsiliasi Ekspedisi</a> buat update pencairan.</p>
+              <p className="text-[10px] text-muted-foreground">Catatan pencairan draft tetap dihitung setelah menjadi order final. Upload payout di <a href="/reconciliation/spx-cashflow" className="text-zinc-500 hover:underline">Rekonsiliasi Ekspedisi</a> buat update pencairan.</p>
             </CardContent>
           </Card>
 
@@ -222,12 +227,12 @@ export default function FinancialPositionPage() {
               />
               <BucketCard
                 icon={Banknote} tone="emerald"
-                label="COD di SPX" sub="Sudah sampai, belum ditarik"
+                label="Estimasi COD setelah penarikan" sub="Bukan saldo SPX terverifikasi"
                 amount={n(p.cod_at_spx)}
                 footer={
                   <>
                     <div className="text-[11px] text-muted-foreground">
-                      {p.cod_at_spx_orders} order DITERIMA · COD ngendon di akun SPX
+                      {p.cod_at_spx_orders} order diterima atau tercatat cair · biaya kurir belum direkonsiliasi
                     </div>
                     <div className="text-[11px] text-muted-foreground">
                       {p.withdrawal_count > 0
@@ -303,7 +308,7 @@ export default function FinancialPositionPage() {
             <CardContent className="pt-4 pb-4 text-xs text-muted-foreground space-y-1.5">
               <div className="font-semibold text-foreground mb-1">Cara baca:</div>
               <div>• <strong>COD di Perjalanan</strong> — order sudah dikirim tapi belum sampai. Belum jadi uang; sebagian bisa retur.</div>
-              <div>• <strong>COD di SPX</strong> — order DITERIMA, uang COD sudah dipegang SPX, tinggal ditarik ke rekening. Catat penarikan di SPX Cashflow biar angkanya turun.</div>
+              <div>• <strong>Estimasi COD setelah penarikan</strong> — COD diterima yang belum tercatat cair, ditambah pencairan final/draft tercatat, dikurangi penarikan SPX. Belum mencakup seluruh biaya atau membuktikan saldo rekening.</div>
               <div>• <strong>HPP ke Supplier</strong> — modal barang yang belum dibayar ke supplier. Tandai lunas lewat &quot;Detail per supplier&quot;.</div>
               <div>• <strong>Ongkir SPX</strong> — estimasi ongkir + fee COD + PPN untuk order yang sudah jalan. SPX tagih bulanan.</div>
               <div>• <strong>Posisi Bersih</strong> = (COD di Perjalanan + COD di SPX) − (HPP + Ongkir SPX + Komisi). Estimasi posisi kas kalau semua beres.</div>
@@ -311,6 +316,8 @@ export default function FinancialPositionPage() {
           </Card>
         </>
       )}
+
+      <ActualCostReport />
 
       <SupplierPayableSheet
         open={supplierSheetOpen}

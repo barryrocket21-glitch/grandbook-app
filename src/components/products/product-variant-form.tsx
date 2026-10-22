@@ -29,10 +29,9 @@ import {
 import type {
   ProductAttribute,
   ProductAttributeValue,
-  ProductWithVariants,
   Supplier,
 } from '@/lib/types'
-import { cn } from '@/lib/utils'
+import { formatRupiah } from '@/lib/format'
 
 const supabase = createClient()
 
@@ -152,6 +151,8 @@ export function ProductVariantForm({ productId }: Props) {
     }
   }, [orgId])
 
+  // Synchronize available attributes from the organization master data.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadAttributes() }, [loadAttributes])
 
   // Phase 8A — load active suppliers untuk dropdown.
@@ -306,6 +307,7 @@ export function ProductVariantForm({ productId }: Props) {
   // ----- Submit -----
   async function handleSubmit() {
     if (!orgId) return
+    if (!Number.isFinite(packingFee) || packingFee < 0) { toast.error('Biaya packing tidak boleh negatif'); return }
     if (!name.trim()) { toast.error('Nama produk wajib'); return }
     if (hasVariants && attributesUsed.length === 0) {
       toast.error('Pilih minimal 1 atribut untuk variable product')
@@ -390,7 +392,7 @@ export function ProductVariantForm({ productId }: Props) {
         <CardHeader>
           <CardTitle>{productId ? 'Edit Produk' : 'Tambah Produk'}</CardTitle>
           <CardDescription>
-            Input nama produk + tentukan tipe (Simple = 1 SKU, Variable = multi-variant dengan atribut).
+            Input nama produk + tentukan tipe (Simple = 1 SKU, Variable = multi-variant dengan atribut). Harga HPP baru berlaku mulai hari ini (WIB) untuk order dengan HPP otomatis. HPP sebelum tanggal itu dan HPP khusus tetap tersimpan.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -510,11 +512,13 @@ export function ProductVariantForm({ productId }: Props) {
                 <Input type="number" min={0} value={simplePrice} onChange={e => setSimplePrice(Number(e.target.value) || 0)} />
               </div>
               <div className="space-y-1">
-                <Label>HPP (Rp)</Label>
+                <Label>Modal barang per pcs (Rp)</Label>
                 <Input type="number" min={0} value={simpleHpp} onChange={e => setSimpleHpp(Number(e.target.value) || 0)} />
               </div>
             </div>
           )}
+
+          {!hasVariants && <ProductCostPreview hpp={simpleHpp} packing={packingFee} price={simplePrice} />}
 
           {/* VARIABLE PRODUCT */}
           {hasVariants && (
@@ -581,7 +585,7 @@ export function ProductVariantForm({ productId }: Props) {
                             <Input type="number" min={0} value={v.price} onChange={e => updateVariant(idx, 'price', Number(e.target.value) || 0)} />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">HPP (Rp)</Label>
+                            <Label className="text-xs">Modal per pcs (Rp)</Label>
                             <Input type="number" min={0} value={v.hpp} onChange={e => updateVariant(idx, 'hpp', Number(e.target.value) || 0)} />
                           </div>
                           <div className="space-y-1">
@@ -593,6 +597,7 @@ export function ProductVariantForm({ productId }: Props) {
                             <Input value={v.variation_code} onChange={e => updateVariant(idx, 'variation_code', e.target.value)} placeholder="opsional" />
                           </div>
                         </div>
+                        <ProductCostPreview hpp={v.hpp} packing={packingFee} price={v.price} />
                       </CardContent>
                     </Card>
                   ))}
@@ -676,4 +681,20 @@ function AddValueChip({ attribute, onAdd }: { attribute: ProductAttribute; onAdd
       />
     </div>
   )
+}
+
+function ProductCostPreview({ hpp, packing, price }: { hpp: number; packing: number; price: number }) {
+  const [qty, setQty] = useState(1)
+  const perUnit = hpp + packing
+  return <div className="rounded-md border bg-muted/20 p-3 space-y-2 text-sm">
+    <div className="font-medium">Rincian HPP</div>
+    <p>Modal barang {formatRupiah(hpp)} + packing {formatRupiah(packing)} = <strong>{formatRupiah(perUnit)} / pcs</strong></p>
+    <label className="flex items-center gap-2">Simulasi jumlah barang
+      <Input aria-label="Jumlah simulasi HPP" className="w-24" type="number" min={1} max={100000} step={1} value={qty} onChange={e => setQty(Math.max(1, Math.min(100000, Math.trunc(Number(e.target.value) || 1))))} />
+    </label>
+    <p>Total HPP {qty} pcs: <strong>{formatRupiah(perUnit * qty)}</strong></p>
+    <p className="text-xs text-muted-foreground">Selisih harga jual dan HPP: {formatRupiah((price - perUnit) * qty)}. Belum dikurangi ongkir, biaya COD, retur, iklan, dan biaya operasional.</p>
+    {hpp <= 0 && <p role="status" className="text-amber-600">Modal barang belum diisi. HPP dan estimasi keuntungan belum lengkap.</p>}
+    {price > 0 && price < perUnit && <p role="status" className="text-amber-600">Harga jual di bawah HPP barang dan packing.</p>}
+  </div>
 }

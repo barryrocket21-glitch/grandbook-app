@@ -860,7 +860,10 @@ function CsvUploadDialog({
                   <p className="text-muted-foreground">+ {matchResult.unmatched_campaign_names.length - 8} more...</p>
                 )}
                 <p className="text-muted-foreground mt-2">
-                  Buka /campaigns + tambah campaign dengan nama yang match (Indonesia export biasa nggak punya Campaign ID, jadi match by name persis).
+                  Kalau dilanjut import, row yang nggak match ini tidak masuk ke GrandBook — akibatnya total tracked spend bisa lebih kecil dari spreadsheet/source.
+                </p>
+                <p className="text-muted-foreground">
+                  Sekarang matcher sudah lebih toleran (normalisasi prefix `1.`/`2.`, typo ringan, alias nama umum), tapi kalau masih ada unmatched berarti campaign DB memang belum ada / penamaannya terlalu beda dan perlu dibenerin dulu.
                 </p>
               </div>
             )}

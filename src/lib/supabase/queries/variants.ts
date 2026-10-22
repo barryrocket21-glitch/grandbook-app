@@ -138,10 +138,10 @@ export async function getProductWithVariants(
 }
 
 /**
- * Save full product with variants atomically (best-effort sequential).
+ * Save the product, dated prices and variants in one normal-auth transaction.
  * - Insert/update parent products row
  * - Sync product_attributes_assignment
- * - Replace product_variants + variant_attribute_values
+ * - Preserve variant IDs; deactivate omitted variants
  */
 export interface SaveProductPayload {
   id?: number | null
@@ -178,107 +178,14 @@ export async function saveProduct(
   supabase: SupabaseClient,
   payload: SaveProductPayload
 ): Promise<{ id: number }> {
-  // 1. Upsert parent product
-  const parentData: Record<string, unknown> = {
-    organization_id: payload.orgId,
-    name: payload.name.trim(),
-    notes: payload.notes ?? null,
-    active: payload.active,
-    has_variants: payload.hasVariants,
-    price_default: payload.hasVariants
-      ? (payload.variants[0]?.price ?? 0)
-      : (payload.simplePrice ?? 0),
-    hpp: payload.hasVariants
-      ? (payload.variants[0]?.hpp ?? 0)
-      : (payload.simpleHpp ?? 0),
-    // Phase 8A — supplier_id (nullable). Only set kalau explicitly passed
-    // (undefined = jangan touch, null = clear)
-    ...(payload.supplierId !== undefined ? { supplier_id: payload.supplierId } : {}),
-    // Brief #3 — packing_fee (per produk, masuk HPP per order)
-    ...(payload.packingFee !== undefined ? { packing_fee: payload.packingFee } : {}),
-    // Brief #10 — display_name (resi bersih) + weight_kg (flat, kg)
-    ...(payload.displayName !== undefined ? { display_name: payload.displayName } : {}),
-    ...(payload.weightKg !== undefined ? { weight_kg: payload.weightKg } : {}),
-  }
-
-  let productId: number
-  if (payload.id) {
-    const { error } = await supabase
-      .from('products')
-      .update(parentData)
-      .eq('id', payload.id)
-    if (error) throw new Error(`saveProduct (update): ${error.message}`)
-    productId = payload.id
-  } else {
-    const { data, error } = await supabase
-      .from('products')
-      .insert(parentData)
-      .select('id')
-      .single()
-    if (error || !data) throw new Error(`saveProduct (insert): ${error?.message || 'no row'}`)
-    productId = data.id
-  }
-
-  // 2. Sync attribute assignments (replace)
-  await supabase.from('product_attributes_assignment').delete().eq('product_id', productId)
-  if (payload.hasVariants && payload.attributeIds.length > 0) {
-    const assignRows = payload.attributeIds.map((aid, idx) => ({
-      product_id: productId,
-      attribute_id: aid,
-      display_order: idx,
-    }))
-    const { error } = await supabase.from('product_attributes_assignment').insert(assignRows)
-    if (error) throw new Error(`saveProduct (attr assign): ${error.message}`)
-  }
-
-  // 3. Sync variants (delete-all + re-insert is simplest given Phase 9 fresh-start)
-  await supabase.from('product_variants').delete().eq('product_id', productId)
-
-  if (payload.hasVariants) {
-    for (const v of payload.variants) {
-      const { data: insertedVar, error: vErr } = await supabase
-        .from('product_variants')
-        .insert({
-          product_id: productId,
-          organization_id: payload.orgId,
-          variant_name: v.variant_name.trim(),
-          variation_code: v.variation_code?.trim() || null,
-          price: v.price,
-          hpp: v.hpp,
-          weight_grams: v.weight_grams ?? null,
-          active: v.active,
-        })
-        .select('id')
-        .single()
-      if (vErr || !insertedVar) throw new Error(`saveProduct (variant insert): ${vErr?.message || 'no row'}`)
-
-      // Link variant ↔ attribute values
-      if (v.attribute_value_ids.length > 0) {
-        const linkRows = v.attribute_value_ids.map(avid => ({
-          variant_id: insertedVar.id,
-          attribute_value_id: avid,
-        }))
-        const { error: linkErr } = await supabase.from('variant_attribute_values').insert(linkRows)
-        if (linkErr) throw new Error(`saveProduct (variant attr link): ${linkErr.message}`)
-      }
-    }
-  } else {
-    // Simple product: create 1 default variant (variant_name='default', no attribute links)
-    const { error } = await supabase.from('product_variants').insert({
-      product_id: productId,
-      organization_id: payload.orgId,
-      variant_name: 'default',
-      variation_code: null,
-      price: payload.simplePrice ?? 0,
-      hpp: payload.simpleHpp ?? 0,
-      weight_grams: null,
-      active: payload.active,
-    })
-    if (error) throw new Error(`saveProduct (default variant): ${error.message}`)
-  }
-
-  return { id: productId }
+  const { data, error } = await supabase.rpc('save_product_with_price_history', {
+    p_payload: payload,
+  })
+  if (error) throw new Error(`saveProduct: ${error.message}`)
+  if (!data || typeof data.id !== 'number') throw new Error('saveProduct: missing product ID')
+  return { id: data.id }
 }
+
 
 export async function deleteProduct(supabase: SupabaseClient, productId: number): Promise<void> {
   const { error } = await supabase.from('products').delete().eq('id', productId)

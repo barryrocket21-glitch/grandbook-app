@@ -10,29 +10,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, KeyRound, Trash2, Pencil, Wrench, AlertTriangle, Users } from 'lucide-react'
+import { UserPlus, Loader2, KeyRound, Pencil, Wrench, AlertTriangle, Users } from 'lucide-react'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import type { Profile, UserRole } from '@/lib/types'
 import { useAuth } from '@/components/providers/auth-provider'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 
-const roles: UserRole[] = ['owner', 'admin', 'cs', 'advertiser', 'akunting']
+const allRoles: UserRole[] = ['owner', 'admin', 'cs', 'advertiser', 'akunting']
 
 export default function UsersPage() {
-  const { role, loading: authLoading } = useAuth()
+  const { role, user: currentUser, loading: authLoading } = useAuth()
+  const roles = role === 'owner' ? allRoles : allRoles.filter(r => r !== 'owner' && r !== 'admin')
+  const canManage = (u: Profile) => role === 'owner' || !['owner', 'admin'].includes(u.role)
   const [users, setUsers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [repairing, setRepairing] = useState(false)
   const [showSqlHelp, setShowSqlHelp] = useState(false)
-  const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'admin' as UserRole })
+  const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'cs' as UserRole })
   const [resetTarget, setResetTarget] = useState<Profile | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [resetting, setResetting] = useState(false)
   const [editTarget, setEditTarget] = useState<Profile | null>(null)
-  const [editForm, setEditForm] = useState({ full_name: '', email: '', role: 'admin' as UserRole })
+  const [editForm, setEditForm] = useState({ full_name: '', email: '', role: 'cs' as UserRole })
   const [editing, setEditing] = useState(false)
 
   const loadUsers = async () => {
@@ -70,7 +72,7 @@ export default function UsersPage() {
         throw new Error(json.error || 'Gagal membuat user')
       }
       toast.success('User berhasil dibuat!', { description: `${form.full_name} (${ROLE_LABELS[form.role]})` })
-      setOpen(false); setForm({ email: '', password: '', full_name: '', role: 'admin' }); loadUsers()
+      setOpen(false); setForm({ email: '', password: '', full_name: '', role: 'cs' }); loadUsers()
     } catch (err: any) {
       toast.error('Gagal membuat user', { description: getErrorMessage(err) })
     } finally {
@@ -114,19 +116,6 @@ export default function UsersPage() {
     }
   }
 
-  const handleDelete = async (user: Profile) => {
-    if (!confirm(`HAPUS PERMANEN ${user.full_name} (${user.email})? Akun akan hilang dari sistem dan tidak bisa dipulihkan.`)) return
-    try {
-      const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Gagal hapus')
-      toast.success('User dihapus')
-      loadUsers()
-    } catch (err: any) {
-      toast.error('Gagal hapus', { description: getErrorMessage(err) })
-    }
-  }
-
   const changeRole = async (user: Profile, newRole: UserRole) => {
     if (newRole === user.role) return
     try {
@@ -156,8 +145,14 @@ export default function UsersPage() {
     if (!editForm.email.trim()) return toast.error('Email wajib diisi')
     setEditing(true)
     try {
-      const payload: Record<string, unknown> = { full_name: editForm.full_name, role: editForm.role }
-      if (editForm.email !== editTarget.email) payload.email = editForm.email
+      const payload: Record<string, unknown> = {}
+      if (editForm.full_name !== editTarget.full_name) payload.full_name = editForm.full_name
+      if (editForm.role !== editTarget.role) payload.role = editForm.role
+      if (editForm.email !== editTarget.email) {
+        if (Object.keys(payload).length) throw new Error('Simpan perubahan nama/role terlebih dahulu, lalu ubah email secara terpisah.')
+        payload.email = editForm.email
+      }
+      if (!Object.keys(payload).length) { setEditTarget(null); return }
       const res = await fetch(`/api/admin/users/${editTarget.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -293,10 +288,9 @@ export default function UsersPage() {
                   <TableCell className="text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString('id-ID')}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" title="Edit user" onClick={() => openEdit(u)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" title="Reset password" onClick={() => { setResetTarget(u); setNewPassword('') }}><KeyRound className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => toggleActive(u)}>{u.active ? 'Nonaktifkan' : 'Aktifkan'}</Button>
-                      <Button variant="ghost" size="icon" title="Hapus user" className="text-red-500" onClick={() => handleDelete(u)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" title="Edit user" disabled={!canManage(u)} onClick={() => openEdit(u)}><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" title="Reset password (Owner)" disabled={role !== 'owner'} onClick={() => { setResetTarget(u); setNewPassword('') }}><KeyRound className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="sm" disabled={!canManage(u) || u.id === currentUser?.id} onClick={() => toggleActive(u)}>{u.active ? 'Nonaktifkan' : 'Aktifkan'}</Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -311,8 +305,8 @@ export default function UsersPage() {
           <DialogHeader><DialogTitle>Edit User</DialogTitle></DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4">
             <div className="space-y-2"><Label>Nama Lengkap *</Label><Input value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} required /></div>
-            <div className="space-y-2"><Label>Email *</Label><Input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} required /><p className="text-xs text-muted-foreground">Mengubah email akan mengirim email konfirmasi ke alamat baru.</p></div>
-            <div className="space-y-2"><Label>Role</Label><Select value={editForm.role} onValueChange={v => v && setEditForm({ ...editForm, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>Email *</Label><Input type="email" disabled={role !== 'owner'} value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} required /><p className="text-xs text-muted-foreground">Hanya Owner yang dapat mengubah email. Simpan terpisah dari nama/role.</p></div>
+            <div className="space-y-2"><Label>Role</Label><Select disabled={editTarget?.id === currentUser?.id} value={editForm.role} onValueChange={v => v && setEditForm({ ...editForm, role: v as UserRole })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="w-[200px]">{roles.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}</SelectContent></Select></div>
             <Button type="submit" className="w-full " disabled={editing}>{editing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan Perubahan</Button>
           </form>
         </DialogContent>
@@ -327,7 +321,7 @@ export default function UsersPage() {
             <p className="text-sm text-muted-foreground">User: <strong>{resetTarget?.full_name}</strong> ({resetTarget?.email})</p>
             <div className="space-y-2">
               <Label>Password Baru *</Label>
-              <Input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} required placeholder="Minimal 8 karakter" autoFocus />
+              <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} required placeholder="Minimal 8 karakter" autoFocus />
               <p className="text-xs text-muted-foreground">Catat password ini — kamu harus beritahu user secara manual.</p>
             </div>
             <Button type="submit" className="w-full " disabled={resetting}>{resetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Reset Password</Button>

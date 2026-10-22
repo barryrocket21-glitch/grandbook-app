@@ -475,8 +475,43 @@ export async function parseMetaAdsCsv(file: File | string): Promise<ParseResult>
 export interface MatchResult {
   matched: number
   unmatched_campaign_names: string[]
-  matched_rows: Array<{ row: MetaAdsRow; campaign_id: number; match_by: 'code' | 'name' }>
+  matched_rows: Array<{ row: MetaAdsRow; campaign_id: number; match_by: 'code' | 'name' | 'normalized_name' }>
   unmatched_rows: MetaAdsRow[]
+}
+
+function normalizeCampaignName(input: string): string {
+  let s = input.toLowerCase().trim()
+
+  // Prefix varian/slot campaign seperti `1.` / `2.` sering beda antara CSV vs DB.
+  s = s.replace(/^[0-9]+\s*\.\s*/g, '')
+
+  // Samakan variasi penulisan yang sering kejadian di data Barry/GrandBook.
+  s = s
+    .replace(/adventeds\+?/g, '')
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/nature penggemuk/g, 'nature gemuk badan')
+    .replace(/kran robotic arm/g, 'kran robotic')
+    .replace(/twg vitamin rambut/g, 'twg vitamin')
+    .replace(/shampo uban/g, 'shampo')
+    .replace(/cream collgen/g, 'cream collagen')
+    .replace(/ginger oil/g, 'gingger oil')
+
+  // Rapikan variasi titik/spasi marker campaign.
+  s = s
+    .replace(/f\.a\s*1/g, 'f.a.1')
+    .replace(/f\.a\s*2/g, 'f.a.2')
+    .replace(/f\.b\s*1/g, 'f.b.1')
+    .replace(/f\.b\s*2/g, 'f.b.2')
+    .replace(/s\.c\s*4/g, 's.c.4')
+    .replace(/pavio\s*f\.a\.2\./g, 'pavio f.a.2')
+
+  // Samakan typo legacy tertentu di DB.
+  s = s.replace(/blade\s*k45/g, 'bladek45')
+
+  // Hilangkan noise punctuation/spacing.
+  s = s.replace(/[^a-z0-9.]+/g, ' ')
+  s = s.replace(/\s+/g, ' ').trim()
+  return s
 }
 
 export function matchToCampaigns(
@@ -485,9 +520,16 @@ export function matchToCampaigns(
 ): MatchResult {
   const byCode = new Map<string, number>()
   const byName = new Map<string, number>()
+  const byNormalizedName = new Map<string, number[]>()
+
   for (const c of campaigns) {
     if (c.campaign_code) byCode.set(c.campaign_code, c.id)
     byName.set(c.campaign_name.toLowerCase().trim(), c.id)
+
+    const normalized = normalizeCampaignName(c.campaign_name)
+    const existing = byNormalizedName.get(normalized) || []
+    existing.push(c.id)
+    byNormalizedName.set(normalized, existing)
   }
 
   const matched_rows: MatchResult['matched_rows'] = []
@@ -496,14 +538,23 @@ export function matchToCampaigns(
 
   for (const r of parsedRows) {
     let id: number | undefined
-    let mode: 'code' | 'name' | null = null
+    let mode: 'code' | 'name' | 'normalized_name' | null = null
+
     if (r.campaign_code && byCode.has(r.campaign_code)) {
       id = byCode.get(r.campaign_code)
       mode = 'code'
     } else if (byName.has(r.campaign_name.toLowerCase().trim())) {
       id = byName.get(r.campaign_name.toLowerCase().trim())
       mode = 'name'
+    } else {
+      const normalized = normalizeCampaignName(r.campaign_name)
+      const candidates = byNormalizedName.get(normalized) || []
+      if (candidates.length === 1) {
+        id = candidates[0]
+        mode = 'normalized_name'
+      }
     }
+
     if (id !== undefined && mode) {
       matched_rows.push({ row: r, campaign_id: id, match_by: mode })
     } else {

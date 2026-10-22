@@ -1,3 +1,5 @@
+import { dateRangePreset } from '@/lib/date/ranges'
+
 /**
  * Format number to Indonesian Rupiah currency
  */
@@ -35,6 +37,7 @@ export function formatPercent(num: number, decimals = 1): string {
  */
 export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -46,6 +49,7 @@ export function formatDate(date: string | Date): string {
  */
 export function formatDateTime(date: string | Date): string {
   return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -98,26 +102,15 @@ export function calculateCPM(spend: number, impressions: number): number {
  * Get date range for today
  */
 export function getToday(): string {
-  return new Date().toISOString().split('T')[0]
+  return dateRangePreset('today').from
 }
 
-/**
- * Get start of current week (Monday)
- */
 export function getStartOfWeek(): string {
-  const now = new Date()
-  const day = now.getDay()
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(now.setDate(diff))
-  return monday.toISOString().split('T')[0]
+  return dateRangePreset('week').from
 }
 
-/**
- * Get start of current month
- */
 export function getStartOfMonth(): string {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  return dateRangePreset('month').from
 }
 
 /**

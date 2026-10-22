@@ -607,6 +607,7 @@ export interface OrderStatusStat {
  * delivered_at karena draft hanya workspace pre-resi.
  */
 export type DraftOrderStatus = 'BARU' | 'SIAP_KIRIM' | 'PROBLEM' | 'CANCEL'
+export type FulfillmentCategory = 'GB_NO_RESI' | 'FIX_ORDER'
 
 export interface OrderDraftEnriched {
   id: number
@@ -633,6 +634,8 @@ export interface OrderDraftEnriched {
   cs_name: string | null
   channel_name: string | null
   product_summary: string | null
+  attribution_code_raw: string | null
+  fulfillment_category: FulfillmentCategory | null
   product_count: number
   cs_attempts: number
   internal_note: string | null
@@ -1380,6 +1383,10 @@ export const DEFAULT_STATE: SimulatorState = {
 // =============================================================
 
 export interface CsPerformance {
+  gb_orders?: number
+  gb_with_resi?: number
+  gb_without_resi?: number
+  incomplete_hpp_orders?: number
   user_id: string
   full_name: string
   email: string | null
@@ -1390,7 +1397,9 @@ export interface CsPerformance {
   revenue_handled: number
   commission_earned: number
   commission_unpaid: number
-  // Phase 8 v2 — top product within periode
+  gross_profit?: number
+  delivered_rate?: number
+  // Phase 8 v2 — top product within periode (kept for detail/backward compatibility; hidden on /team/cs summary)
   top_product_name: string | null
   top_product_orders: number
   // Brief #18 — lapor (cs_daily_leads) vs real + retur rate
@@ -1438,6 +1447,9 @@ export interface TeamDailySpendRow {
 }
 
 export interface TeamRecentOrderRow {
+  source?: string
+  tracking_no?: string
+  spx_created_at?: string
   id: number
   order_number: string
   customer_name: string
@@ -1467,7 +1479,20 @@ export interface TeamCommissionHistoryRow {
   order_number: string | null
 }
 
+export interface CsRegionPerformance {
+  province: string
+  city: string
+  total_orders: number
+  delivered: number
+  returned: number
+  ongoing: number
+  delivered_rate: number
+  returned_rate: number
+}
+
 export interface CsDetailResponse {
+  gb_products?: { product_id: number | null; product_name: string; orders: number; units: number; with_resi: number; without_resi: number }[]
+  regions?: CsRegionPerformance[]
   stats: CsPerformance | null
   daily_trend: TeamDailyTrendRow[]
   recent_orders: TeamRecentOrderRow[]

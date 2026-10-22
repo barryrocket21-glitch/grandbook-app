@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { confirmSameDayPhones } from '@/lib/orders/phone-warning'
 import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -140,7 +141,7 @@ export default function BulkUploadPage() {
       )
       setPreview(r)
       setStep('preview')
-    } catch (err: any) {
+    } catch (err) {
       toast.error('Gagal preview', { description: getErrorMessage(err) })
     } finally {
       setPreviewLoading(false)
@@ -166,6 +167,7 @@ export default function BulkUploadPage() {
         onProgress: (done, total) => setProgress({ done, total }),
         // Phase 8H — bulk upload manual = workspace pre-resi
         targetDraft: true,
+        confirmPhones: confirmSameDayPhones,
       })
       setResult(r)
       setStep('done')
@@ -174,7 +176,7 @@ export default function BulkUploadPage() {
       } else if (r.errors.length > 0) {
         toast.error(`Selesai dengan ${r.errors.length} error`)
       }
-    } catch (err: any) {
+    } catch (err) {
       toast.error('Gagal import', { description: getErrorMessage(err) })
       setStep('preview')
     }

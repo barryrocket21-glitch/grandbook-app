@@ -46,6 +46,7 @@ const COLUMNS: ColumnSpec[] = [
   { field: 'provinsi', label: 'Provinsi', kind: 'text', width: 'min-w-[90px]' },
   { field: 'kodePos', label: 'Pos', kind: 'text', width: 'min-w-[55px]' },
   { field: 'produk', label: 'Produk', kind: 'text', width: 'min-w-[150px]', required: true },
+  { field: 'atribusiCodeRaw', label: 'Kode Atribusi', kind: 'text', width: 'min-w-[180px]', required: true },
   { field: 'variation', label: 'Variasi', kind: 'text', width: 'min-w-[110px]' },
   { field: 'qty', label: 'Qty', kind: 'number', width: 'min-w-[50px]', align: 'right' },
   { field: 'hargaTotal', label: 'Total', kind: 'number', width: 'min-w-[95px]', required: true, align: 'right' },
@@ -111,6 +112,14 @@ export function WaPastePreviewTable({ orders, products, onUpdate, onRemove }: Wa
                       } else if (!isEmpty) {
                         statusTone = 'bad'
                         tooltip = 'Produk tidak match ke master'
+                      }
+                    } else if (c.field === 'atribusiCodeRaw') {
+                      if (!isEmpty) {
+                        statusTone = 'ok'
+                        tooltip = 'Kode Atribusi akan disimpan ke orders_draft.attribution_code_raw'
+                      } else {
+                        statusTone = 'bad'
+                        tooltip = 'Kode Atribusi wajib ada sebelum order valid/export'
                       }
                     } else if (c.field === 'hp' && !isEmpty) {
                       if (o.phoneValid) {

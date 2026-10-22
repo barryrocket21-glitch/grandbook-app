@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { confirmSameDayPhones } from '@/lib/orders/phone-warning'
 import { getErrorMessage } from '@/lib/errors'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -36,6 +37,7 @@ export default function NewOrderPage() {
     }
     setSubmitting(true)
     try {
+      if (!await confirmSameDayPhones([data.customer_phone || ''])) return
       const orgId = profile?.organization_id || 1
       const orderNumber = await generateOrderNumber(supabase, orgId)
       // Phase 8H — Order baru selalu masuk orders_draft (workspace pre-resi).
@@ -128,7 +130,7 @@ export default function NewOrderPage() {
 
       toast.success(`Order ${orderNumber} masuk Antrian Kerja`)
       router.push('/orders/draft')
-    } catch (err: any) {
+    } catch (err) {
       toast.error('Gagal simpan', { description: getErrorMessage(err) })
     } finally {
       setSubmitting(false)

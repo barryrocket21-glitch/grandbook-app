@@ -65,7 +65,7 @@ function OrdersDraftInner() {
   const initialStatus = (searchParams.get('status') || 'ALL') as 'ALL' | DraftOrderStatus
   const canExport = role === 'owner' || role === 'admin'
 
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => (searchParams.get('search') || '').slice(0, 200))
   const [statusFilter, setStatusFilter] = useState<'ALL' | DraftOrderStatus>(initialStatus)
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')
@@ -307,14 +307,14 @@ function OrdersDraftInner() {
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            {canSetResi && readiness.not_ready > 0 && (
+            {canSetResi && (
               <Button
                 size="sm"
                 onClick={() => setBenerinOpen(true)}
                 className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white"
               >
                 <Wand2 className="w-3.5 h-3.5" />
-                Benerin Alamat ({readiness.not_ready})
+                Benerin Alamat
               </Button>
             )}
             {canExport && readiness.ready > 0 && (

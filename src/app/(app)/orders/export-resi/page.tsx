@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react'
+import { exportProductGroup, type ExportItem } from '@/lib/orders/export-groups'
 import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -31,7 +32,6 @@ import { canApproveOrders } from '@/lib/auth/permissions'
 import { previewOutbound, type OutboundPreviewResult } from '@/lib/converter/preview'
 import {
   generateOutbound,
-  markOrdersExported,
   downloadBlob,
   type OutboundResult,
 } from '@/lib/converter/engine-outbound'
@@ -59,10 +59,13 @@ interface OrderRow {
   wilayah_id: number | null  // Brief #9 — SUMBER TUNGGAL kesiapan export
   exported_at: string | null  // Brief #11 — anti dobel-export
   channel_id: number | null
+  attribution_code_raw: string | null
+  cs_name: string | null
   total: number
   order_date: string
   created_at: string
   channel?: { id: number; code: string }
+  product_group: { key: string; label: string }
   items_count?: number
 }
 
@@ -114,7 +117,7 @@ function OrdersExportResiInner() {
     const s = searchParams.get('status')
     return (s && ['SIAP_KIRIM', 'BARU', 'ELIGIBLE', 'DIKIRIM'].includes(s) ? s : 'ELIGIBLE') as StatusFilter
   })
-  const [productFilter, setProductFilter] = useState<string>('ALL')
+  const [productFilter, setProductFilter] = useState<string>(() => searchParams.get('product') || 'ALL')
   const [dateFrom, setDateFrom] = useState<string>(() => searchParams.get('from') || '')
   const [dateTo, setDateTo] = useState<string>(() => searchParams.get('to') || '')
   const [search, setSearch] = useState(() => searchParams.get('q') || '')
@@ -168,76 +171,51 @@ function OrdersExportResiInner() {
     load()
   }, [])
 
+  const loadRequest = useRef(0)
   const loadOrders = useCallback(async () => {
+    const request = ++loadRequest.current
     setOrdersLoading(true)
-
-    // Phase 8I-Followup — kalau product filter aktif, pre-fetch order_id yang punya
-    // produk itu (SPX dashboard 1 alamat pengirim per batch upload — operator perlu
-    // split per supplier produk).
-    // Phase 8H — source table = orders_draft (orders yang BELUM dapet resi). Yang
-    // udah dapet resi otomatis pindah ke `orders` lewat promote trigger.
-    let restrictToOrderIds: number[] | null = null
-    if (productFilter !== 'ALL') {
-      const { data: oiRows } = await supabase
-        .from('order_items_draft')
-        .select('order_id')
-        .eq('product_id', Number(productFilter))
-      restrictToOrderIds = Array.from(new Set((oiRows || []).map((r) => r.order_id as number)))
-      if (restrictToOrderIds.length === 0) {
-        setOrders([])
-        setOrdersLoading(false)
-        return
-      }
-    }
-
-    let q = supabase
-      .from('orders_draft')
-      .select(
-        // Brief #11 fix — orders_draft punya 2 FK ke courier_channels (channel_id +
-        // exported_channel_id) → embed jadi ambigu (PostgREST 300). Disambiguasi
-        // pakai hint kolom FK !channel_id (valid utk orders_draft & orders).
-        'id, order_number, status, customer_name, customer_city, customer_province, wilayah_id, exported_at, channel_id, total, order_date, created_at, channel:courier_channels!channel_id(id, code), items:order_items_draft(id)'
-      )
-      .order('order_date', { ascending: false })
-      .limit(500)
-    // Brief #11 — default cuma yang BELUM diexport (anti dobel). Re-export → toggle.
-    if (!includeExported) q = q.is('exported_at', null)
-    if (channelFilter !== 'ALL') {
-      // Phase 8K — aggregator filter (e.g. "AGG:LINCAH") expands to all channels
-      // under that aggregator. Lincah/Mengantar pakai 1 profile untuk semua
-      // sub-courier; user gak perlu split export per courier.
-      if (channelFilter.startsWith('AGG:')) {
-        const agg = channelFilter.slice(4)
-        const channelIds = channels.filter((c) => c.aggregator === agg).map((c) => c.id)
-        if (channelIds.length === 0) {
-          setOrders([])
-          setOrdersLoading(false)
-          return
+    setSelectedIds(new Set())
+    try {
+      const rows: OrderRow[] = []
+      for (let offset = 0; ; offset += 500) {
+        let q = supabase.from('orders_draft').select(
+          'id, order_number, status, customer_name, customer_city, customer_province, wilayah_id, exported_at, channel_id, attribution_code_raw, cs_name, total, order_date, created_at, channel:courier_channels!channel_id(id, code), items:order_items_draft(id,product_id,product_name_raw,product:products(name))'
+        ).order('order_date', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 499)
+        if (!includeExported) q = q.is('exported_at', null)
+        if (channelFilter.startsWith('AGG:')) {
+          const ids = channels.filter(c => c.aggregator === channelFilter.slice(4)).map(c => c.id)
+          if (!ids.length) break
+          q = q.in('channel_id', ids)
+        } else if (channelFilter !== 'ALL') q = q.eq('channel_id', Number(channelFilter))
+        q = statusFilter === 'ELIGIBLE' ? q.in('status', ELIGIBLE_STATUSES) : q.eq('status', statusFilter)
+        if (dateFrom) q = q.gte('order_date', dateFrom)
+        if (dateTo) q = q.lte('order_date', dateTo)
+        const { data, error } = await q
+        if (request !== loadRequest.current) return
+        if (error) throw error
+        for (const row of (data || []) as unknown as (OrderRow & { items: ExportItem[] })[]) {
+          rows.push({ ...row, items_count: row.items.length, product_group: exportProductGroup(row.items) })
         }
-        q = q.in('channel_id', channelIds)
-      } else {
-        q = q.eq('channel_id', Number(channelFilter))
+        if (!data || data.length < 500) break
       }
+      if (request === loadRequest.current) setOrders(rows)
+    } catch (error) {
+      if (request === loadRequest.current) {
+        setOrders([])
+        toast.error('Gagal memuat antrian export', { description: getErrorMessage(error) })
+      }
+    } finally {
+      if (request === loadRequest.current) setOrdersLoading(false)
     }
-    if (statusFilter === 'ELIGIBLE') q = q.in('status', ELIGIBLE_STATUSES)
-    else q = q.eq('status', statusFilter)
-    if (dateFrom) q = q.gte('order_date', dateFrom)
-    if (dateTo) q = q.lte('order_date', dateTo)
-    if (restrictToOrderIds) q = q.in('id', restrictToOrderIds)
-
-    const { data } = await q
-    type Row = Omit<OrderRow, 'items_count'> & { items?: { id: number }[] }
-    const rows = ((data || []) as unknown as Row[]).map((r) => ({
-      ...r,
-      items_count: r.items?.length || 0,
-    })) as OrderRow[]
-    setOrders(rows)
-    setOrdersLoading(false)
-  }, [channelFilter, statusFilter, productFilter, dateFrom, dateTo, channels, includeExported])
+  }, [channelFilter, statusFilter, dateFrom, dateTo, channels, includeExported])
 
   useEffect(() => {
     if (step !== 'filter') return
+    // Reload external queue data when the filter changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadOrders()
+    return () => { loadRequest.current++ }
   }, [step, loadOrders])
 
   // ----- Profile bundle loader -----
@@ -308,13 +286,19 @@ function OrdersExportResiInner() {
   const startGenerate = async () => {
     if (!profileBundle || !user) return
 
-    // Brief #9 — SUMBER TUNGGAL: cuma order ✅ (wilayah_id terisi) boleh export.
-    // Sama definisi kaya Antrian Kerja → SPX gak nolak lagi gara-gara alamat kurang.
+    // GrandBook must be the source of GB Referensi + Kode Atribusi + CS before SPX enrichment.
     const ids = Array.from(selectedIds)
-    const notReady = ids.filter((id) => { const o = orders.find((x) => x.id === id); return !o || o.wilayah_id == null })
-    if (notReady.length > 0) {
-      toast.error(`${notReady.length} order belum siap (alamat ⚠️)`, {
-        description: 'Order dengan alamat belum ke-resolve gak boleh di-export. Benerin dulu di Antrian Kerja.',
+    const missingAddress = ids.filter((id) => { const o = orders.find((x) => x.id === id); return !o || o.wilayah_id == null })
+    const missingAttribution = ids.filter((id) => { const o = orders.find((x) => x.id === id); return !o || !o.attribution_code_raw?.trim() })
+    const missingCs = ids.filter((id) => { const o = orders.find((x) => x.id === id); return !o || !o.cs_name?.trim() })
+    if (missingAddress.length > 0 || missingAttribution.length > 0 || missingCs.length > 0) {
+      const parts = [
+        missingAddress.length ? `${missingAddress.length} alamat` : null,
+        missingAttribution.length ? `${missingAttribution.length} kode atribusi` : null,
+        missingCs.length ? `${missingCs.length} CS` : null,
+      ].filter(Boolean).join(', ')
+      toast.error(`Ada ${parts} belum lengkap`, {
+        description: 'Order belum valid untuk export. Lengkapi dulu di Antrian Kerja supaya GB Referensi selalu membawa Kode Atribusi dan CS.',
         duration: 10000,
         action: {
           label: 'Buka Antrian Kerja',
@@ -410,27 +394,40 @@ function OrdersExportResiInner() {
 
   // ----- Order list selection -----
   const filteredOrders = useMemo(() => {
-    if (!search.trim()) return orders
+    const productOrders = productFilter === 'ALL' ? orders : orders.filter(o => o.product_group.key === productFilter)
+    if (!search.trim()) return productOrders
     const q = search.toLowerCase().trim()
-    return orders.filter(
+    return productOrders.filter(
       (o) =>
         o.order_number.toLowerCase().includes(q) ||
         o.customer_name.toLowerCase().includes(q) ||
         (o.customer_city || '').toLowerCase().includes(q)
     )
-  }, [orders, search])
+  }, [orders, search, productFilter])
 
   // Brief #9 — alamat ✅ (wilayah_id) = boleh export. Brief #11 — anti dobel:
   // auto-ceklis cuma yang BELUM diexport. Yang udah → boleh re-export MANUAL.
+  const productGroups = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; count: number }>()
+    for (const o of orders) {
+      if (o.wilayah_id == null || o.exported_at != null) continue
+      const group = groups.get(o.product_group.key) || { ...o.product_group, count: 0 }
+      group.count++
+      groups.set(group.key, group)
+    }
+    return [...groups.values()].sort((a,b) => a.label.localeCompare(b.label))
+  }, [orders])
   const isReady = (o: OrderRow) => o.wilayah_id != null
   const isExported = (o: OrderRow) => o.exported_at != null
-  const autoIds = useMemo(() => orders.filter((o) => isReady(o) && !isExported(o)).map((o) => o.id), [orders])
-  const readyCount = orders.filter(isReady).length
-  const warnCount = orders.length - readyCount
-  const exportedCount = orders.filter(isExported).length
+  const autoIds = useMemo(() => filteredOrders.filter((o) => isReady(o) && !isExported(o)).map((o) => o.id), [filteredOrders])
+  const readyCount = filteredOrders.filter(isReady).length
+  const warnCount = filteredOrders.length - readyCount
+  const exportedCount = filteredOrders.filter(isExported).length
 
   // Auto-ceklis SEMUA ✅ yang belum diexport tiap daftar ke-load. ⚠️ & exported gak.
   useEffect(() => {
+    // Keep selection aligned with the newly loaded, visible export group.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIds(new Set(autoIds))
   }, [autoIds])
 
@@ -611,6 +608,8 @@ function OrdersExportResiInner() {
                     </SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">Semua produk</SelectItem>
+                      <SelectItem value="MIXED">Campuran beberapa produk</SelectItem>
+                      <SelectItem value="UNMAPPED">Produk belum dipetakan</SelectItem>
                       {products.map((p) => (
                         <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                       ))}
@@ -671,6 +670,14 @@ function OrdersExportResiInner() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <h2 className="font-medium text-sm">Antrian setelah Benerin Alamat, per produk</h2>
+                <p className="text-xs text-muted-foreground">Pilih produk untuk menyiapkan file SPX. Order dengan beberapa produk tetap satu paket di kelompok Campuran. Format dan kelengkapan SPX diperiksa pada langkah Preview.</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant={productFilter === 'ALL' ? 'default' : 'outline'} onClick={() => setProductFilter('ALL')}>Semua produk</Button>
+                  {productGroups.map(group => <Button key={group.key} size="sm" variant={productFilter === group.key ? 'default' : 'outline'} onClick={() => setProductFilter(group.key)}>{group.label} ({group.count})</Button>)}
+                </div>
+              </div>
               {ordersLoading ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -689,6 +696,7 @@ function OrdersExportResiInner() {
                         </TableHead>
                         <TableHead>Alamat</TableHead>
                         <TableHead>Order#</TableHead>
+                        <TableHead>Produk</TableHead>
                         <TableHead>Customer</TableHead>
                         <TableHead>Channel</TableHead>
                         <TableHead className="text-right">Total</TableHead>
@@ -725,6 +733,7 @@ function OrdersExportResiInner() {
                             )}
                           </TableCell>
                           <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
+                          <TableCell className="text-xs">{o.product_group.label}</TableCell>
                           <TableCell>
                             <div>{o.customer_name}</div>
                             <div className="text-[10px] text-muted-foreground">{o.customer_city || '-'}</div>
@@ -747,7 +756,7 @@ function OrdersExportResiInner() {
           <div className="flex justify-end">
             <Button
               onClick={goToProfile}
-              disabled={selectedIds.size === 0}
+              disabled={ordersLoading || selectedIds.size === 0}
               className=""
             >
               Lanjutkan ({selectedIds.size} dipilih) <ArrowRight className="w-3.5 h-3.5 ml-1" />

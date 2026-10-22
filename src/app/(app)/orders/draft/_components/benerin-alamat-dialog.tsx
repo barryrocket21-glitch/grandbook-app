@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { getErrorMessage } from '@/lib/errors'
 import { toast } from 'sonner'
 import {
@@ -8,18 +8,17 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase/client'
 import {
   Loader2, MapPin, Search, Check, AlertTriangle, ArrowRight, SkipForward, Star, Wand2, PartyPopper, Phone, Package, User,
 } from 'lucide-react'
 import { formatRupiah } from '@/lib/format'
 
-const supabase = createClient()
 
 // ── Tipe ─────────────────────────────────────────────────────────────────
 interface QueueItem {
   id: number
   order_number: string
+  updated_at: string
   customer_name: string
   customer_phone: string | null
   customer_address: string | null
@@ -32,7 +31,7 @@ interface QueueItem {
   product: string
 }
 interface WilayahHit { id: number; province: string; city: string; subdistrict: string; zip: string | null; score: number; source?: string }
-interface Chosen { wilayah_id: number; province: string; city: string; subdistrict: string; zip: string | null }
+interface Chosen { draft_id: number; wilayah_id: number; province: string; city: string; subdistrict: string; zip: string | null }
 
 interface Filters { status: string; search: string; dateFrom: string; dateTo: string }
 interface Props {
@@ -71,36 +70,76 @@ function FieldPill({ label, value }: { label: string; value: string | null | und
 
 // ── Search wilayah (fallback) — konteks lengkap tiap suggestion ─────────────
 function WilayahPicker({ onPick }: { onPick: (h: WilayahHit) => void }) {
+  const listId = useId()
+  const [activeIndex, setActiveIndex] = useState(0)
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<WilayahHit[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const tRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [error, setError] = useState('')
   useEffect(() => {
-    if (tRef.current) clearTimeout(tRef.current)
-    if (q.trim().length < 2) { setHits([]); return }
-    tRef.current = setTimeout(async () => {
+    const controller = new AbortController()
+    setHits([])
+    setOpen(false)
+    setError('')
+    setLoading(false)
+    setActiveIndex(0)
+    if (q.trim().length < 2) return
+    const timer = setTimeout(async () => {
       setLoading(true)
       try {
-        const { data } = await supabase.rpc('wilayah_autocomplete', { p_query: q, p_limit: 8 })
-        setHits((data || []) as WilayahHit[]); setOpen(true)
-      } finally { setLoading(false) }
+        const response = await fetch('/api/orders/address-review/autocomplete', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: q, limit: 8 }), signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('Pencarian wilayah gagal. Coba lagi.')
+        const data = await response.json()
+        if (controller.signal.aborted) return
+        setHits(data || []); setOpen(true)
+      } catch (error) {
+        if (!controller.signal.aborted) setError(getErrorMessage(error))
+      } finally { if (!controller.signal.aborted) setLoading(false) }
     }, 300)
+    return () => { clearTimeout(timer); controller.abort() }
   }, [q])
+
+  useEffect(() => {
+    if (open) document.getElementById(`${listId}-${activeIndex}`)?.scrollIntoView({ block: 'nearest' })
+  }, [activeIndex, open, listId])
+  const pick = (hit: WilayahHit) => {
+    onPick(hit); setQ(''); setHits([]); setOpen(false)
+  }
+
   return (
     <div className="relative">
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
         <Input value={q} onChange={e => setQ(e.target.value)} onFocus={() => hits.length && setOpen(true)}
+          role="combobox" aria-label="Cari wilayah" aria-autocomplete="list" aria-expanded={open && hits.length > 0}
+          aria-controls={listId} aria-activedescendant={open && hits[activeIndex] ? `${listId}-${activeIndex}` : undefined}
+          onKeyDown={e => {
+            if (e.nativeEvent.isComposing) { e.stopPropagation(); return }
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault(); e.stopPropagation(); setOpen(true)
+              setActiveIndex(i => Math.max(0, Math.min(hits.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1))))
+            } else if (e.key === 'Enter' && (q.trim() || open || loading)) {
+              e.preventDefault(); e.stopPropagation()
+              if (!e.repeat && !loading && open && hits[activeIndex]) pick(hits[activeIndex])
+            } else if (e.key === 'Escape' && open) {
+              e.preventDefault(); e.stopPropagation(); setOpen(false)
+            }
+          }}
           placeholder="Cari manual: kecamatan / kota / kode pos..." className="pl-8" />
         {loading && <Loader2 className="absolute right-2.5 top-2.5 w-3.5 h-3.5 animate-spin text-muted-foreground" />}
       </div>
+      {error && <p role="alert" className="text-xs text-destructive mt-1">{error}</p>}
+      {open && !loading && hits.length === 0 && <p className="text-xs text-muted-foreground mt-1">Wilayah belum ditemukan. Coba nama kecamatan, kota, atau kode pos.</p>}
       {open && hits.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-56 overflow-y-auto">
-          {hits.map(h => (
-            <button key={h.id} type="button"
-              onClick={() => { onPick(h); setQ(''); setHits([]); setOpen(false) }}
-              className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/60 flex items-start gap-1.5">
+        <div id={listId} role="listbox" aria-label="Hasil pencarian wilayah" className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-56 overflow-y-auto">
+          {hits.map((h, index) => (
+            <button key={h.id} id={`${listId}-${index}`} type="button" role="option" tabIndex={-1} aria-selected={activeIndex === index}
+              onMouseEnter={() => setActiveIndex(index)} onClick={() => pick(h)}
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted/60 flex items-start gap-1.5 ${activeIndex === index ? 'bg-muted/60' : ''}`}>
               <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-zinc-500" />
               <span><span className="font-medium">{h.subdistrict}</span>, {h.city}, <span className="text-muted-foreground">{h.province}</span>{h.zip ? ` · ${h.zip}` : ''}</span>
             </button>
@@ -120,11 +159,20 @@ function WilayahPicker({ onPick }: { onPick: (h: WilayahHit) => void }) {
  * wilayah_id (sumber tunggal kesiapan).
  */
 export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const saveRef = useRef<HTMLButtonElement>(null)
+  const savingRef = useRef(false)
+  const focusSave = useRef(false)
+  const suggestionRequests = useRef(new Map<string, { promise: Promise<WilayahHit[]>; controller: AbortController; ready: boolean }>())
+  const [includeComplete, setIncludeComplete] = useState(false)
+  const [queueError, setQueueError] = useState('')
+  const queueRequest = useRef(0)
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [idx, setIdx] = useState(0)
   const [loadingQueue, setLoadingQueue] = useState(false)
   const [suggestions, setSuggestions] = useState<WilayahHit[]>([])
   const [sugLoading, setSugLoading] = useState(false)
+  const manualPick = useRef(false)
   const [chosen, setChosen] = useState<Chosen | null>(null)
   const [autoPicked, setAutoPicked] = useState(false)  // ★ dominan ke-pilih otomatis
   const [addrDetail, setAddrDetail] = useState('')
@@ -135,60 +183,67 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
   const current = queue[idx] || null
   const done = idx >= total // hanya dievaluasi di render saat total > 0
 
+  useEffect(() => () => {
+    for (const request of suggestionRequests.current.values()) request.controller.abort()
+    suggestionRequests.current.clear()
+  }, [open, includeComplete])
+
+  const getSuggestions = useCallback((draft: QueueItem) => {
+    const key = `${draft.id}:${draft.updated_at}`
+    const cached = suggestionRequests.current.get(key)
+    if (cached) return cached.promise
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 15000)
+    const entry = { controller, ready: false, promise: Promise.resolve([] as WilayahHit[]) }
+    entry.promise = fetch('/api/orders/address-review/suggestions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draftId: draft.id, limit: 6 }), signal: controller.signal,
+    }).then(async response => {
+      if (!response.ok) throw new Error('Saran wilayah gagal dimuat. Coba pencarian manual atau buka ulang antrean.')
+      const hits = await response.json() as WilayahHit[]
+      entry.ready = true
+      return hits
+    }).catch(error => {
+      if (suggestionRequests.current.get(key) === entry) suggestionRequests.current.delete(key)
+      throw error
+    })
+      .finally(() => clearTimeout(timer))
+    suggestionRequests.current.set(key, entry)
+    return entry.promise
+  }, [])
+
   // Muat antrian ⚠️ (wilayah_id NULL) — se-FILTER, semua draft (bukan 1 halaman)
   const loadQueue = useCallback(async () => {
+    const requestId = ++queueRequest.current
     setLoadingQueue(true)
+    setQueueError('')
+    setQueue([])
     try {
-      let qb = supabase.from('orders_draft')
-        .select('id, order_number, customer_name, customer_phone, customer_address, customer_address_detail, customer_province, customer_city, customer_subdistrict, customer_zip, total, order_items_draft(product_name_raw, qty)')
-        .is('wilayah_id', null)
-        .order('created_at', { ascending: true })
-      if (filters.status && filters.status !== 'ALL') qb = qb.eq('status', filters.status)
-      if (filters.dateFrom) qb = qb.gte('order_date', filters.dateFrom)
-      if (filters.dateTo) qb = qb.lte('order_date', filters.dateTo)
-      if (filters.search?.trim()) {
-        const s = filters.search.trim().replace(/[%,]/g, '')
-        qb = qb.or(`order_number.ilike.%${s}%,customer_name.ilike.%${s}%,customer_phone.ilike.%${s}%`)
-      }
-      const { data, error } = await qb
-      if (error) throw error
-      const rows: QueueItem[] = (data || []).map((r: Record<string, unknown>) => {
-        const items = (r.order_items_draft as { product_name_raw: string; qty: number }[]) || []
-        const product = items.length
-          ? items.map(it => `${it.product_name_raw} (${it.qty}x)`).join(', ')
-          : '—'
-        return {
-          id: r.id as number,
-          order_number: r.order_number as string,
-          customer_name: r.customer_name as string,
-          customer_phone: r.customer_phone as string | null,
-          customer_address: r.customer_address as string | null,
-          customer_address_detail: r.customer_address_detail as string | null,
-          customer_province: r.customer_province as string | null,
-          customer_city: r.customer_city as string | null,
-          customer_subdistrict: r.customer_subdistrict as string | null,
-          customer_zip: r.customer_zip as string | null,
-          total: Number(r.total) || 0,
-          product,
-        }
+      const response = await fetch('/api/orders/address-review/queue', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...filters, includeComplete }),
       })
+      if (!response.ok) throw new Error('Antrean alamat gagal dimuat. Coba buka kembali.')
+      const rows = await response.json() as QueueItem[]
+      if (requestId !== queueRequest.current) return
       setQueue(rows)
       setIdx(0)
       setFixedCount(0)
     } catch (err) {
       const msg = getErrorMessage(err)
+      if (requestId === queueRequest.current) setQueueError(msg)
       toast.error('Gagal memuat antrian', { description: msg })
     } finally {
-      setLoadingQueue(false)
+      if (requestId === queueRequest.current) setLoadingQueue(false)
     }
-  }, [filters])
+  }, [filters, includeComplete])
 
   // Muat antrian SEKALI saat dialog dibuka. JANGAN re-run pas loadQueue identity
   // berubah (parent re-render dari polling 30s) — itu yang bikin progress reset
   // ke order 1 tiap 30 detik. filters di-snapshot saat buka (modal, user gak
   // ubah filter di bawahnya).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (open) loadQueue() }, [open])
+  useEffect(() => { if (open) loadQueue(); return () => { queueRequest.current++ } }, [open, includeComplete])
 
   // Reset per-order + ambil saran resolver HANYA pas order BENERAN ganti (key by
   // id, BUKAN object ref). Kalau parent re-render & queue ke-rebuild dengan objek
@@ -197,36 +252,58 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
   const currentId = current?.id ?? null
   useEffect(() => {
     if (!open || currentId == null) { setSuggestions([]); setChosen(null); setAutoPicked(false); return }
+    manualPick.current = false
     setChosen(null)
+    setSuggestions([])
     setAutoPicked(false)
     setAddrDetail(current?.customer_address_detail || current?.customer_address || '')
     setSugLoading(true)
     let cancelled = false
     ;(async () => {
       try {
-        const { data } = await supabase.rpc('suggest_draft_wilayah', { p_draft_id: currentId, p_limit: 6 })
+        const hits = await getSuggestions(current!)
         if (cancelled) return
-        const hits = (data || []) as WilayahHit[]
         setSuggestions(hits)
         // PRE-SELECT ★ HANYA kalau dominan: skor top tinggi (≥90 = ter-korroborasi)
         // DAN jauh di atas kandidat kedua (gap ≥15). Ambigu (mis. Kapuas Hulu vs
         // Kapuas, skornya mepet) → JANGAN pre-select → admin milih sadar.
         const top = hits[0]
-        const dominant = !!top && top.score >= 90 && (hits.length === 1 || top.score - (hits[1]?.score ?? 0) >= 15)
-        if (dominant) {
-          setChosen({ wilayah_id: top.id, province: top.province, city: top.city, subdistrict: top.subdistrict, zip: top.zip })
+        const dominant = !!top && top.source !== 'fuzzy' && top.score >= 90 && (hits.length === 1 || top.score - (hits[1]?.score ?? 0) >= 15)
+        if (dominant && !manualPick.current) {
+          const focused = document.activeElement
+          focusSave.current = focused === dialogRef.current || focused === saveRef.current || focused === document.body
+          setChosen({ draft_id: currentId, wilayah_id: top.id, province: top.province, city: top.city, subdistrict: top.subdistrict, zip: top.zip })
           setAutoPicked(true)
         }
+        // Warm only the next draft version; server still guards updated_at on save.
+        if (queue[idx + 1]) void getSuggestions(queue[idx + 1]).catch(() => {})
+      } catch (error) {
+        if (!cancelled) toast.error('Saran wilayah gagal dimuat', { description: getErrorMessage(error) })
       } finally {
         if (!cancelled) setSugLoading(false)
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      const key = `${currentId}:${current?.updated_at}`
+      const request = suggestionRequests.current.get(key)
+      if (request && !request.ready) { request.controller.abort(); suggestionRequests.current.delete(key) }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, currentId])
 
+  useEffect(() => {
+    if (chosen && chosen.draft_id === currentId && focusSave.current && !saving) {
+      focusSave.current = false
+      saveRef.current?.focus({ preventScroll: true })
+    }
+  }, [chosen, currentId, saving])
+
   const applyPick = (h: WilayahHit) => {
-    setChosen({ wilayah_id: h.id, province: h.province, city: h.city, subdistrict: h.subdistrict, zip: h.zip })
+    if (currentId == null || savingRef.current) return
+    manualPick.current = true
+    focusSave.current = true
+    setChosen({ draft_id: currentId, wilayah_id: h.id, province: h.province, city: h.city, subdistrict: h.subdistrict, zip: h.zip })
     setAutoPicked(false)  // pilihan manual menggantikan auto-select
   }
 
@@ -236,24 +313,25 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
   }
 
   const save = async () => {
-    if (!current || !chosen) return
+    if (!current || !chosen || chosen.draft_id !== current.id || savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     try {
-      const { error } = await supabase.from('orders_draft').update({
-        customer_province: chosen.province,
-        customer_city: chosen.city,
-        customer_subdistrict: chosen.subdistrict,
-        customer_zip: chosen.zip || current.customer_zip || null,
-        customer_address_detail: addrDetail.trim() || null,
-        wilayah_id: chosen.wilayah_id,
-      }).eq('id', current.id)
-      if (error) throw error
+      const response = await fetch('/api/orders/address-review/save', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draftId: current.id, expectedUpdatedAt: current.updated_at, wilayahId: chosen.wilayah_id, province: chosen.province, city: chosen.city, subdistrict: chosen.subdistrict, zip: chosen.zip || current.customer_zip || '', detail: addrDetail.trim() }),
+      })
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}))
+        throw new Error(body.error || 'Gagal simpan alamat')
+      }
       setFixedCount(c => c + 1)
       advance()
     } catch (err) {
       const msg = getErrorMessage(err)
       toast.error('Gagal simpan', { description: msg })
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
   }
@@ -270,7 +348,11 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
 
   // Enter = Simpan & Lanjut (kalau ada pilihan)
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && chosen && !saving) { e.preventDefault(); save() }
+    if (e.key !== 'Enter' || e.defaultPrevented || e.nativeEvent.isComposing || !(e.target instanceof HTMLElement)) return
+    if (e.target.tagName === 'TEXTAREA' && !e.ctrlKey && !e.metaKey) return
+    if (e.repeat || savingRef.current) { e.preventDefault(); return }
+    if (e.target.closest('button') && !e.ctrlKey && !e.metaKey) return
+    if (chosen?.draft_id === currentId) { e.preventDefault(); void save() }
   }
 
   const provVal = chosen?.province ?? current?.customer_province
@@ -280,7 +362,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) close() }}>
-      <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto" onKeyDown={onKeyDown}>
+      <DialogContent ref={dialogRef} initialFocus={dialogRef} className="sm:max-w-2xl max-h-[92vh] overflow-y-auto" onKeyDown={onKeyDown}>
         <DialogHeader>
           {/* pr-8 → judul gak ketabrak tombol X di pojok kanan */}
           <DialogTitle className="flex items-center gap-2 pr-8">
@@ -289,6 +371,12 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
           </DialogTitle>
         </DialogHeader>
 
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={includeComplete} disabled={saving || loadingQueue}
+            onChange={e => { if (fixedCount > 0) onDone(); setIncludeComplete(e.target.checked) }} />
+          Tampilkan juga alamat terisi untuk diedit
+        </label>
+        <p className="text-xs text-muted-foreground">Maksimal 200 order sesuai filter. Gunakan pencarian di Antrian Kerja untuk memilih order tertentu.</p>
         {/* Progress — counter punya baris sendiri (gak nabrak X) + bar tipis */}
         {total > 0 && !done && (
           <div className="space-y-1 -mt-1">
@@ -306,11 +394,13 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
           <div className="py-16 flex items-center justify-center text-muted-foreground gap-2">
             <Loader2 className="w-5 h-5 animate-spin" /> Memuat antrian…
           </div>
+        ) : queueError ? (
+          <p role="alert" className="py-8 text-sm text-destructive">{queueError}</p>
         ) : total === 0 ? (
           <div className="py-14 text-center space-y-2">
             <PartyPopper className="w-10 h-10 mx-auto text-emerald-500" />
-            <p className="font-medium">Semua alamat udah beres 🎉</p>
-            <p className="text-sm text-muted-foreground">Gak ada order ⚠️ di filter sekarang.</p>
+            <p className="font-medium">Tidak ada alamat dalam antrean ini</p>
+            <p className="text-sm text-muted-foreground">Tidak ada order yang cocok dengan filter pemeriksaan sekarang.</p>
             <Button onClick={() => close()} className="mt-2">Tutup</Button>
           </div>
         ) : done ? (
@@ -338,7 +428,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Alamat mentah</p>
               <div className="rounded-md border bg-card p-2.5 text-sm leading-relaxed">
                 {highlightTerms(
-                  current.customer_address_detail || current.customer_address || '—',
+                  current.customer_address || current.customer_address_detail || '—',
                   [provVal, cityVal, subVal, zipVal],
                 )}
               </div>
@@ -391,7 +481,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
             {/* Search fallback */}
             <div className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Cari manual</p>
-              <WilayahPicker onPick={applyPick} />
+              <WilayahPicker key={current.id} onPick={applyPick} />
             </div>
 
             {/* Alamat detail editable — SIMPAN patokan/landmark, jangan dihapus */}
@@ -406,7 +496,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
                 placeholder="Jl. ... RT/RW ... (+ patokan, mis. 'depan warung Bu Siti')"
                 className="w-full rounded-md border bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
               />
-              <p className="text-[10px] text-muted-foreground">Detail mentah + patokan disimpan apa adanya buat driver — gak kehapus pas wilayah di-set.</p>
+              <p className="text-[10px] text-muted-foreground">Enter untuk baris baru; Ctrl/⌘ + Enter untuk simpan dan lanjut. Detail dan patokan tetap disimpan.</p>
             </div>
 
             {/* Actions */}
@@ -415,7 +505,7 @@ export function BenerinAlamatDialog({ open, onOpenChange, filters, onDone }: Pro
                 <SkipForward className="w-3.5 h-3.5" /> Lewati
               </Button>
               <span className="text-[11px] text-muted-foreground ml-auto hidden sm:inline">Enter = Simpan &amp; Lanjut</span>
-              <Button onClick={save} disabled={saving || !chosen} className="gap-1.5 bg-zinc-600 hover:bg-zinc-700">
+              <Button ref={saveRef} onClick={save} disabled={saving || !chosen || chosen.draft_id !== currentId} className="gap-1.5 bg-zinc-600 hover:bg-zinc-700">
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
                 Simpan &amp; Lanjut
               </Button>

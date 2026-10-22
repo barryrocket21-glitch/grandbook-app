@@ -5,7 +5,10 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
-import { Loader2 } from 'lucide-react'
+import { Copy, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { getAttributionCode } from '@/lib/orders/attribution-code'
 import { formatRupiah, formatDateTime } from '@/lib/format'
 
 const supabase = createClient()
@@ -17,6 +20,7 @@ interface OrderRow { [k: string]: unknown }
 export function OrderDetailSheet({ source, id, onClose }: { source: 'draft' | 'final' | null; id: number | null; onClose: () => void }) {
   const open = source !== null && id !== null
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [o, setO] = useState<OrderRow | null>(null)
   const [items, setItems] = useState<Item[]>([])
   const [names, setNames] = useState<{ adv?: string; camp?: string; ch?: string; cs?: string }>({})
@@ -25,7 +29,7 @@ export function OrderDetailSheet({ source, id, onClose }: { source: 'draft' | 'f
     if (!open) return
     let cancel = false
     const run = async () => {
-      setLoading(true); setO(null); setItems([])
+      setLoading(true); setError(''); setO(null); setItems([]); setNames({})
       const tbl = source === 'draft' ? 'orders_draft' : 'orders'
       const itbl = source === 'draft' ? 'order_items_draft' : 'order_items'
       try {
@@ -34,6 +38,7 @@ export function OrderDetailSheet({ source, id, onClose }: { source: 'draft' | 'f
           supabase.from(itbl).select('*, product:products(display_name, name)').eq('order_id', id).order('id'),
         ])
         if (cancel) return
+        if (ord.error || its.error) throw new Error('Detail order belum dapat dimuat. Tutup lalu buka kembali.')
         const row = (ord.data || null) as OrderRow | null
         setO(row); setItems((its.data || []) as Item[])
         if (row) {
@@ -51,7 +56,7 @@ export function OrderDetailSheet({ source, id, onClose }: { source: 'draft' | 'f
             cs: (cs.data as { full_name?: string } | null)?.full_name,
           })
         }
-      } catch { /* silent */ } finally { if (!cancel) setLoading(false) }
+      } catch { if (!cancel) setError('Detail order belum dapat dimuat. Tutup lalu buka kembali.') } finally { if (!cancel) setLoading(false) }
     }
     void run()
     return () => { cancel = true }
@@ -60,6 +65,7 @@ export function OrderDetailSheet({ source, id, onClose }: { source: 'draft' | 'f
   const addr = o ? [o.customer_address_detail, o.customer_village, o.customer_subdistrict, o.customer_city, o.customer_province, o.customer_zip].filter(Boolean).join(', ') : ''
   const total = n(o?.total)
   const ongkir = n(o?.shipping_cost)
+  const attributionCode = getAttributionCode(o)
 
   return (
     <Sheet open={open} onOpenChange={x => !x && onClose()}>
@@ -72,6 +78,7 @@ export function OrderDetailSheet({ source, id, onClose }: { source: 'draft' | 'f
         </SheetHeader>
 
         {loading ? <div className="py-16 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
+        : error ? <div role="alert" className="py-16 text-center text-sm text-destructive">{error}</div>
         : !o ? <div className="py-16 text-center text-sm text-muted-foreground">Order tidak ditemukan.</div>
         : (
           <div className="space-y-4 mt-3 text-sm">
@@ -110,7 +117,11 @@ export function OrderDetailSheet({ source, id, onClose }: { source: 'draft' | 'f
               <Field label="CS" value={names.cs || String(o.cs_name || '—')} />
               <Field label="Advertiser" value={names.adv || '—'} />
               <Field label="Campaign" value={names.camp || '—'} />
-              <Field label="Kode" value={o.meta && (o.meta as Record<string, unknown>).atribusi_account ? `${(o.meta as Record<string, unknown>).platform}.${(o.meta as Record<string, unknown>).atribusi_account}.${(o.meta as Record<string, unknown>).atribusi_campaign}` : '—'} mono />
+              <Field label="Kode Atribusi" value={attributionCode || '—'} mono />
+              {attributionCode && <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={async () => {
+                try { await navigator.clipboard.writeText(attributionCode); toast.success('Kode atribusi disalin') }
+                catch { toast.error('Gagal menyalin. Pilih teks kode untuk menyalin manual.') }
+              }}><Copy className="w-3.5 h-3.5" />Salin kode atribusi</Button>}
             </Section>
           </div>
         )}

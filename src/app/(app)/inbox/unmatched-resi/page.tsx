@@ -1,7 +1,6 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
-import { getErrorMessage } from '@/lib/errors'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,461 +9,168 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { toast } from 'sonner'
-import { Inbox, Search, Wrench, Loader2, Filter } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
-import { format, parseISO } from 'date-fns'
-
-const supabase = createClient()
+import { Inbox, Search, Wrench, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
+import { inboxResiRequestSchema } from '@/lib/schemas/inbox-resi-request'
+import { Choice, CreateOrderFields, initialCreateForm, sourceText, type References } from './_components/create-order-fields'
 
 interface InboxRow {
-  id: number
-  source_profile_id: number
-  raw_resi: string
-  raw_data: Record<string, any>
-  resolved: boolean
-  resolution: 'linked' | 'ignored' | 'created_new' | null
-  resolved_to_order_id: number | null
-  resolved_at: string | null
-  resolved_by: string | null
-  created_at: string
-  source_profile?: { id: number; code: string; name: string }
-  resolved_order?: { id: number; order_number: string }
+  id: number; source_profile_id: number | null; raw_resi: string; raw_data: Record<string, unknown>
+  resolved: boolean; resolution: 'linked' | 'ignored' | 'created_new' | null
+  resolved_to_order_id: number | null; resolved_to_draft_id: number | null; resolved_order_number: string | null
+  resolution_note: string | null; created_at: string; updated_at: string
 }
-
-interface OrderLite {
-  id: number
-  order_number: string
-  external_order_id: string | null
-  customer_name: string
-  resi: string | null
+interface OrderResult { source: 'draft' | 'final'; id: number; order_number: string; external_order_id: string | null; customer_name: string; resi: string | null; tracking_no: string | null; updated_at: string }
+const endpoint = '/api/inbox/unmatched-resi'
+const labels = { linked: 'Ditautkan', ignored: 'Diabaikan', created_new: 'Order dibuat' }
+async function readResponse(response: Response) {
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(data?.error ?? 'Permintaan belum berhasil. Coba lagi.')
+  return data
 }
-
-interface ProfileLite { id: number; code: string; name: string }
 
 export default function UnmatchedResiPage() {
-  const { user } = useAuth()
+  const { role } = useAuth()
+  const allowed = role === 'owner' || role === 'admin'
   const [rows, setRows] = useState<InboxRow[]>([])
-  const [profiles, setProfiles] = useState<ProfileLite[]>([])
+  const [refs, setRefs] = useState<References | null>(null)
+  const [refError, setRefError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [profileFilter, setProfileFilter] = useState('ALL')
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'RESOLVED'>('PENDING')
+  const [statusFilter, setStatusFilter] = useState('PENDING')
   const [search, setSearch] = useState('')
-
-  // Resolve dialog
-  const [resolveOpen, setResolveOpen] = useState(false)
+  const [page, setPage] = useState(0)
+  const [count, setCount] = useState(0)
+  const [reload, setReload] = useState(0)
   const [active, setActive] = useState<InboxRow | null>(null)
   const [action, setAction] = useState<'link' | 'create' | 'ignore'>('link')
   const [orderQuery, setOrderQuery] = useState('')
-  const [orderResults, setOrderResults] = useState<OrderLite[]>([])
+  const [orderResults, setOrderResults] = useState<OrderResult[]>([])
   const [orderSearching, setOrderSearching] = useState(false)
-  const [pickedOrderId, setPickedOrderId] = useState<number | null>(null)
+  const [picked, setPicked] = useState<OrderResult | null>(null)
   const [ignoreReason, setIgnoreReason] = useState('')
+  const [createForm, setCreateForm] = useState(() => initialCreateForm({}))
   const [submitting, setSubmitting] = useState(false)
+  const [resolveError, setResolveError] = useState('')
+  const saving = useRef(false)
+  const activeId = useRef<number | null>(null)
+  const searchRequest = useRef<AbortController | null>(null)
+  const receipt = useRef<{ payload: string; id: string } | null>(null)
 
-  const load = async () => {
-    setLoading(true)
-    const [{ data: rs }, { data: ps }] = await Promise.all([
-      supabase
-        .from('inbox_unmatched_resi')
-        .select(`
-          *,
-          source_profile:converter_profiles(id, code, name),
-          resolved_order:orders!resolved_to_order_id(id, order_number)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(500),
-      supabase.from('converter_profiles').select('id, code, name').order('code'),
-    ])
-    setRows((rs as any) || [])
-    setProfiles(ps || [])
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    if (!allowed) return
+    const controller = new AbortController()
+    setRefError('')
+    fetch(endpoint + '?mode=references', { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) }).then(readResponse).then(data => {
+      if (!controller.signal.aborted) setRefs(data)
+    }).catch(error => { if (!controller.signal.aborted) setRefError(getErrorMessage(error)) })
+    return () => controller.abort()
+  }, [allowed, reload])
+  useEffect(() => {
+    if (!allowed) return
+    const controller = new AbortController()
+    setLoading(true); setLoadError('')
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ status: statusFilter, profile: profileFilter, q: search, page: String(page) })
+        const data = await readResponse(await fetch(endpoint + '?' + params, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) }))
+        if (!controller.signal.aborted) { setRows(data.rows); setCount(data.count) }
+      } catch (error) { if (!controller.signal.aborted) setLoadError(getErrorMessage(error)) }
+      finally { if (!controller.signal.aborted) setLoading(false) }
+    }, 250)
+    return () => { clearTimeout(timer); controller.abort() }
+  }, [allowed, statusFilter, profileFilter, search, page, reload])
+  useEffect(() => () => searchRequest.current?.abort(), [])
 
   const openResolve = (row: InboxRow) => {
-    setActive(row)
-    setAction('link')
-    setOrderQuery('')
-    setOrderResults([])
-    setPickedOrderId(null)
-    setIgnoreReason('')
-    setResolveOpen(true)
+    searchRequest.current?.abort(); activeId.current = row.id; receipt.current = null
+    setActive(row); setAction('link'); setOrderQuery(row.raw_resi); setOrderResults([]); setOrderSearching(false)
+    setPicked(null); setIgnoreReason(''); setResolveError(''); setCreateForm(initialCreateForm(row.raw_data ?? {}))
   }
-
+  const close = () => {
+    if (saving.current) return
+    activeId.current = null; searchRequest.current?.abort(); setActive(null)
+  }
   const searchOrders = async () => {
-    if (!orderQuery.trim()) return
-    setOrderSearching(true)
+    const query = orderQuery.trim()
+    if (query.length < 2) return
+    searchRequest.current?.abort()
+    const controller = new AbortController(); searchRequest.current = controller
+    const inboxId = activeId.current
+    setOrderSearching(true); setPicked(null); setOrderResults([]); setResolveError('')
     try {
-      const q = orderQuery.trim()
-      // Search by order_number, external_order_id, or customer_name
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, order_number, external_order_id, customer_name, resi')
-        .or(`order_number.ilike.%${q}%,external_order_id.ilike.%${q}%,customer_name.ilike.%${q}%`)
-        .limit(20)
-      if (error) throw error
-      setOrderResults((data as any) || [])
-      if ((data || []).length === 0) toast.info('Tidak ada order match.')
-    } catch (err: any) {
-      toast.error('Gagal cari', { description: getErrorMessage(err) })
-    } finally {
-      setOrderSearching(false)
-    }
+      const data = await readResponse(await fetch(endpoint + '?' + new URLSearchParams({ mode: 'orders', q: query }), { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) }))
+      if (!controller.signal.aborted && activeId.current === inboxId) {
+        setOrderResults(data.rows)
+        if (!data.rows.length) setResolveError('Tidak ada order yang cocok. Periksa nomor referensi sebelum membuat order baru.')
+      }
+    } catch (error) { if (!controller.signal.aborted) setResolveError(getErrorMessage(error)) }
+    finally { if (!controller.signal.aborted) setOrderSearching(false) }
   }
-
   const submitResolve = async () => {
-    if (!active) return
-    setSubmitting(true)
+    if (!active || saving.current) return
+    const payload = action === 'create' ? createForm : action === 'ignore' ? { reason: ignoreReason }
+      : picked ? { source: picked.source, orderId: picked.id, updatedAt: picked.updated_at } : null
+    const serialized = JSON.stringify({ action, payload, inboxId: active.id, updatedAt: active.updated_at })
+    if (receipt.current?.payload !== serialized) receipt.current = { payload: serialized, id: crypto.randomUUID() }
+    const request = { inboxId: active.id, updatedAt: active.updated_at, requestId: receipt.current.id, action, payload }
+    if (!inboxResiRequestSchema.safeParse(request).success) {
+      setResolveError(action === 'link' ? 'Cari dan pilih order tujuan.' : action === 'ignore' ? 'Isi alasan pengabaian.' : 'Lengkapi nama, alamat, tanggal, ekspedisi, pembayaran dan produk. Periksa telepon, jumlah serta harga.'); return
+    }
+    saving.current = true; setSubmitting(true); setResolveError('')
     try {
-      const base: any = {
-        resolved: true,
-        resolved_at: new Date().toISOString(),
-        resolved_by: user?.id || null,
-      }
-      if (action === 'link') {
-        if (!pickedOrderId) {
-          toast.error('Pilih order untuk di-link')
-          return
-        }
-        // Update orders to set resi from this raw_resi
-        const { error: e1 } = await supabase
-          .from('orders')
-          .update({ resi: active.raw_resi })
-          .eq('id', pickedOrderId)
-        if (e1) throw e1
-        const { error } = await supabase
-          .from('inbox_unmatched_resi')
-          .update({ ...base, resolution: 'linked', resolved_to_order_id: pickedOrderId })
-          .eq('id', active.id)
-        if (error) throw error
-        toast.success(`Resi "${active.raw_resi}" ter-link ke order`)
-      } else if (action === 'create') {
-        const { error } = await supabase
-          .from('inbox_unmatched_resi')
-          .update({ ...base, resolution: 'created_new' })
-          .eq('id', active.id)
-        if (error) throw error
-        toast.success('Inbox di-clear', {
-          description: 'Fitur create order dari resi akan tersedia di Phase 4. Inbox sudah di-resolve.',
-        })
-      } else {
-        // ignore — no notes column on inbox_unmatched_resi; reason dropped silently
-        const { error } = await supabase
-          .from('inbox_unmatched_resi')
-          .update({ ...base, resolution: 'ignored' })
-          .eq('id', active.id)
-        if (error) throw error
-        toast.success('Resi diabaikan')
-      }
-      setResolveOpen(false)
-      setActive(null)
-      load()
-    } catch (err: any) {
-      toast.error('Gagal resolve', { description: getErrorMessage(err) })
-    } finally {
-      setSubmitting(false)
+      const data = await readResponse(await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: AbortSignal.timeout(25000) }))
+      toast.success(data.resolution === 'ignored' ? 'Resi diabaikan; alasan tersimpan.' : `${data.orderNumber} ${data.resolution === 'created_new' ? 'dibuat beserta itemnya di Antrian.' : 'ditautkan ke inbox.'}`)
+      activeId.current = null; setActive(null); setReload(n => n + 1)
+    } catch (error) {
+      const interrupted = error instanceof Error && ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name)
+      setResolveError(interrupted ? 'Penyimpanan belum dikonfirmasi. Coba lagi dengan data yang sama; permintaan tidak akan digandakan.' : getErrorMessage(error))
     }
+    finally { saving.current = false; setSubmitting(false) }
   }
 
-  const filtered = useMemo(() => {
-    let list = rows
-    if (statusFilter === 'PENDING') list = list.filter((r) => !r.resolved)
-    if (statusFilter === 'RESOLVED') list = list.filter((r) => r.resolved)
-    if (profileFilter !== 'ALL') list = list.filter((r) => String(r.source_profile_id) === profileFilter)
-    if (search) {
-      const q = search.toLowerCase()
-      list = list.filter((r) => r.raw_resi.toLowerCase().includes(q))
-    }
-    return list
-  }, [rows, statusFilter, profileFilter, search])
-
-  const pendingCount = useMemo(() => rows.filter((r) => !r.resolved).length, [rows])
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        icon={Inbox}
-        title="Unmatched Resi"
-        description="Resi dari rekonsil ekspedisi yang belum nemu match di tabel orders. Resolve dengan link ke order existing, buat order baru, atau abaikan."
-        badge={
-          pendingCount > 0 ? (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-              {pendingCount} belum resolved
-            </Badge>
-          ) : null
-        }
-      />
-
-      <Card>
-        <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row gap-3 flex-wrap">
-          <div className="flex-1 min-w-[200px] relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari raw resi..." className="pl-9" />
-          </div>
-          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v as any)}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="w-[200px]">
-              <SelectItem value="PENDING">Belum resolved</SelectItem>
-              <SelectItem value="RESOLVED">Sudah resolved</SelectItem>
-              <SelectItem value="ALL">Semua</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={profileFilter} onValueChange={(v) => v && setProfileFilter(v)}>
-            <SelectTrigger className="w-52">
-              <SelectValue placeholder="Source Profile">
-                {(value: string | null) => {
-                  if (!value || value === 'ALL') return 'Semua source'
-                  return profiles.find((p) => String(p.id) === value)?.code ?? value
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="w-[280px]">
-              <SelectItem value="ALL">Semua source</SelectItem>
-              {profiles.map((p) => (
-                <SelectItem key={p.id} value={String(p.id)}>{p.code}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Created</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Raw Resi</TableHead>
-                <TableHead>Receiver</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Resolution</TableHead>
-                <TableHead>Linked Order</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={8}>
-                      <div className="h-4 bg-muted animate-pulse rounded" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="p-0">
-                    <EmptyState
-                      icon={rows.length === 0 ? Inbox : Filter}
-                      title={rows.length === 0 ? 'Inbox kosong' : 'Tidak ada hasil'}
-                      description={
-                        rows.length === 0
-                          ? 'Inbox akan otomatis terisi saat Converter Engine (Phase 3) nemu resi yang nggak match. Kamu bisa juga insert manual via SQL untuk testing.'
-                          : 'Coba ubah filter.'
-                      }
-                    />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((r) => {
-                  const receiver =
-                    (r.raw_data?.receiver_name as string) ||
-                    (r.raw_data?.customer_name as string) ||
-                    (r.raw_data?.['Nama Penerima'] as string) ||
-                    null
-                  return (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {fmtDate(r.created_at)}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {r.source_profile ? (
-                          <Badge variant="outline" className="font-mono text-[10px]">{r.source_profile.code}</Badge>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{r.raw_resi}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{receiver || '—'}</TableCell>
-                      <TableCell>
-                        {r.resolved ? (
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">Resolved</Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">Belum</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {r.resolution ? (
-                          <Badge variant="outline" className={
-                            r.resolution === 'linked' ? 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30' :
-                            r.resolution === 'created_new' ? 'bg-zinc-500/10 text-zinc-600 border-zinc-500/30' :
-                            'bg-zinc-500/10 text-zinc-600 border-zinc-500/30'
-                          }>
-                            {r.resolution}
-                          </Badge>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {r.resolved_order ? r.resolved_order.order_number : '—'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {!r.resolved && (
-                          <Button variant="outline" size="sm" onClick={() => openResolve(r)}>
-                            <Wrench className="w-3.5 h-3.5 mr-1" />Resolve
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Resolve Dialog */}
-      <Dialog open={resolveOpen} onOpenChange={(v) => { setResolveOpen(v); if (!v) setActive(null) }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Resolve Resi “{active?.raw_resi}”</DialogTitle>
-          </DialogHeader>
-          {active && (
-            <div className="space-y-4">
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>Source: <Badge variant="outline" className="font-mono text-[10px]">{active.source_profile?.code}</Badge></div>
-                <div>Created: {fmtDate(active.created_at)}</div>
-                <details className="mt-2">
-                  <summary className="cursor-pointer hover:text-foreground">Lihat raw data</summary>
-                  <pre className="mt-2 p-2 bg-muted rounded text-[10px] overflow-x-auto">
-                    {JSON.stringify(active.raw_data, null, 2)}
-                  </pre>
-                </details>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs">Pilih Action</Label>
-                <div className="space-y-2">
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={action === 'link'}
-                      onChange={() => setAction('link')}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">Link ke order existing</div>
-                      <div className="text-xs text-muted-foreground">
-                        Cari order yang sudah ada di sistem, set resi-nya = "{active.raw_resi}".
-                      </div>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={action === 'create'}
-                      onChange={() => setAction('create')}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">Buat order baru dari data ini</div>
-                      <div className="text-xs text-muted-foreground">
-                        ⚠️ Stub — fitur create order dari resi akan tersedia di Phase 4.
-                        Saat ini cuma clear inbox dengan resolution=created_new.
-                      </div>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={action === 'ignore'}
-                      onChange={() => setAction('ignore')}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">Abaikan resi ini</div>
-                      <div className="text-xs text-muted-foreground">
-                        Tandai inbox sebagai resolved tanpa link/create.
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {action === 'link' && (
-                <div className="space-y-2 border-t pt-3">
-                  <Label className="text-xs">Cari Order</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={orderQuery}
-                      onChange={(e) => setOrderQuery(e.target.value)}
-                      placeholder="Order number / external ID / nama customer"
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), searchOrders())}
-                    />
-                    <Button onClick={searchOrders} disabled={orderSearching || !orderQuery.trim()} variant="outline">
-                      {orderSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                    </Button>
-                  </div>
-                  {orderResults.length > 0 && (
-                    <div className="border rounded max-h-60 overflow-y-auto">
-                      {orderResults.map((o) => (
-                        <button
-                          key={o.id}
-                          type="button"
-                          onClick={() => setPickedOrderId(o.id)}
-                          className={`w-full text-left p-2 text-xs hover:bg-muted border-b last:border-b-0 ${pickedOrderId === o.id ? 'bg-zinc-500/10' : ''}`}
-                        >
-                          <div className="font-medium">{o.order_number} {o.external_order_id && <span className="text-muted-foreground">· {o.external_order_id}</span>}</div>
-                          <div className="text-muted-foreground">
-                            {o.customer_name}
-                            {o.resi && <span> · resi: {o.resi}</span>}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {action === 'ignore' && (
-                <div className="space-y-2 border-t pt-3">
-                  <Label className="text-xs">Alasan (optional)</Label>
-                  <Textarea
-                    value={ignoreReason}
-                    onChange={(e) => setIgnoreReason(e.target.value)}
-                    rows={2}
-                    placeholder="(catatan untuk diri sendiri — tidak disimpan ke DB di Phase 2B)"
-                  />
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 border-t pt-3">
-                <Button variant="outline" onClick={() => setResolveOpen(false)}>Batal</Button>
-                <Button
-                  onClick={submitResolve}
-                  disabled={submitting || (action === 'link' && !pickedOrderId)}
-                  className=""
-                >
-                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Konfirmasi
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-function fmtDate(iso: string): string {
-  try {
-    return format(parseISO(iso), 'dd MMM HH:mm')
-  } catch {
-    return iso
-  }
+  if (role && !allowed) return <p role="alert">Halaman ini hanya untuk owner dan admin.</p>
+  return <div className="space-y-6">
+    <PageHeader icon={Inbox} title="Resi Nyangkut" description="Periksa resi yang belum cocok. Tautkan ke order yang ada, lengkapi order baru, atau abaikan dengan alasan." />
+    {(refError || loadError) && <div role="alert" className="rounded-md border border-destructive p-3 text-sm">{loadError || refError} <Button variant="outline" size="sm" onClick={() => setReload(n => n + 1)}>Muat ulang</Button></div>}
+    <Card><CardContent className="flex flex-wrap gap-3 py-4">
+      <Input className="min-w-48 flex-1" aria-label="Cari resi inbox" placeholder="Cari resi..." maxLength={200} value={search} onChange={e => { setSearch(e.target.value); setPage(0) }} />
+      <Choice className="sm:w-44" aria-label="Status inbox" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(0) }}><option value="PENDING">Belum diselesaikan</option><option value="RESOLVED">Sudah diselesaikan</option><option value="ALL">Semua status</option></Choice>
+      <Choice className="sm:w-52" aria-label="Sumber inbox" value={profileFilter} onChange={e => { setProfileFilter(e.target.value); setPage(0) }}><option value="ALL">Semua sumber</option>{refs?.profiles.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}</Choice>
+    </CardContent></Card>
+    <Card><CardContent className="p-0"><Table>
+      <TableHeader><TableRow>{['Dibuat', 'Sumber', 'Resi', 'Penerima', 'Penyelesaian', 'Order terkait', 'Aksi'].map(label => <TableHead key={label}>{label}</TableHead>)}</TableRow></TableHeader>
+      <TableBody>{loading ? <TableRow><TableCell colSpan={7}><Loader2 className="mx-auto my-6 animate-spin" aria-label="Memuat inbox" /></TableCell></TableRow>
+        : loadError ? <TableRow><TableCell colSpan={7}>Data belum berhasil dimuat.</TableCell></TableRow>
+          : !rows.length ? <TableRow><TableCell colSpan={7}><EmptyState icon={Inbox} title="Tidak ada resi pada filter ini" description="Resi yang belum cocok akan muncul setelah rekonsil ekspedisi." /></TableCell></TableRow>
+            : rows.map(row => <TableRow key={row.id}>
+              <TableCell className="text-xs whitespace-nowrap">{new Date(row.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</TableCell>
+              <TableCell className="text-xs">{refs?.profiles.find(p => p.id === row.source_profile_id)?.code ?? '—'}</TableCell>
+              <TableCell className="font-mono text-xs"><span className="block max-w-56 whitespace-normal break-all">{row.raw_resi}</span></TableCell>
+              <TableCell className="max-w-40 truncate text-xs">{sourceText(row.raw_data ?? {}, 'customer_name', 'receiver_name', 'recipient_name', 'Nama Penerima') || '—'}</TableCell>
+              <TableCell><Badge variant="outline">{!row.resolved ? 'Belum' : row.resolution === 'created_new' && !row.resolved_to_order_id && !row.resolved_to_draft_id ? 'Perlu diperiksa' : row.resolution ? labels[row.resolution] : 'Selesai'}</Badge>{row.resolution_note && <p className="mt-1 max-w-60 whitespace-pre-wrap break-words text-xs text-muted-foreground">{row.resolution_note}</p>}</TableCell>
+              <TableCell className="text-xs">{row.resolved_order_number ? <Link className="underline" href={row.resolved_to_order_id ? `/orders/${row.resolved_to_order_id}` : `/orders/draft?search=${encodeURIComponent(row.resolved_order_number)}`}>{row.resolved_order_number}{row.resolved_to_draft_id ? ' · Antrian' : ''}</Link> : '—'}</TableCell>
+              <TableCell>{!row.resolved && <Button variant="outline" size="sm" disabled={!refs || !!refError} onClick={() => openResolve(row)}><Wrench className="mr-1 h-3.5 w-3.5" />Resolve</Button>}</TableCell>
+            </TableRow>)}</TableBody>
+    </Table></CardContent></Card>
+    <div className="flex items-center justify-between gap-3 text-sm"><span>{count} resi sesuai filter · Halaman {page + 1}</span><div className="flex gap-2"><Button variant="outline" disabled={loading || page === 0} onClick={() => setPage(p => p - 1)}>Sebelumnya</Button><Button variant="outline" disabled={loading || (page + 1) * 100 >= count} onClick={() => setPage(p => p + 1)}>Berikutnya</Button></div></div>
+    <Dialog open={!!active} onOpenChange={open => { if (!open) close() }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>Resolve Resi “{active?.raw_resi}”</DialogTitle></DialogHeader>
+      {active && refs && <div className="space-y-4">
+        <details><summary className="cursor-pointer text-sm">Lihat data sumber</summary><pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2 text-xs">{JSON.stringify(active.raw_data, null, 2)}</pre></details>
+        <fieldset disabled={submitting} className="space-y-4">
+          <div className="space-y-2">{([['link', 'Link ke order yang sudah ada'], ['create', 'Buat order baru beserta item'], ['ignore', 'Abaikan resi ini']] as const).map(([value, label]) => <label key={value} className="flex items-center gap-2 text-sm"><input type="radio" name="resolution" checked={action === value} onChange={() => { setAction(value); setResolveError('') }} />{label}</label>)}</div>
+          {action === 'link' && <div className="space-y-3 border-t pt-3"><Label htmlFor="inbox-order-search">Cari di Antrian dan arsip order</Label><div className="flex gap-2"><Input id="inbox-order-search" value={orderQuery} maxLength={200} placeholder="Nomor order, referensi, resi, atau nama" onChange={e => { searchRequest.current?.abort(); setOrderQuery(e.target.value); setPicked(null); setOrderResults([]); setOrderSearching(false) }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchOrders() } }} /><Button type="button" variant="outline" disabled={orderSearching || orderQuery.trim().length < 2} onClick={searchOrders} aria-label="Cari order">{orderSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}</Button></div><div className="max-h-56 overflow-auto">{orderResults.map(order => <button key={order.source + order.id} type="button" aria-pressed={picked?.source === order.source && picked.id === order.id} onClick={() => setPicked(order)} className={`mb-1 w-full rounded border p-2 text-left text-sm ${picked?.source === order.source && picked.id === order.id ? 'border-primary bg-muted' : ''}`}><strong>{order.order_number}</strong> · {order.source === 'draft' ? 'Antrian' : 'Arsip'}<p className="text-xs text-muted-foreground">{order.customer_name} · {order.resi || order.tracking_no || 'Belum ada resi'}</p></button>)}</div><p className="text-xs text-muted-foreground">Resi yang sudah terisi berbeda akan ditolak. Nilai keuangan dan status order tetap perlu rekonsil.</p></div>}
+          {action === 'create' && <CreateOrderFields value={createForm} onChange={setCreateForm} refs={refs} />}
+          {action === 'ignore' && <div className="space-y-2"><Label htmlFor="inbox-ignore-reason">Alasan pengabaian *</Label><Textarea id="inbox-ignore-reason" maxLength={2000} value={ignoreReason} onChange={e => setIgnoreReason(e.target.value)} placeholder="Alasan ini disimpan bersama penyelesaian inbox." /></div>}
+        </fieldset>
+        {resolveError && <p role="alert" className="text-sm text-destructive">{resolveError}</p>}
+        <div className="flex justify-end gap-2 border-t pt-3"><Button variant="outline" disabled={submitting} onClick={close}>Batal</Button><Button disabled={submitting || (action === 'link' && !picked)} onClick={submitResolve}>{submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{action === 'create' ? 'Buat order & selesaikan inbox' : 'Konfirmasi'}</Button></div>
+      </div>}
+    </DialogContent></Dialog>
+  </div>
 }

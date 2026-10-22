@@ -1,39 +1,40 @@
 # GrandBook Codex Handoff
 
-### Codex continuation claim — current recovery references
+## Codex — main release and recovery capture — 2026-10-23T02:07:36.186359+07:00
 
-IN PROGRESS: scripts/migrations/pnl-ui-2026-10-21.json,
-scripts/sql/pnl-performance/20261021000100-materialized-summary.sql,
-docs/recovery-references-2026-10-22.md. Review existing exact bytes/hashes,
-version as historical references only. No SQL execution, recovery rehearsal,
-financial recalculation or provider recovery claim. Other historical dependency
-references remain in place and will be reported accurately if untracked.
+**SELESAI / RELEASED for all claimed edit areas.** Barry authorized push/deploy.
+Main is active on dpl_BucY9PDZtzE1thQZMHZcGv2nKvw8, READY/bom1.
+Source commit db7dfc3;453 inputs; digest
+67625e47043f12edf1babae6140b362196bc32fc9845cf70f5bc347f2f9b59a3.
 
+- Fixed root-only upload exclusions; first272-file candidate was never promoted.
+  Actual CLI/Vercel inventory now453 paths+hashes exact;14 packaging tests pass,
+  cloud build passes. No business-code/formula change after readiness.
+- Push succeeded via existing authorized Mac GitHub account and isolated bundle;
+  VPS sunoviz lacked permission. No credentials copied/global auth changed.
+- Normal-owner API4 periods PASS. VPS browser PARTIAL at ledger checkpoint;
+  independent Chrome Mac normal-session acceptance PASS all3 pages, Inter,
+  no page overflow or load errors. No customer export/write; Safari not checked.
+- Recovery continuation:3fcb219 captures current manifest + reader unchanged.
+  All35 dependency hashes match; remaining34 historical dependencies are not yet
+  versioned. No SQL execution, HPP617/package/31 replay, payment, Auth/RLS change.
+- Changed files: .vercelignore; release manifest/README; packaging tests;
+  docs/main-release-2026-10-22.md; docs/repo-readiness-2026-10-22.md (supersession);
+  current recovery manifest/reader; docs/recovery-references-2026-10-22.md;
+  this handoff (Codex preamble only). All vision sections preserved byte-for-byte.
+- Main env7 records unchanged. Liard untouched/current alias404 not certified.
+  Physical Safari/full live export/provider recovery remain NOT VERIFIED.
+- Release closeout: final docs/recovery Git push uses temporary exit0 ignored-build
+  guard. Restore original null and verify alias/env/settings via private
+  final-check.py restore before concluding; evidence final-verification.json.
+  This is an operator setting only; no permanent guard/config change authorized.
+- Evidence/report: [main release](main-release-2026-10-22.md).
+  Private root: /root/backups/grandbook/main-release-20261022-1d7fa74c. All edit claims RELEASED.
+  No pending application source edits; unrelated dirty work retained.
 
-### Additional Codex claim — upload-ignore correction
+**NEXT:** review/version remaining34 recovery dependencies per scope; no replay.
 
-Vercel candidate dpl_5XajREAtTuFAh3KPzK2ne8s7ZFua failed before promotion:
-unanchored supabase ignore omitted src/lib/supabase, 272 instead of 453 inputs.
-Claim .vercelignore, scripts/releases/repo-readiness/manifest.json,
-scripts/releases/repo-readiness/README.md,
-tests/releases/repo-readiness/test_release.py, docs/main-release-2026-10-22.md.
-Fix root-directory anchoring, test source/private ignore paths, run actual CLI
-upload inventory parity, prepare a new immutable package. Business code unchanged.
-Main alias unchanged. Temporary ignored-build command exit0 must be restored.
-
-## Codex — approved main push/deploy and acceptance — 2026-10-22T19:26:36.411662+07:00
-
-**IN PROGRESS.** Barry explicitly authorized push and deploy now, then continuation.
-Claim: main Git push (fast-forward only), isolated verified application release to
-grandbook-app only/bom1, normal-auth read-only production acceptance,
-docs/CODEX-HANDOFF.md (Codex section only), and docs/main-release-2026-10-22.md.
-vision audit/verification are RELEASED; all vision sections preserved.
-453 inputs/digest from readiness commit 2500847 must remain unchanged.
-Do not deploy dirty shared checkout, Liard, SQL, or financial corrections.
-After acceptance continue by reviewing/versioning the two current recovery
-artifacts identified by vision, without applying SQL. Extra file claims will
-be recorded before edits. No blanket financial-policy mutation is inferred.
-
+---
 
 ## Codex — repo siap deploy, tanpa push/deploy — 22 Oktober 2026 WIB
 

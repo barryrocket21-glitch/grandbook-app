@@ -1,3 +1,5 @@
+> Superseded for upload/deployment by [the approved main release](main-release-2026-10-22.md). Source-package checks passed here, but CLI upload later exposed an unanchored ignore rule; commit db7dfc3 fixes it and actual 453-file upload parity is verified. The original evidence below is retained.
+
 # Main repo release readiness — 22 October 2026 WIB
 
 **READY for a controlled main application release; NOT PUSHED / NOT DEPLOYED.**

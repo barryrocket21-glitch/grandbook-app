@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "file_count": 453,
+  "file_count": 454,
   "baseline": {
     "deployment": "dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ",
     "url": "grandbook-8ok9t7kpo-barrys-projects-41ecfbbc.vercel.app",
@@ -16,7 +16,13 @@
     ".vercelignore": "Root-anchored private/operator/local-config exclusions preserve nested application source during CLI upload.",
     "src/app/(app)/financial-position/page.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change.",
     "src/components/dashboard/cashflow-summary-widget.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change.",
-    "src/app/(app)/reconciliation/spx-cashflow/page.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change."
+    "src/app/(app)/reconciliation/spx-cashflow/page.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change.",
+    "src/lib/auth/landing.ts": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
+    "src/lib/supabase/middleware.ts": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
+    "src/app/login/page.tsx": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
+    "src/app/auth/callback/route.ts": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
+    "src/app/(app)/dashboard/page.tsx": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
+    "src/lib/converter/engine.ts": "Preserve live10fc9d2 bulk-upload timeout fix."
   },
   "permitted_extra_source_files": [
     "src/lib/supabase/migrations/157_auto_provision_cs_from_production.sql",
@@ -166,7 +172,7 @@
       "sha256": "e10a921c27a2769fb6b16e19985c2bfcbaaa5db64d52bf4acc5ce041d44e11b8"
     },
     "src/app/auth/callback/route.ts": {
-      "sha256": "054b81884bd7912dbd5bfd74f28ec3d289e1f4cfbe38e3d9baaedb093c379e1e"
+      "sha256": "ccde65c2efd646cda2a6c7f39e37e42f21ab70ce4ce2a8e0e8bb2ef909a1056f"
     },
     "src/lib/supabase/migrations/022_cs_daily_report.sql": {
       "sha256": "b8fb0291abcdf9d4ea0cf8ad93182283da55153884f2c08bb019f89713808fc4"
@@ -659,7 +665,7 @@
       "sha256": "f5153b9ab6ee2254705b5ec7f924ee4d55ac04ffd50872ccd0d6e4274ad5f254"
     },
     "src/app/login/page.tsx": {
-      "sha256": "e28b4b0b00f2173d276114d5cf7815adee15cf9e9be866319b7e803999fcf7c1"
+      "sha256": "136e0ba2fd41eeed52ea81fdcb71a6762997ab78fb1a9410720f627ac1335794"
     },
     "src/lib/supabase/migrations/156_order_number_and_date_wib.sql": {
       "sha256": "7347a0bc33993380cf6ec614cccde8c0f80a1550e4ce0e3c3a95840b882adf5a"
@@ -680,7 +686,7 @@
       "sha256": "3032d9b912e23ca00a90337bb87ead81db9c48124edb202719d1bbf0b47a1c68"
     },
     "src/lib/converter/engine.ts": {
-      "sha256": "6f2114a459e230291392f6da5021dddd01a0369801f2ae98959b5b1ef2d9ace1"
+      "sha256": "31856a57d4e4b5e20621548dbefb93cbe3a7eb9673024dad6263f5857c0e4dc3"
     },
     "src/components/ui/checkbox.tsx": {
       "sha256": "3d2d0b3d87a19aad65821e4cdb1c4bb149209778bea271b1f98265383cddd6d5"
@@ -1250,7 +1256,7 @@
       "sha256": "9008c9db9076c93ab7048fc74ca4ebb26656074517fc9a5804a6c2114de6e179"
     },
     "src/lib/supabase/middleware.ts": {
-      "sha256": "ca9fd61253957c704eb14cb66b04dbd2ca2e982fec52e7c4946a402cc89e0e24"
+      "sha256": "25a45d1b39409fff2eb566468ceed3cb4fb28771d7666aeb559c471168e7a992"
     },
     "src/lib/supabase/migrations/README.md": {
       "sha256": "d961301c7ed6d45cae2694da1b55e619884f50f0697c68f65bba8f837183ff3a"
@@ -1340,7 +1346,7 @@
       "sha256": "49e95be0720759b557b4cb747d172d4caacfb77a844e337d76f00e01a5d9aac9"
     },
     "src/app/(app)/dashboard/page.tsx": {
-      "sha256": "8ec3cb990400102be4dc00459b4e7d6968a8cc79cec65f6c2d2767dd1a752637"
+      "sha256": "8dcfce034d9b14ed8d9f290fa58dc9f7136cbae365cd7e9fe6f94fb4a3413abc"
     },
     "src/lib/supabase/migrations/091_exported_at_post_export.sql": {
       "sha256": "a5684f424f9096839afa85bc406658fdccd621e65068359ad6ebbf5442b809d9"
@@ -1386,6 +1392,16 @@
     },
     "src/components/ui/chart.tsx": {
       "sha256": "0060b7708d85a5fffc914dcd1ee4753b5acfe83db7ba634b4cea280bd9f19c8f"
+    },
+    "src/lib/auth/landing.ts": {
+      "sha256": "e481556bd6bcac76fd2b2e26a99a83524cd4f63ddc14566bdd06e1e0089d786e"
     }
+  },
+  "preserved_git_source": {
+    "deployment": "dpl_qHtCr8qZwr88yLnGBfwjNjUFjwEK",
+    "commit": "10fc9d234daf136e87886222b4288034e6f2eac7",
+    "source": "git",
+    "source_verification": "Vercel gitSource SHA; Git-source file API unavailable",
+    "note": "Preserve later bulk-upload timeout fix; no rollback to earlier CLI package."
   }
 }

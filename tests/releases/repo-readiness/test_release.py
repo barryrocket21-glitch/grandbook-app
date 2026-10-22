@@ -20,14 +20,14 @@ class ReleaseTests(unittest.TestCase):
         self.run_git('config', 'user.name', 'Fixture')
         self.run_git('config', 'user.email', 'fixture@example.invalid')
         files = {}
-        for i in range(451):
+        for i in range(452):
             name = f'src/fixture-{i:03}.ts'; q = self.repo/name; q.parent.mkdir(exist_ok=True)
             q.write_text(f'export const value = {i}\n'); files[name] = {'sha256':release.sha(q.read_bytes())}
         q = self.repo/'.vercelignore'; q.write_text('.env*\ntests\n')
         files['.vercelignore'] = {'sha256':release.sha(q.read_bytes())}
         q = self.repo/release.TEMPLATE; q.parent.mkdir(parents=True, exist_ok=True); q.write_text('/// <reference types="next" />\n')
         files['next-env.d.ts'] = {'source':release.TEMPLATE, 'sha256':release.sha(q.read_bytes())}
-        self.manifest = {'schema_version':1, 'file_count':453, 'files':files, 'permitted_extra_source_files':[]}
+        self.manifest = {'schema_version':1, 'file_count':454, 'files':files, 'permitted_extra_source_files':[]}
         self.write_manifest(); self.run_git('add', '--', 'src', '.vercelignore', 'scripts')
         self.run_git('commit', '-qm', 'synthetic reviewed input')
 
@@ -45,7 +45,7 @@ class ReleaseTests(unittest.TestCase):
         (self.repo/'.env.local').write_text('PRIVATE_FIXTURE=must-not-export\n')
         (self.repo/'operator.xlsx').write_bytes(b'private synthetic fixture')
         out = self.base/'package'; report = release.prepare(self.repo, 'HEAD', out)
-        self.assertEqual(report['files'], 453); self.assertEqual(report['status'], 'PREPARED_NOT_DEPLOYED')
+        self.assertEqual(report['files'], 454); self.assertEqual(report['status'], 'PREPARED_NOT_DEPLOYED')
         self.assertFalse((out/'.env.local').exists()); self.assertFalse((out/'operator.xlsx').exists())
         self.assertTrue((out/'next-env.d.ts').is_file())
         _, payload, _ = release.inputs(self.repo); release.verify_package(out, payload)

@@ -97,13 +97,14 @@ const TRANSFER_HINT = /\b(transfer|tf|lunas|sudah\s*bayar|sdh\s*bayar|paid)\b/i
 const TS_LINE = /^\[\d{1,2}[.:]\d{2}[^\]]*\]/
 const TS_PREFIX = /^\[\d{1,2}[.:]\d{2}[^\]]*\][^:]*:\s*/
 const NAME_LINE = /^\s*(nama\s+penerima|nama|atas\s+nama|pemesan|penerima)\s*:/i
+const INLINE_CS_NOTE = /^\s*(?:(?:keterangan|ket|catatan|note)\s*[:\-]?\s*)?cs\s*[:\-]?\s*([a-z][a-z0-9 ._-]{1,40})\s*$/i
 /**
  * Header dropship Indonesia: "SALE AIS (20)" / "SALE LISA (22)" / "SALE SITI (13)"
  * — tiap line yg match jadi start of new block. Priority paling tinggi karena
  * pattern ini explicit (vs name-label boundary yg muncul DI TENGAH block kalau
  * order pakai format "Produk dulu, Nama di akhir"). Group 1 = CS name.
  */
-const SALE_LINE = /^\s*SALE\s+([A-Z][A-Z0-9]*(?:\s+[A-Z0-9]+)?)\s*\((\d+)\)\s*$/i
+const SALE_LINE = /^\s*SALE\s+([A-Z][A-Z0-9]*(?:\s+[A-Z0-9]+)?)(?:\s*\((\d+)\))?\s*$/i
 
 // ----- Indonesian provinces (lowercased, longest-first) -----
 const PROVINCES = [
@@ -322,6 +323,12 @@ function parseBlock(block: string, idx: number, warnings: string[]): ParsedWaOrd
     const saleMatch = line.match(SALE_LINE)
     if (saleMatch) {
       if (!fields.csName) fields.csName = saleMatch[1].trim()
+      continue
+    }
+
+    const inlineCs = line.match(INLINE_CS_NOTE)
+    if (inlineCs) {
+      if (!fields.csName) fields.csName = inlineCs[1].trim()
       continue
     }
 

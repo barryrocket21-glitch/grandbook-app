@@ -1,3 +1,4 @@
+import { normalizeOrderOnlineProduct } from './orderonline-product'
 // =============================================================
 // Light-weight parser preview (Phase 2B + 3B + 3C)
 // Shares parser.ts core with engine.ts (Phase 3A) and engine-rekonsil.ts (3B).
@@ -101,6 +102,7 @@ export async function previewParse(
         ;(bucket as Record<string, unknown>)[fm.target_field] = postValue
       }
     }
+    normalizeOrderOnlineProduct(profile.code, raw, out.order_items, out.meta)
     return out
   })
 

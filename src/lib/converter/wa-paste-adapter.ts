@@ -8,7 +8,6 @@
 // - Build insert payload untuk orders_draft + order_items_draft
 // =============================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getErrorMessage } from '@/lib/errors'
 import { normalize_phone_id_safe } from './transforms'
 import type { ParsedWaOrder } from './wa-paste-v3'
 
@@ -59,6 +58,7 @@ export interface OrderDraftPayload {
   attribution_platform: string | null
   attribution_account_code: string | null
   attribution_campaign_marker: string | null
+  attribution_status: 'RESOLVED' | 'PENDING' | 'UNKNOWN'
   meta: Record<string, unknown> | null
   // Single-item for now (1 order = 1 product di WA paste). Future: multi-item.
   _item: {
@@ -180,13 +180,14 @@ export function adaptOrder(
   if (parsed.atribusiCampaign) meta.atribusi_campaign = parsed.atribusiCampaign
   if (parsed.atribusiPending) {
     meta.atribusi_pending = true
+    meta.atribusi_status = 'PENDING'
     warnings.push(`Atribusi parkir: platform=${parsed.platform ?? '?'}, akun=${parsed.atribusiAccount}, campaign=${parsed.atribusiCampaign} (resolve di menu ADV)`)
   } else if (!parsed.atribusiAccount) {
     // Kode atribusi GAK ADA / GAK LENGKAP (cuma huruf platform mis "F", atau kosong).
-    // Warning NON-BLOCKING: admin tetep bisa proses order ke ekspedisi; ADV isi
-    // campaign-nya nanti manual di Distribusi Atribusi (order tampil sbg "no-code").
+    // This is blocking at WA Paste submit/export: GrandBook must preserve Kode Atribusi before SPX enrichment.
     meta.atribusi_missing = true
-    warnings.push(`⚠️ Produk "${parsed.produk ?? '?'}" gak ada kode atribusi lengkap (format: Produk Platform.Akun.Marker, mis. "Sandal Pavio S.A.1"). Order tetep bisa diproses — ADV isi campaign-nya nanti di Distribusi Atribusi.`)
+    meta.atribusi_status = 'UNKNOWN'
+    warnings.push(`❌ Produk "${parsed.produk ?? '?'}" tidak punya kode atribusi lengkap (format: Produk Platform.Akun.Marker, mis. "Sandal Pavio S.A.1"). Order tidak valid untuk export sampai kode atribusi diisi.`)
   }
 
   const payload: OrderDraftPayload = {
@@ -213,6 +214,9 @@ export function adaptOrder(
     attribution_platform: parsed.platform,
     attribution_account_code: parsed.atribusiAccount,
     attribution_campaign_marker: parsed.atribusiCampaign,
+    attribution_status: parsed.atribusiCodeRaw && parsed.atribusiAccount && parsed.atribusiCampaign
+      ? (parsed.atribusiPending ? 'PENDING' : 'RESOLVED')
+      : 'PENDING',
     meta: Object.keys(meta).length > 0 ? meta : null,
     _item: {
       organization_id: ctx.organizationId,
@@ -254,48 +258,4 @@ export interface InsertResult {
   failed: number
   insertedOrderIds: number[]
   errors: Array<{ index: number; message: string }>
-}
-
-/** Insert adapted orders ke orders_draft + order_items_draft. Per-row try/catch. */
-export async function insertAdaptedOrders(
-  supabase: SupabaseClient,
-  orgId: number,
-  adapted: AdaptedOrder[]
-): Promise<InsertResult> {
-  const result: InsertResult = { inserted: 0, failed: 0, insertedOrderIds: [], errors: [] }
-
-  for (const a of adapted) {
-    try {
-      // 1. Generate order_number via RPC (race-safe)
-      const { data: orderNum, error: errNum } = await supabase.rpc('generate_order_number', { org_id: orgId })
-      if (errNum) throw new Error(`generate_order_number: ${errNum.message}`)
-
-      // 2. Insert orders_draft
-      const { _item, ...orderRow } = a.payload
-      const { data: orderRes, error: errOrder } = await supabase
-        .from('orders_draft')
-        .insert({ ...orderRow, order_number: orderNum, order_date: new Date().toISOString().slice(0, 10) })
-        .select('id')
-        .single()
-      if (errOrder) throw new Error(`orders_draft insert: ${errOrder.message}`)
-      if (!orderRes) throw new Error('orders_draft insert: no row returned')
-
-      // 3. Insert order_items_draft
-      const { error: errItem } = await supabase
-        .from('order_items_draft')
-        .insert({ ..._item, order_id: orderRes.id })
-      if (errItem) throw new Error(`order_items_draft insert: ${errItem.message}`)
-
-      result.inserted++
-      result.insertedOrderIds.push(orderRes.id)
-    } catch (err) {
-      result.failed++
-      result.errors.push({
-        index: a.originalIndex,
-        message: getErrorMessage(err),
-      })
-    }
-  }
-
-  return result
 }

@@ -12,7 +12,7 @@ import { getErrorMessage } from '@/lib/errors'
 import { applyTransform, type TransformContext } from './transforms'
 import { indexValueMappings } from './parser'
 import {
-  resolveSourceValue,
+  resolveOutboundFieldValue,
   resolveSpxLookupAsync,
   isAsyncSpxLookup,
   type SpxLookupCache,
@@ -49,6 +49,15 @@ export interface OutboundResult extends OutboundRowsResult {
   rowsGenerated: number
   fileBlob: Blob
   fileName: string
+}
+
+export interface OutboundFromOrdersOptions {
+  profile: ConverterProfile
+  fieldMappings: ConverterFieldMapping[]
+  valueMappings: ConverterValueMapping[]
+  orders: OrderForOutbound[]
+  supabase: SupabaseClient
+  onProgress?: (done: number, total: number) => void
 }
 
 export interface OutboundOptions {
@@ -97,8 +106,14 @@ const ORDER_COLUMNS_BASE = [
   'payment_method',
   'status',
   'cs_name',
+  'attribution_code_raw',
+  'attribution_platform',
+  'attribution_account_code',
+  'attribution_campaign_marker',
+  'fulfillment_category',
   'notes',
   'meta',
+  'raw_data',
   'order_date',
   'created_at',
 ]
@@ -201,6 +216,76 @@ export async function generateOutbound(opts: OutboundOptions): Promise<OutboundR
   }
 }
 
+export async function generateOutboundFromOrders(opts: OutboundFromOrdersOptions): Promise<OutboundResult> {
+  const rowsResult = await buildOutboundRowsFromOrders(opts)
+  const fileBlob = serializeForProfile(opts.profile, rowsResult.rows, rowsResult.headers)
+  const fileName = suggestOutboundFilename(opts.profile)
+  return {
+    ...rowsResult,
+    rowsGenerated: rowsResult.rows.length,
+    fileBlob,
+    fileName,
+  }
+}
+
+export async function buildOutboundRowsFromOrders(opts: OutboundFromOrdersOptions): Promise<OutboundRowsResult> {
+  if (opts.profile.direction !== 'OUTBOUND_TO_COURIER') {
+    throw new Error(
+      `Profile bukan untuk outbound (direction=${opts.profile.direction}). Gunakan profile dengan direction=OUTBOUND_TO_COURIER.`
+    )
+  }
+
+  const sortedFields = [...opts.fieldMappings]
+    .filter((fm) => fm.target_table === 'file_column')
+    .sort((a, b) => a.display_order - b.display_order)
+  const headers = sortedFields.map((fm) => fm.target_field)
+
+  const result: OutboundRowsResult = {
+    rows: [],
+    headers,
+    ordersIncluded: 0,
+    ordersSkipped: 0,
+    warnings: [],
+    errors: [],
+  }
+
+  if (opts.orders.length === 0) return result
+  if (sortedFields.length === 0) {
+    result.warnings.push({
+      orderId: 0,
+      orderNumber: null,
+      message: 'Profile tidak punya field mapping target_table=file_column.',
+    })
+    return result
+  }
+
+  const valueMapIndex = indexValueMappings(opts.valueMappings)
+  const spxCache: SpxLookupCache = new Map()
+  const profileNeedsSpxLookup = sortedFields.some(fm => isAsyncSpxLookup(fm.source_field))
+
+  for (let idx = 0; idx < opts.orders.length; idx++) {
+    const order = opts.orders[idx]
+    try {
+      const row = await buildRow(
+        order, sortedFields, valueMapIndex, result.warnings,
+        opts.supabase, spxCache, profileNeedsSpxLookup,
+      )
+      result.rows.push(row)
+      result.ordersIncluded++
+    } catch (err) {
+      result.errors.push({
+        orderId: order.id,
+        orderNumber: order.order_number,
+        reason: getErrorMessage(err),
+      })
+      result.ordersSkipped++
+    }
+    opts.onProgress?.(idx + 1, opts.orders.length)
+  }
+
+  return result
+}
+
 // =============================================================
 // Bulk RPC: mark orders as DIKIRIM (or other status) after export
 // =============================================================
@@ -277,7 +362,7 @@ async function buildRow(
     if (profileNeedsSpxLookup && isAsyncSpxLookup(fm.source_field)) {
       value = await resolveSpxLookupAsync(fm.source_field, order, supabase, spxCache, warnings)
     } else {
-      value = resolveSourceValue(fm.source_field, order, warnings)
+      value = resolveOutboundFieldValue(fm.source_field, fm.target_field, order, warnings)
     }
 
     // Value mapping (raw → mapped). E.g. channel_courier_code 'JNE_VIA_MENGANTAR' → 'JNE'.

@@ -1,3 +1,4 @@
+import { normalizeOrderOnlineProduct } from './orderonline-product'
 // =============================================================
 // Production-grade Inbound Engine (Phase 3A)
 // Handles INBOUND_ORDER + WA_PASTE direction.
@@ -74,6 +75,7 @@ export interface IngestOptions {
    * inbox FK ke orders only. Default false (orders + order_items).
    */
   targetDraft?: boolean
+  confirmPhones?: (phones: string[]) => Promise<boolean>
 }
 
 const ALLOWED_DIRECTIONS = new Set(['INBOUND_ORDER', 'WA_PASTE'])
@@ -146,6 +148,12 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
   if (rawRows.length === 0) return result
 
   const valueMapIndex = indexValueMappings(opts.valueMappings)
+  if (opts.targetDraft && opts.confirmPhones) {
+    // Check every mapped phone before product matching can write an inbox entry.
+    const probe = { ...result, warnings: [] }
+    const phones = rawRows.map((raw, index) => String(applyMappings(raw, opts.fieldMappings, valueMapIndex, probe, index + 1).ordersData.customer_phone || ''))
+    if (!await opts.confirmPhones(phones)) throw new Error('Import dibatalkan untuk memeriksa nomor HP yang sama.')
+  }
 
   // Pre-resolve cs_name → cs_id by fetching all profiles once (case-insensitive lookup)
   const csNameToId = await loadCsNameMap(opts.supabase)
@@ -175,6 +183,8 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
         result,
         rowIndex
       )
+
+      normalizeOrderOnlineProduct(opts.profile.code, raw, itemData, metaData)
 
       // Phase 8G: defensive phone validation. Detect Excel scientific notation
       // corruption (CSV export bug) + length anomalies. Invalid phone tetap masuk

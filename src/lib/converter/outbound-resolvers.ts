@@ -47,6 +47,30 @@ export const DEFAULT_ITEM_WEIGHT_KG = 1
  * Sync resolveSourceValue — semua resolver yang tidak butuh DB lookup.
  * Phase 8G: SPX wilayah lookups + shipping_payment moved ke resolveSourceValueAsync.
  */
+/** SPX merchandise value must not reuse OrderOnline gross revenue/COD. */
+export function resolveOutboundFieldValue(
+  sourceField: string,
+  targetField: string,
+  order: OrderForOutbound,
+  warnings: OutboundResolveWarning[],
+): unknown {
+  if (sourceField === 'total' && targetField === '*Harga Barang // *Parcel Value') {
+    const raw = order.raw_data
+    if (raw && Object.prototype.hasOwnProperty.call(raw, 'product_price')) {
+      const price = raw.product_price
+      // OrderOnline numeric source cells are authoritative; do not guess locale formats.
+      const value = typeof price === 'number' ? price
+        : typeof price === 'string' && /^\d+(?:\.\d+)?$/.test(price.trim())
+          ? Number(price.trim()) : NaN
+      if (!Number.isFinite(value) || value < 0) {
+        throw new Error('Harga barang OrderOnline tidak valid; periksa product_price sebelum export SPX.')
+      }
+      return value
+    }
+  }
+  return resolveSourceValue(sourceField, order, warnings)
+}
+
 export function resolveSourceValue(
   sourceField: string,
   order: OrderForOutbound,

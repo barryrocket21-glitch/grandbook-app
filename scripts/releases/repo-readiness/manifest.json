@@ -1,0 +1,1391 @@
+{
+  "schema_version": 1,
+  "file_count": 453,
+  "baseline": {
+    "deployment": "dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ",
+    "url": "grandbook-8ok9t7kpo-barrys-projects-41ecfbbc.vercel.app",
+    "regions": [
+      "bom1"
+    ],
+    "source_files": 453,
+    "alias": "dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ",
+    "state": "READY"
+  },
+  "record_date_wib": "2026-10-22",
+  "intentional_deviations": {
+    ".vercelignore": "Exclude private/operator/local-config artifacts from uploads.",
+    "src/app/(app)/financial-position/page.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change.",
+    "src/components/dashboard/cashflow-summary-widget.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change.",
+    "src/app/(app)/reconciliation/spx-cashflow/page.tsx": "Defer initial remote read to a cleaned-up zero-delay timer; no query/formula/role change."
+  },
+  "permitted_extra_source_files": [
+    "src/lib/supabase/migrations/157_auto_provision_cs_from_production.sql",
+    "src/lib/supabase/schema.sql",
+    "src/lib/supabase/seed-part2.sql",
+    "src/lib/supabase/seed.sql",
+    "src/lib/supabase/seed_phase1.sql",
+    "src/lib/supabase/seed_phase8a_suppliers.sql"
+  ],
+  "files": {
+    "src/lib/converter/wa-paste-phone-dup.ts": {
+      "sha256": "28fb6800402e8d5746591f7bca242b80e34ac8a9691fb67692d8647ce639c411"
+    },
+    "src/lib/supabase/migrations/116_pembukuan_penjualan_ongkir.sql": {
+      "sha256": "f3ed540f2ed7aa84843b67b5cbf312eedfdce2241c6cd9c8904bcc8c08ed954d"
+    },
+    "src/lib/supabase/queries/commissions.ts": {
+      "sha256": "119daa8a51924f01cc8bf5a6a779fd3c1eaf7a81798a49fe3491baa193e34619"
+    },
+    "src/app/api/orders/wa-paste/ref-data/route.ts": {
+      "sha256": "254250a7a96e78105bc715e0d4eb8c962c2c7b9e9cc91cd19d76123f3bbc1bbb"
+    },
+    "src/app/(app)/settings/couriers/page.tsx": {
+      "sha256": "b336939629f7cd58dda4c9fb5378f1c8562de6a5420159434639fa1cfcf32fff"
+    },
+    "src/components/ui/scroll-area.tsx": {
+      "sha256": "42de3962daca60255bf1d3cd90bd3c038db73a3ed61ecaac6cffc6a153181e4a"
+    },
+    "src/components/ui/dropdown-menu.tsx": {
+      "sha256": "817fada40e1bc8a806bdd16598e71fe2849b2e592f1f143ada76df759e4a2750"
+    },
+    "src/hooks/use-mobile.ts": {
+      "sha256": "ad0936f84f1df79d3697bfbff9c18f8ad58431c1cbaf2359c6a853b0fcc9f28b"
+    },
+    "src/app/(app)/reports/export/page.tsx": {
+      "sha256": "e82bdc70633090afd7423445d630c67756f64aff396f62612ffa92e15f8826af"
+    },
+    "src/lib/supabase/migrations/143_spx_cashflow_preview_integrity.sql": {
+      "sha256": "1ab225d4b281dc24710fe124ce9a66881107ed9df7fb35b0c9440e986a9771b7"
+    },
+    "src/lib/converter/address-parser.ts": {
+      "sha256": "d3e295d474521a6c96d40b6b4ff826a0e3b68a2adf909019b7cd9315da3e762a"
+    },
+    "src/app/(app)/orders/draft/_components/draft-row-actions.tsx": {
+      "sha256": "041882b18527846554c1a728570b3ac9390ad8bec3ede92c7638865a64d9fec9"
+    },
+    "src/app/(app)/orders/list/_components/insights-drawer.tsx": {
+      "sha256": "7a20948504fcae269ff40d7319dcc4dfa7048912f2312523979acd4a47072224"
+    },
+    "src/components/ui/calendar.tsx": {
+      "sha256": "e40894796aa3762f5bcb3b60d9118dfdd3df00c67c61ac787e6f1c153e15220c"
+    },
+    "src/lib/orders/pembukuan-export.ts": {
+      "sha256": "e8cb3025d48143736cad499d02398b4cabb7d071390c9f2d6ab74ca064e9ef59"
+    },
+    "src/components/dashboard/cashflow-summary-widget.tsx": {
+      "sha256": "3c47d07cb6252f2e2470df8d28a0a2501484485cefb461963519cf17c2aae7aa"
+    },
+    "src/lib/supabase/migrations/038_phase8g_hotfix_lookup_alias.sql": {
+      "sha256": "082c9e9b5f208c8c9371e635fd425b18f2d946e667511600e2ce737a743a594e"
+    },
+    "src/lib/supabase/migrations/118_selisih_ongkir_union.sql": {
+      "sha256": "7c2a89eb0e8c260185422ac764af67970054be64bd04ff648004f87caf5c1a28"
+    },
+    "src/lib/supabase/migrations/047_phase8i_recon_batches.sql": {
+      "sha256": "8c2d4fe68122f7bd991ca602684b9bae25995654e2addd890aec51930373c3d0"
+    },
+    "package-lock.json": {
+      "sha256": "784e87751b9ec19e2d3a9a0e683996a64c63fd550fa39bc5022e8e9cc28f2efa"
+    },
+    "src/lib/supabase/migrations/089_wilayah_alias_kamus.sql": {
+      "sha256": "51ffa914f120b91c776a2de0b00ff1424e8bc1e5193101b30c21fb8b03e54f3e"
+    },
+    "src/app/(app)/reports/page.tsx": {
+      "sha256": "c139e537a3efe13158ffaa47e66a3c593bb7fb7eea9351f390a8e45a58c1639e"
+    },
+    "src/lib/templates.ts": {
+      "sha256": "8596bd3a5a442ce6397348b4ca2fb3e963981f48e48692987fdd83456a878906"
+    },
+    "src/components/ui/select.tsx": {
+      "sha256": "31382992063418b4ea3d233a76e391fd041af22d85c018bafe2300ce3ca28d62"
+    },
+    "src/app/(app)/settings/status-mapping/page.tsx": {
+      "sha256": "a40cdce9d2d5366e455e8caf3ef790ee5424ebabd9e9c791cee583700f08be10"
+    },
+    "src/components/orders/resi-lifecycle-section.tsx": {
+      "sha256": "6204540520c2110aa2a34e253c15e19238fe4d991f9078b2bb72da54e5fd462b"
+    },
+    "src/lib/recon/mengantar-parser.ts": {
+      "sha256": "7de5f61cd3bcc525d3d7570ab18ba3b31fd1a84292f3d1223dba2ea7fc7425cd"
+    },
+    "src/components/orders/wa-paste-preview-table.tsx": {
+      "sha256": "2a0d6307d8ebb22bacfa6e94bcd5b492dfadee576dbb800764fe81ccab033913"
+    },
+    "src/lib/supabase/migrations/037_phase8g_spx_compliance.sql": {
+      "sha256": "bb40512532c7cfd4cdac12b0035cc0467a1eb53b63a8d0399cfb1d42daeaa98a"
+    },
+    "src/lib/supabase/migrations/098_assign_orders_campaign.sql": {
+      "sha256": "0bf4e65ab6998b630cdf58a73f8861a7bdff4e01bcafef57daad47de3a4b9fc5"
+    },
+    "src/app/(app)/orders/export-resi/page.tsx": {
+      "sha256": "791c72a0e8168fddc17931bd290bc8701db761422419beba32ae55f036a035f2"
+    },
+    "src/lib/supabase/migrations/008_commission_per_user_rules.sql": {
+      "sha256": "1c3386d694db62d6f3dabb07f65cb450d24384c672c403f70181756981429d1f"
+    },
+    "src/lib/schemas/order-update.ts": {
+      "sha256": "45a47542ecd45a898b66da1e12ccc11748eb7616f8243359ce99a819b860f881"
+    },
+    "src/lib/schemas/wa-paste-request.ts": {
+      "sha256": "2b3e8d28258603784721a4fea68fb4f83c53f3edf7ba94c58a4018ac479ce498"
+    },
+    "src/lib/supabase/migrations/081_resolve_crm_case_invoker.sql": {
+      "sha256": "d46e457a7f44d5eb0a904686a71d62a374c86cf044ac4b796cf1d04981985d61"
+    },
+    "src/app/(app)/orders/new/page.tsx": {
+      "sha256": "8e6d40e8d4d80bca4a7099d5f5b2125051b5f02448286e724dec79d59b50022e"
+    },
+    "src/app/api/auth/fallback-owner/route.ts": {
+      "sha256": "36f0cd8a52319fd8aba4ef180664a8501660664d548a29ee4765c36512cd6878"
+    },
+    "src/app/(app)/reports/financial/page.tsx": {
+      "sha256": "de29be1d5fcb86a27e4d06377b22152b59e495acac5ffd147a8f692aab593d98"
+    },
+    "src/app/(app)/laba-rugi/page.tsx": {
+      "sha256": "ab74177996b486852218095b64c8897fc2e7a08b8b5d616f9b530c3e71408c8c"
+    },
+    "src/lib/supabase/migrations/134_draft_lifecycle_timestamps_pickup.sql": {
+      "sha256": "c38665af1d06cef5be4d17ea5d51d1dbfd9333eecc445ec1ba00536e4c50521c"
+    },
+    "src/lib/converter/serializer.ts": {
+      "sha256": "002efda90d6c952b9fa98b7f98925d5b9652ad3ef2fccb09994c576cfe7b47a0"
+    },
+    "src/components/ui/stat-card.tsx": {
+      "sha256": "45970756f00f655c8d19e8e61c0d44b77a24dd9180edd6f925aed578b0fd2cf3"
+    },
+    "src/components/ui/dialog.tsx": {
+      "sha256": "9e7ab80f58cbad464023082d65bc3b31a4c06ffa72a717c36d87b213bb0e7461"
+    },
+    "src/lib/supabase/migrations/093_list_draft_tracking_no.sql": {
+      "sha256": "baee7ebc34dc922f1cc04b09577793ed08be5b2c550e12f9bd4d2e76b983fc29"
+    },
+    "src/lib/supabase/migrations/139_orders_draft_order_number_index.sql": {
+      "sha256": "6048b914fed5a181f072e8d2780d251dc4b19d99c0a985150a7ad54fe1142db3"
+    },
+    "src/lib/supabase/queries/campaigns.ts": {
+      "sha256": "e10a921c27a2769fb6b16e19985c2bfcbaaa5db64d52bf4acc5ce041d44e11b8"
+    },
+    "src/app/auth/callback/route.ts": {
+      "sha256": "054b81884bd7912dbd5bfd74f28ec3d289e1f4cfbe38e3d9baaedb093c379e1e"
+    },
+    "src/lib/supabase/migrations/022_cs_daily_report.sql": {
+      "sha256": "b8fb0291abcdf9d4ea0cf8ad93182283da55153884f2c08bb019f89713808fc4"
+    },
+    "src/lib/supabase/migrations/088_draft_readiness_and_suggest.sql": {
+      "sha256": "0b62b820b3ef12b3757d70b5d01c0d74c57ff6502c2e2a838f6f635217938d51"
+    },
+    "src/lib/supabase/queries/analytics.ts": {
+      "sha256": "23a01d3f52e1aa53de023bd6dfd319987bdf22a38e98f54f33d14969b2969844"
+    },
+    "src/app/(app)/inbox/layout.tsx": {
+      "sha256": "e6a57bd8c4f47225bcc498e97cc28064cda05e6375cc11701c2f3e7f49e08e0b"
+    },
+    "src/lib/orders/order-number.ts": {
+      "sha256": "c50e8c1607a848d5d8dff5853b5291ffa8098c879a687eafdf674627016b7bd7"
+    },
+    "src/components/ui/skeleton.tsx": {
+      "sha256": "8110bba70d0cb9fe968c0b7bd092ad12258caef40b028b4a87f402bdab907faf"
+    },
+    "public/vercel.svg": {
+      "sha256": "f081337b2fee635b455b63275406a3e7f39d6a014e25ad90dab5a67e62a12ac4"
+    },
+    "src/app/(app)/orders/pembukuan/page.tsx": {
+      "sha256": "4cc2884a78e3db37a6ed724fcbfb5c37d98a1234aec9a044c9e1edb15117bfd2"
+    },
+    "src/app/(app)/settings/converter-profiles/[id]/page.tsx": {
+      "sha256": "ba2d3b5bc826f540d46a84f1c646bbe3a2565c3b1b4e3cc179d42851c1075ad9"
+    },
+    "src/lib/supabase/queries/billing-config.ts": {
+      "sha256": "0e49ec500c1238843bfd2f4301d7a5692914b085f63de434b0b08c798a37843b"
+    },
+    "src/lib/supabase/queries/cs-report.ts": {
+      "sha256": "a57b0f34f3f87205031255647178fb7dd7a59af3b54ebb6abc63b6e819db6c2d"
+    },
+    "src/app/(app)/reconciliation/layout.tsx": {
+      "sha256": "c4348bd03e3a401262c884ab602bb7a4569dc6bc5e88e791c6f979607bbecbbe"
+    },
+    "src/components/orders/column-customizer.tsx": {
+      "sha256": "8294cd53cbe9b3a86726b656c3f94fcf5e65fabb3620ba959c954a3b77524170"
+    },
+    "src/components/ui/label.tsx": {
+      "sha256": "7f19b8476658d25ff197c84030e58cd7395059d876a54630e025951e474ebdae"
+    },
+    "next.config.ts": {
+      "sha256": "3dfb66eab181bd9bf043ecc4796d9169461d5d75071c39142cec97484920cbd5"
+    },
+    "src/components/ui/badge.tsx": {
+      "sha256": "968b0403af74a785c9408ca69a677235e49d0c80b2c27fb9858ad421a8778c7d"
+    },
+    "src/app/(app)/export-rekonsiliasi/page.tsx": {
+      "sha256": "44065edf034712dd11fb34ecb874ae81ee9fb2f9772a136d88332b781b80cd47"
+    },
+    "src/lib/supabase/migrations/023_per_cs_per_product_rpc.sql": {
+      "sha256": "9efe57894033d3ea2ba19ef6fad8d6009b8fc511424e2ded569f302d70b3e049"
+    },
+    "src/lib/supabase/migrations/054_phase8j_financial_position.sql": {
+      "sha256": "23f3d1800e896f49079e3a5d5aa5f617669a3bbf8dbfee092e5b73e068fe3ab2"
+    },
+    "src/lib/supabase/migrations/072_fix_get_financial_position_status_filter.sql": {
+      "sha256": "3973bddb306e51402a2922bdc51d917095c5fb6342ca37e2ebe11a8b2fe53038"
+    },
+    "src/lib/supabase/migrations/115_penjualan_include_ongkir.sql": {
+      "sha256": "1342e44a97a4a082d38f020a931085cc2bab1477c78618f6b6b3e6fc50026d15"
+    },
+    "src/app/(app)/settings/converter-profiles/page.tsx": {
+      "sha256": "7446bc69b081178e2461bccac9279b7a7f42da3d33ea495bd0bd135e44264647"
+    },
+    "src/lib/supabase/migrations/130_guard_amount_sane.sql": {
+      "sha256": "89137cf607737bb5d2ca14e2a5c8aee60a4fc5dba563d3bee7cbcc88f9323994"
+    },
+    "src/app/(app)/products/page.tsx": {
+      "sha256": "3e7633fbd0dc3144c16a73e3ed31a447b67a1f3c4e8f5c6707aa182fa5d90404"
+    },
+    "src/lib/supabase/migrations/107_adv_crud_guards.sql": {
+      "sha256": "9bb912a801a0300cff7e2b9cf60fe2bf83b8f14b571ebd35ac7309c1331ea5f7"
+    },
+    "src/lib/recon/spx-cashflow-parser.ts": {
+      "sha256": "3ee1e2336e582af81c0007a9fd45a871297c1bd6289de8fb7fca5a147a61a2be"
+    },
+    "src/app/(app)/reconciliation/ekspedisi/page.tsx": {
+      "sha256": "0cc8afa7511070fd5e6ad1f5367e04942247bacdc89a071c12b39a69fc3db49d"
+    },
+    "src/lib/supabase/migrations/102_analytics_union_source.sql": {
+      "sha256": "bb6396d253b046c808ec972fada81113a1fc56bc084d008509befc17b0b19f1d"
+    },
+    "src/app/globals.css": {
+      "sha256": "3cb23644be0c3f42d1905c1928c741a3fbe25d32db97ffb1ae86df07cb463910"
+    },
+    "src/lib/supabase/migrations/078_packing_fee_attribution_gate.sql": {
+      "sha256": "e597e5621ff1fd677dc14a7e20f2ed194586a689cf1e221d3623de7588001387"
+    },
+    "src/lib/recon/spx-status-sync.ts": {
+      "sha256": "60066362b7503f9e073cb4d0343c03c3b3a4175e990e428d82c69c01ff2814e9"
+    },
+    "src/app/(app)/adv/margin-simulator/page.tsx": {
+      "sha256": "f9a005189eaa54de6ff2afa8a29640e1def7e41edeb0471bb10880f3916b45f9"
+    },
+    "src/lib/supabase/migrations/105_clear_campaign_seed.sql": {
+      "sha256": "cdbc8e1701481e557d003f42bf5d11414c101c5d58ba96cb5ebfc53322fdaafb"
+    },
+    "src/app/(app)/reconciliation/spx/_components/recon-history.tsx": {
+      "sha256": "76d3436d8c22002be43a9a2d4ae28afedd5b45bd1064f7695c5f275e5fe76f1f"
+    },
+    "src/lib/supabase/migrations/111_pembukuan_ledger_pnl.sql": {
+      "sha256": "eb604fa56866064deb802d5b5c9ef373c6cdc9ec953dfc8989fe19ce4a5a9233"
+    },
+    "src/lib/supabase/migrations/067_lincah_channels_seed.sql": {
+      "sha256": "4efbd58483f25095d24c85dd5e5077f0c3ef15fcc5af4fecb038df969b5d8538"
+    },
+    "src/app/(app)/reconciliation/upload/page.tsx": {
+      "sha256": "6a5db48f686ce3d5e52cb8b6a29f755109c8fd9196bf7bd68cbddf3227361136"
+    },
+    "src/lib/converter/status-inference.ts": {
+      "sha256": "1af82d99afa558699690475efd418c7a8335d04c38ed1f47371bc1ed6ff05df3"
+    },
+    "src/lib/server/fallback-owner.ts": {
+      "sha256": "6af83e1622b4ec544323f1ce497e45e0684c909b2b5d862a2b502ce2f515a413"
+    },
+    "src/lib/supabase/migrations/003_install_repair_function.sql": {
+      "sha256": "a15f99be6c6c897ed426c9d26b9125e013194a2a90e402b828fc5808dd1e7fce"
+    },
+    "src/lib/supabase/migrations/129_inbox_resi_nullable_profile.sql": {
+      "sha256": "ebbd21d46a81730a96cd3c092d4335d0fc8333fa12183ce64b982f3175179891"
+    },
+    "src/lib/supabase/migrations/025_phase7_margin_simulator.sql": {
+      "sha256": "22b05b1303fb71a75fd7ec2c3bfbf9523bf4a46b8614341ac6b99abae1810fd6"
+    },
+    "src/app/api/orders/wa-paste/existing-phones/route.ts": {
+      "sha256": "be1a114495ee81a3f4320c078c575669842933ec5e2d9f38c0b5d42313e55b87"
+    },
+    "src/lib/schemas/crm.ts": {
+      "sha256": "1d7a14ffdd5f94870ffa6fe57f299c197f3affba5c49710be40ccbf4e9a33276"
+    },
+    "src/app/(app)/cs/resi/page.tsx": {
+      "sha256": "b76f69a4284bab0852161c8c141381619af90c5755ec107a9e11723f37abdcdc"
+    },
+    "src/lib/supabase/migrations/041_phase8h_master_wilayah_spx_rls_policy.sql": {
+      "sha256": "02d5fba9fee83c211bc82507c8cb3b9157619c4cad22e7616b29b90509d0cb0c"
+    },
+    "src/lib/supabase/migrations/009_fix_commission_cleanup.sql": {
+      "sha256": "4092c8cdf1dc32341f063c098c368ba18144d4e71fc2537dc4e9d81a386dc611"
+    },
+    "src/lib/environment-safety.ts": {
+      "sha256": "370f40d2aa1762054adcbadc9c12d48a2827fa45c90688c687ccd4ec9bb98a94"
+    },
+    "src/app/api/orders/wa-paste/submit/route.ts": {
+      "sha256": "f5000477598f8119741efdde66f8c4d1ba05cb5caec538719a2801ac36b6ea8f"
+    },
+    "src/app/(app)/orders/page.tsx": {
+      "sha256": "21173d480d53278a520cd21cb00b009e15a3f9ea566b3a853dcb1cf9f7de5024"
+    },
+    "src/components/layout/app-header.tsx": {
+      "sha256": "71c6b80fe88433f6f9a3adad4a7bc9d761229cab537fb88dde1ea686f69f6454"
+    },
+    "src/app/(app)/products/[id]/edit/page.tsx": {
+      "sha256": "7b1b01908103235f4af7c0827b86473c9759ac79fcafe7ffdb763d631594b0b0"
+    },
+    "src/app/(app)/settings/courier-rates/page.tsx": {
+      "sha256": "84c18342b1f7c430278deb225742737fbe9c4470796c152c2719480fd74f381b"
+    },
+    "src/app/(app)/team/cs/[userId]/page.tsx": {
+      "sha256": "0683c8ab97b1c2db44fbed0a49622a827d81686e027d01052b0dbf8bc5c38fee"
+    },
+    "src/app/(app)/settings/commission-rules/page.tsx": {
+      "sha256": "1ea5b5ab366bbc6cc0c87dd779058368f32fec42e52c400ef82967cd1e45e865"
+    },
+    "src/app/api/inbox/unmatched-resi/route.ts": {
+      "sha256": "7e350ebceff4d4b0be5cd03c3a1e44d0d49d90a7de3341c6db1752919e00578b"
+    },
+    "src/app/(app)/analytics/page.tsx": {
+      "sha256": "d0d8ed8cf2ebb61554798438acf9ac9365182e3334414cb2ce7e53bbbb478e0a"
+    },
+    "src/app/(app)/inbox/unmapped-statuses/page.tsx": {
+      "sha256": "77b8410ca5cde87bff468b5aefc9d9e663b89ad6c17dd10d6f313a7ebf3e586b"
+    },
+    "src/lib/supabase/migrations/010_phase1_foundation.sql": {
+      "sha256": "e6f8a6573f06ed10185e228a880ca5f1f15c4b44d00253593c1976004c2f73c0"
+    },
+    "src/lib/date/jakarta.ts": {
+      "sha256": "3f5da1f3eeaf8e6c57807ad09344a271a153a9f52288bfba1ab1c997441bfbd4"
+    },
+    "src/lib/supabase/migrations/072_commission_rules_per_user_per_period.sql": {
+      "sha256": "22046bd95ca218fcd44784fc08e1d01f5cfb1ba2584346599833f0fe6f348445"
+    },
+    "src/lib/supabase/migrations/063_variant_matcher_and_backfill.sql": {
+      "sha256": "a2141c8a3981067cf2fe8f059c33f41fad1077f69543f739967997adf3d4e2b4"
+    },
+    "src/app/(app)/team/advertisers/[userId]/page.tsx": {
+      "sha256": "383a43552bba61d8bfbd224f03fd947c4f84c4192bc84713d8806d1e107fb3a8"
+    },
+    "public/file.svg": {
+      "sha256": "2b67812c325c199a02536cdbeea0c593a72f707d323b72ee3e08dbab06753bd4"
+    },
+    "src/components/ui/sidebar.tsx": {
+      "sha256": "a3ecc76e599963a6e733efb6ca9e566b66739494b9fda09e36e2eca69779acda"
+    },
+    "src/lib/schemas/spx-missing-request.ts": {
+      "sha256": "b530f1fc199b84132018a99613805b301cb4e5f1400443c9b794ea51693234f6"
+    },
+    "src/lib/supabase/queries/margin-simulator.ts": {
+      "sha256": "064e91d94ca7305b2672ece2b472466d0328e5bed03d8fb2feb78d37ab8f357e"
+    },
+    "src/lib/supabase/migrations/128_cs_dimension_matrix.sql": {
+      "sha256": "cd8d1b075898eb25480b64656589f156d7de4b5fd2dbb54db23967dfd87ad882"
+    },
+    "src/lib/supabase/migrations/011_phase8a_suppliers.sql": {
+      "sha256": "0bbaef8f032fb52684e06c72965d0f26f91e26c5e112fff90fd2e760c8194a1f"
+    },
+    "src/app/(app)/layout.tsx": {
+      "sha256": "21e5f96ada02401e8ea0df64c815d44ee41b5ad3910838e464029af35228dff8"
+    },
+    "src/app/(app)/orders/sandbox/page.tsx": {
+      "sha256": "f9d777b509f8d10e0c95b5371f8839753550c8da8869b1a2511cda65513304c9"
+    },
+    "src/app/api/orders/address-review/autocomplete/route.ts": {
+      "sha256": "0def1aeaa63aa4f1c13a63f5873fd1b961952f96080198216cc0d22ff6785a1e"
+    },
+    "src/lib/supabase/migrations/079_fix_reset_cascade_delete.sql": {
+      "sha256": "7cc23616a85fe84c905202d460f05ff2c127c5e98594b294803b709f762f8f6c"
+    },
+    "next-env.d.ts": {
+      "sha256": "7b550dda9686c16f36a17bf9051d5dbf31e98555b30d114ac49fc49a1e712651",
+      "source": "scripts/releases/repo-readiness/next-env.d.ts.template"
+    },
+    "public/globe.svg": {
+      "sha256": "b614b9bf183925957661ac851498fe1d8029fd43a62fbfed86f9e2624a57e7cf"
+    },
+    "src/app/(app)/marketing/distribusi/page.tsx": {
+      "sha256": "996c4faaf4139db67c3db51b5b96abfab10e8d14143f0f21e05bb572f5f3e459"
+    },
+    "src/app/(app)/financial-position/_components/supplier-payable-sheet.tsx": {
+      "sha256": "30af333b7f697f6b0dbca3054eedf0d47ac84730823ff00c28111376d6879793"
+    },
+    "src/lib/supabase/migrations/092_spx_status_sync.sql": {
+      "sha256": "b09d9e186a108c3c4adce4692e6e85b3a0939a1e695b78edb40f721fc69101d6"
+    },
+    "src/lib/supabase/migrations/144_spx_status_sync_tracking_fallback.sql": {
+      "sha256": "fb01dd849bba97c049409f67f7c59c70488ea1490cd0bd5ef803232017f366a1"
+    },
+    "src/app/api/reconciliation/spx-status/debug-read/route.ts": {
+      "sha256": "f7780c384b26411149f2ec237d6972c23dcd81cbf4a835caf139e096e7011b0e"
+    },
+    "src/app/(app)/ad-spend/page.tsx": {
+      "sha256": "3fdcf0ee913aa410d72e1530dd2b077ed3e972994fa6f2088287d5e0ccc66749"
+    },
+    "src/components/orders/order-row-actions.tsx": {
+      "sha256": "47373b3395d02690ae75aef33cfc449af8d75068dc87485a46376489e6b8bd6c"
+    },
+    "src/lib/supabase/migrations/056_bookkeeping_arsip_columns.sql": {
+      "sha256": "f83edcb060fb04d8b47727a2daf3d29fd6bf0e73d6bccf4ce6041ed5b7b21800"
+    },
+    "src/lib/cost/calculator.ts": {
+      "sha256": "4de0ee4260a7d9e8d38ac5165ed3ed0af654a0bad160878c2c5c78aa94a993fa"
+    },
+    "src/components/ui/sheet.tsx": {
+      "sha256": "a8ff25079c1167230fc3a9ddce881a8fb24f8ebb1eecbc8189c7f1cf242018df"
+    },
+    "src/app/api/auth/logout/route.ts": {
+      "sha256": "57fc2ef0b36d97cd581ec02cc8a96d749c45690c549af17e99ae0e30990d4c37"
+    },
+    "src/lib/financial/actual-cost-report.ts": {
+      "sha256": "bfc7ce17c08eda4b6e7f2b6e2a02523a1f3f242eeb3ffaa7a6f681e080e9de2b"
+    },
+    "src/components/analytics/personal-dashboard.tsx": {
+      "sha256": "2f03c29f10ec1c7bf092292de630397a5d1f15c3f2bbbcf5bb610503e4a4d752"
+    },
+    "public/next.svg": {
+      "sha256": "55995dfad6ecb4945a1e856ddca03c5e16aa5bf13fd21b4df6a74ae79357bcfc"
+    },
+    "src/lib/supabase/queries/retur.ts": {
+      "sha256": "2c2fcb1825f5d1a986fdfd6dda14f88d99f52257a5874adbe6578982133e0b22"
+    },
+    "src/lib/utils.ts": {
+      "sha256": "7c8c3dfc0cdd370d44932828eb067ef771c8fe7996693221d5d4b90af6d54f2d"
+    },
+    "src/lib/supabase/migrations/042_phase8i_followup.sql": {
+      "sha256": "f7d762bbfa480378108a1ca806ad3920b8fc2f1fee1ccc1a9dc274b2eb09fbcc"
+    },
+    "src/lib/supabase/migrations/031_phase9_variant_model.sql": {
+      "sha256": "e18ee27745a3029bb0442375b1d021d6bafd5a7b504c59889c03b864cf4df519"
+    },
+    "src/app/(app)/orders/draft/_components/bulk-resi-dialog.tsx": {
+      "sha256": "b6bdad8962418c79dfce7408f162492a7949b6c646db3ac5e170564700f845d4"
+    },
+    "src/lib/supabase/migrations/149_order_data_fulfillment_category.sql": {
+      "sha256": "074dfe18e12b604fa16700e1965484f51fa54ed081e25109c1eb4a49951ce19a"
+    },
+    "src/lib/analytics/complete-report-read.ts": {
+      "sha256": "21051677e3427b092ef5b136c673ab9d73b52e8c4ab2720e21ef78648de7a516"
+    },
+    "src/app/(app)/reconciliation/page.tsx": {
+      "sha256": "b0e704d0b2249e8922298913ee33417328eafae062f6ac69ef828f64e564e2ce"
+    },
+    "src/components/ui/empty-state.tsx": {
+      "sha256": "d961ca5e60a57709c705e730a02a4ce734bb15c67b8c95b0c2484a1188d89db5"
+    },
+    "src/lib/supabase/migrations/100_pembukuan_master_view.sql": {
+      "sha256": "4778b80a65dd09abfac4d55ffdad2d285187dd8b1381371e5719f7ba8da165cc"
+    },
+    "src/lib/supabase/migrations/104_cs_leads_official.sql": {
+      "sha256": "b3bf052c63856f9fd35d65e6cfaff28c5745765dfa94b4e837a29a71f7e33b68"
+    },
+    "src/components/analytics/per-produk-section.tsx": {
+      "sha256": "c4a77d3936b5d889852d52d0f303c5bd86e11a6a5b3bc3a6cd2bd5f708316c74"
+    },
+    "src/lib/converter/parser.ts": {
+      "sha256": "aaf267939e94a3cb849482558d8c854a4015059b2e2ed09c6219d811596834c5"
+    },
+    "src/app/api/orders/address-review/suggestions/route.ts": {
+      "sha256": "cdd7525f5f2358af06f46cf5ce8329e12fbd1a38a5045be151dab2072c936887"
+    },
+    "src/lib/supabase/migrations/150_list_data_orders_fix_count_includes_final_orders.sql": {
+      "sha256": "266fbb179abc433da43249441f858deb1570d7ea76b8a5e9de09223184d14fb3"
+    },
+    "src/components/ui/page-header.tsx": {
+      "sha256": "3c480e6a38da7eae213bdbe5ba678708389c684b4839e8d514c3611a862fce8c"
+    },
+    "src/components/orders/customer-reputation-warning.tsx": {
+      "sha256": "24fc767e881b0694dbab0e3cb2c67fd5604af9e34095e36aff3851d3e6d3896c"
+    },
+    "src/components/ui/table.tsx": {
+      "sha256": "ce15e877b6d6d8bcddb4252590d6b7aa2542351baf8a73b0d1cda5f5db93b11a"
+    },
+    "src/lib/supabase/queries/reconciliation-export.ts": {
+      "sha256": "4db84738717851dfcdf1704230f04e237e4958e2dd635ed4715de3c382c15be2"
+    },
+    "src/components/ui/collapsible.tsx": {
+      "sha256": "ead4349ff7b01d696ef89294a81d18ee1d3f732321398896462c834ab9b9e065"
+    },
+    "src/components/providers/theme-provider.tsx": {
+      "sha256": "aa075df75b97cd955757518a3adc0f93928fb1eb8a118f63f759d12ac7f3dcd8"
+    },
+    "src/lib/supabase/migrations/117_net_presentation_selisih_ongkir.sql": {
+      "sha256": "1b07290afb356df1c598d27129d08abad69d5cc5d92bffa783b8fa8fd7be3997"
+    },
+    "src/app/(app)/orders/draft/_components/draft-quick-edit-dialog.tsx": {
+      "sha256": "ea15c24c7d992a232eb754c4ee364f8e1ecc78cf083e88d1b16a408aec82017b"
+    },
+    "src/lib/supabase/migrations/069_add_indexes_unindexed_foreign_keys.sql": {
+      "sha256": "7293dd1c3265a6e7cb608eafd2ed67ade9235924e7d90f3ebc35502774ba87f8"
+    },
+    "src/lib/supabase/migrations/028_team_product_breakdown.sql": {
+      "sha256": "2e02e75ff102f6b896a8cf911f23be0288dfd392327a7188d898f5a30e4bf9e7"
+    },
+    "src/lib/supabase/migrations/016_commission_v2.sql": {
+      "sha256": "aa0269ad5b904121db9b94be4b6720d17a7822e0c45dc7654c449852ecf97f83"
+    },
+    "src/lib/supabase/migrations/002_fix_handle_new_user_trigger.sql": {
+      "sha256": "5b40e32609b55e854a7a16c77120b87697c06e798f0ee728c70ae5203e3c5e97"
+    },
+    "src/app/(app)/orders/post-export/page.tsx": {
+      "sha256": "5bd079aa94763f38bf44dc4d8b03d4ef5656834fcd2dd510a89e3948ad4a97f1"
+    },
+    "src/lib/format.ts": {
+      "sha256": "760be691bc04c37cf30ec756456c679b72de7bbac9859f4a84eb813fa8aa257e"
+    },
+    "src/lib/analytics/profit-cost-evidence.ts": {
+      "sha256": "f3943065951117fef3daf345570543b0052faec78c714ea5cbee4531b8e9b393"
+    },
+    "src/lib/supabase/migrations/027_team_performance_rpcs.sql": {
+      "sha256": "ff4f747acaa0f04384ab270047c6eb5902a07ea40460f671cc6183c79472af35"
+    },
+    "src/app/layout.tsx": {
+      "sha256": "6210e437d436efebccf44acffd2ba7339850c5e3cd2a14064dd735c502aedbfb"
+    },
+    "src/lib/supabase/migrations/059_fix_cost_engine_transfer_cash_in.sql": {
+      "sha256": "857225b68907120cff18c5ad11ba5920f417d2ef2d94c30a61e89b56f1aca23a"
+    },
+    "src/lib/supabase/server.ts": {
+      "sha256": "8d535c8c4cddc24f6a4667505061bf07927580649078b90c5d94633eeec163c4"
+    },
+    "src/components/products/product-variant-form.tsx": {
+      "sha256": "33ce4c87a56d82be175222be5e6a25464b285ba2a4a7228b47eb8c242b1f6f3a"
+    },
+    "src/lib/supabase/migrations/005_commission_engine.sql": {
+      "sha256": "99f66e506960cc7259108c86eaa6fc7002ee2f18b0aaccf623631c5ff6dafad1"
+    },
+    "src/app/(app)/settings/courier-channels/page.tsx": {
+      "sha256": "90170d16798d6872de15d30ba32929f95fee92b4c08e65e22162589b83dc9685"
+    },
+    "src/components/team/product-breakdown-chart.tsx": {
+      "sha256": "06e29fbe44cc5b64ba641f12d38540cd665ebc4780ea205ae0077fc877130ee5"
+    },
+    "src/lib/supabase/migrations/013_wilayah_distinct_helpers.sql": {
+      "sha256": "778d199467368778bee8202ca0e869b6955c78ba6f0f9a2244be2c58cdcaaf7c"
+    },
+    "src/lib/supabase/migrations/101_spx_status_batch.sql": {
+      "sha256": "c3418eb9fec4391963dcdafc5d0b2b33101a6526637ba2fc949779472d01556e"
+    },
+    "src/lib/supabase/migrations/153_list_data_orders_fix_order_independent_spx_scope.sql": {
+      "sha256": "7c88e5e6ea40a3591bfbee2f6767d09a2c1887bc04094be02d90d14a149d5adf"
+    },
+    "src/lib/supabase/queries/variants.ts": {
+      "sha256": "edb118056748d91ab54819fd223bc37daa99a169118e59031ffc2fd5dd3ed614"
+    },
+    "src/lib/supabase/migrations/112_cost_engine_accuracy.sql": {
+      "sha256": "edfe555ea436e1dd3658f960ad6d3d9c3493e9163cbe0c6c6176bf9d75ecd57d"
+    },
+    "src/app/(app)/settings/wilayah/page.tsx": {
+      "sha256": "2e5252eaf1530342ca903a52763d2152a1d82a95259e6f6384b952fdc08cef70"
+    },
+    "src/lib/supabase/migrations/096_ad_accounts_attribution.sql": {
+      "sha256": "5c5f943ca1e9b06a4c14df6cecb3192d026f4738f5f3889fd27a248a302f0555"
+    },
+    "src/lib/converter/preview.ts": {
+      "sha256": "5eeb2b7f2e5e2eb34b30d779c2567e1d1eae0789961bb89ef4be4b2c9510f3b4"
+    },
+    "src/lib/converter/outbound-resolvers.ts": {
+      "sha256": "d963c3951b0389edce118f4aaa42848588fe569a858998e35e27981d5aec8db9"
+    },
+    "src/lib/wilayah/cascade.ts": {
+      "sha256": "1978e5a47e9e8b8ce42984c216f05b6a1f2e78634105b80c7b6909dd55a70345"
+    },
+    "src/lib/supabase/migrations/001_add_resi_fields.sql": {
+      "sha256": "19ef92d00189fb6d408995522f8dec2f4dcf023d9172f65a09ee83e993a5b550"
+    },
+    "src/lib/supabase/migrations/060_financial_position_v2.sql": {
+      "sha256": "4c24e32ed5403e4f8c3129396d2e0afd7b6be6b6fe2a0e96038f815a19ba9318"
+    },
+    "src/lib/hooks/use-sidebar-counts.ts": {
+      "sha256": "1c0aac2eef266ce5bdbe2ccfa2c01f2d4875a9e437204fa804fc4f9a20882dc2"
+    },
+    "src/lib/recon/spx-missing-order-persist.ts": {
+      "sha256": "050da7a0ec63f3dba74636a6c1179377df802167fba55076431fc057c3511e0b"
+    },
+    "src/app/(app)/orders/list/_components/status-stats-bar.tsx": {
+      "sha256": "e25cd79dbd98ba2538678608238f298bd7dbfa32f6eeab82227ba899fca53fb9"
+    },
+    "src/middleware.ts": {
+      "sha256": "151ca0a9d54da347e39abd405ab5c3abf2a6f800a86be34a48b1e0d1748ea375"
+    },
+    "src/lib/supabase/migrations/084_customers_delete_sync.sql": {
+      "sha256": "377e0b0f10c96bad74fbc761617e0d42ba11ea03bf400eb215ea49461654619b"
+    },
+    "src/app/(app)/customers/page.tsx": {
+      "sha256": "9317665daad9d3114548177336aed60cd8c28279fdb7d258bdfa9043076d1eed"
+    },
+    "src/app/(app)/cs-report/page.tsx": {
+      "sha256": "81f41d05c242e56c173d18b4349bce99d6bbfd5434fdbe3b574cffac0cf03158"
+    },
+    "src/lib/supabase/migrations/026_phase7_drop_presets_table.sql": {
+      "sha256": "a625cc245884f977424b3e831cb96f160b31ea22e88da36d547bb51fb5359cd1"
+    },
+    "src/components/ui/input-group.tsx": {
+      "sha256": "17e76f6e6093754756dd10182f833abf35f1020dc4a8a7ead8c0f9703576870b"
+    },
+    "src/app/(app)/reports/ads/page.tsx": {
+      "sha256": "19a6d0b8b199621ced0452e029c63af9b7651c44cec8dba574cee60d5e2c9b8a"
+    },
+    "src/lib/supabase/migrations/030_inbox_unmatched_products.sql": {
+      "sha256": "4fd4453b3ca8c5250db44e5b0d06b158a44d34806c274524812c493ee1a7d66b"
+    },
+    "src/lib/constants.ts": {
+      "sha256": "84d3177121d09b28859b92dd5e0f70dbc1766348c017259ffa498fe27879211c"
+    },
+    "src/app/(app)/orders/[id]/page.tsx": {
+      "sha256": "4584c7c69118cc63b7ce5a1f336b53c762275e4228dedefb2b25bae3716b10f6"
+    },
+    "src/lib/supabase/migrations/043_phase8i_list_orders_enriched_products.sql": {
+      "sha256": "13534f4b8741a62036e2e876912689e42f730b961571094f4b27571a588080b0"
+    },
+    "src/lib/supabase/migrations/137_mengantar_import.sql": {
+      "sha256": "2a06f78eaf666f05ef081053d12dabb6796be0ec2e6f4f022ddbea1b1c215b16"
+    },
+    "src/components/reconciliation/payout-recon-section.tsx": {
+      "sha256": "4f26d581332f890fe55119ebe3f51f925869bc6463eebd8683b47f3c5a6801b6"
+    },
+    "src/app/(app)/commissions/spx/page.tsx": {
+      "sha256": "0b19358bad474f16f1e9d88635ad8e3fd086fd126d2e2ec7be94138dc925f624"
+    },
+    "src/app/(app)/orders/sandbox/_components/sandbox-benerin-alamat-dialog.tsx": {
+      "sha256": "c21a92cbd68d75ff1e4c22e6618043fa046c88c81b2c09902787b79d899a7022"
+    },
+    "src/app/(app)/analytics/produk/[id]/page.tsx": {
+      "sha256": "974374b414aad5366fc826446201510abdee1e118579fb20b5cd28ab8b459b17"
+    },
+    "src/app/(app)/crm/[order_id]/page.tsx": {
+      "sha256": "27f167e21f0badf9d3e31b5da7f7b95548af0cd241f49f19d8ed79c90b2df8f4"
+    },
+    "src/lib/supabase/migrations/033_phase9_hotfix_commissions_unique.sql": {
+      "sha256": "fc7a54cf37d04eb88c86b2d1c90b852622ebf62d7d3c9f539d6c19aa3e58c39e"
+    },
+    "src/lib/supabase/migrations/141_spx_status_sync_timeout.sql": {
+      "sha256": "dfca3eefb5860f80d36ad02ecdfc1cb0a6c8a8f1a9a0b9d9b3c650641ac5459f"
+    },
+    "src/app/(app)/inbox/phone-review/page.tsx": {
+      "sha256": "9bf6d9eccc9148b23866507d6fe32cbf5b4fd2ba18f97d49461b10de1be554bc"
+    },
+    "src/lib/errors.ts": {
+      "sha256": "f5153b9ab6ee2254705b5ec7f924ee4d55ac04ffd50872ccd0d6e4274ad5f254"
+    },
+    "src/app/login/page.tsx": {
+      "sha256": "e28b4b0b00f2173d276114d5cf7815adee15cf9e9be866319b7e803999fcf7c1"
+    },
+    "src/lib/supabase/migrations/156_order_number_and_date_wib.sql": {
+      "sha256": "7347a0bc33993380cf6ec614cccde8c0f80a1550e4ce0e3c3a95840b882adf5a"
+    },
+    "src/lib/supabase/migrations/036_phase8f_address_parsing.sql": {
+      "sha256": "1297ca2dc0b124436776341e2a54b75d5069e7abb90a1802ad0af4c939b31137"
+    },
+    "src/app/(app)/inventory/page.tsx": {
+      "sha256": "9ddb5c49ef614f7aec90c3b441802269d408bebb0be5719556da77f71574ab85"
+    },
+    "src/components/ui/command.tsx": {
+      "sha256": "b80b0f0356add12993366cd4571ceae1416f50035ac189876373d0e5050308c5"
+    },
+    "src/lib/supabase/migrations/126_product_search_aliases.sql": {
+      "sha256": "b76cbf5b171a69ad260b9f1b0c02196f3017289bdcf15342fe8a71aafe8956ce"
+    },
+    "src/components/providers/auth-provider.tsx": {
+      "sha256": "3032d9b912e23ca00a90337bb87ead81db9c48124edb202719d1bbf0b47a1c68"
+    },
+    "src/lib/converter/engine.ts": {
+      "sha256": "6f2114a459e230291392f6da5021dddd01a0369801f2ae98959b5b1ef2d9ace1"
+    },
+    "src/components/ui/checkbox.tsx": {
+      "sha256": "3d2d0b3d87a19aad65821e4cdb1c4bb149209778bea271b1f98265383cddd6d5"
+    },
+    "src/lib/recon/spx-api.ts": {
+      "sha256": "d8eadf4ee361420842d8df7ea60f22ee700a3d533717336cf2cec16d63fa06a6"
+    },
+    "src/app/(app)/orders/list/_components/insights-table.tsx": {
+      "sha256": "a2aa18a003d7721ae540f2bcb55f24e77ceefbd249ac78e77f32a8e41b809e7e"
+    },
+    "src/app/(app)/cs-ringkasan/page.tsx": {
+      "sha256": "58fe184aa1a4629fdfbac64a4c76d3fe37319be84bd398556eff665bb173c671"
+    },
+    "src/lib/supabase/migrations/004_analytics_engine.sql": {
+      "sha256": "ca204298b4e14a87e3313f57d9d25aec9bb516f66228c3a6b3d4de78e353ab9c"
+    },
+    "src/components/orders/order-form.tsx": {
+      "sha256": "f5df75631cdf74299c9da99a7b9fa13cafe50c8282a520e3b15cf814cc3fa074"
+    },
+    "src/lib/server/admin-users.ts": {
+      "sha256": "b5e47c6f7dbc849e3127be9705e52cd503514acf113973d3b0aceece56030a70"
+    },
+    "src/components/analytics/cs-lead-section.tsx": {
+      "sha256": "6197cf237c28de2366c9f784b2707eace654cd3c247d189ab4bc6525e4282af4"
+    },
+    "src/components/analytics/retur-section.tsx": {
+      "sha256": "bd5d645f58108cbdc2ec3a1381a937564064fb2b244e07d87dd850753f9ea891"
+    },
+    "src/lib/supabase/migrations/124_inventory_stok.sql": {
+      "sha256": "4b68aecd44f157079a0c222818f4dc59b9da1580d6bebcfb72bf844cb7921e3b"
+    },
+    "src/lib/converter/engine-rekonsil.ts": {
+      "sha256": "af52c3e905a13d6d1c98405342367dbd1af9b5dd3876d13969c646a630fb5572"
+    },
+    "src/lib/supabase/queries/shipping-diff.ts": {
+      "sha256": "e3c8ef2149b0076f6859a7c044d2e9214219b951fad4a111ee1572832b74a894"
+    },
+    "src/app/(app)/settings/master-kurir/page.tsx": {
+      "sha256": "24f70b8e382c1b478f65b14629a058980ccdfe5b25056904e1ba93b9033ef0fb"
+    },
+    "src/lib/supabase/migrations/142_spx_cashflow_apply_integrity.sql": {
+      "sha256": "47b71aadf7adb6e513c6f8cdf1f17676411a31ad8a54e093c15c257a98f99e57"
+    },
+    "package.json": {
+      "sha256": "62f38cfb7cfbe303c97f9a5ba5e90be380d971e08354fdf13d36b1af175be83a"
+    },
+    "src/app/api/reconciliation/spx-status/persist-missing/route.ts": {
+      "sha256": "af1b0d50b3f4b6c199a6db67f1b3c20bd52eb1cbfa632d28f6be75765adc3a25"
+    },
+    "src/app/(app)/performa/page.tsx": {
+      "sha256": "a3323e7ee2f48d38688f0d237a3edd948db5a632cee18ac099b5c010ec80dff4"
+    },
+    "src/lib/supabase/migrations/106_create_ad_account.sql": {
+      "sha256": "1a87951254652e6049fe8fc9a1319df340eeac68403b67514401c46ec9e31a74"
+    },
+    "src/lib/supabase/migrations/039_phase8g_hotfix_district_alias_both_sides.sql": {
+      "sha256": "5e1f3d8c5eb5929859c103589f69e9f4cbf5d955955e429a0896c4f88b201836"
+    },
+    "src/lib/converter/wa-paste-adapter.ts": {
+      "sha256": "8c1482930dc9e35cd539c1ea91b3be386f11d60ed1eae8bf076d2b49d7f3e431"
+    },
+    "src/lib/supabase/migrations/122_resolver_advertiser_from_account.sql": {
+      "sha256": "28cf46b8c96ba307fcbdb7fdc3417d9979db5c96964875dfbc063b6df42b21eb"
+    },
+    "src/app/page.tsx": {
+      "sha256": "d11970198aabad68bd60d62692029e6c76078b1b74d0b207723df693ef3c9be6"
+    },
+    "src/lib/server/operations-auth.ts": {
+      "sha256": "6beedcd7cdee1389dce30e420cde197a78800832b75ecc38c243aeb7d2e83783"
+    },
+    "src/app/(app)/shipping-diff/page.tsx": {
+      "sha256": "792c24cc1ad7be227693a503bd0dbfcc1b02053e6287b83cd6136c91125ebbe8"
+    },
+    "src/app/(app)/reconciliation/spx-cashflow/page.tsx": {
+      "sha256": "c346c2797bcf89d77398d415591fe487d55b5cc015ca096538bf7dcc5611e745"
+    },
+    "src/lib/supabase/migrations/113_pembukuan_hpp_include_packing.sql": {
+      "sha256": "99803ac7acef6e9e611da40891280df8deafd969af5097551d9cfd929c12b720"
+    },
+    "src/lib/recon/spx-manual-sync.ts": {
+      "sha256": "2d516ff9d095687f9f34196ce826b0ef55cf041dfdfeeb29a6351b36b7ec0c6b"
+    },
+    "src/lib/auth/permissions.ts": {
+      "sha256": "b67e49641b9b843434ad79799f0d082d4709e47f0241aaa16af005fff7ab3100"
+    },
+    "src/lib/supabase/migrations/019_fix_phase4c_rate_format.sql": {
+      "sha256": "e9eae6f36903df083df9dc04ef69a2558266efb6387720d89a438e55e274147e"
+    },
+    "src/lib/supabase/migrations/049_phase8h_orders_draft.sql": {
+      "sha256": "2e0deb51cd48312e1e50c32cd7491db68316c926d13b2dd55b788f8b35ba66d4"
+    },
+    "src/lib/supabase/migrations/097_campaign_performance.sql": {
+      "sha256": "90b3617efad6981775ee8e6fc800a05e0f0e64677c20c18729740ae6266659fc"
+    },
+    "src/lib/converter/wa-paste-submit-guard.ts": {
+      "sha256": "9c4aa7fb14a69dacfb489503d2665367702593ee37c40edbf34657eba7b671c5"
+    },
+    "src/lib/supabase/migrations/110_orders_draft_allow_dikirim.sql": {
+      "sha256": "70f12c1bfb2f7c9833f05ad1bf0bafc242514c740b1c66cdcd77abf99d4b1799"
+    },
+    "src/lib/orders/export-groups.ts": {
+      "sha256": "51ad7e7951af893379799e7c8849de8795890ab4723b036acf19b31f29e42f1b"
+    },
+    "src/components/team/cs-regions.tsx": {
+      "sha256": "acf84fcbcddc1715573d8de7b0613ed88cb65dcb06377ea6036be67a41b6ff83"
+    },
+    "src/lib/supabase/migrations/109_attribution_per_product.sql": {
+      "sha256": "936ae8cd93e1d00cc6812aec2c5cb674bad76eb96bd524c0178d6767785be542"
+    },
+    ".vercelignore": {
+      "sha256": "82739838dda660e8709fafec71d0c465e24889e177eb7388f042ae1cdd58dd71"
+    },
+    "src/lib/supabase/queries/customers.ts": {
+      "sha256": "8489531743fcb73bb06142fc53ff4daff0591fe51b88092fcdcf374bf19c381c"
+    },
+    "src/lib/orders/data-order-export-params.ts": {
+      "sha256": "e72dafa3f72499278ecab61eb3ac3232db68612433c50f69e099221bb5368faa"
+    },
+    "src/components/ui/separator.tsx": {
+      "sha256": "75085bd84ff6965e4a356c53a4689799cabf65caa93c0bba064d5a0c6fa78f13"
+    },
+    "src/lib/supabase/migrations/131_financial_position_draft_aware.sql": {
+      "sha256": "174e16a8b4a583b662b108c2618f1d8818393e09e286e9a37d2eb596eab63c76"
+    },
+    "postcss.config.mjs": {
+      "sha256": "dfac7ac2d86d326a0e5adb024e7943c181393ed17a5fcb8f0315b24c7da6ddde"
+    },
+    "src/app/api/admin/users/[id]/route.ts": {
+      "sha256": "66b2ae6f721ca8bb22fc8072eaaddd3f2111290932bd4980286a9b8799547e77"
+    },
+    "src/lib/supabase/migrations/053_phase8k_wa_paste_v2_currency_qty.sql": {
+      "sha256": "6e08b7c725be41dfbe7b8cc36ea8bd6ea0f07066cbc67304bbef8d4231c0b0ab"
+    },
+    "src/lib/converter/wa-submission-request.ts": {
+      "sha256": "424d350706bcc405fba4cca0d4136f6e3b12ef5dd619425e756c6d809eb4bdd6"
+    },
+    "src/components/ui/sonner.tsx": {
+      "sha256": "2dd975ad2170ba2570b00e58713dcbda90f26a7fffdaceb1ef7255f450c2d2a6"
+    },
+    "src/lib/commissions/spx-preview.ts": {
+      "sha256": "cfca7e3094de671f5346f8aa75dd63d0e85979c02b77381b7ff6c0844cb29696"
+    },
+    "src/app/(app)/inbox/unmatched-resi/_components/create-order-fields.tsx": {
+      "sha256": "b919f114811babeef8dedee0342dc74618bcc8ef4af49c20a16abad9a710ffdd"
+    },
+    "src/lib/supabase/migrations/127_produk_platform_roi.sql": {
+      "sha256": "c110317102f3e265d0d36c850194c7ffe7bca14647bad9891f3cb15a70993280"
+    },
+    "src/lib/staging-readonly.ts": {
+      "sha256": "20caa73a042c1b182c7871464cc971a3ab176fbefc7a3f8ddefc4862b3e6aa04"
+    },
+    "src/lib/supabase/migrations/154_list_data_orders_pending_count_funnel_math.sql": {
+      "sha256": "06b0f7fcde325824e6fca9c02fec5e7bad5874239e86ae7980b7294bbe54c6f6"
+    },
+    "src/lib/supabase/migrations/145_orders_draft_campaign_repair_from_items.sql": {
+      "sha256": "2bb2218d6ade73370f6f75f00a9c22c1bbc4675597ab10756bf0b20fb757818a"
+    },
+    "src/lib/supabase/migrations/061_spx_coverage_area.sql": {
+      "sha256": "a41fc7a2afc8162dbe5112696359ea96fe53a5b999bb48dda1ff8097abdfd69a"
+    },
+    "src/app/(app)/commissions/my/page.tsx": {
+      "sha256": "3592a27fb398d3c097a7f586c45b0b9eb24a3cfc7fe60fd7ac426e5060eab25a"
+    },
+    "src/components/ui/tabs.tsx": {
+      "sha256": "8bf9ee3935ab86c268a2a71cb5b4b67d3d5587ca9f2e0bf25f37ffdb1980434c"
+    },
+    "src/lib/supabase/migrations/151_list_data_orders_spx_create_date_filter.sql": {
+      "sha256": "69745eb8ba558760f5504c58b37dfb33ca35f5208f16fed3756c75d59d9ffa33"
+    },
+    "src/lib/supabase/migrations/080_crm_followup.sql": {
+      "sha256": "bf07a2bf134df35640f93e0de633e8ec9ae0665b2e0ee26c0942584c1e1e64ab"
+    },
+    "src/app/(app)/campaigns/page.tsx": {
+      "sha256": "922a96683276aebfa432034185db8f57b8f6e9ae0715e8e994a5c89709260fe4"
+    },
+    "src/lib/sandbox-orders.ts": {
+      "sha256": "b71ecab66f7bf7fbcd6e253d7ec23a47dfc3c9bb8283d529a4196dbd2e9371d8"
+    },
+    "src/app/(app)/settings/page.tsx": {
+      "sha256": "e925312bfda416a56370cce579386b8cb412380e0032860b68580c7f47e14e2f"
+    },
+    "src/app/api/admin/users/route.ts": {
+      "sha256": "daef194ee384ec2ec4bd81dfc432a59bb6e3233f49ac48248903e47bbdeaf2f9"
+    },
+    "src/app/(app)/team/cs/page.tsx": {
+      "sha256": "aba90d84ad62ea5ac772a155e13134c889dd7b077ce97a2c8ac22f0ca50f450f"
+    },
+    "src/lib/supabase/migrations/065_multi_source_wilayah.sql": {
+      "sha256": "c055ddc3274794d2e1c11eca5c88d2275ba658bd4ac168583d9d6b55b1b2ca4c"
+    },
+    "src/lib/margin-simulator/useLocalState.ts": {
+      "sha256": "0b378279537a53bb50affe804420d8d4b0ef6129ec63f9c8dab16a91c62bda4a"
+    },
+    "src/lib/supabase/migrations/045_get_orders_by_dimension.sql": {
+      "sha256": "74212ec2417e8eb7afc8927970be642e625344540f3e14e2e359e8bd42022afb"
+    },
+    "src/lib/orders/attribution-code.ts": {
+      "sha256": "ad6942ca0164b1612d743d48d8479be8a4a08f64ac460c01b917e43bab44817b"
+    },
+    "src/components/cs/shipment-contact-actions.tsx": {
+      "sha256": "c670615be80d3f68348904e44b44d78862a08f4ba02bae3a2c8142292811070c"
+    },
+    "src/app/(app)/orders/list/page.tsx": {
+      "sha256": "c2b330dd77d2ee542287f62c5ada658dc13adec58a7cfa91527b6401d4be946e"
+    },
+    "src/lib/supabase/migrations/014_rekonsil_helpers.sql": {
+      "sha256": "5a04e4423e9da9fe833c5c614c0714588daf29094c791453deff48e326a8da64"
+    },
+    "src/lib/supabase/migrations/121_auto_resolve_attribution.sql": {
+      "sha256": "23accc625abbbd84bb6d6d7214d0808d8da2e7cb76c5a9eae22173a6aeafcd93"
+    },
+    "src/lib/types.ts": {
+      "sha256": "eed190c4f5ef4b1bb9f25a2db15db754dbca9779152d81f76f43dcf148d99edc"
+    },
+    "src/lib/supabase/migrations/087_smart_address_resolver.sql": {
+      "sha256": "2914979b2f47c4c986ab98ed516051821a2685a630de5e378d60648ea6828692"
+    },
+    "src/lib/supabase/migrations/070_rls_initplan_wrap_auth_uid.sql": {
+      "sha256": "056ed1d770fde61b30180be91b7eca37161d273587d3037a37b28771af82b837"
+    },
+    "src/lib/supabase/migrations/136_attribution_raw_first_class.sql": {
+      "sha256": "4585a1fc153979f956720fc957939f065231890bf5870e23619aed0d0ea0fad3"
+    },
+    "src/lib/orders/columns-config.ts": {
+      "sha256": "75ff757df0824b3c592769a658b9fb3e8edbefa04d8a3516a8f588e64d5a3af1"
+    },
+    "src/components/layout/app-sidebar.tsx": {
+      "sha256": "ef26dabd6562ba2985639a5de5583fb299c67366c7653ac5a50763dbede6a4f3"
+    },
+    "src/lib/supabase/queries/team.ts": {
+      "sha256": "e925311f31ab12334b995a0a503ed7bb8fd230a6d60ed75fef401e356cda2478"
+    },
+    "src/lib/supabase/migrations/152_list_data_orders_dual_date_filters.sql": {
+      "sha256": "6200b4fdd9df959e623ac3b29cfcc11267dcd47797e20794f78ea8d8130f87c5"
+    },
+    "src/app/(app)/settings/users/page.tsx": {
+      "sha256": "4fd5930566e08b006585428a0523fbf84ed0dc0c636b9accb03e8bc45f925d6b"
+    },
+    "components.json": {
+      "sha256": "7f89b1e9e3995be8620be3162df8e08b7dd512f894fb0accb559193138fdc390"
+    },
+    "src/lib/supabase/migrations/108_fix_ad_spend_summary_types.sql": {
+      "sha256": "18fbdb5d79385dc10a12d823c87b9f20e501aa89cfd2ef8aef127b83f5ac6d57"
+    },
+    "src/lib/supabase/migrations/120_pembukuan_zone_resi.sql": {
+      "sha256": "366c5ac2c6fb357273c4f7fa3ef492df5655fa6896715e8b4351ba27ba210eed"
+    },
+    "src/lib/supabase/migrations/024_shipping_diff_rpc.sql": {
+      "sha256": "623b1d8e4119b35187e789313d7e73272287a8db08833d909984c3a0da4b3d23"
+    },
+    "src/lib/margin-simulator/calc.ts": {
+      "sha256": "6900848953b7cfb834a83e9282d98ce16c0fa65ae9079adc362ec833d5c5bf8f"
+    },
+    "src/app/(app)/reconciliation/spx-cashflow/_components/cashflow-history.tsx": {
+      "sha256": "9164474e25103f0a5f8bde71e69f187eb4572349ac9db8d48290eab2a462d291"
+    },
+    "src/app/(app)/cs-dashboard/page.tsx": {
+      "sha256": "bb29a6027b4b0921d234fd7b9556640a155b2fb5ff564743ec8390269cbe74b3"
+    },
+    "src/lib/supabase/migrations/150_restore_lookup_spx_wilayah.sql": {
+      "sha256": "7caa156a658cd6400d4b8c9cff446ddfe1e592029d5b03b4f8cf4c27c3bcb209"
+    },
+    "src/lib/supabase/migrations/035_phase8e_order_enrichment.sql": {
+      "sha256": "7e9478bb1760dfa0157549a065a5e21c1c89e1db443e22603459de2c9877f3a9"
+    },
+    "src/lib/recon/spx-cashflow-input.ts": {
+      "sha256": "708e47f9958e81e0d8c732e8e1f68c76c671ad60824f6c2870a8c421bd91663a"
+    },
+    "src/lib/supabase/migrations/058_laba_rugi_summary.sql": {
+      "sha256": "bf1970371c825fa73eb0a99209208bf48647e862f67678884b439f744edbe50a"
+    },
+    "src/lib/supabase/migrations/055_phase8l_sidebar_counts.sql": {
+      "sha256": "3fd846b85ce9f5e5ac00e111c091bb053e42328c6f66adc072ff37a9dc6279c4"
+    },
+    "src/app/(app)/import-mengantar/page.tsx": {
+      "sha256": "f054eab7686a481037cc3b6091c5838139c85c3d0fa7eeae6c02ad200a7076f1"
+    },
+    "src/lib/supabase/migrations/140_pembukuan_atribusi_campaign.sql": {
+      "sha256": "8700a9e73d4ba5c3fb4dbedc408c4db18adb2ddf541d5f848c80b1dd1d1718df"
+    },
+    "src/lib/converter/transforms.ts": {
+      "sha256": "191db1de904b90ea6cf8e5f86997ae30d3b8ecded753148aadcdee6afe582121"
+    },
+    "src/app/(app)/orders/draft/_components/benerin-alamat-dialog.tsx": {
+      "sha256": "f1bf8207f33af5b795784ca63124b3c874614339622c0138814b1b33e5b73b64"
+    },
+    "src/lib/supabase/migrations/068_function_search_path_lock.sql": {
+      "sha256": "e5318f9dc80cf1ee03c72223c60e72986741d18ed22f152bfab3c1bc4fa6b156"
+    },
+    "src/lib/supabase/migrations/138_mengantar_status_sync.sql": {
+      "sha256": "f6c7b8de203d5b1a98f2aaf982d410346fd3e1c72a1e189e9d22ca8b26930c20"
+    },
+    "src/lib/recon/spx-parser.ts": {
+      "sha256": "7fde0a15cfb2c563aea6352fa1c266507051b385fb89ad5dabed2ca7812b0423"
+    },
+    "src/components/orders/order-detail-sheet.tsx": {
+      "sha256": "ee0e88366516a4e7ab7a614f4181d62565e8933e3027e9551cd27e185f929406"
+    },
+    "src/lib/schemas/inbox-resi-request.ts": {
+      "sha256": "124e6d85ae670ba374035c3af68ad3808aed323319d933ccd70d1b9faa13e9d1"
+    },
+    "src/lib/supabase/migrations/125_draft_cost_actual_ongkir.sql": {
+      "sha256": "b7e758f13f19500c3fa969c3fad3d3bb5feb54fa8139c544b43a92e0a3c7f34f"
+    },
+    "src/components/ui/page-tabs.tsx": {
+      "sha256": "1fadaa156e1a2b52c9128a9a50b0f741e26f4c10a78b3ac84b5c52dd1c19f027"
+    },
+    "src/app/(app)/reports/owner-profit/page.tsx": {
+      "sha256": "cf5fbf08e13e4dddc95bfc1fa5d7178af1073bfe9e6191858cb3dab32e8f396c"
+    },
+    "src/lib/supabase/migrations/029_hpp_snapshot_trigger.sql": {
+      "sha256": "14a6401caadbbce31e9e5f6b35e10e7a969a969949bc5fafa8ce9527fa58ffd5"
+    },
+    "src/lib/supabase/migrations/099_spx_capstone_promote.sql": {
+      "sha256": "a2bc5669be5c932b3d24e8c05788003bbad5b9ada0d553d37a172dc507736e18"
+    },
+    "src/components/ui/breadcrumb.tsx": {
+      "sha256": "26f83fc8ed302d710851a71b705f5f8f28c805561c1fb6945370617267c5a4a9"
+    },
+    "src/lib/schemas/settings.ts": {
+      "sha256": "8d2d2b73d638fe34a7a935551efc1db92ac88ba975bc0b518dd95508d07ad065"
+    },
+    "src/lib/supabase/migrations/148_attribution_lifecycle_hardening.sql": {
+      "sha256": "0a0b20b0adf2f6ab10b0a33564ce4e5d601c97ce3d8c06113bb1afbb78a41dd7"
+    },
+    "public/window.svg": {
+      "sha256": "644768c4aaeb4767bce293344eeb0c125fb804a94d801440424072202d85e3a1"
+    },
+    "src/lib/supabase/migrations/114_estimate_commission_invoker.sql": {
+      "sha256": "d989b97bd04f64baeced276985b9fbb9de924e674090af225f742da5061e065d"
+    },
+    "src/components/wilayah/wilayah-autocomplete.tsx": {
+      "sha256": "85cf5252936fc677747fc007cdc341ce9e79b053281ac871d93caf58c3ca9d29"
+    },
+    "src/lib/supabase/migrations/071_consolidate_multiple_permissive_policies.sql": {
+      "sha256": "caa44866a17107e30d41c617793bd4f43e6bae1cb2f90ec15ee47405b2acb6bb"
+    },
+    "src/app/(app)/orders/wa-paste/page.tsx": {
+      "sha256": "8baf3f90a29b7168bdb6e8c5885e706bc4ca0476823ed6aa389a706811eb4180"
+    },
+    "src/lib/date/ranges.ts": {
+      "sha256": "2302e8455ec161c33b3a3e5b8bebf9373e3133066b5ddc9098a48618ae451bb5"
+    },
+    "src/app/(app)/expenses/page.tsx": {
+      "sha256": "4fea9ded49086864bb8fb6db94ccc0feb881a382f61c8fdf18819424c17f9499"
+    },
+    "src/components/ui/combobox.tsx": {
+      "sha256": "5a0c80e4a26924f35e23208ba27a648a9bf9264bb26ef3d7f89d9860ff436009"
+    },
+    "src/app/(app)/settings/audit-log/page.tsx": {
+      "sha256": "2ff1abb12b7a7ae6e2d3950e9f16f37e45e99ea06e1ae234c147e949a9066206"
+    },
+    "src/lib/converter/engine-outbound.ts": {
+      "sha256": "1c1b85ad6d8aa73eb6ce54f7cff6055954e5353a90c7c5c8282e7a96ffdf8a0c"
+    },
+    "src/lib/supabase/migrations/062_check_orders_spx_coverage.sql": {
+      "sha256": "bd9533e031d8e8430839570d8756e528dadd3334b2a75a0b775894ee8211bbcf"
+    },
+    "src/lib/supabase/queries/products.ts": {
+      "sha256": "54f60a3908e30d1c44a7deeeaaf1592fd3b8dbb9e337aebc13c2ab44d0df147a"
+    },
+    "src/components/ui/popover.tsx": {
+      "sha256": "67aa5f28d07c6b149d9d30d173af78d6640f9bca18138bfb16b98e66973974b9"
+    },
+    "src/lib/supabase/migrations/066_lincah_outbound_profile.sql": {
+      "sha256": "e4c6e80ca6be3f79b1934d39f5b447510a993f0529d9c60691b1b94eb9c07ed9"
+    },
+    "src/app/(app)/reconciliation/spx-status/page.tsx": {
+      "sha256": "dee1a1ce6906302fa4448f4c4b7fa8e6d8aaec60a982ec4c500044e02820cc13"
+    },
+    "src/app/api/reconciliation/spx-cashflow/sync/route.ts": {
+      "sha256": "6b4c8a410a8792291d8fb429128d24c6b10fe40fc6fed1c11c30c9a73948f8a1"
+    },
+    "src/lib/supabase/migrations/018_billing_models.sql": {
+      "sha256": "56f1c65a98f2002eb9f18d0ae1478f9edc7c645f1e54c8f9f839d93faad25e96"
+    },
+    "src/app/(app)/marketing/performa/page.tsx": {
+      "sha256": "7cbc17791b64828476f579c6ea2869883cba0f25e00a3f1fe43c5dec33893fd1"
+    },
+    "src/components/ui/tooltip.tsx": {
+      "sha256": "2cea2294d4947b88d815860f64e0b5e0eb47a59bde47cfd194aac2230c923865"
+    },
+    "src/app/api/admin/reset-data/route.ts": {
+      "sha256": "4390e3480f2d6b3b7753e60d2dc0a0ba6e8307a784af3cdc4ccd969248e82d88"
+    },
+    "src/app/api/admin/repair/route.ts": {
+      "sha256": "f3b0feb22b853443161302d25933e8043b70533014adf50bd21e076d2ceacdc7"
+    },
+    "src/app/(app)/inbox/unmatched-resi/page.tsx": {
+      "sha256": "bbae25517942a3a6de3250133bc43c9f9bdffce4d0c59752ab00ea1819522f7d"
+    },
+    "src/app/(app)/inbox/address-review/page.tsx": {
+      "sha256": "c778eb905f25ada0d9827acbf357559ace84dda4abea1c0000efea6e1282866e"
+    },
+    "src/components/ui/textarea.tsx": {
+      "sha256": "58b58d84fc54ba5f4ca46937870c619349fd9eccc4d494250ac7bc73a94e05e9"
+    },
+    "src/lib/supabase/migrations/050_phase8h_audit_log_admin_access.sql": {
+      "sha256": "f6810baf2682a670f827b5688c04e4c62d119f46cd2140e3e66a1ff52322e135"
+    },
+    "src/components/team/product-breakdown-table.tsx": {
+      "sha256": "6c0acf48424c0c96a85e7bc1b0885cd09bab8629dabef704a7cdf117ebfe1597"
+    },
+    "src/lib/schemas/saved-view.ts": {
+      "sha256": "b081151fef797c34a980c5bacf2a5c54cbd3535693463ca18043bbbeb753784e"
+    },
+    "src/components/analytics/analytics-nav.tsx": {
+      "sha256": "9820f5347f065ca8abf326bc54b62e96b281f5a04f4fdb175eebe016cf5fe5e3"
+    },
+    "src/app/(app)/team/advertisers/page.tsx": {
+      "sha256": "adc46d401e99158791e172bb3f64f73831b7efac9258c4ee8fb52f82ff0d35ef"
+    },
+    "src/app/(app)/financial-position/page.tsx": {
+      "sha256": "d64fc907cd7de93db2daf93bd305068506d9852845f84091b4251bf62808889b"
+    },
+    "src/lib/supabase/client.ts": {
+      "sha256": "062e0814c718a7bff1c4977f5186c1be5bc486bd5ec3dca06e462eb2d3c31997"
+    },
+    "src/app/(app)/orders/list/_components/insights-chart.tsx": {
+      "sha256": "b6cc137353e7b4cc9e38cab9d44358c7a2b09f9e27623128da2ec06a6681d28e"
+    },
+    "src/lib/supabase/migrations/076_check_order_export_ready_draft_aware.sql": {
+      "sha256": "a2a59e21f24473a3d75ba46636d10d004f0f6bb44b2d00be9004f330a3359dc3"
+    },
+    "src/lib/supabase/queries/crm.ts": {
+      "sha256": "2f0ed05c5ec95e99ed2da4913ad1659daa1eb6f39dbe6d63a06ccaa4ee1aed03"
+    },
+    "src/lib/server/request-origin.ts": {
+      "sha256": "5ef1c38fe2034cdbb4eeb1dd1100a7737e2e5b236fd65bea62141f5f0323f4d2"
+    },
+    "src/lib/supabase/migrations/077_customers_reputation.sql": {
+      "sha256": "acd98303ad1e9e2ce4787b4019e50ee3ba935a2d66c7d244b3a5b8113d6dcfff"
+    },
+    "src/app/api/commissions/spx-preview/route.ts": {
+      "sha256": "e74cdcbe38d75accc509f4ca904a6d0c467f30ea8d320f5213f9e5da6a05538b"
+    },
+    "src/app/api/orders/address-review/save/route.ts": {
+      "sha256": "d15fefa4c749b8debf82e801cec1158feffe99e7c61751277222939b846f9599"
+    },
+    "src/lib/supabase/migrations/136_mengantar_recon.sql": {
+      "sha256": "55392624120df897d6325f5276ff1096ce9ef863139a0cf27072f11a3cf31a16"
+    },
+    "src/app/(app)/marketing/ad-setup/page.tsx": {
+      "sha256": "f7c3fa4be11910e95f8ce3dbbf611e19041f11662ea4b6bac73624c986a59cfe"
+    },
+    "src/app/(app)/crm/page.tsx": {
+      "sha256": "099929a7cae037013368edba6e25331045ed801ff8eba20cc5d9524a0459409b"
+    },
+    "src/lib/supabase/migrations/082_retur_root_cause.sql": {
+      "sha256": "750069155318262c5de46807bf9fbd6609837c4a7ed993a281f2021ba39c4a4c"
+    },
+    "src/components/ui/card.tsx": {
+      "sha256": "a41b4d3d618416128d0093af2575048a2de8ef25c0926bcea4f19a24a59de476"
+    },
+    "src/components/orders/editable-cell.tsx": {
+      "sha256": "6c67662f357c4b0f7e602bacf7ee1aad4af34e81de4db63a56b8046a3f7ef309"
+    },
+    "src/lib/supabase/migrations/007_shipping_actual.sql": {
+      "sha256": "d34d42bef7629dac9d40b67f8a9c38e65c076326f2f87c95566c6517edbf7de8"
+    },
+    "src/lib/converter/orderonline-product.ts": {
+      "sha256": "b90d6747faf45a731fd255cf2cbb0c07e08a6f9ad276b03c1702d223f2efb056"
+    },
+    "src/lib/supabase/migrations/086_bulk_insert_orders_draft.sql": {
+      "sha256": "bd699fbbae991b3c71a2cb04299b0501e5f1b3e18bbdb05f85c9960c0a95b2ca"
+    },
+    "src/components/settings/permission-guard.tsx": {
+      "sha256": "27c490fab4bcec574117c0a841ecfa7a1b3ccf8c252820962117e2d63062a3ed"
+    },
+    "src/lib/supabase/migrations/074_profit_per_product_per_platform.sql": {
+      "sha256": "e9ef30aaaccc734e25965cae23038f4bb10996d61284a081268aca6feed14c1c"
+    },
+    "src/components/ui/avatar.tsx": {
+      "sha256": "357b2f9aac0192c071cb2ed65cb6e4c8ec01fa02fc15cf50d889b85731b75666"
+    },
+    "src/components/margin-simulator/scenario-card.tsx": {
+      "sha256": "a6646a16b7dee64cc15f91d64eada24be0f7febd7eef03515e43d650a4c5914e"
+    },
+    "src/lib/supabase/migrations/151_cs_resi_portal.sql": {
+      "sha256": "eed6545a5fa6483ba30da7b4694eb92c36a591135ae054e52c16cce4604721a6"
+    },
+    "src/app/(app)/customers/[phone]/page.tsx": {
+      "sha256": "fcf2de7424f8854f30ad1f98c13469a46a9da808137e6608fdff64805be1c58d"
+    },
+    "src/app/(app)/settings/suppliers/page.tsx": {
+      "sha256": "70e43929e3c2844aca9838af002b000f493613876916d50af3a815ed9e13794f"
+    },
+    "src/lib/supabase/migrations/057_fix_cost_engine_stale_hpp.sql": {
+      "sha256": "f9bff130f942e013e62e50ca6efde41186bdfdb382853ce5956606b9e337cbd2"
+    },
+    "src/lib/supabase/migrations/017_analytics_aggregations.sql": {
+      "sha256": "c384af99d5c4cfff318df298aff47e185b8b1e5d0c5d2664ccaecad27ea40961"
+    },
+    "src/components/ui/input.tsx": {
+      "sha256": "f7d6ecff9a4d631feeaf401c02bb87e26ddb38131c55d15a43b9290747390847"
+    },
+    "src/lib/supabase/migrations/044_phase8i_get_orders_status_stats.sql": {
+      "sha256": "31a348447b6a23b1bc6192793d8c62ed4682952e015b804dbec1bf06652fd3ee"
+    },
+    "tsconfig.json": {
+      "sha256": "5c51df4c59f4510d8c7dadf07a5c32132228826a3b331da5e286207b4df7ef9c"
+    },
+    "src/lib/supabase/migrations/155_list_data_orders_all_union_gb_spx_scope.sql": {
+      "sha256": "fca0a6dca5724686392b441f295d4da4a12cefd3975fc0f393165ad2aad1a6e8"
+    },
+    "src/app/(app)/products/new/page.tsx": {
+      "sha256": "573b7a7ae809538fb2b5be8155e0d3e8fe0da211c7835dfe426bfef760b01528"
+    },
+    "src/app/(app)/settings/reset-data/page.tsx": {
+      "sha256": "6f1bf39bde20d2ba83ab180111ef34edc043ecdbcadc4dd6e861cb5934b5a314"
+    },
+    "src/lib/supabase/migrations/090_product_display_weight.sql": {
+      "sha256": "bfe9b92b6c1f49695dff3a492753fe81bcf6ef7593dae54f9bd4cfd6043e0daf"
+    },
+    "src/components/dashboard/pending-pickup-widget.tsx": {
+      "sha256": "b4b6133bf6922c63f4b21ab9aab9e7f4913982998757bd1807135cee6fd694e2"
+    },
+    "src/lib/supabase/migrations/006_fix_product_fk.sql": {
+      "sha256": "a3fe29bd51fc9ed9754065241b08a40e7e1ea98c9d4173a22ee46a782ae3b0a8"
+    },
+    "src/lib/supabase/migrations/123_performa_analytics.sql": {
+      "sha256": "a5530f6bd928962b556c5291987ba10d3ca139565576e9b2c91534523a49a7a7"
+    },
+    "src/app/favicon.ico": {
+      "sha256": "2b8ad2d33455a8f736fc3a8ebf8f0bdea8848ad4c0db48a2833bd0f9cd775932"
+    },
+    "src/lib/supabase/migrations/048_phase8i_v2_cashflow.sql": {
+      "sha256": "a7e5d72e4b30f4edc4a0247285db450544235fc8545440b8019adeaa8f852d07"
+    },
+    "src/app/api/orders/address-review/queue/route.ts": {
+      "sha256": "1caebc09182392d3c09d773dd50041a56eae1be308be5d1ef264b5ba007a5177"
+    },
+    "src/lib/supabase/migrations/132_fix_compute_commissions_adv_id_source.sql": {
+      "sha256": "391d4d6a248e8e294f3518aa7d66b57dc4708b65186ef003dddfefac91eefd28"
+    },
+    "src/app/(app)/orders/bulk-upload/page.tsx": {
+      "sha256": "ec6578a02f0731535d7175d2b802857791036d0a2022f9f89dd23351d40aaa87"
+    },
+    "src/app/(app)/orders/draft/_components/draft-status-stats-bar.tsx": {
+      "sha256": "e622437b2d1db203243e98509d6a76b51a7d65c01cb3c4fd1eb1eb792cfdbf35"
+    },
+    "src/lib/supabase/migrations/015_outbound_helpers.sql": {
+      "sha256": "6a593f6cfdd22b01420a53d7887e70e3f635fb6104969e6e8fb479b097ff8117"
+    },
+    "src/lib/supabase/migrations/133_crm_draft_aware.sql": {
+      "sha256": "d1dd58d51c3e69d27f36d977798299fef346bb1b9e998e641e7de85f9d49ea4b"
+    },
+    "src/lib/supabase/migrations/095_seed_unresolved_products.sql": {
+      "sha256": "014d703e975c5e6849d3db01505468892784dcccc74ebfaa7742021260f6b4a2"
+    },
+    "src/lib/supabase/migrations/147_cleanup_misleading_campaign_labels.sql": {
+      "sha256": "273f50df0221ee2258ace9808656783a9a04492ef29ded9993eca88c087b3e75"
+    },
+    "src/lib/cs-shipment-actions.ts": {
+      "sha256": "63a3bdeb635b37dfa71d6884ae221e9c68019100ca6e01ba5b64155e2490995e"
+    },
+    "src/lib/supabase/migrations/103_payout_recon.sql": {
+      "sha256": "be0e2f386b55a4ec6e6fb82f0e1db37a48488e3a5559425dbc4dd14ded4368e6"
+    },
+    "src/lib/supabase/migrations/083_fix_roas_per_campaign_type.sql": {
+      "sha256": "59e2451cf0444451220edbe49aed7794ce1490baf333f05cf7f12ce4494f9369"
+    },
+    "src/lib/supabase/migrations/034_phase8b_resi_lifecycle.sql": {
+      "sha256": "00b90dfde11010472f2996aba99192fe3186f6569fbc53c3ba492cfacfba4c11"
+    },
+    "src/lib/supabase/migrations/146_fix_typo_and_remaining_draft_attribution.sql": {
+      "sha256": "9008c9db9076c93ab7048fc74ca4ebb26656074517fc9a5804a6c2114de6e179"
+    },
+    "src/lib/supabase/middleware.ts": {
+      "sha256": "ca9fd61253957c704eb14cb66b04dbd2ca2e982fec52e7c4946a402cc89e0e24"
+    },
+    "src/lib/supabase/migrations/README.md": {
+      "sha256": "d961301c7ed6d45cae2694da1b55e619884f50f0697c68f65bba8f837183ff3a"
+    },
+    "src/lib/supabase/queries/expenses.ts": {
+      "sha256": "84c519dd65b3ebae8330a42155a401a5bcbe108655a045b185d18944d8f5c25b"
+    },
+    "src/lib/server/environment-guard.ts": {
+      "sha256": "73dea122042a7cb586bf21dd04ecfe68b74619729b7a18c1fc493bb08b745dec"
+    },
+    "src/app/(app)/commissions/manage/page.tsx": {
+      "sha256": "ad907a6342eacff2babe60ba6aa26d5eee7c365b03a2366ef4096d9978b4a871"
+    },
+    "src/lib/reports/owner-profit-export.ts": {
+      "sha256": "8c33716b40309379b3a22f4682c91298264c09cbad1ea7db7f9104f4aa58043b"
+    },
+    "src/lib/supabase/migrations/135_export_reconciliation_rows.sql": {
+      "sha256": "7913d1236be19bd4917e3bcb5115d92880e21fef4125ac44ee50d9a08fe720ed"
+    },
+    "src/lib/schemas/customer.ts": {
+      "sha256": "c115a350bb0992717839a4f3e3259d5c97a54a4a6ac999b89406aefd34c1023e"
+    },
+    "src/lib/supabase/migrations/085_wilayah_resolve_autocomplete.sql": {
+      "sha256": "4db91e6730938700e51f4d0394d4ee5b59ba4a56e10f102b557c20e730f890b4"
+    },
+    "src/lib/converter/wa-paste-v3.ts": {
+      "sha256": "3a853ce76bf7c574420d66a8baa42a07926c0108a6edd36800e4c720212a2b29"
+    },
+    "src/lib/supabase/migrations/021_ad_spend_campaigns.sql": {
+      "sha256": "92a1384f94cec0dda7672c58b50a929d55038a6c9b42dd406854018b71985b80"
+    },
+    "src/lib/supabase/migrations/051_phase8k_wa_paste_profile.sql": {
+      "sha256": "493414b1185ea2f727f8c116fac9d82566e03619ac5af4a6c9be0ad57e86f429"
+    },
+    "src/lib/supabase/queries/ad-spend.ts": {
+      "sha256": "81fa381480e5c71bc7c31ad012b9415c02f79e49a1734ab436a13b19f74ef8ea"
+    },
+    "src/lib/csv/meta-ads-parser.ts": {
+      "sha256": "3fb589466609c8a11e9c0c6e40555046a5156a962da8c963ba91d86db5b2ab4e"
+    },
+    "src/components/layout/notification-bell.tsx": {
+      "sha256": "f713b4438086fa9dce07582035bc1f4b229bfe756e3ef8d6bdd80905fcbd7c65"
+    },
+    "src/lib/supabase/migrations/012_order_number_generator.sql": {
+      "sha256": "5c436f0553167e25bc093c1be86f8ad12814e5d9e1d3e7144cddb5e5aa0f287a"
+    },
+    "src/app/(app)/orders/data/page.tsx": {
+      "sha256": "be6ebb07da574596ff276b2d5cf4c210bd0dfc6b3bda7afec99491adea0f6a2d"
+    },
+    "src/app/(app)/orders/draft/page.tsx": {
+      "sha256": "354d891611d46b80ece9ae2187020fc94d8368b79ecc668b0161bb8115aabe24"
+    },
+    "src/lib/supabase/migrations/075_forecast_analytics.sql": {
+      "sha256": "e66000d4bfd84c6b4a10854d2eb742bb8299cae020101d525c9681e558b90f85"
+    },
+    "src/lib/supabase/migrations/119_draft_stats_exported_filter.sql": {
+      "sha256": "fc37d223c85242c5793ea7358960ea063062e45b455af4fa1941006ad1d970bc"
+    },
+    "src/app/(app)/inbox/pending-review/page.tsx": {
+      "sha256": "3f0ce6a6724e774121b9c43c45da2b3af8f43380510c05edd98d565f0557e54e"
+    },
+    "src/lib/supabase/migrations/046_restore_audit_log_triggers.sql": {
+      "sha256": "0c4cdafa86db8df1f1ddbce154cab3e7eb324ad7dfbb4e036a60b97d3f08a2ba"
+    },
+    "src/app/(app)/commissions/page.tsx": {
+      "sha256": "3a6580ab95396c6bbfee41f529c7be9dccf5301f95c148b1e7ab68121ec3fbfe"
+    },
+    "src/lib/supabase/migrations/072_phase8h_spx_city_coverage_rpc.sql": {
+      "sha256": "c31c73ad2bad7324f73b5ef211613d77d36cd940c4a0f60120195986f04040cf"
+    },
+    "src/app/(app)/adv-dashboard/page.tsx": {
+      "sha256": "b404c398cdaf43d66a8f7c0ded4b3515b8441219a21f5ce37606bd5567ce422b"
+    },
+    "src/lib/schemas/supplier.ts": {
+      "sha256": "081590a0a4585266e7b4d1f4e66e01be65d3008ff685ceeba1e720f92a1efadb"
+    },
+    "src/lib/supabase/migrations/020_products_expenses.sql": {
+      "sha256": "80597d7c5f2f6de8282041f96ef5104aa10e0cbeb1748596bd7adc5e8d21e3b2"
+    },
+    "src/components/ui/button.tsx": {
+      "sha256": "f3aef38b4236eba6dc8305c57a73deef526acc480e86b502ef702a4a3faea496"
+    },
+    "src/lib/supabase/migrations/032_phase9_commission_redesign.sql": {
+      "sha256": "5758db0530f3ab0ae310136bcfa4a80934f2114c8c53851d6f8c460fb1e2ebc7"
+    },
+    "src/app/api/reports/owner-profit/route.ts": {
+      "sha256": "49e95be0720759b557b4cb747d172d4caacfb77a844e337d76f00e01a5d9aac9"
+    },
+    "src/app/(app)/dashboard/page.tsx": {
+      "sha256": "8ec3cb990400102be4dc00459b4e7d6968a8cc79cec65f6c2d2767dd1a752637"
+    },
+    "src/lib/supabase/migrations/091_exported_at_post_export.sql": {
+      "sha256": "a5684f424f9096839afa85bc406658fdccd621e65068359ad6ebbf5442b809d9"
+    },
+    "src/lib/supabase/migrations/040_phase8h_parser_v3_lookup.sql": {
+      "sha256": "b859e990d425357899f139bfb9bedf428c3a1602d6eccf5f12d52047bcd88a1b"
+    },
+    "src/components/ui/date-range-picker.tsx": {
+      "sha256": "c910ab80e03402891e3cfd9e08010a70414a9c6156a50f7b120478734f2a9950"
+    },
+    "src/app/(app)/reconciliation/spx/page.tsx": {
+      "sha256": "a66f298f681873b225b0db8ac2050e2aa7ff259df18e2fa3bd25284884b22ab4"
+    },
+    "src/lib/supabase/migrations/064_analytics_variant_per_product.sql": {
+      "sha256": "0c38aa4de11fcc5de9698597f6f06adcc2867490892afbf35cb26ecdd23a462b"
+    },
+    "src/lib/orders/phone-warning.ts": {
+      "sha256": "aca2e0862e717589b1bcc3898e8f723d661c3d660b5c9acd23b3045104a6ca01"
+    },
+    "src/lib/analytics/ads-coverage.ts": {
+      "sha256": "3ab63e11fb605cac8c30343e9a1ddf7886e9e7d0a6e0c8292286fc98be5a5781"
+    },
+    "src/app/(app)/inbox/atribusi-required/page.tsx": {
+      "sha256": "e3fd1821fd72f7c1607ebdadb71a264440218fe1602116bd6e081e4b0eed9d0a"
+    },
+    "src/app/(app)/orders/draft/_components/resi-input-dialog.tsx": {
+      "sha256": "b7d35712ef2679c11583e7fa347db2433bc44626349479fc7adf38da4d84e9a7"
+    },
+    "src/components/reconciliation/actual-cost-report.tsx": {
+      "sha256": "bf05ac8bb9daa2ecf8755611ab6f5073813845550cfdd7e69b90bc66386f066c"
+    },
+    "src/lib/supabase/migrations/094_draft_cost_engine.sql": {
+      "sha256": "c4f2a33bfc9d3f537bfd0e9e50ee3530d313a495412e0c130167ec3f4299beda"
+    },
+    "src/lib/converter/product-matcher.ts": {
+      "sha256": "14e0335e89bbd3a20aa1ddb02e8f0975c6a310c8af3a88ecd929f68b506987a1"
+    },
+    "src/lib/supabase/queries/mengantar-import.ts": {
+      "sha256": "7452a7a2c0300faa1677b224c190999009fc4770979a99d36b80756dcecdd420"
+    },
+    "src/lib/supabase/migrations/052_phase8h_order_number_draft_aware.sql": {
+      "sha256": "d0e113987ef145d919770f59cf809fe86163d172f396af1dcb4274168d6e048f"
+    },
+    "src/components/ui/chart.tsx": {
+      "sha256": "0060b7708d85a5fffc914dcd1ee4753b5acfe83db7ba634b4cea280bd9f19c8f"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { StatCard } from '@/components/ui/stat-card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,7 +17,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah, formatDate } from '@/lib/format'
 import { STATUS_BADGE_COLOR, STATUS_LABEL, COMMISSION_STATUS_BADGE_COLOR, COMMISSION_STATUS_LABEL } from '@/lib/schemas/settings'
 import {
-  listCommissions,
+  listAllCommissions,
   computeStats,
   periodToDates,
   type CommissionRow,
@@ -31,33 +32,59 @@ export default function MyCommissionsPage() {
   const { user, role, loading: authLoading } = useAuth()
   const [rows, setRows] = useState<CommissionRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const currentRead = useRef<AbortController | null>(null)
   const [period, setPeriod] = useState<Period>('this_month')
   const [customFrom, setCustomFrom] = useState<string>('')
   const [customTo, setCustomTo] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<'ALL' | CommissionV2Status>('ALL')
 
   const load = useCallback(async () => {
+    currentRead.current?.abort()
     if (!user) return
+    const controller = new AbortController()
+    currentRead.current = controller
     setLoading(true)
+    setRows([])
+    setError('')
     try {
       const { dateFrom, dateTo } = periodToDates(period, customFrom || null, customTo || null)
-      const data = await listCommissions(supabase, {
+      const data = await listAllCommissions(supabase, {
         userId: user.id,
         statuses: statusFilter === 'ALL' ? undefined : [statusFilter],
         dateFrom,
         dateTo,
-      })
-      setRows(data)
+      }, controller.signal)
+      if (!controller.signal.aborted) {
+        setRows(data.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id))
+      }
+    } catch (cause) {
+      if (!controller.signal.aborted) {
+        setRows([])
+        setError(cause instanceof Error ? cause.message : 'Gagal membaca komisi. Coba muat ulang.')
+      }
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) setLoading(false)
     }
   }, [user, period, customFrom, customTo, statusFilter])
 
   useEffect(() => {
-    if (!authLoading && user) void load()
+    const timer = window.setTimeout(() => { if (!authLoading && user) void load() }, 0)
+    return () => {
+      window.clearTimeout(timer)
+      currentRead.current?.abort()
+    }
   }, [authLoading, user, load])
 
-  const stats = useMemo(() => computeStats(rows), [rows])
+  const stats = useMemo(() => {
+    const normalized = rows.map(row => ({ ...row,
+      status: row.status === 'PENDING' ? 'ESTIMATED' as const : row.status === 'CANCELLED' ? 'VOIDED' as const : row.status,
+    }))
+    const result = computeStats(normalized)
+    const orders = (status: CommissionV2Status) => new Set(normalized.filter(r => r.status === status).map(r => r.order_id)).size
+    return { ...result, estimatedCount: orders('ESTIMATED'), earnedCount: orders('EARNED'),
+      paidCount: orders('PAID'), cancelledCount: orders('VOIDED') }
+  }, [rows])
 
   if (!authLoading && !user) {
     return (
@@ -78,12 +105,17 @@ export default function MyCommissionsPage() {
         description="Komisi otomatis terhitung saat order yang Anda handle status DITERIMA."
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {!loading && !authLoading && !error ? <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Forecast (masih jalan)" value={formatRupiah(stats.estimatedTotal)} sub={`${stats.estimatedCount} order`} tone="zinc" />
         <StatCard label="Belum Dibayar" value={formatRupiah(stats.earnedTotal)} sub={`${stats.earnedCount} order`} tone="amber" />
         <StatCard label="Sudah Dibayar" value={formatRupiah(stats.paidTotal)} sub={`${stats.paidCount} order`} tone="emerald" />
         <StatCard label="Hangus" value={String(stats.cancelledCount)} sub="order (Retur/Cancel/Fake)" tone="zinc" />
-      </div>
+      </div> : null}
+
+      {error ? <div role="alert" className="rounded-lg border border-red-500/30 p-4 text-sm space-y-2">
+        <p>{error} Total belum tersedia karena pembacaan komisi belum lengkap.</p>
+        <Button variant="outline" onClick={() => void load()}>Muat ulang komisi</Button>
+      </div> : null}
 
       <Card>
         <CardContent className="pt-4 pb-4 space-y-3">
@@ -153,6 +185,8 @@ export default function MyCommissionsPage() {
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                 </TableCell></TableRow>
+              ) : error ? (
+                <TableRow><TableCell colSpan={8} className="text-center py-8">Komisi belum terbaca lengkap.</TableCell></TableRow>
               ) : rows.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="p-0">
                   {role === 'owner' ? (

@@ -102,6 +102,52 @@ export async function listCommissions(
   return rows
 }
 
+/** Complete payroll read; never return a truncated or failed-page total. */
+export async function listAllCommissions(
+  supabase: SupabaseClient,
+  filter: Omit<CommissionFilter, 'limit'>,
+  signal?: AbortSignal
+): Promise<CommissionRow[]> {
+  const rows: CommissionRow[] = []
+  let after = 0
+  let expected: number | null = null
+  for (;;) {
+    signal?.throwIfAborted()
+    let query = supabase.from('commissions').select(SELECT_COLUMNS, { count: 'exact' })
+      .gt('id', after).order('id').limit(500)
+    if (filter.userId) query = query.eq('user_id', filter.userId)
+    if (filter.statuses?.length) query = query.in('status', filter.statuses)
+    if (filter.dateFrom) query = query.gte('order.order_date', filter.dateFrom)
+    if (filter.dateTo) query = query.lte('order.order_date', filter.dateTo)
+    if (signal) query = query.abortSignal(signal)
+    const { data, error, count } = await query
+    signal?.throwIfAborted()
+    if (error || !data || count === null || !Number.isSafeInteger(count) || count < 0) {
+      throw new Error('Komisi belum terbaca lengkap. Coba muat ulang.')
+    }
+    expected ??= count
+    if (expected > 100000) throw new Error('Periode terlalu besar. Pilih rentang yang lebih pendek.')
+    if (count !== expected - rows.length) {
+      throw new Error('Data komisi berubah selama pembacaan. Muat ulang sebelum melanjutkan.')
+    }
+    if (data.length === 0) {
+      if (rows.length !== expected) throw new Error('Komisi belum terbaca lengkap. Coba muat ulang.')
+      break
+    }
+    for (const row of data as unknown as CommissionRow[]) {
+      if (!Number.isSafeInteger(row.id) || row.id <= after || row.amount == null || String(row.amount).trim() === '' || !Number.isSafeInteger(Math.round(Number(row.amount) * 100))) {
+        throw new Error('Data komisi tidak valid. Total tidak ditampilkan.')
+      }
+      rows.push(row)
+      after = row.id
+    }
+    if (rows.length > expected) throw new Error('Jumlah komisi berubah. Coba muat ulang.')
+  }
+  const search = filter.search?.trim().toLowerCase()
+  return search ? rows.filter(row => row.order?.order_number.toLowerCase().includes(search)
+    || row.order?.customer_name.toLowerCase().includes(search)) : rows
+}
+
 export interface CommissionStats {
   estimatedTotal: number
   estimatedCount: number

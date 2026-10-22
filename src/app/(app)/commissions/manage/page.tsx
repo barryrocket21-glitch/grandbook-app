@@ -9,7 +9,7 @@
 // Halaman ini surface: per CS di periode terpilih, berapa yang Earned
 // (perlu dibayar), berapa yang Sudah Dibayar, dan tombol bayar batch.
 // =============================================================
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { getErrorMessage } from '@/lib/errors'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -34,7 +34,7 @@ import {
   type CommissionPaymentMethodEnum,
 } from '@/lib/schemas/settings'
 import {
-  listCommissions, bulkMarkCommissionPaid, type CommissionRow,
+  listAllCommissions, bulkMarkCommissionPaid, type CommissionRow,
 } from '@/lib/supabase/queries/commissions'
 import type { UserRole } from '@/lib/types'
 
@@ -61,6 +61,11 @@ export default function ManageCommissionsPage() {
   const [rangeReady, setRangeReady] = useState(false)
   const [rows, setRows] = useState<CommissionRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [loadedPeriod, setLoadedPeriod] = useState('')
+  const requestRef = useRef<AbortController | null>(null)
+  const period = `${range.from}:${range.to}`
+  const complete = !loading && !loadError && loadedPeriod === period
 
   // Pay dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -79,31 +84,45 @@ export default function ManageCommissionsPage() {
 
   const load = useCallback(async () => {
     if (!canManage || !rangeReady) return
+    requestRef.current?.abort()
+    const controller = new AbortController()
+    requestRef.current = controller
     setLoading(true)
+    setLoadError('')
+    setRows([])
+    setLoadedPeriod('')
+    setDialogOpen(false)
+    setDialogTarget(null)
     try {
-      const data = await listCommissions(supabase, {
+      const data = await listAllCommissions(supabase, {
         dateFrom: range.from,
         dateTo: range.to,
-      })
+      }, controller.signal)
+      if (controller.signal.aborted) return
       setRows(data)
+      setLoadedPeriod(`${range.from}:${range.to}`)
     } catch (err) {
-      const msg = getErrorMessage(err)
-      toast.error('Gagal load komisi', { description: msg })
+      if (controller.signal.aborted) return
+      setLoadError(getErrorMessage(err))
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) setLoading(false)
     }
   }, [canManage, rangeReady, range.from, range.to])
 
   useEffect(() => {
     if (!authLoading && canManage) {
       const timer = window.setTimeout(() => { void load() }, 0)
-      return () => window.clearTimeout(timer)
+      return () => {
+        window.clearTimeout(timer)
+        requestRef.current?.abort()
+      }
     }
   }, [authLoading, canManage, load])
 
   // Aggregate per CS — drives the main table.
   const aggregates = useMemo<CsAggregate[]>(() => {
     const map = new Map<string, CsAggregate>()
+    const counted = new Set<string>()
     for (const r of rows) {
       const uid = r.user_id
       let agg = map.get(uid)
@@ -123,12 +142,17 @@ export default function ManageCommissionsPage() {
         map.set(uid, agg)
       }
       const amt = Number(r.amount) || 0
+      const countKey = `${uid}:${r.status}:${r.order_id}`
+      const firstOrder = !counted.has(countKey)
+      counted.add(countKey)
       if (r.status === 'EARNED') {
         agg.earned_unpaid_total += amt
-        agg.earned_unpaid_count++
+        if (firstOrder) agg.earned_unpaid_count++
         agg.earned_unpaid_ids.push(r.id)
         if (r.order) {
-          agg.earned_unpaid_orders.push({
+          const existing = agg.earned_unpaid_orders.find(order => order.id === r.order!.id)
+          if (existing) existing.amount += amt
+          else agg.earned_unpaid_orders.push({
             id: r.order.id,
             order_number: r.order.order_number,
             customer_name: r.order.customer_name,
@@ -138,9 +162,9 @@ export default function ManageCommissionsPage() {
         }
       } else if (r.status === 'PAID') {
         agg.paid_total += amt
-        agg.paid_count++
+        if (firstOrder) agg.paid_count++
       } else if (r.status === 'VOIDED') {
-        agg.cancelled_count++
+        if (firstOrder) agg.cancelled_count++
       }
     }
     return Array.from(map.values()).sort((a, b) => b.earned_unpaid_total - a.earned_unpaid_total)
@@ -158,7 +182,7 @@ export default function ManageCommissionsPage() {
   }, [aggregates])
 
   const openPayDialog = (agg: CsAggregate) => {
-    if (agg.earned_unpaid_count === 0) return
+    if (!complete || agg.earned_unpaid_count === 0) return
     setDialogTarget(agg)
     setPaymentMethod('TRANSFER')
     setPaymentReference('')
@@ -166,7 +190,7 @@ export default function ManageCommissionsPage() {
   }
 
   const submitPayment = async () => {
-    if (!dialogTarget) return
+    if (!dialogTarget || !complete) return
     setSubmitting(true)
     try {
       const updated = await bulkMarkCommissionPaid(
@@ -178,7 +202,13 @@ export default function ManageCommissionsPage() {
           paymentNote: `Pembayaran komisi ${range.from}..${range.to} untuk ${dialogTarget.user_name}`,
         }
       )
-      toast.success(`${updated} order komisi ditandai Sudah Dibayar (${formatRupiah(dialogTarget.earned_unpaid_total)})`)
+      if (updated === dialogTarget.earned_unpaid_ids.length) {
+        toast.success(`${dialogTarget.earned_unpaid_count} order komisi ditandai Sudah Dibayar (${formatRupiah(dialogTarget.earned_unpaid_total)})`)
+      } else {
+        toast.warning('Data komisi berubah; status pembayaran dimuat ulang.', {
+          description: 'Sebagian pilihan sudah berubah status. Total sebelumnya tidak dikonfirmasi.',
+        })
+      }
       setDialogOpen(false)
       setDialogTarget(null)
       void load()
@@ -222,7 +252,8 @@ export default function ManageCommissionsPage() {
         description="Gaji/fee tim berdasarkan order sukses terkirim. Order masih di jalan belum dibayar, dan Carry-over bulan lalu ikut kebaca saat akhirnya delivered."
         actions={
           <div className="flex items-center gap-2">
-            <DateRangePicker value={range} onChange={setRange} />
+            <DateRangePicker value={range} onChange={next => { if (!submitting) setRange(next) }} />
+            <Link href="/commissions/spx" className="underline text-sm">Preview Delivered SPX</Link>
             <Link
               href="/settings/commission-rules"
               className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 text-sm transition-colors"
@@ -242,6 +273,12 @@ export default function ManageCommissionsPage() {
         </div>
       </div>
 
+      {!complete && <Card><CardContent className="p-6">
+        {loadError ? <><p role="alert">{loadError} Total dan pembayaran tidak tersedia sebelum seluruh data berhasil dibaca.</p>
+          <Button className="mt-3" onClick={() => void load()}>Muat ulang komisi</Button></>
+          : <p role="status">Memuat seluruh komisi dalam periode…</p>}
+      </CardContent></Card>}
+      {complete && <>
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Belum Dibayar" value={formatRupiah(totals.earnedUnpaid)} sub={`${totals.ordersUnpaid} order`} tone="amber" />
@@ -313,7 +350,8 @@ export default function ManageCommissionsPage() {
       </Card>
 
       {/* Pay confirmation dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      </>}
+      <Dialog open={dialogOpen && complete} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>

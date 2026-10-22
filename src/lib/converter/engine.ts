@@ -561,29 +561,58 @@ export async function ingestInbound(opts: IngestOptions): Promise<IngestResult> 
     opts.onProgress?.(idx + 1, rawRows.length)
   }
 
-  // Brief #5 A1 — batch-insert semua draft rows dalam 1 RPC server-side (dedup +
-  // generate order_number batch + insert + resolve alamat set-based). Ini yang
-  // bikin import 124 order dari "lama banget" → detik (no per-row round-trip).
+  // Bulk draft insert is intentionally chunked. The RPC performs row inserts plus
+  // a set-based address resolver; sending a whole large file as one transaction
+  // can exceed Supabase/Postgres statement_timeout. Chunking keeps each statement
+  // bounded and lets successful chunks remain committed when a later chunk fails.
   if (opts.targetDraft && draftRows.length > 0) {
     const channelIdForBatch =
       opts.channelIdOverride != null
         ? opts.channelIdOverride
         : opts.profile.channel_id || opts.profile.default_channel_id || null
-    const { data: bulkRes, error: bulkErr } = await opts.supabase.rpc('bulk_insert_orders_draft', {
-      p_rows: draftRows,
-      p_org: opts.organizationId,
-      p_initial_status: opts.initialStatus,
-      p_created_by: opts.createdBy ?? null,
-      p_source_profile_id: opts.profile.id,
-      p_channel_id: channelIdForBatch,
-    })
-    if (bulkErr) {
-      result.errors.push({ rowIndex: -1, reason: `Bulk insert draft gagal: ${bulkErr.message}`, raw: {} })
-    } else if (bulkRes) {
-      const br = bulkRes as { inserted?: number; skipped_duplicates?: number; inserted_ids?: number[] }
-      result.inserted += br.inserted ?? 0
-      result.skipped_duplicates += br.skipped_duplicates ?? 0
-      if (Array.isArray(br.inserted_ids)) result.inserted_order_ids.push(...br.inserted_ids)
+
+    const insertDraftChunk = async (rows: Array<Record<string, unknown>>): Promise<void> => {
+      const { data: bulkRes, error: bulkErr } = await opts.supabase.rpc('bulk_insert_orders_draft', {
+        p_rows: rows,
+        p_org: opts.organizationId,
+        p_initial_status: opts.initialStatus,
+        p_created_by: opts.createdBy ?? null,
+        p_source_profile_id: opts.profile.id,
+        p_channel_id: channelIdForBatch,
+      })
+
+      if (!bulkErr) {
+        const br = bulkRes as { inserted?: number; skipped_duplicates?: number; inserted_ids?: number[] } | null
+        result.inserted += br?.inserted ?? 0
+        result.skipped_duplicates += br?.skipped_duplicates ?? 0
+        if (Array.isArray(br?.inserted_ids)) result.inserted_order_ids.push(...br.inserted_ids)
+        return
+      }
+
+      // A timeout is load-sensitive. Split only that failed chunk and retry its
+      // halves; this avoids replaying already-completed chunks.
+      const message = getErrorMessage(bulkErr)
+      const isTimeout = /statement timeout|canceling statement due to statement timeout|57014/i.test(message)
+      if (isTimeout && rows.length > 1) {
+        const midpoint = Math.ceil(rows.length / 2)
+        await insertDraftChunk(rows.slice(0, midpoint))
+        await insertDraftChunk(rows.slice(midpoint))
+        return
+      }
+
+      result.errors.push({
+        rowIndex: -1,
+        reason: `Bulk insert draft gagal (${rows.length} row): ${message}`,
+        raw: {},
+      })
+    }
+
+    // Keep each RPC comfortably below the usual statement timeout while
+    // retaining the performance gain of server-side bulk insertion.
+    const CHUNK_SIZE = 100
+    for (let start = 0; start < draftRows.length; start += CHUNK_SIZE) {
+      await insertDraftChunk(draftRows.slice(start, start + CHUNK_SIZE))
+      opts.onProgress?.(Math.min(start + CHUNK_SIZE, draftRows.length), draftRows.length)
     }
   }
 

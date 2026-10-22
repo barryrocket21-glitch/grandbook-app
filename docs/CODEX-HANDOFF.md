@@ -538,6 +538,82 @@ read-only kode).
   setelah itu putuskan scope rekonsiliasi 27 file beda + 10 file hilang
   sebagai pekerjaan terpisah (implementasi di jalur Codex).
 
+#### Addendum vision — konfirmasi pelaku sinkronisasi 16:50 (dicatat 22 Oktober 2026)
+
+- **Atribusi TERTUTUP.** Barry mengonfirmasi pada 2026-10-21 16:59 WIB
+  bahwa pelaku sinkronisasi lima file src pukul 16:50:42 (tiga file
+  tertahan + `src/lib/date/ranges.ts` +
+  `src/lib/orders/data-order-export-params.ts`) adalah **Codex**. Item
+  NOT VERIFIED pada sesi verifikasi di atas kini selesai.
+- **Kesesuaian linimasa.** Handoff kini memuat catatan sesi Codex
+  "penyelesaian UI/source alignment" (header 2026-10-21T16:49:17+07:00,
+  hasil akhir 17:02:09) yang claim-nya mencakup persis kelima file itu;
+  sinkronisasi 16:50:42 berada di dalam jendela sesi tersebut dan
+  hasilnya ter-commit sebagai `30e8d9e`, `1120299`, `cb5a5d6`, ditutup
+  `ae910bb`. Menurut catatan Codex, 13/13 file UI kini match rilis
+  terverifikasi dan scope UI/ekspor SELESAI (bukan lagi PARTIAL).
+- **Temuan koordinasi (bukan pelanggaran berat).** Sesi verifikasi
+  vision yang ditutup 16:52:54 tidak melihat claim baru saat itu —
+  dua sesi berjalan bersamaan dan claim berada di bagian lain file.
+  Pelajaran yang dicatat agar tidak berulang: sebelum menutup sesi,
+  baca ulang seluruh area koordinasi termasuk bagian paling atas file,
+  bukan hanya bagian milik sendiri.
+- **Isi WT yang tertimpa.** Iterasi lama tiga file tertahan (khususnya
+  iterasi paralel `orders/data/page.tsx` "Data Orderan" yang memuat isi
+  unik) tertimpa versi rilis oleh sinkronisasi tersebut. Sumber tersisa
+  yang diketahui adalah gap-patches privat Codex di
+  `/root/backups/grandbook/ui-source-alignment-20261021-972449e2/gap-patches/`;
+  isinya belum diperiksa vision. Bila iterasi lama masih dibutuhkan,
+  keputusan pemulihannya di Barry.
+
+#### Usulan vision — scope rekonsiliasi working tree ↔ produksi (MENUNGGU KEPUTUSAN BARRY)
+
+Status: **USULAN, belum diputuskan Barry.** Angka dasar: 37/453 file
+divergen terhadap manifest rilis produksi
+`dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ` (416 cocok, 27 beda isi, 10 hilang
+di working tree) — konsisten dengan catatan penutup Codex di atas.
+Tidak ada deploy dari working tree sebelum rekonsiliasi ini selesai
+dan terverifikasi.
+
+**A. 10 file produksi yang hilang di working tree** (pulihkan dari
+snapshot rilis; risiko deploy tertinggi karena file produksi absen):
+`src/lib/analytics/complete-report-read.ts`,
+`src/lib/analytics/profit-cost-evidence.ts`,
+`src/lib/analytics/ads-coverage.ts`,
+`src/app/(app)/commissions/spx/page.tsx`,
+`src/lib/commissions/spx-preview.ts`,
+`src/app/api/commissions/spx-preview/route.ts`,
+`src/lib/orders/export-groups.ts`, `src/lib/orders/phone-warning.ts`,
+`src/components/team/cs-regions.tsx`, `.vercelignore`.
+
+**B. 27 file beda isi** (rekonsiliasi per kelompok dengan review per
+file; JANGAN blanket-overwrite — versi working tree bisa memuat
+iterasi operator yang lebih baru dari rilis; keputusan per file di
+Barry, eksekusi implementasi di jalur Codex):
+- WA Paste (7): converter `wa-paste-phone-dup.ts`, `preview.ts`,
+  `engine.ts`, `schemas/wa-paste-request.ts`,
+  `orders/wa-paste/page.tsx`, API `existing-phones` dan `submit`.
+- Komisi (3): `queries/commissions.ts`, `commissions/my/page.tsx`,
+  `commissions/manage/page.tsx`.
+- Laporan/keuangan (7): `reports/owner-profit/page.tsx`,
+  `api/reports/owner-profit/route.ts`,
+  `lib/reports/owner-profit-export.ts`, `financial-position/page.tsx`,
+  `reconciliation/spx-cashflow/page.tsx` + API sync-nya,
+  `cashflow-summary-widget.tsx`.
+- Tim CS (4): `team/cs/page.tsx`, `team/cs/[userId]/page.tsx`,
+  `queries/team.ts`, `queries/crm.ts`.
+- Lain-lain (6): `orders/export-resi`, `orders/new`,
+  `orders/bulk-upload`, `format.ts`, `types.ts`,
+  `product-variant-form.tsx`.
+
+**Urutan aman yang diusulkan:** (1) pulihkan 10 file hilang dari
+snapshot rilis; (2) rekonsiliasi 27 file beda per kelompok; (3)
+setelah src 0 divergen dan terverifikasi ulang oleh vision, commit
+bertahap kelompok untracked lain; `supabase/.temp` dan
+`foto sementara` masuk gitignore, bukan commit.
+
+**Catatan susulan (22 Oktober, saat pencatatan):** Codex membuka claim IN PROGRESS 2026-10-22T13:24:51+07:00 untuk membereskan tepat 37 path di atas sampai repo siap deploy, atas izin eksplisit Barry, tanpa push/deploy; Codex juga mengonfirmasi langsung di claim-nya bahwa sinkronisasi lima file pukul 16:50 dilakukan oleh Codex. Usulan scope ini dengan demikian sejalan dengan pekerjaan yang sedang berjalan di jalur Codex; vision akan memverifikasi ulang hasilnya secara read-only setelah Codex RELEASED.
+
 ---
 
 ## Checkpoint historis — superseded bila bertentangan dengan catatan terbaru

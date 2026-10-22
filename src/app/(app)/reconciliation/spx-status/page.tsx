@@ -1,7 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { getErrorMessage } from '@/lib/errors'
-import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,45 +12,13 @@ import { Truck, Loader2, Upload, CheckCircle2, AlertTriangle, FileSpreadsheet, R
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/page-header'
 import { canApproveOrders } from '@/lib/auth/permissions'
+import { findMissingPersistCandidates, parseSpxStatusFile, type ExistingOrderKey, type ParseResult, type RescuePriority, type SyncRow } from '@/lib/recon/spx-status-sync'
+
+import { prepareManualSpxSync, type ManualSyncPlan } from '@/lib/recon/spx-manual-sync'
 
 const supabase = createClient()
 
-type RescuePriority = 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
-
-interface SyncRow {
-  ref: string
-  tracking_no: string | null
-  tracking_status: string | null
-  actual_fee: number | null
-  return_fee: number | null
-  delivered_at: string | null
-  retur_reason: string | null
-  cod_amount: number | null
-  create_time: string | null
-  rescue_priority: RescuePriority
-}
-interface ParseResult { rows: SyncRow[]; total: number; withGb: number; noGb: number; fileName: string; fileSize: number }
 interface ApplyResult { matched: number; updated: number; skipped_no_ref: number; skipped_no_match: number }
-
-function num(v: unknown): number | null {
-  if (v == null) return null
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null
-  const s = String(v).trim()
-  if (s === '' || s === '-') return null
-  const n = Number(s.replace(/[^0-9.\-]/g, ''))
-  return Number.isFinite(n) ? n : null
-}
-// "01-06-2026 18:56" (DD-MM-YYYY HH:MM) → ISO. "-"/"" → null.
-function parseDate(v: unknown): string | null {
-  if (v == null) return null
-  const s = String(v).trim()
-  if (s === '' || s === '-') return null
-  const m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/)
-  if (!m) return null
-  const [, d, mo, y, hh, mm] = m
-  const dt = new Date(Number(y), Number(mo) - 1, Number(d), Number(hh || 0), Number(mm || 0))
-  return Number.isNaN(dt.getTime()) ? null : dt.toISOString()
-}
 
 function rescuePriority(status: string | null, reason: string | null): RescuePriority {
   const s = String(status || '').trim().toLowerCase()
@@ -67,55 +34,6 @@ function rescueLabel(priority: RescuePriority) {
   if (priority === 'MEDIUM') return 'Monitor'
   if (priority === 'LOW') return 'Sudah final/low'
   return 'Normal'
-}
-
-function parseSpxFile(data: ArrayBuffer, fileName: string, fileSize: number): ParseResult {
-  const wb = XLSX.read(data, { type: 'array' })
-  const ws = wb.Sheets[wb.SheetNames[0]]
-  const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null })
-  // cari baris header (yang ada "Customer Reference No.")
-  let hi = -1
-  for (let i = 0; i < Math.min(aoa.length, 6); i++) {
-    if ((aoa[i] || []).some((c) => /customer reference no/i.test(String(c ?? '')))) { hi = i; break }
-  }
-  if (hi < 0) throw new Error('Header "Customer Reference No." gak ketemu — pastiin ini file status SPX.')
-  const hdr = (aoa[hi] as unknown[]).map((h) => String(h ?? '').trim())
-  const col = (re: RegExp) => hdr.findIndex((h) => re.test(h))
-  const iRef = col(/^customer reference no\.?$/i)
-  const iTrk = col(/^tracking no\.?$/i)
-  const iStat = col(/^tracking status$/i)
-  const iActual = col(/^actual shipping fee$/i)
-  const iReturn = col(/^return shipping fee$/i)
-  const iDeliv = col(/^delivered time$/i)
-  const iFail = col(/^delivery failed reason$/i)
-  const iHold = col(/^delivery onhold reason$/i)
-  const iCod = col(/^COD Amount$/i)
-  const iCreate = col(/^Create Time$/i)
-
-  const rows: SyncRow[] = []
-  let withGb = 0, noGb = 0
-  for (let i = hi + 1; i < aoa.length; i++) {
-    const r = aoa[i] as unknown[]
-    if (!r || r.every((c) => c == null || String(c).trim() === '')) continue
-    const ref = String(r[iRef] ?? '').trim()
-    const status = iStat >= 0 ? (String(r[iStat] ?? '').trim() || null) : null
-    const reason = ((iFail >= 0 ? String(r[iFail] ?? '').trim() : '') || (iHold >= 0 ? String(r[iHold] ?? '').trim() : '')) || null
-    const isGb = ref.startsWith('GB-')
-    if (isGb) withGb++; else noGb++
-    rows.push({
-      ref,
-      tracking_no: iTrk >= 0 ? (String(r[iTrk] ?? '').trim() || null) : null,
-      tracking_status: status,
-      actual_fee: iActual >= 0 ? num(r[iActual]) : null,
-      return_fee: iReturn >= 0 ? num(r[iReturn]) : null,
-      delivered_at: iDeliv >= 0 ? parseDate(r[iDeliv]) : null,
-      retur_reason: reason,
-      cod_amount: iCod >= 0 ? num(r[iCod]) : null,
-      create_time: iCreate >= 0 ? parseDate(r[iCreate]) : null,
-      rescue_priority: rescuePriority(status, reason),
-    })
-  }
-  return { rows, total: rows.length, withGb, noGb, fileName, fileSize }
 }
 
 function RescueQueuePreview({ rows }: { rows: SyncRow[] }) {
@@ -177,54 +95,68 @@ export default function SpxStatusSyncPage() {
   const [parsing, setParsing] = useState(false)
   const [applying, setApplying] = useState(false)
   const [result, setResult] = useState<ApplyResult | null>(null)
+  const [missingPersistCount, setMissingPersistCount] = useState(0)
+  const [syncPlan, setSyncPlan] = useState<ManualSyncPlan | null>(null)
+  const busy = useRef(false)
 
   const onFile = async (file: File) => {
-    setParsing(true); setResult(null); setParsed(null)
+    if (busy.current) return
+    busy.current = true
+    setParsing(true); setResult(null); setParsed(null); setSyncPlan(null); setMissingPersistCount(0)
     try {
       const buf = await file.arrayBuffer()
-      setParsed(parseSpxFile(buf, file.name, file.size))
+      const nextParsed = parseSpxStatusFile(buf, file.name, file.size)
+      // Send every identity so a later row can link an earlier row to an existing
+      // order. Collapse connected duplicates across all file chunks afterwards.
+      const keys = nextParsed.rows.map(row => ({ ref: row.ref, tracking_no: row.tracking_no }))
+      const existing: ExistingOrderKey[] = []
+      for (let i = 0; i < keys.length; i += 200) {
+        const { data, error } = await supabase.rpc('preview_missing_spx_orders', {
+          p_rows: keys.slice(i, i + 200),
+        })
+        if (error) throw error
+        if (!data || !Array.isArray(data.existing_keys)) throw new Error('Pemeriksaan order SPX belum tersedia.')
+        existing.push(...data.existing_keys)
+      }
+      setMissingPersistCount(findMissingPersistCandidates(nextParsed.rows, existing).length)
+      const reviewed = await prepareManualSpxSync(supabase, nextParsed.rows)
+      setSyncPlan(reviewed)
+      setParsed(nextParsed)
     } catch (err) {
       toast.error('Gagal baca file', { description: getErrorMessage(err) })
-    } finally { setParsing(false) }
+    } finally { setParsing(false); busy.current = false }
   }
 
   const apply = async () => {
-    if (!parsed) return
+    if (!parsed || !syncPlan || busy.current) return
+    busy.current = true
     setApplying(true)
+    const tid = toast.loading('Menyimpan hasil preview SPX...')
     try {
-      const acc: ApplyResult = { matched: 0, updated: 0, skipped_no_ref: 0, skipped_no_match: 0 }
-      // Chunk KECIL (150) — tiap baris yang jadi terminal (DITERIMA/RETUR/CANCEL)
-      // trigger promote draft→arsip yang berat, jadi chunk gede bikin statement
-      // timeout. 150 nahan tiap call di bawah batas waktu.
-      const CHUNK = 150
-      const totalChunks = Math.ceil(parsed.rows.length / CHUNK)
-      const tid = toast.loading(`Sync 0/${totalChunks} batch...`)
-      for (let i = 0; i < parsed.rows.length; i += CHUNK) {
-        const chunk = parsed.rows.slice(i, i + CHUNK)
+      const acc: ApplyResult = { matched: 0, updated: 0, skipped_no_ref: syncPlan.skipped_no_ref, skipped_no_match: syncPlan.skipped_no_match }
+      const totalChunks = Math.ceil(syncPlan.rows.length / 150)
+      for (let i = 0; i < syncPlan.rows.length; i += 150) {
+        const chunk = syncPlan.rows.slice(i, i + 150)
         const { data, error } = await supabase.rpc('apply_spx_status_sync', { p_rows: chunk })
-        if (error) { toast.dismiss(tid); throw error }
-        const d = (data || {}) as ApplyResult
-        acc.matched += d.matched || 0; acc.updated += d.updated || 0
-        acc.skipped_no_ref += d.skipped_no_ref || 0; acc.skipped_no_match += d.skipped_no_match || 0
-        toast.loading(`Sync ${Math.floor(i / CHUNK) + 1}/${totalChunks} batch... (${acc.updated} ke-update)`, { id: tid })
+        if (error) throw error
+        if (!data || data.dry_run !== false || data.matched !== chunk.length || !Number.isInteger(data.updated)
+          || data.updated < 0 || data.updated > data.matched) throw new Error('Hasil simpan belum dapat dipastikan; ulangi preview sebelum melanjutkan.')
+        acc.matched += data.matched
+        acc.updated += data.updated
+        toast.loading(`Sync ${Math.floor(i / 150) + 1}/${totalChunks} batch... (${acc.updated} berubah)`, { id: tid })
       }
-      toast.dismiss(tid)
       setResult(acc)
-      // PART 2: catat riwayat batch (best-effort, gak gagalin sync)
-      try {
-        const shippingSum = parsed.rows.reduce((s, r) => s + (r.ref.startsWith('GB-') && r.actual_fee ? r.actual_fee : 0), 0)
-        await supabase.rpc('record_spx_status_batch', {
-          p_file_name: parsed.fileName, p_file_size: parsed.fileSize, p_total: parsed.total,
-          p_matched: acc.matched, p_unmatched: acc.skipped_no_ref + acc.skipped_no_match, p_shipping: shippingSum,
-        })
-      } catch (e) { console.warn('record batch:', e) }
-      toast.success(`Sync selesai: ${acc.updated} order ke-update, ${acc.skipped_no_ref + acc.skipped_no_match} di-skip`)
+      toast.success(`Sync selesai: ${acc.updated} order berubah.`)
     } catch (err) {
-      toast.error('Gagal sync', { description: getErrorMessage(err) })
-    } finally { setApplying(false) }
+      toast.error('Sync belum selesai', { description: `${getErrorMessage(err)} Batch yang sudah berhasil tetap tersimpan; retry yang sama tidak menggandakan order.` })
+    } finally {
+      toast.dismiss(tid)
+      setApplying(false)
+      busy.current = false
+    }
   }
 
-  const reset = () => { setParsed(null); setResult(null) }
+  const reset = () => { setParsed(null); setSyncPlan(null); setResult(null); setMissingPersistCount(0) }
 
   if (!canSync) {
     return <div className="space-y-6"><PageHeader icon={Truck} title="Sync Status SPX" /><Card><CardContent className="p-6 text-sm text-muted-foreground">Hanya owner/admin.</CardContent></Card></div>
@@ -233,7 +165,7 @@ export default function SpxStatusSyncPage() {
   return (
     <div className="space-y-5">
       <PageHeader icon={Truck} title="Sync Status SPX"
-        description="Upload file status SPX → cocokin GB- → isi resi + status + ongkir ke order di Post-Export. Order TANPA GB- di-skip total." />
+        description="Upload file status SPX → preview kecocokan draft dan arsip → simpan resi serta status kurir. Biaya aktual direkonsiliasi lewat file keuangan." />
 
       {!parsed ? (
         <Card>
@@ -244,7 +176,7 @@ export default function SpxStatusSyncPage() {
             {parsing && <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Membaca file…</div>}
             <div className="text-xs text-muted-foreground rounded bg-amber-500/10 border border-amber-500/20 p-2.5">
               <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-amber-600" />
-              Import ini <b>cuma update</b> order yang udah ada (match GB-). <b>Gak pernah bikin order baru</b>, gak nimpa data customer/alamat/produk. Baris tanpa GB- di-skip.
+              Import ini <b>cuma update</b> order yang udah ada. Prioritas match: <b>GB-</b>; kalau gak ada, fallback ke <b>tracking/resi exact</b> yang sudah tertanam di draft. <b>Gak pernah bikin order baru</b>, gak nimpa data customer/alamat/produk.
             </div>
           </CardContent>
         </Card>
@@ -262,13 +194,22 @@ export default function SpxStatusSyncPage() {
               </div>
               <div className="p-3 rounded border bg-zinc-500/10 border-zinc-500/30">
                 <div className="text-2xl font-bold text-zinc-500">{parsed.noGb}</div>
-                <div className="text-xs text-muted-foreground">tanpa GB- (di-SKIP total)</div>
+                <div className="text-xs text-muted-foreground">tanpa GB-</div>
+              </div>
+              <div className="p-3 rounded border bg-blue-500/10 border-blue-500/30">
+                <div className="text-2xl font-bold text-blue-600">{parsed.withTracking}</div>
+                <div className="text-xs text-muted-foreground">punya tracking (bisa fallback exact)</div>
               </div>
             </div>
+            {missingPersistCount > 0 && (
+              <div className="text-xs rounded bg-red-500/10 border border-red-500/20 p-2.5 text-red-700 dark:text-red-300">
+                <AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> Ada <b>{missingPersistCount}</b> identitas order SPX yang belum ditemukan di draft maupun arsip GrandBook. Periksa sumber ordernya; Apply Sync hanya memperbarui order yang sudah ada.
+              </div>
+            )}
             <RescueQueuePreview rows={parsed.rows} />
-            {parsed.withGb === 0 && (
+            {parsed.withGb === 0 && parsed.withTracking === 0 && (
               <div className="text-xs rounded bg-amber-500/10 border border-amber-500/20 p-2.5 text-amber-700 dark:text-amber-400">
-                <AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> Gak ada baris ber-GB- — semua bakal di-skip (gak ada yang ke-update). Ini normal buat file lama/legacy.
+                <AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> Gak ada baris ber-GB- maupun tracking yang bisa dipakai — semua bakal di-skip (gak ada yang ke-update). Ini normal buat file lama/legacy yang minim kolom referensi.
               </div>
             )}
             {/* sample */}
@@ -279,8 +220,8 @@ export default function SpxStatusSyncPage() {
                 </tr></thead>
                 <tbody>
                   {parsed.rows.slice(0, 12).map((r, i) => (
-                    <tr key={i} className={r.ref.startsWith('GB-') ? '' : 'opacity-50'}>
-                      <td className="p-2 font-mono">{r.ref || '—'}{!r.ref.startsWith('GB-') && <span className="ml-1 text-[10px] text-zinc-500">(skip)</span>}</td>
+                    <tr key={i} className={r.ref.startsWith('GB-') || !!r.tracking_no ? '' : 'opacity-50'}>
+                      <td className="p-2 font-mono">{r.ref || '—'}{!r.ref.startsWith('GB-') && !r.tracking_no && <span className="ml-1 text-[10px] text-zinc-500">(skip)</span>}</td>
                       <td className="p-2 font-mono">{r.tracking_no || '—'}</td>
                       <td className="p-2">{r.tracking_status || '—'}</td>
                       <td className="p-2 text-right tabular-nums">{r.actual_fee != null ? r.actual_fee.toLocaleString('id-ID') : '—'}</td>
@@ -292,9 +233,9 @@ export default function SpxStatusSyncPage() {
             </div>
             <div className="flex justify-between">
               <Button variant="outline" onClick={reset}><RotateCcw className="w-3.5 h-3.5 mr-1" /> Ganti File</Button>
-              <Button onClick={apply} disabled={applying} className="">
+              <Button onClick={apply} disabled={applying || !syncPlan?.rows.length} className="">
                 {applying ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
-                Apply Sync ({parsed.withGb} ber-GB-)
+                Apply Sync ({syncPlan?.matched || 0} order cocok)
               </Button>
             </div>
           </CardContent>
@@ -303,10 +244,11 @@ export default function SpxStatusSyncPage() {
         <Card>
           <CardContent className="pt-4 pb-4 space-y-3">
             <div className="flex items-center gap-2"><CheckCircle2 className="w-6 h-6 text-emerald-500" /><h3 className="text-lg font-bold">Sync selesai</h3></div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
               <StatCard label="ke-update" value={result.updated} tone="emerald" />
-              <StatCard label="match GB-" value={result.matched} tone="zinc" />
-              <StatCard label="skip (no GB-)" value={result.skipped_no_ref} tone="zinc" />
+              <StatCard label="match ref/tracking" value={result.matched} tone="zinc" />
+              <StatCard label="Sudah sesuai" value={result.matched - result.updated} tone="amber" />
+              <StatCard label="skip (no ref & no tracking)" value={result.skipped_no_ref} tone="zinc" />
               <StatCard label="skip (no match)" value={result.skipped_no_match} tone="amber" />
             </div>
             <p className="text-xs text-muted-foreground">Order ke-update tetap di <b>Post-Export</b> — status & resi-nya berubah. Terkirim = filter selesai; Retur = alasan kesimpen.</p>
@@ -317,4 +259,3 @@ export default function SpxStatusSyncPage() {
     </div>
   )
 }
-

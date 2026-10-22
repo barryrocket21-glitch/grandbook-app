@@ -77,7 +77,7 @@ function nestedNumber(row: SpxFinanceApiRow, key: string): number {
 }
 
 export function spxTransactionTypeName(row: SpxFinanceApiRow): string {
-  const raw = pick(row, ['tx_type', 'type_name', 'transaction_type_name', 'transaction_type', 'type'])
+  const raw = pick(row, ['seller_tran_type', 'tx_type', 'type_name', 'transaction_type_name', 'transaction_type', 'type'])
   const s = text(raw)
   if (/cod/i.test(s)) return 'COD'
   if (/ongkos|shipping|shipment|biaya kirim/i.test(s)) return 'Ongkos Kirim'
@@ -86,13 +86,14 @@ export function spxTransactionTypeName(row: SpxFinanceApiRow): string {
   const n = toNumber(raw)
   if (n === 1) return 'COD'
   if (n === 2) return 'Ongkos Kirim'
+  if (n === 3) return 'Penyesuaian'
   if (n === 4) return 'Penarikan'
   return s || 'Lainnya'
 }
 
 export function spxStatusName(value: unknown): string {
   const s = text(value)
-  if (!s) return 'Berhasil'
+  if (!s) return 'Tidak diketahui'
   if (/berhasil|success|completed/i.test(s)) return 'Berhasil'
   if (/pending|process/i.test(s)) return 'Pending'
   if (/tolak|reject|fail/i.test(s)) return 'Ditolak'
@@ -108,11 +109,11 @@ export function normalizeSpxFinanceApiRows(apiRows: SpxFinanceApiRow[]): ParsedA
     const txType = spxTransactionTypeName(row)
     const status = spxStatusName(pick(row, ['status', 'transaction_status']))
     const tracking = txType === 'Penarikan' ? '' : text(pick(row, ['tracking_number', 'tracking', 'awb', 'resi']))
-    const externalId = text(pick(row, ['transaction_id', 'external_id', 'id'])) ||
+    const externalId = text(pick(row, ['transaction_id_str', 'transaction_id', 'external_id', 'id'])) ||
       text(pick(row, ['biz_transaction_id', 'settlement_sn']))
     const completeTime = unixToIso(pick(row, ['complete_time', 'tran_time', 'update_time']))
     const createTime = unixToIso(pick(row, ['create_time', 'tran_time']))
-    const nominal = toNumber(pick(row, ['amount', 'nominal', 'transaction_amount']))
+    const nominal = toNumber(pick(row, ['transaction_amount', 'amount', 'nominal']))
     const basicShippingFee = nestedNumber(row, 'basic_shipping_fee')
     const codServiceFee = nestedNumber(row, 'cod_service_fee')
     const totalFee = nestedNumber(row, 'total_fee')
@@ -129,8 +130,8 @@ export function normalizeSpxFinanceApiRows(apiRows: SpxFinanceApiRow[]): ParsedA
       net_received: toNumber(pick(row, ['withdraw_bank_transfer_amount', 'net_received', 'jumlah_transfer_bank_penarikan'])),
       status,
       bank_account: text(pick(row, ['bank_account', 'bank_reference', 'akun_bank_penarikan'])),
-      reference_no: text(pick(row, ['transaction_reference_no', 'reference_no', 'settlement_sn'])),
-      rejection_reason: text(pick(row, ['rejection_reason', 'alasan_penolakan_penarikan'])),
+      reference_no: text(pick(row, ['bank_transaction_reference_no', 'transaction_reference_no', 'reference_no', 'settlement_sn'])),
+      rejection_reason: text(pick(row, ['reject_message', 'reject_reason', 'rejection_reason', 'alasan_penolakan_penarikan'])),
       create_time: createTime,
       complete_time: completeTime,
       raw: {

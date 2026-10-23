@@ -1,5 +1,37 @@
 # GrandBook Codex Handoff
 
+## Codex — Owner Dashboard accuracy #1 — 2026-10-23 (IN PROGRESS)
+
+Barry authorizes dashboard accuracy to completion; no live data/rule changes.
+Read vision validation f4a070f (RELEASED): agrees on pagination + fail-closed error
+UI. Earlier 14:17 Codex claim was lost when concurrent handoff snapshot was saved;
+restore the claim here without altering any vision section. vision: please preserve
+this preamble and independently review the completed candidate read-only; record
+new claims before editing. Coordination only through this handoff.
+
+Codex claims src/app/(app)/dashboard/page.tsx, src/lib/dashboard/accuracy.ts,
+src/lib/dashboard/read.ts, src/lib/dashboard/use-dashboard-read.ts,
+src/components/dashboard/pending-pickup-widget.tsx,
+src/components/dashboard/cashflow-summary-widget.tsx, tests/dashboard-accuracy/,
+docs/dashboard-accuracy-2026-10-23.md and this Codex preamble.
+Additional claim before release metadata edits: scripts/releases/repo-readiness/
+manifest.json, release.py, README.md, tests/releases/repo-readiness/test_release.py.
+Review all six changed/new application inputs, advance fixed gate from454 to457;
+no other baseline source or historical SQL changed. No other UI/API/SQL/Auth/RLS/financial-rule files claimed.
+Scope: complete ordered/count-verified reads; WIB period; explicit incomplete/
+error states and retry; abort/stale protection. Existing financial calculations
+preserved; labels may clarify their existing source, never imply cash profit.
+Read-only source sample: 6,325 monthly draft orders/items; 8,673 orders for
+30-day/month union, 1,097 ad-spend rows; valid RPCs, no cross-source identity
+overlap. Data files only in private evidence, no customer records in Git/docs.
+No SQL/HPP617/package/31 replay, database/role/payment/settlement mutations,
+push or deployment. Previous release authorization is scoped, not blanket.
+Progress: core candidate implemented;22 SDK/model regression tests PASS; full
+TypeScript and scoped app/test ESLint PASS. Normal Owner read5.572s matched an
+independent Python Decimal oracle (17 numeric checks,90 daily values,5 products).
+Browser fixtures, isolated build and final packaging are IN PROGRESS; not released.
+Private evidence: /root/backups/grandbook/dashboard-accuracy-20261023-0aa019a3.
+
 ## Codex — recovery34 complete and role entry fixed — 2026-10-23T13:48:45.182028+07:00
 
 **SELESAI / RELEASED for all claimed edit areas.** Barry requested completion of34

@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
@@ -10,17 +9,23 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   DollarSign, CircleDollarSign, Target, ShoppingCart, Package,
   AlertTriangle, RefreshCw, Activity, Scale, Wallet, ArrowRight,
-  LayoutDashboard,
+  LayoutDashboard, type LucideIcon,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
 } from 'recharts'
-import { formatRupiah, formatPercent, getToday, getStartOfMonth } from '@/lib/format'
+import { formatRupiah, formatPercent } from '@/lib/format'
 import { PageHeader } from '@/components/ui/page-header'
 import { PendingPickupWidget } from '@/components/dashboard/pending-pickup-widget'
 import { CashflowSummaryWidget } from '@/components/dashboard/cashflow-summary-widget'
+
+import { useDashboardRead } from '@/lib/dashboard/use-dashboard-read'
+import { readDashboard } from '@/lib/dashboard/read'
+
+const loadDashboard = (signal: AbortSignal) => readDashboard(supabase, signal)
+const money = (value: number | null) => value === null ? '—' : formatRupiah(value)
 
 // Chart colors
 const CHART_COLORS = ['#3f6fd1', '#71717a', '#a1a1aa', '#10b981', '#f59e0b', '#ef4444']
@@ -28,205 +33,15 @@ const CHART_COLORS = ['#3f6fd1', '#71717a', '#a1a1aa', '#10b981', '#f59e0b', '#e
 // Supabase client dibuat sekali di module level agar tidak trigger re-render loop
 const supabase = createClient()
 
-interface DashboardData {
-  omzetHariIni: number
-  omzetBulanIni: number
-  totalOrdersHariIni: number
-  totalOrdersBulanIni: number
-  ordersByStatus: Record<string, number>
-  totalAdSpendBulanIni: number
-  blendedROAS: number
-  // Brief #16 — EST (order berjalan/draft) vs AKTUAL (delivered). Sumber UNION
-  // orders_draft + orders (akar masalah: orders kosong, order hidup di draft).
-  estProfit: number
-  estBiaya: number
-  estFeeCod: number
-  estPpn: number
-  aktualProfit: number
-  deliveredCount: number
-  // Sub-brief #17 — pencairan COD (real, ganti placeholder #16)
-  codCair: number
-  codUncair: number
-  uncairCount: number
-  returPercentage: number
-  fakePercentage: number
-  dailyChart: Array<{ date: string; omzet: number; spend: number; profit: number }>
-  topProducts: Array<{ name: string; qty: number; revenue: number }>
-}
-
 export default function DashboardPage() {
-  const { profile, role, loading: authLoading } = useAuth()
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const fetchingRef = useRef(false)
-
-  const fetchDashboardData = useCallback(async () => {
-    if (fetchingRef.current) return // prevent overlapping fetches
-    fetchingRef.current = true
-    try {
-      const today = getToday()
-      const startOfMonth = getStartOfMonth()
-
-      // Brief #16 — sumber UNION: order berjalan ada di orders_draft, terminal
-      // (delivered/retur/batal) di orders. Agregasi keuangan dari KEDUANYA.
-      const SEL = 'total, status, order_date, estimated_profit, estimated_total_cost, estimated_cod_fee, estimated_ppn'
-      const [
-        { data: draftAllMonth },
-        { data: ordersAllMonth },
-        { data: adSpendMonth },
-        { data: draftItems },
-        { data: orderItems },
-        { data: payoutPos },
-      ] = await Promise.all([
-        supabase.from('orders_draft').select(SEL).gte('order_date', startOfMonth),
-        supabase.from('orders').select(SEL).gte('order_date', startOfMonth),
-        supabase.from('ad_spend').select('spend, spend_date').gte('spend_date', startOfMonth),
-        supabase.from('order_items_draft').select('qty, price, products(name), orders_draft!inner(order_date, status)').gte('orders_draft.order_date', startOfMonth),
-        supabase.from('order_items').select('qty, price, products(name), orders!inner(order_date, status)').gte('orders.order_date', startOfMonth),
-        supabase.rpc('get_payout_position'),
-      ])
-      const pay: any = Array.isArray(payoutPos) ? payoutPos[0] : null
-      const codCair = Number(pay?.cair_total) || 0
-      const codUncair = Number(pay?.uncair_total) || 0
-      const uncairCount = Number(pay?.uncair_count) || 0
-      const safeArr = (arr: any[] | null) => arr || []
-
-      const TERMINAL = ['DITERIMA', 'RETUR', 'CANCEL', 'FAKE']
-      const draftMonth = safeArr(draftAllMonth)   // order berjalan (EST)
-      const ordersMonth = safeArr(ordersAllMonth) // order terminal (AKTUAL)
-      const allMonth = [...draftMonth, ...ordersMonth]
-      const allToday = allMonth.filter((o: any) => o.order_date === today)
-
-      const sumOmzet = (arr: any[]) => arr
-        .filter((o) => !['CANCEL', 'FAKE'].includes(o.status))
-        .reduce((sum: number, o: any) => sum + Number(o.total), 0)
-      const omzetHariIni = sumOmzet(allToday)
-      const omzetBulanIni = sumOmzet(allMonth)
-
-      // Orders by status (union)
-      const ordersByStatus: Record<string, number> = {}
-      allMonth.forEach((o: any) => {
-        ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1
-      })
-
-      // Ad spend + ROAS
-      const totalAdSpendBulanIni = safeArr(adSpendMonth).reduce(
-        (sum: number, s: any) => sum + Number(s.spend), 0,
-      )
-      const blendedROAS = totalAdSpendBulanIni > 0 ? omzetBulanIni / totalAdSpendBulanIni : 0
-
-      // EST (order berjalan, belum terminal) vs AKTUAL (delivered)
-      const sumF = (arr: any[], k: string) => arr.reduce((s: number, o: any) => s + (Number(o[k]) || 0), 0)
-      const running = allMonth.filter((o: any) => !TERMINAL.includes(o.status))
-      const estProfit = sumF(running, 'estimated_profit')
-      const estBiaya = sumF(running, 'estimated_total_cost')
-      const estFeeCod = sumF(running, 'estimated_cod_fee')
-      const estPpn = sumF(running, 'estimated_ppn')
-      const delivered = ordersMonth.filter((o: any) => o.status === 'DITERIMA')
-      const aktualProfit = sumF(delivered, 'estimated_profit') // post-promote estimated_* = pakai ongkir aktual
-      const deliveredCount = delivered.length
-
-      // Retur & Fake %
-      const totalOrdersMonth = allMonth.length
-      const returCount = ordersByStatus['RETUR'] || 0
-      const fakeCount = ordersByStatus['FAKE'] || 0
-      // Retur Rate: % dari order yang udah selesai (diterima+retur), match
-      // formula di Laba Rugi RPC — bukan retur / total (yang ke-dilute order
-      // in-transit dan bikin angkanya beda sama Laba Rugi).
-      const finishedCount = (ordersByStatus['DITERIMA'] || 0) + returCount
-      const returPercentage = finishedCount > 0 ? (returCount / finishedCount) * 100 : 0
-      const fakePercentage = totalOrdersMonth > 0 ? (fakeCount / totalOrdersMonth) * 100 : 0
-
-      // Top products — union order_items_draft + order_items
-      const allItems = [
-        ...safeArr(draftItems).map((i: any) => ({ ...i, _status: i.orders_draft?.status })),
-        ...safeArr(orderItems).map((i: any) => ({ ...i, _status: i.orders?.status })),
-      ]
-      const productMap = new Map<string, { qty: number; revenue: number }>()
-      allItems
-        .filter((i: any) => !['CANCEL', 'FAKE'].includes(i._status))
-        .forEach((i: any) => {
-          const name = i.products?.name || 'Unknown'
-          const existing = productMap.get(name) || { qty: 0, revenue: 0 }
-          productMap.set(name, {
-            qty: existing.qty + i.qty,
-            revenue: existing.revenue + Number(i.price) * i.qty,
-          })
-        })
-      const topProducts = Array.from(productMap.entries())
-        .map(([name, d]) => ({ name, ...d }))
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5)
-
-      // Daily chart (last 30 days)
-      const dailyMap = new Map<string, { omzet: number; spend: number }>()
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date()
-        d.setDate(d.getDate() - i)
-        dailyMap.set(d.toISOString().split('T')[0], { omzet: 0, spend: 0 })
-      }
-      allMonth
-        .filter((o: any) => !['CANCEL', 'FAKE'].includes(o.status))
-        .forEach((o: any) => {
-          const day = dailyMap.get(o.order_date)
-          if (day) day.omzet += Number(o.total)
-        })
-      safeArr(adSpendMonth).forEach((s: any) => {
-        const day = dailyMap.get(s.spend_date)
-        if (day) day.spend += Number(s.spend)
-      })
-      const dailyChart = Array.from(dailyMap.entries()).map(([date, vals]) => ({
-        date: new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
-        omzet: vals.omzet,
-        spend: vals.spend,
-        profit: vals.omzet - vals.spend,
-      }))
-
-      setData({
-        omzetHariIni,
-        omzetBulanIni,
-        totalOrdersHariIni: allToday.length,
-        totalOrdersBulanIni: totalOrdersMonth,
-        ordersByStatus,
-        totalAdSpendBulanIni,
-        blendedROAS,
-        estProfit,
-        estBiaya,
-        estFeeCod,
-        estPpn,
-        aktualProfit,
-        deliveredCount,
-        codCair,
-        codUncair,
-        uncairCount,
-        returPercentage,
-        fakePercentage,
-        dailyChart,
-        topProducts,
-      })
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-      fetchingRef.current = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (authLoading || (role !== 'owner' && role !== 'admin')) return
-    const timer = setTimeout(() => { void fetchDashboardData() }, 0)
-    return () => clearTimeout(timer)
-  }, [authLoading, role, fetchDashboardData])
-
-  const handleRefresh = () => {
-    setRefreshing(true)
-    fetchDashboardData()
-  }
+  const { user, profile, role, loading: authLoading } = useAuth()
+  const verified = !authLoading && user?.id === profile?.id && (role === 'owner' || role === 'admin')
+  const key = verified ? user!.id + ':' + profile?.organization_id + ':' + role : null
+  const { data, loading, error, readAt, refresh: handleRefresh } = useDashboardRead(key, loadDashboard)
+  const refreshing = loading
 
   // Phase 8H audit — Admin Indra perlu KPI overview operasional.
-  if (authLoading) return <DashboardSkeleton />
+  if (authLoading || ((role === 'owner' || role === 'admin') && !verified)) return <DashboardSkeleton />
 
   if (role !== 'owner' && role !== 'admin') {
     return (
@@ -248,11 +63,26 @@ export default function DashboardPage() {
     return <DashboardSkeleton />
   }
 
+  if (error || !data) {
+    return (
+      <div className="space-y-6">
+        <PageHeader icon={LayoutDashboard} title="Dashboard" description="Ringkasan Owner" />
+        <Card role="alert">
+          <CardContent className="pt-6 space-y-3">
+            <h2 className="font-semibold">Dashboard belum dapat ditampilkan</h2>
+            <p className="text-sm text-muted-foreground">Data belum terbaca lengkap atau berubah saat dimuat. Angka tidak ditampilkan agar tidak menyesatkan.</p>
+            <Button onClick={() => void handleRefresh()} variant="outline">Coba lagi</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   const statusPieData = data ? Object.entries(data.ordersByStatus).map(([status, count]) => ({
     name: status,
     value: count,
   })) : []
-  const profitPositive = (data?.estProfit || 0) >= 0
+  const profitPositive = (data.estProfit ?? 0) >= 0
 
   return (
     <div className="space-y-6">
@@ -267,6 +97,13 @@ export default function DashboardPage() {
           </Button>
         }
       />
+
+      <div className="text-xs text-muted-foreground space-y-1" data-dashboard-coverage>
+        <p>Periode bulanan: {data.period.month} – {data.period.today} (WIB). Grafik: {data.period.days[0]} – {data.period.today}.</p>
+        <p>Sumber {data.period.start} – {data.period.today}, terbaca lengkap: {data.coverage.drafts + data.coverage.orders} order, {data.coverage.draftItems + data.coverage.items} item bulan ini, {data.coverage.spend} baris iklan untuk periode sumber. Dimuat {readAt ? new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' }).format(new Date(readAt)) : '—'} WIB.</p>
+        <p>Estimasi tersimpan sesuai sumber. Delivered belum berarti COD sudah cair; pencairan tercatat bukan laba kas atau verifikasi saldo bank.</p>
+        {(data.incompleteEstimates > 0 || data.incompleteDelivered > 0) && <p role="status">Estimasi belum lengkap: {data.incompleteEstimates} order berjalan dan {data.incompleteDelivered} order delivered. Total terkait ditampilkan —.</p>}
+      </div>
 
       {/* Hero — Laba Bersih & Posisi Bersih (link ke halaman detail) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -286,15 +123,15 @@ export default function DashboardPage() {
                 <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </div>
               <div className={`text-3xl font-bold tabular-nums mt-3 ${profitPositive ? 'text-emerald-600' : 'text-red-600'}`}>
-                {formatRupiah(data?.estProfit || 0)}
+                {money(data.estProfit)}
               </div>
               <div className="text-[11px] text-muted-foreground mt-1">
-                Est. biaya {formatRupiah(data?.estBiaya || 0)} · fee COD {formatRupiah(data?.estFeeCod || 0)} · PPN {formatRupiah(data?.estPpn || 0)}
+                Est. biaya {money(data.estBiaya)} · fee COD {money(data.estFeeCod)} · PPN {money(data.estPpn)}
               </div>
               <div className="text-[11px] mt-1">
-                <span className="text-muted-foreground">Aktual (delivered): </span>
-                <span className="font-semibold tabular-nums text-emerald-600">{formatRupiah(data?.aktualProfit || 0)}</span>
-                <span className="text-muted-foreground"> · {data?.deliveredCount || 0} order Diterima</span>
+                <span className="text-muted-foreground">Estimasi order delivered: </span>
+                <span className="font-semibold tabular-nums text-emerald-600">{money(data.aktualProfit)}</span>
+                <span className="text-muted-foreground"> · {data.deliveredCount} order Diterima</span>
               </div>
             </CardContent>
           </Card>
@@ -310,16 +147,16 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <div className="text-xs uppercase tracking-wider text-muted-foreground">COD Sudah Cair</div>
-                    <div className="text-[10px] text-muted-foreground">Payout SPX masuk</div>
+                    <div className="text-[10px] text-muted-foreground">Pencairan tercatat · semua periode</div>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </div>
               <div className="text-3xl font-bold tabular-nums mt-3 text-emerald-600">
-                {formatRupiah(data?.codCair || 0)}
+                {formatRupiah(data.codCair)}
               </div>
               <div className="text-[11px] text-muted-foreground mt-1">
-                Belum cair {formatRupiah(data?.codUncair || 0)} · {data?.uncairCount || 0} order delivered nunggu payout
+                Belum cair {formatRupiah(data.codUncair)} · {data.uncairCount} order delivered nunggu payout
               </div>
             </CardContent>
           </Card>
@@ -330,22 +167,22 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           title="Omzet Hari Ini"
-          value={formatRupiah(data?.omzetHariIni || 0)}
-          subtitle={`${data?.totalOrdersHariIni || 0} orders`}
+          value={formatRupiah(data.omzetHariIni)}
+          subtitle={`${data.totalOrdersHariIni} orders`}
           icon={DollarSign}
           gradient="from-emerald-500 to-zinc-600"
         />
         <StatCard
           title="Omzet Bulan Ini"
-          value={formatRupiah(data?.omzetBulanIni || 0)}
-          subtitle={`${data?.totalOrdersBulanIni || 0} orders`}
+          value={formatRupiah(data.omzetBulanIni)}
+          subtitle={`${data.totalOrdersBulanIni} orders`}
           icon={CircleDollarSign}
           gradient="from-zinc-500 to-zinc-600"
         />
         <StatCard
           title="ROAS Blended"
-          value={`${(data?.blendedROAS || 0).toFixed(2)}x`}
-          subtitle={`Ad Spend: ${formatRupiah(data?.totalAdSpendBulanIni || 0)}`}
+          value={`${(data.blendedROAS).toFixed(2)}x`}
+          subtitle={`Ad Spend: ${formatRupiah(data.totalAdSpendBulanIni)}`}
           icon={Target}
           gradient="from-amber-500 to-amber-600"
         />
@@ -361,7 +198,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium">Retur Rate</p>
               <p className="text-2xl font-bold text-amber-500">
-                {formatPercent(data?.returPercentage || 0)}
+                {formatPercent(data.returPercentage)}
               </p>
             </div>
           </CardContent>
@@ -374,7 +211,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium">Fake Order Rate</p>
               <p className="text-2xl font-bold text-red-500">
-                {formatPercent(data?.fakePercentage || 0)}
+                {formatPercent(data.fakePercentage)}
               </p>
             </div>
           </CardContent>
@@ -394,7 +231,7 @@ export default function DashboardPage() {
               <Activity className="w-5 h-5 text-zinc-500" />
               Trend 30 Hari Terakhir
             </CardTitle>
-            <CardDescription>Omzet vs Ad Spend vs Profit</CardDescription>
+            <CardDescription>Omzet, Ad Spend, dan selisih keduanya; bukan laba bersih</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[320px]">
@@ -424,7 +261,7 @@ export default function DashboardPage() {
                       borderRadius: '8px',
                       fontSize: '12px',
                     }}
-                    formatter={(value: any) => formatRupiah(Number(value))}
+                    formatter={(value) => formatRupiah(Number(value))}
                   />
                   <Legend />
                   <Area type="monotone" dataKey="omzet" stroke="#3f6fd1" fill="url(#gradientOmzet)" strokeWidth={2} name="Omzet" />
@@ -535,7 +372,7 @@ function StatCard({
   title: string
   value: string
   subtitle: string
-  icon: any
+  icon: LucideIcon
   gradient: string
 }) {
   return (

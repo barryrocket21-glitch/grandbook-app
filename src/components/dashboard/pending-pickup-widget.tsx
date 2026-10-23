@@ -1,5 +1,4 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
@@ -7,9 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { AlertTriangle, Truck, ChevronRight, RefreshCw } from 'lucide-react'
 import { formatRupiah } from '@/lib/format'
-import type { PendingPickupSummary } from '@/lib/types'
+
+import { useAuth } from '@/components/providers/auth-provider'
+import { useDashboardRead } from '@/lib/dashboard/use-dashboard-read'
+import { readPickup } from '@/lib/dashboard/read'
 
 const supabase = createClient()
+const loadPickup = (signal: AbortSignal) => readPickup(supabase, signal)
 
 const DAYS_THRESHOLD = 3
 const REFRESH_INTERVAL_MS = 120_000 // 2 menit (sesuai brief)
@@ -22,45 +25,12 @@ const REFRESH_INTERVAL_MS = 120_000 // 2 menit (sesuai brief)
  * Refresh: on mount + tiap 2 menit + on window focus.
  */
 export function PendingPickupWidget() {
-  const [data, setData] = useState<PendingPickupSummary | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true)
-    else setRefreshing(true)
-    try {
-      const { data: rows, error } = await supabase.rpc('pending_pickup_summary', {
-        p_days_threshold: DAYS_THRESHOLD,
-      })
-      if (error) throw error
-      const first = Array.isArray(rows) ? rows[0] : rows
-      setData(first ? {
-        total_count: Number(first.total_count) || 0,
-        total_value: Number(first.total_value) || 0,
-        oldest_days_pending: Number(first.oldest_days_pending) || 0,
-        by_channel: (first.by_channel as Record<string, { count: number; value: number }>) || {},
-      } : null)
-    } catch (err) {
-      // Migration 034 belum di-apply → silently skip widget (jangan break dashboard)
-      console.warn('pending_pickup_summary failed:', err)
-      setData(null)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-    const interval = setInterval(() => load(true), REFRESH_INTERVAL_MS)
-    const onFocus = () => load(true)
-    window.addEventListener('focus', onFocus)
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('focus', onFocus)
-    }
-  }, [load])
+  const { user, profile, role, loading: authLoading } = useAuth()
+  const key = !authLoading && user?.id === profile?.id && (role === 'owner' || role === 'admin')
+    ? user!.id + ':' + profile?.organization_id + ':' + role : null
+  const { data, loading, error, refresh } = useDashboardRead(key, loadPickup, REFRESH_INTERVAL_MS)
+  const refreshing = loading
+  if (key === null) return null
 
   if (loading) {
     return (
@@ -72,8 +42,12 @@ export function PendingPickupWidget() {
     )
   }
 
-  // RPC error atau data null → tidak render widget (silent fail)
-  if (!data) return null
+  if (error || !data) {
+    return <Card role="alert"><CardContent className="pt-4 pb-4 space-y-2">
+      <p className="text-sm">Data pickup belum terbaca lengkap.</p>
+      <Button variant="outline" size="sm" onClick={() => void refresh()}>Coba lagi</Button>
+    </CardContent></Card>
+  }
 
   const count = data.total_count
   const totalValue = data.total_value
@@ -105,7 +79,7 @@ export function PendingPickupWidget() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => load(true)}
+            onClick={() => void refresh()}
             disabled={refreshing}
             title="Refresh"
             className="h-7 px-2"

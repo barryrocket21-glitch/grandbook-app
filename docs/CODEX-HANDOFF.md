@@ -819,6 +819,119 @@ bertahap kelompok untracked lain; `supabase/.temp` dan
 
 ---
 
+### Sesi validasi vision — Dashboard Owner #1 kelengkapan total — 23 Oktober 2026 (RELEASED)
+
+- **Agent:** vision (Muse AI). **Claim:** 2026-10-23T14:19:00+07:00 (WIB). **Ruang lingkup:**
+  validasi READ-ONLY akurasi Dashboard Owner nomor 1 dari urutan Barry —
+  kelengkapan total dashboard: (a) total tidak terpotong batas 1.000 baris
+  PostgREST/Supabase, (b) kegagalan baca tidak ditampilkan sebagai angka nol.
+  Nomor 2 (estimasi/delivered/kas settled) dan nomor 3 (audit pencairan
+  komisi manual) TIDAK dikerjakan sesi ini. Satu-satunya file yang diubah
+  vision sesi ini adalah handoff ini. Tidak ada source/SQL/data live yang
+  diubah, tidak ada query database live (validasi dari kode/definisi
+  SQL/dokumen/tests), tidak ada reset/stash/clean/checkout/bulk-commit/
+  push/deploy, koreksi APPLIED tidak diulang. Sesi Codex terakhir yang
+  terlihat saat claim: SELESAI/RELEASED (recovery34 + role entry,
+  2026-10-23T13:48:45+07:00); tidak ada claim aplikasi aktif yang
+  bertabrakan. Backup handoff pra-sesi (sementara, di VPS):
+  `/tmp/CODEX-HANDOFF-before-vision-dashboard1-20261023.md`.
+- **Hasil validasi:** lima permukaan total owner dipetakan sampai ke
+  query/RPC di belakangnya. Satu-satunya permukaan yang gagal di kedua
+  uji Barry adalah **dashboard utama** — dan ia gagal struktural, bukan
+  kebetulan data:
+
+  **1. Dashboard utama (`src/app/(app)/dashboard/page.tsx`) — BERISIKO
+  TERPOTONG + GAGAL-TAMPIL-NOL (P1).** Seluruh total bulan ini dihitung
+  di client dari baris yang di-fetch: query di baris 81–88 mengambil
+  `orders_draft`, `orders`, `ad_spend`, `order_items_draft`,
+  `order_items` sejak awal bulan **tanpa `.limit()`/`.range()`/paginasi
+  dan tanpa `.order()`**, lalu omzet (101–105), hitungan per status
+  (108–111), ad spend + ROAS (114–117), profit estimasi + biaya/fee
+  COD/PPN (120–125), aktual delivered + delivered count (126–128),
+  total order (131), retur/fake % (137–139), top products (141–160),
+  dan grafik harian (169–184) semuanya `reduce`/`length` atas array
+  hasil fetch. Konsekuensinya tunduk pada batas baris PostgREST/
+  Supabase (default 1.000 baris per respons): tiap tabel terpotong
+  sendiri-sendiri tanpa tanda apa pun; `order_items*` paling dulu
+  terpotong. Jalur errornya juga tertutup: keenam query hanya dibaca
+  `data`-nya — `error` tidak pernah dibaca; `safeArr` (baris 93)
+  mengubah kegagalan menjadi array kosong; catch (208–214) hanya
+  `console.error`; render memakai pola `data?.x || 0` (mis. 289,
+  319, kartu KPI) sehingga kegagalan total maupun parsial tampil
+  sebagai angka 0 yang sah. Tidak ada status error UI sama sekali
+  di halaman ini.
+  **Total COD cair/belum cair di hero dashboard** sumbernya RPC
+  `get_payout_position` (agregasi server, definisi di
+  `src/lib/supabase/migrations/103_payout_recon.sql:150`) sehingga
+  AMAN dari potongan — tetapi ikut jalur gagal-tampil-nol yang sama:
+  error RPC tidak dibaca dan nilainya dipaksa `Number(pay?.…) || 0`
+  (baris 89–92).
+
+  **2. Widget Saldo SPX & Cashflow (`src/components/dashboard/cashflow-summary-widget.tsx`) — AMAN.** Agregasi RPC server
+  (`get_cashflow_summary`, definisi `048_phase8i_v2_cashflow.sql:473`;
+  `get_payout_position`), error dilempar (29–34) lalu state dikosongkan
+  dan UI menampilkan `—` + "Data pencairan belum tersedia." (83–90),
+  bukan 0.
+
+  **3. Widget Resi Pending Pickup (`src/components/dashboard/pending-pickup-widget.tsx`) — AMAN dari potongan.** RPC
+  `pending_pickup_summary` (33–36); error → widget tidak dirender
+  sama sekali (75–76, silent by design), bukan tampil 0.
+
+  **4. Posisi Keuangan (`src/app/(app)/financial-position/page.tsx`)
+  — AMAN.** Dua RPC agregasi server (`get_financial_position`,
+  definisi terakhir `131_financial_position_draft_aware.sql`;
+  `get_payout_position`), error dilempar (85–91) dan UI menampilkan
+  "Gagal memuat posisi keuangan." (142–144), bukan 0. Total aset/
+  utang/posisi bersih dihitung dari satu baris hasil RPC (129–132).
+
+  **5. Header Laba Rugi (`src/app/(app)/laba-rugi/page.tsx`) — AMAN.**
+  Satu RPC `laba_rugi_summary` (79–83, agregasi SQL materialized);
+  error masuk `errorMessage` (87–92, termasuk pesan timeout khusus)
+  dan dirender sebagai kartu error (145).
+
+  **6. Owner Profit Cockpit (`src/app/(app)/reports/owner-profit/page.tsx` + `src/app/api/reports/owner-profit/route.ts`) — AMAN,
+  pola teladan.** API membaca orders/items/commissions/ADS memakai
+  `completeReportRead` (`src/lib/analytics/complete-report-read.ts`:
+  "Read every page or fail") — paginasi kursor `.gt('id', after)
+  .order('id').limit(500)` dengan `{ count: 'exact' }` dan lempar
+  error bila hitungan tak cocok (route 142–151); kegagalan verifikasi
+  kelengkapan berakhir HTTP 503 (155, 166, 184) dan halaman
+  menampilkan kartu error (187–188). Total direduce hanya dari
+  himpunan yang terbukti lengkap (route 348).
+
+  **Temuan tambahan di luar scope inti (dicatat, bukan vonis utama):**
+  dashboard personal CS/advertiser (`fetchPersonalDashboard` di
+  `src/lib/supabase/queries/analytics.ts` ±551–598) membatasi orders
+  secara eksplisit `.limit(1000)` lalu menghitung total revenue/
+  diterima/retur dari himpunan terpotong itu di client —
+  BERISIKO TERPOTONG pola sama; error dilempar dari query, tampilan
+  error di komponennya NOT VERIFIED sesi ini.
+
+  **NOT VERIFIED sesi ini:** nilai efektif batas baris di project
+  Supabase hosted (default PostgREST 1.000; tidak ada override di
+  `src/lib/supabase/client.ts`) dan apakah volume bulanan aktual
+  sudah melewati 1.000 baris per tabel — tanpa query live sesuai
+  larangan, jadi risiko dashboard utama dinyatakan struktural dari
+  kode, bukan terbukti sudah terjadi pada data bulan berjalan.
+  Kolom belanja dashboard memakai `ad_spend.spend` sementara rute
+  Owner Profit memakai `spend_total`; keduanya muncul di kode —
+  mana yang kanonik perlu konfirmasi skema, di luar uji nomor 1.
+
+  **Prioritas untuk jalur implementasi (Codex):** P1 — dashboard
+  utama: pindahkan total ke agregasi server (RPC) atau pola
+  `completeReportRead` + verifikasi count seperti Owner Profit, dan
+  baca `error` tiap query dengan state error UI; jangan biarkan
+  kegagalan tampil sebagai 0. P2 — pola limit(1000) di dashboard
+  personal CS/advertiser. Perubahan angka/aturan live tetap menunggu
+  persetujuan Barry; sesi ini tidak mengusulkan nilai pengganti.
+- **Status akhir sesi validasi vision: RELEASED** (selesai
+  2026-10-23T14:26:00+07:00 WIB). vision tidak memegang area apa pun
+  setelah sesi ini. **NEXT (satu langkah):** Codex claim perbaikan
+  dashboard utama (P1) di handoff sebelum mengedit; vision menilai
+  hasilnya read-only terhadap dua uji Barry.
+
+---
+
 ## Checkpoint historis — superseded bila bertentangan dengan catatan terbaru
 
 

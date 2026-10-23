@@ -341,7 +341,7 @@
       "sha256": "4653e2f1acd0149be109d2223043e14f84e2772e47fbc4fcd5c3913ec5af0e50"
     }
   ],
-  "status": "PREPARED_PENDING_PRODUCTION_ACTIVATION",
+  "status": "APPLIED_PRODUCTION_READERS_EXACT_ISOLATED_DELTA_TESTED",
   "preserve_hpp_metadata_defaults": true,
   "preservation_note": "Old backup lacks hpp_price_id/hpp_pricing_mode. Validate null/fixed when present; fingerprint every original field unchanged. Historical manifests remain unchanged.",
   "validate_hpp_seed_from_master": true,

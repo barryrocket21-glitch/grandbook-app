@@ -1,5 +1,94 @@
 # GrandBook Codex Handoff
 
+## Codex — F1/F2 LIVE VERIFIED; next F3 audit complete — 24 October 2026 WIB
+
+SELESAI / source and SQL claims RELEASED. Supersedes earlier Codex claims below.
+Barry authorized push/deploy + continuation; vision review694d32b PASS preserved
+verbatim. Native Owner Mac P&L/Buku and actual Excel download verified. New readers
+have exact candidate bodies; no business-record/rule/Auth/RLS/grant/cost change.
+No617/package/31 or historical recovery SQL replay. Liard untouched.
+
+Main dpl_9gTqgjWqz6kXqZT1ir9nVFHy81Zs READY/bom1. Input457/1627afbd2d7066bf7aadc2867550818a96a0af0841847c5a9ce3a6f02263ae7d.
+UI a148467, SQL/recovery5ed5187 pushed fast-forward via isolated Mac bundle after VPS
+HTTP403. Ordinary Git CI READY/iad1 completed before bom1 promotion; guards/settings/
+env unchanged, cancellations0. Docs closeout push follows same ordinary CI then
+re-promotes SAME approved bom1 candidate; require private final-verification.json.
+
+CHANGED: exact3 UI/export paths from49b727b + release manifest; new
+scripts/sql/financial-report-readers/release-20261024/* and recovery successor
+scripts/migrations/financial-readers-2026-10-24.json (36upgrade/25fresh refs,
+full contract c2c9bafe7db9696ef28f018d4133baafcd4938cb418921facfcb1cbd25fe8d78);
+docs/financial-p1-release-2026-10-24.md and
+docs/owner-profit-packing-followup-2026-10-24.md. Historical manifests unchanged.
+All160 legacy hashes pass in pinned source copy; pre-existing untracked157 preserved.
+Unrelated AGENTS/doctor/normalizer bytes unchanged; shared checkout not globally clean.
+
+VERIFIED: guarded same-snapshot31,434 Buku identities, receipt cells, GP/net,
+63 table fingerprints and security contracts preserved. Whole schema differs only
+two reader definitions.5749 receipts/Rp1,082,521,138 exactly equals dashboard source;
+missing draft454,793,628 now shown, not new profit/payment. October component
+reduction112,403,000 leaves GP683,144,005.52/net467,583,363.52 unchanged.
+Exact rollback/reapply tested locally. Build/typecheck, package14 tests, actual
+457 upload hashes, four normal Owner REST reads and native desktop3 checks pass.
+Prior exact candidate14 SQL/7 export/6 isolated responsive/error browser tests pass.
+
+VPS automated live browser blocked Vercel checkpoint21; not a completed hosted
+responsive/fault suite and no bypass. Native desktop succeeded. Actual live Excel
+numeric fields, real SUM and conditional unknown totals pass; app recalculation/
+physical iPhone/full realized profit not verified. Inherited export is PAGE ONLY.
+
+Continued READ-ONLY F3 audit complete/released: fresh September281 delivered items,
+9 packing items/Rp22,300 omitted by Owner Profit reader. October delivered0/effect0.
+Sept hosted API403 from VPS, current endpoint total not verified; source and fresh
+item arithmetic prove omission. No P2 source/live changes. F4 ADS remains outside.
+Private evidence: /root/backups/grandbook/financial-p1-release-20261024.
+
+vision: independently validate released F1/F2 read-only from your normal session,
+record results/claims only here; do not replay SQL or edit records/rules. No watcher
+or automatic external dispatch is claimed. Your personal dashboard audit stays yours.
+NEXT: Codex prepares isolated F3 packing candidate, preserving live records/rules.
+
+## Codex — next process: F3 packing evidence — READ-ONLY CLAIM
+
+Barry authorized continuing after F1/F2 publication. Codex will refresh the existing
+F3 P2 finding in Owner Profit: packing_fee_snapshot missing from per-item costs.
+Scope now READ ONLY: source + normal Owner September/October reads, scoped follow-up
+docs and this handoff only. No route/source changes, SQL replay, record/rule changes,
+or new P2 deployment. F1/F2 release verification remains the active publication
+scope; vision may independently validate it read-only and retain personal audit.
+NEXT: verify fresh cohort/packing delta against current live Owner Profit.
+
+## Codex — F1/F2 release checkpoint — SQL APPLIED, UI promotion pending
+
+Two reader bodies now match reviewed candidate exactly. Activation transaction
+verified all31,434 Buku identities, all5749 receipts/Rp1,082,521,138, GP/net unchanged
+and63 table fingerprints/reader access contracts preserved. Business writes0.
+Buku visible cash before627,727,510 ->1,082,521,138 restores454,793,628 draft receipts;
+this is receipt display, not additional profit or a new payment. No old SQL replay.
+Cloud candidate dpl_9gTqgjWqz6kXqZT1ir9nVFHy81Zs READY/bom1; all457 uploaded
+source hashes match reviewed1627afbd package. Main alias not promoted yet.
+Vision review694d32b PASS, RELEASED, preserved. Existing dirty files preserved.
+Active recovery successor for this scope: scripts/migrations/financial-readers-2026-10-24.json
+(36 upgrade/25 fresh references; source hashes only checked, no historical replay).
+NEXT: normal Owner REST + Git push/CI, then approved bom1 promotion and live browser.
+
+## Codex — approved F1/F2 production release — CLAIMED / IN PROGRESS
+
+Barry explicitly authorized "Push dan deploy sekarang. Terus lanjut ke proses berikut"
+on 24 October 2026 WIB. Scope: publish the reviewed F1/F2 reader fixes and exact
+three-file UI/export patch, prepare guarded activation/rollback + recovery successor,
+verify normal Owner live. No business-record, cost-engine, commission, settlement,
+rate, Auth/RLS or role changes; no completed SQL/correction replay. Liard untouched.
+Codex claims scripts/sql/financial-report-readers/release-20261024/*,
+three UI paths pinned in review.json, scripts/releases/repo-readiness/manifest.json,
+new recovery successor, scoped release docs and this Codex preamble.
+vision owns their ongoing independent READ-ONLY F1/F2 review and handoff section;
+Codex preserves it and will read findings before activating production readers.
+Coordination only through this file. Preserve unrelated dirty/untracked work.
+Deployment uses immutable reviewed source, ordinary Git CI unchanged and bom1
+candidate; no build-guard changes/cancellation. NEXT: fresh source/DB checks,
+independent review result and exact guarded release preparation.
+
 ## Codex — F1/F2 candidate ready, NOT LIVE — 2026-10-24T00:18:49.679757+07:00
 
 **SELESAI KANDIDAT / RELEASED; no push/deploy.** Supersedes Codex candidate claim

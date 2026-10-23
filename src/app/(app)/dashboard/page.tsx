@@ -25,6 +25,7 @@ import { useDashboardRead } from '@/lib/dashboard/use-dashboard-read'
 import { readDashboard } from '@/lib/dashboard/read'
 
 const loadDashboard = (signal: AbortSignal) => readDashboard(supabase, signal)
+const compactNumber = new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 })
 const money = (value: number | null) => value === null ? '—' : formatRupiah(value)
 
 // Chart colors
@@ -253,7 +254,7 @@ export default function DashboardPage() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} stroke="var(--muted-foreground)" />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} stroke="var(--muted-foreground)" tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} stroke="var(--muted-foreground)" tickFormatter={(value) => compactNumber.format(Number(value))} />
                   <RechartsTooltip
                     contentStyle={{
                       backgroundColor: 'rgba(24,24,27,0.95)',

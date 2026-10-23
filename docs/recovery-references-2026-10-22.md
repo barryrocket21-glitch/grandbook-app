@@ -1,3 +1,5 @@
+> Completed by [23 October verification](access-recovery-2026-10-23.md): all 34 remaining dependencies are now committed unchanged; all 35 current references verify from a fresh Git clone. The dated capture below is historical. No SQL was executed.
+
 # Current recovery references — 22 October 2026 WIB
 
 Two active P&L artifacts identified by vision are preserved with existing bytes:

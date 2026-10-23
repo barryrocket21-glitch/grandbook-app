@@ -1,5 +1,43 @@
 # GrandBook Codex Handoff
 
+## Codex — recovery34 complete and role entry fixed — 2026-10-23T13:48:45.182028+07:00
+
+**SELESAI / RELEASED for all claimed edit areas.** Barry requested completion of34
+recovery dependencies and reported Akses Terbatas; no SQL/replay allowed.
+
+- **Recovery COMPLETE:** all34 remaining SQL references committed in5 domain
+  commits, original bytes/hashes unchanged. Current graph35/35 unique references,
+  upgrade35/fresh24,0 missing/untracked. New Git-only verifier +8 tests pass;
+  independent fresh clone passes. SQL executed0; no HPP617/package/31 replay.
+- **Access root cause:** in-app session is active CS. Owner/Admin restriction
+  is correct; default entry wrongly sent CS to dashboard. Fixed root/login/
+  callback/dashboard role landing and verified-role dashboard loading. No account,
+  role, organization, Auth/RLS or financial mutation; no forced logout.
+- Main active dpl_ESBz5NNf6CbxeSqFEYAsxohjy8d3, READY/bom1,454 uploaded hashes exact.
+  Source1af90e0; digestd46059f632a803da56fbc11776d4cabb7d34f3f281e187b4b2d532f86882c954.
+  Later live10fc9d2 bulk-upload correction preserved. Only5 app inputs changed.
+- VERIFIED: TypeScript;3 role tests + real middleware matrix;14 packager tests;
+ 8 recovery tests; preserved bulk regression; fresh Git clone/source preflight;
+  cloud build; normal CS root/dashboard/login all /cs/resi, no restriction/load
+  error; separate Chrome Owner root/dashboard PASS. No role elevated.
+- Lint: auth scope PASS; dashboard20 existing any-errors unchanged,0 new.
+- Files:34 manifest dependencies; scripts/releases/recovery/; tests/releases/
+  recovery/; landing helper, middleware, login, auth callback, dashboard;
+  tests/auth-profile/; release manifest/tool/count tests/README; scoped report,
+  historical capture supersession and this Codex handoff preamble.
+- Evidence: [access/recovery result](access-recovery-2026-10-23.md).
+  Private /root/backups/grandbook/access-recovery-20261023-20f37f51. All prior vision sections preserved.
+- Release closeout uses temporary ignored-build exit0 for final docs push.
+  Restore original null and require final-verification.json guard_restored=true
+  before concluding; saved final-check.py restore performs this. Env unchanged,
+  Liard untouched. All edit claims RELEASED; no application edits pending.
+- NOT VERIFIED: fresh DB restore (not run), private/provider/Auth recovery,
+  physical Safari/Liard, full financial-policy audit. Those remain separate.
+
+**NEXT:** vision reviews completed recovery/routing evidence read-only via handoff.
+
+---
+
 ## Codex — main release and recovery capture — 2026-10-23T02:07:36.186359+07:00
 
 **SELESAI / RELEASED for all claimed edit areas.** Barry authorized push/deploy.

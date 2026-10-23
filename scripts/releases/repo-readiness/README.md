@@ -4,7 +4,7 @@ This tool only reads Git and prepares/verifies a local package. It never pushes,
 publishes, deploys, reads credentials, or applies SQL. Barry must separately
 authorize any later push/deployment. Main and Liard are independent.
 
-The manifest contains 454 reviewed inputs. Its original 453-file baseline was verified against main Vercel
+The manifest contains 457 reviewed inputs. Its original 453-file baseline was verified against main Vercel
 `dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ`, bom1. Reviewed deviations are a stronger .vercelignore and cleaned-up zero-delay
 timers for three initial remote reads. Query payloads, formulas and roles are
 unchanged; the exact deviation list is in manifest.json. Generated next-env.d.ts is reconstructed from a committed template;
@@ -20,7 +20,7 @@ python3 scripts/releases/repo-readiness/release.py prepare --output /tmp/grandbo
 python3 scripts/releases/repo-readiness/release.py verify --package /tmp/grandbook-reviewed-release
 ```
 
-Use a fresh output path; nothing is overwritten. The package has exactly 454
+Use a fresh output path; nothing is overwritten. The package has exactly 457
 files; audit metadata is a sibling file. Prepare refuses dirty/missing reviewed
 inputs, unreviewed application source, Git symlinks, wrong hashes, path traversal
 and credential patterns. Unrelated docs/jobs/SQL drafts are not silently added.
@@ -40,7 +40,7 @@ settings. This tool deliberately has no push/deploy/promote command. Never run
 the Vercel CLI from the shared dirty working directory; it can read an unrelated
 local vercel.json before upload exclusions are applied.
 
-The snapshot-specific 454-file gate must be reviewed and updated when adding new
+The snapshot-specific 457-file gate must be reviewed and updated when adding new
 application source. Do not bypass a failed source check by copying untracked
 files into the package. A later docs-only commit may share the same input digest;
 `verify` checks package bytes against the requested immutable Git revision.
@@ -55,9 +55,13 @@ Before an approved upload, run the installed Vercel CLI's dry-run file inventory
 in an isolated package copy and compare every uploaded path/hash with the manifest.
 Directory exclusions are anchored to the project root: unanchored supabase
 also excludes src/lib/supabase. Filesystem package parity alone cannot verify
-the uploader's ignore semantics. Do not promote a candidate unless all 454 uploaded
+the uploader's ignore semantics. Do not promote a candidate unless all 457 uploaded
 source files match the current manifest; region must still be bom1.
 
 23 October: the manifest includes the new pure role-landing helper and preserves
 the later live Git10fc9d2 bulk-upload timeout correction. Entry redirects use only
 a verified active profile. Owner/admin access and RLS remain unchanged.
+
+Dashboard accuracy candidate adds three reviewed modules to the prior 454-input
+role-entry release. Six application inputs differ; the baseline and SQL bytes are
+preserved. This package is not a deployment authorization.

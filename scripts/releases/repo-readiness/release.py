@@ -68,7 +68,7 @@ def inputs(repo, ref='HEAD', working=True):
     spec = json.loads(manifest_raw, object_pairs_hook=unique)
     require(spec.get('schema_version') == 1, 'Unsupported manifest version.')
     files = spec.get('files', {})
-    require(len(files) == spec.get('file_count') == 454, 'Expected all 454 reviewed application files.')
+    require(len(files) == spec.get('file_count') == 457, 'Expected all 457 reviewed application files.')
     mode = {}
     for record in git(repo, 'ls-tree', '-rz', commit).split(b'\0'):
         if record:
@@ -116,7 +116,7 @@ def verify_package(folder, payload):
         require(not q.is_symlink(), 'Package contains a symlink.')
         if q.is_file():
             actual.add(str(q.relative_to(folder)))
-    require(actual == set(payload), 'Package file list differs from the 454 reviewed inputs.')
+    require(actual == set(payload), 'Package file list differs from the 457 reviewed inputs.')
     for n, data in payload.items():
         require(sha((folder/n).read_bytes()) == sha(data), 'Package content differs: '+n)
 

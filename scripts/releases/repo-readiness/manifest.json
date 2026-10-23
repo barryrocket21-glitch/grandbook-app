@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "file_count": 454,
+  "file_count": 457,
   "baseline": {
     "deployment": "dpl_EbCS3prnBTgsLF1LkgqVGcPjkeuJ",
     "url": "grandbook-8ok9t7kpo-barrys-projects-41ecfbbc.vercel.app",
@@ -79,7 +79,7 @@
       "sha256": "e8cb3025d48143736cad499d02398b4cabb7d071390c9f2d6ab74ca064e9ef59"
     },
     "src/components/dashboard/cashflow-summary-widget.tsx": {
-      "sha256": "3c47d07cb6252f2e2470df8d28a0a2501484485cefb461963519cf17c2aae7aa"
+      "sha256": "c420707fc55e27f6d2effa5286636e6c9dc950442a18f7c9fa6ef578e08370f8"
     },
     "src/lib/supabase/migrations/038_phase8g_hotfix_lookup_alias.sql": {
       "sha256": "082c9e9b5f208c8c9371e635fd425b18f2d946e667511600e2ce737a743a594e"
@@ -1202,7 +1202,7 @@
       "sha256": "bfe9b92b6c1f49695dff3a492753fe81bcf6ef7593dae54f9bd4cfd6043e0daf"
     },
     "src/components/dashboard/pending-pickup-widget.tsx": {
-      "sha256": "b4b6133bf6922c63f4b21ab9aab9e7f4913982998757bd1807135cee6fd694e2"
+      "sha256": "9ebdbefe306da8a95d18d7223f3241deba9b8bcde698f15a250587beb6981f14"
     },
     "src/lib/supabase/migrations/006_fix_product_fk.sql": {
       "sha256": "a3fe29bd51fc9ed9754065241b08a40e7e1ea98c9d4173a22ee46a782ae3b0a8"
@@ -1346,7 +1346,7 @@
       "sha256": "49e95be0720759b557b4cb747d172d4caacfb77a844e337d76f00e01a5d9aac9"
     },
     "src/app/(app)/dashboard/page.tsx": {
-      "sha256": "8dcfce034d9b14ed8d9f290fa58dc9f7136cbae365cd7e9fe6f94fb4a3413abc"
+      "sha256": "bcdaa84f8679928157da23b9b265dac2f627ab59f5ce771ccb1f9a84ca40945e"
     },
     "src/lib/supabase/migrations/091_exported_at_post_export.sql": {
       "sha256": "a5684f424f9096839afa85bc406658fdccd621e65068359ad6ebbf5442b809d9"
@@ -1395,6 +1395,15 @@
     },
     "src/lib/auth/landing.ts": {
       "sha256": "e481556bd6bcac76fd2b2e26a99a83524cd4f63ddc14566bdd06e1e0089d786e"
+    },
+    "src/lib/dashboard/accuracy.ts": {
+      "sha256": "5fac7c5d124abb47e2c82a2a2c4b5d9dba4fb2fac2b5efa6104635dcdefe8d62"
+    },
+    "src/lib/dashboard/read.ts": {
+      "sha256": "a19b549dc5d00d7b335fa25888d3937b89d69f9d89624769736f8a4f6bf895c3"
+    },
+    "src/lib/dashboard/use-dashboard-read.ts": {
+      "sha256": "5cfe63fee1ba1f659a395aefd0b4df9e7372ae82e8afd9cb022ad8b14e102d83"
     }
   },
   "preserved_git_source": {
@@ -1403,5 +1412,18 @@
     "source": "git",
     "source_verification": "Vercel gitSource SHA; Git-source file API unavailable",
     "note": "Preserve later bulk-upload timeout fix; no rollback to earlier CLI package."
+  },
+  "dashboard_accuracy_review": {
+    "previous_application_digest": "d46059f632a803da56fbc11776d4cabb7d34f3f281e187b4b2d532f86882c954",
+    "previous_file_count": 454,
+    "reviewed_files": [
+      "src/app/(app)/dashboard/page.tsx",
+      "src/components/dashboard/pending-pickup-widget.tsx",
+      "src/components/dashboard/cashflow-summary-widget.tsx",
+      "src/lib/dashboard/accuracy.ts",
+      "src/lib/dashboard/read.ts",
+      "src/lib/dashboard/use-dashboard-read.ts"
+    ],
+    "scope": "Complete dashboard reads, date bounds, typed calculations, explicit failure and stale-request handling; no financial-rule or SQL changes. Not deployed."
   }
 }

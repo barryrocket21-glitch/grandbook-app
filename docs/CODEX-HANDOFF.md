@@ -1,5 +1,69 @@
 # GrandBook Codex Handoff
 
+## Codex — financial audit complete, no fixes applied — 2026-10-23T23:24:46.473555+07:00
+
+**AUDIT SELESAI / RELEASED.** Supersedes Codex financial-audit claim below.
+Changed ONLY docs/financial-dashboard-report-audit-2026-10-23.md and this handoff.
+No app/SQL/rule/data edits; no push/deploy. Metadata pg_catalog SELECT ran in
+READ ONLY transaction; no migration, correction or write SQL executed.
+Business reads used normal Owner Auth/RLS. Preserved vision claim66c62fe exactly:
+vision is IN PROGRESS on independent live Main and personal dashboard audit;
+no independent result claimed. Coordination only here; app paths remain free.
+
+VERIFIED:50/50 P&L output fields reproduce with independent Decimal calculations;
+full6763 Sept/6325 Oct ledger rows reconcile8 financial components;5749 unique
+receipts reconcile payout/position; Owner Profit live API and independent cost/
+HPP/commission bridge match. Source SHA256 + unrelated dirty files unchanged.
+Main remains dpl_a67itdDg1QrLHCUtjBCWb3XkBmCa READY/bom1; Liard untouched.
+
+FINDINGS (not fixed):
+- F1 P1: OrderOnline shipping included in total is re-added in P&L/Buku breakdown.
+ 2723 Oct drafts/Rp112403000 (Sept171/Rp6860000) absorbed by residual Fee CS.
+  Oct Fee CS143900500 vs implied ALL-role commission31497500. GP stays stored
+  estimated_profit: NOT112403000 additional net profit. Fee CS also mixes roles:
+  Sept actual1400000 = CS702500 + advertiser697500. Preserve completed gross fix.
+- F2 P1: Buku Dicairkan omits2348 draft receipts/Rp454793628 globally; Sept order
+  cohort379/Rp66623009. Guarded dashboard receipts already include them. Three
+  normal Owner samples confirm receipt present but ledger Dicairkan NULL.
+- F3 P2: Owner Profit omits packing snapshot; Sept expense understatementRp22300.
+- F4 P2 latent: ADS spend vs spend_total differs; current4160 rows PPN0, impact0.
+
+October dashboard profit683144005.52 is running estimate before ADS; P&L projection
+467583363.52 subtracts215560642 ADS. Realisasi−215560642 has no delivered October
+cohort. Global COD1082521138 is receipts, not profit. Sept P&L/Owner Profit gross
+difference2002558.44 fully bridged by revenue/cost basis and packing.
+
+NOT VERIFIED: true realized cash profit, bank/invoice/ADS external completeness,
+every commission entitlement, fresh workbook/browser UI; vision result pending.
+279/281 delivered Owner Profit shipping costs are legacy, only2 verified.
+Opex/supplier0 rows does not establish zero real costs/debts. Reads not atomic.
+No Auth/RLS/role/rate change or617/package/31 correction replay.
+Private evidence: /root/backups/grandbook/finance-audit-20261023-readonly.
+
+vision: please read scoped findings; optional independent F1/F2 read-only review
+after your current validation, no edits to app/SQL/data. All Codex claims RELEASED.
+NEXT: isolated reader-only F1+F2 candidate for Barry review; implementation/live
+change/push/deploy requires next scope approval, not covered by this audit.
+
+
+## Codex — financial dashboard/report semantics audit — READ-ONLY
+
+**CLAIMED / IN PROGRESS (2026-10-23 WIB).** Barry explicitly authorized read-only
+audit of financial dashboard and reports; no live data/rule changes.
+Codex owns audit documentation docs/financial-dashboard-report-audit-2026-10-23.md
+and this handoff update only. All application/SQL files are READ ONLY.
+Scope: Owner dashboard calculations, Laba Rugi, Financial Position and Owner Profit
+read contracts: period/status/cost/ADS/commission/cash-vs-estimate consistency.
+vision keeps independent live validation and personal CS/advertiser completeness
+audit; Codex will not edit their application areas. Coordinate only here.
+No write SQL/replay, migrations, data writes, schema/rule/Auth/RLS changes,
+push or deployment in this audit. Preserve all existing dirty/untracked work.
+Main baseline:50e21c3 app, a87e43b docs; verified bom1 deployment
+dpl_a67itdDg1QrLHCUtjBCWb3XkBmCa. Liard remains separate.
+Private audit evidence: /root/backups/grandbook/finance-audit-20261023-readonly.
+NEXT: trace source/period/formulas and compare read-only live aggregates.
+
+
 ## Codex — numeric layout released — 2026-10-23T22:59:34.858220+07:00
 
 **SELESAI / LIVE VERIFIED; application claims RELEASED.** Supersedes draft pending

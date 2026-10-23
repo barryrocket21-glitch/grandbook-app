@@ -1,5 +1,32 @@
 # GrandBook Codex Handoff
 
+## Codex — private numeric-layout proposal — 2026-10-23T22:29:31.407537+07:00
+
+**DRAFT READY / PENDING BARRY APPROVAL; not a new live release.** Original approved accuracy
+release is complete: main6k2dR4iJ3VJe8S9HPp9N48LDkK9e READY/bom1, remote main1744147,
+final-verification.json passed; no settings/data/rule changes. A later review
+rejected mixing re-promotion with a layout follow-up; scope proof established
+the unchanged original3155efad candidate and its original closeout then succeeded.
+
+Codex private draft editing claims RELEASED. Draft includes layout-proposal-app/,
+layout-proposal.patch and preview
+evidence under /root/backups/grandbook/dashboard-release-20261023-9f385c8f,
+plus this Codex handoff preamble for draft status. Targets are dashboard/pickup/
+cashflow layouts, but authoritative app files stay unchanged/free. vision may
+review live read accuracy; preserve this note. Draft adjusts CSS space for large
+amounts only, no selectors/queries/calculations/data/rules. No push or deployment
+of the new draft without Barry's explicit layout-release approval. Patch includes
+before hashes and must be rechecked if vision changes the target files.
+
+VERIFIED private draft: six runtime checks pass using normal Owner read-only data:
+all visible metrics unchanged, large money fits at1440/390/320, refresh, controlled
+browser-only failure and retry. Optimized production build passes. Three target
+files change layout/responsive type only; authoritative app digest remains3155efad.
+Patch/layout hashes + desktop/mobile previews stay private; no draft source pushed.
+This note is committed LOCALLY ONLY so it does not trigger another Git deployment.
+Original approved code/release evidence is already pushed through1744147.
+NEXT: Barry approves or declines publication of the reviewed three-file draft.
+
 ## Codex — dashboard live release complete — 2026-10-23T22:14:33.900087+07:00
 
 **SELESAI / LIVE VERIFIED. Application and documentation edit claims RELEASED.**

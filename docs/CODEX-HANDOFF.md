@@ -1180,7 +1180,7 @@ bertahap kelompok untracked lain; `supabase/.temp` dan
 
 ---
 
-### Sesi validasi vision — Dashboard Main live + audit dashboard personal — 23 Oktober 2026 (IN PROGRESS)
+### Sesi validasi vision — Dashboard Main live + audit dashboard personal — 23 Oktober 2026 (RELEASED)
 
 - **Agent:** vision (Muse AI). **Claim:** 2026-10-23T23:10:59+07:00 (WIB). **Perintah:**
   instruksi Barry 2026-10-23 23:07 WIB — validasi independen read-only atas
@@ -1203,7 +1203,7 @@ bertahap kelompok untracked lain; `supabase/.temp` dan
   ini. Tidak ada edit source, tidak ada perubahan data/aturan keuangan,
   tidak menjalankan SQL, tidak ada push/deploy, koreksi yang sudah selesai
   (termasuk APPLIED: 617 HPP, batch paket, 31 HPP) tidak diulang.
-- **Status:** IN PROGRESS.## Checkpoint historis — superseded bila bertentangan dengan catatan terbaru
+- **Status:** RELEASED 2026-10-24T00:17:37+07:00 (WIB).## Checkpoint historis — superseded bila bertentangan dengan catatan terbaru
 
 - **Audit dashboard personal (ditambahkan vision, 2026-10-24, read-only dari
   kode terkini; tanpa query live):** vonis per permukaan —
@@ -1306,12 +1306,29 @@ bertahap kelompok untracked lain; `supabase/.temp` dan
     (dimuat 24/10/26 00.06 WIB: Rp683.144.006 / Rp1.082.521.138 /
     Rp833.048.264; "Omzet Hari Ini Rp0" pada 00.06 WIB adalah nol asli
     hari baru).
-  - **Cek 4 — Lebar 1440/390/320: PENDING bukti pengguna.** Screenshot
-    390/320 px sudah diminta dari Barry (jalur ikon device toolbar
-    DevTools di Chrome-nya). Pada lebar lebar yang teramati browser
-    agent, jumlah utama tampak utuh, tetapi itu TIDAK diklaim sebagai
-    bukti 1440/390/320. Claim sesi ini tetap IN PROGRESS hanya untuk
-    cek ini.
+  - **Cek 4 — Lebar 1440/390/320: PASS (bukti pengguna, keputusan
+    Barry).** Barry mengirim screenshot dari Chrome miliknya dengan
+    DevTools device toolbar aktif, preset "Mobile S – 320px": kartu
+    bertumpuk satu kolom dan semua angka tampil utuh tidak terpotong
+    — COD SUDAH CAIR Rp1.082.521.138 tampil penuh beserta subteks
+    "Belum cair Rp337.339.964 · 1978 order delivered nunggu payout",
+    OMZET BULAN INI Rp833.048.264 (6325 orders), ROAS BLENDED 3.86x,
+    Ad Spend Rp215.560.642. Lebar 390 px tidak ditangkap terpisah;
+    Barry memutuskan (24 Okt 00:15 WIB) 320 px cukup sebagai kasus
+    tersempit/penentu — dicatat apa adanya sebagai keputusan pemilik,
+    bukan klaim bahwa 390 diuji. Pada lebar desktop yang teramati
+    selama sesi (browser agent + screenshot desktop Barry), jumlah
+    utama tampil lengkap; catatan tepi DevTools yang sempat terlihat
+    adalah artefak panel dock, bukan pemotongan oleh kartu.
+  - **Penutup sesi vision — RELEASED 2026-10-24T00:17:37+07:00
+    (WIB).** Ringkasan: cek 1 PASS, cek 2 PASS, cek 3 PASS (bukti
+    pengguna), cek 4 PASS (bukti pengguna 320 px, keputusan Barry);
+    audit dashboard personal selesai dengan temuan P2 yang tercatat
+    di bagian audit di atas. Selama seluruh sesi vision tidak ada
+    perubahan source/SQL/data live dan tidak ada push/deploy —
+    satu-satunya file yang diedit adalah handoff ini. Tindak
+    lanjut: perbaikan P2 dashboard personal di jalur Codex, menunggu
+    prioritas Barry.
 
 Ringkasan proyek untuk orientasi tersedia di
 [GRANDBOOK-RINGKASAN.md](GRANDBOOK-RINGKASAN.md), disusun 16 Oktober 2026 WIB

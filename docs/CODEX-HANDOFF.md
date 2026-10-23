@@ -29,7 +29,9 @@ push or deployment. Previous release authorization is scoped, not blanket.
 Progress: core candidate implemented;22 SDK/model regression tests PASS; full
 TypeScript and scoped app/test ESLint PASS. Normal Owner read5.572s matched an
 independent Python Decimal oracle (17 numeric checks,90 daily values,5 products).
-Browser fixtures, isolated build and final packaging are IN PROGRESS; not released.
+Browser13 checks PASS; image review found light-theme chart axes invisible under
+legacy white strokes. Scoped theme-variable axis/grid correction added; updated
+browser/build verification IN PROGRESS. No numeric/formula change; not released.
 Private evidence: /root/backups/grandbook/dashboard-accuracy-20261023-0aa019a3.
 
 ## Codex — recovery34 complete and role entry fixed — 2026-10-23T13:48:45.182028+07:00

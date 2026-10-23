@@ -1346,7 +1346,7 @@
       "sha256": "49e95be0720759b557b4cb747d172d4caacfb77a844e337d76f00e01a5d9aac9"
     },
     "src/app/(app)/dashboard/page.tsx": {
-      "sha256": "bcdaa84f8679928157da23b9b265dac2f627ab59f5ce771ccb1f9a84ca40945e"
+      "sha256": "1baff251bb5a8fd2955ce0c5be788b44343c9da90d41905bfb18d6195d6d25e8"
     },
     "src/lib/supabase/migrations/091_exported_at_post_export.sql": {
       "sha256": "a5684f424f9096839afa85bc406658fdccd621e65068359ad6ebbf5442b809d9"

@@ -1,0 +1,354 @@
+{
+  "schema_version": 1,
+  "baseline_id": "20261024000100_financial_readers",
+  "record_date_wib": "2026-10-24",
+  "production_project": "ubksitifaprqofujhova",
+  "application_commit": null,
+  "scope": "public application schema and public-function triggers in auth; provider recovery remains separate",
+  "baseline_archive": {
+    "snapshot": "20260913T214714Z-6198246f",
+    "sha256": "f527200b427ff6a6ab03b1cc581fc864d24e3539e3f491f44b72cafff422f3a8",
+    "mode": "schema-only; no business/Auth/history rows"
+  },
+  "upgrade_archive": {
+    "snapshot": "before-rollout-20260912",
+    "sha256": "d009e0a70434befb2a036d906e0846228c4b2f9f98006e096d45674dfe4bd975",
+    "mode": "full private restore then reviewed upgrade"
+  },
+  "application_contract_sha256": "c2c9bafe7db9696ef28f018d4133baafcd4938cb418921facfcb1cbd25fe8d78",
+  "inspector_sha256": "d16c203920ec3509d68a098c6eb07778dfb2985bb4ddd4eb5457e37229475750",
+  "object_counts": {
+    "types": 1,
+    "views": 3,
+    "schema": 1,
+    "columns": 819,
+    "indexes": 283,
+    "policies": 124,
+    "triggers": 66,
+    "functions": 222,
+    "relations": 109,
+    "sequences": 48,
+    "constraints": 300,
+    "default_acl": 7
+  },
+  "upgrade_steps": [
+    {
+      "id": "recovery-01",
+      "path": "scripts/sql/operations-hardening/01-address-resolver.sql",
+      "sha256": "041d86f3b05d6fcc0a0efd9ba3e4ddf8b5d49545bd7310b7602853e5ae8f48e2"
+    },
+    {
+      "id": "recovery-02",
+      "path": "scripts/sql/operations-hardening/02-wa-submit.sql",
+      "sha256": "34371c33b62572fda8d4f50e11736f21584df121bf8502ba54eb5a263429a94c"
+    },
+    {
+      "id": "recovery-03",
+      "path": "scripts/sql/auth-hardening/01-deny-implicit-owner.sql",
+      "sha256": "9462da377bd266fc0a822aa6285fa5dc9a7c802019b804c1b18f81b558692303"
+    },
+    {
+      "id": "recovery-04",
+      "path": "scripts/sql/auth-hardening/02-revoke-legacy-entrypoints.sql",
+      "sha256": "5934bb98d7155b973c119fdd00772130347fbc5be61fffb21d59744439b10b3a"
+    },
+    {
+      "id": "recovery-05",
+      "path": "scripts/sql/auth-hardening/03-safe-function-defaults.sql",
+      "sha256": "464a07feab7b1f3acc5585c7700cb4d92e3e203a79472bcfd22d1e1a32e1c15e"
+    },
+    {
+      "id": "recovery-06",
+      "path": "scripts/sql/admin-hardening/01-profile-access.sql",
+      "sha256": "32a58cc918e2a10f4d0a9f001f07254a354d42fc69d9f40ae2d825d6c60bc03c"
+    },
+    {
+      "id": "recovery-07",
+      "path": "scripts/sql/release-consistency/01-explicit-operation-grants.sql",
+      "sha256": "205e73940c4f2b9c68109cb3956749c3536e3e1e363ab8dc77f18bbb81da73e7"
+    },
+    {
+      "id": "recovery-08",
+      "path": "scripts/sql/operations-hardening/03-address-query-materialization.sql",
+      "sha256": "29acbf9bc70347047b22dc16d4b043be6a66ee801d7d9af8d42d1c15caa2e084"
+    },
+    {
+      "id": "recovery-09",
+      "path": "scripts/sql/spx-persistence/01-atomic-missing-orders.sql",
+      "sha256": "9b39becc78f8853eb0cd68eb35315cbe19a8f21af889afe24e864fe2d613e11b"
+    },
+    {
+      "id": "recovery-10",
+      "path": "scripts/sql/operations-hardening/04-address-suggestion-performance.sql",
+      "sha256": "cc02d32c33d1dd17c8a423131d7d134fa8bd29b84bc5690b5b83eda3777e09e6"
+    },
+    {
+      "id": "recovery-11",
+      "path": "scripts/sql/inbox-resolution/01-atomic-resi-resolution.sql",
+      "sha256": "8964b1fa1d218ee10de737a2245a76fd4e40a3ddb14bde742dc94e3e6c603b4e"
+    },
+    {
+      "id": "recovery-12",
+      "path": "scripts/sql/operations-followup/01-phone-warning.sql",
+      "sha256": "82a4223938301ab4a90c8fdd2aa90918b202c25f5878ecf40a7f97fdab614716"
+    },
+    {
+      "id": "recovery-13",
+      "path": "scripts/sql/operations-followup/02-cs-report.sql",
+      "sha256": "10f36c6fc163c6fa50f7158956506efb286f9a09d24a66e1f5fc437e962910c5"
+    },
+    {
+      "id": "recovery-14",
+      "path": "scripts/sql/operations-followup/03-data-order-ledger.sql",
+      "sha256": "70e12aa5a92063ac6c278e7e80ca994a9fa9f4113a09647385de1ad4fbe04b90"
+    },
+    {
+      "id": "recovery-15",
+      "path": "scripts/sql/spx-tracking/01-courier-only-sync.sql",
+      "sha256": "0b9e216ab41a10fdad640a3907622e518c597eb3a38983af4caa77583843ff52"
+    },
+    {
+      "id": "20260914002000",
+      "path": "scripts/sql/spx-manual/20260914002000-safe-manual-status.sql",
+      "sha256": "3ddaed2771dbb92355c7389ea7a6b17d5874b962f68c070c3a337d80cccbc7bf"
+    },
+    {
+      "path": "scripts/sql/spx-cashflow/20260914003000-reviewed-cashflow.sql",
+      "sha256": "d3108698da69c14a1b46723fcde55b45787c2f6071120d4baf55bfa7f01e585b",
+      "id": "20260914003000"
+    },
+    {
+      "path": "scripts/sql/spx-cashflow/20260914004000-balance-evidence-guard.sql",
+      "sha256": "ff75d6a77446bf5e361fbbac2e43364aad18ad747b577b2ebbb2eeeeab971d0d",
+      "id": "20260914004000"
+    },
+    {
+      "id": "20260914005000",
+      "path": "scripts/sql/spx-cashflow/20260914005000-ledger-reporting.sql",
+      "sha256": "c0015b5069d1ec39d2d7728dc8b9da372df03c2e2e9196814b30117534439d30"
+    },
+    {
+      "id": "20260914006000",
+      "path": "scripts/sql/spx-cashflow/20260914006000-financial-position-materialization.sql",
+      "sha256": "3bd420a116da2c78489daf3658f108e019b142feaed923f9278c5e36092075ab"
+    },
+    {
+      "id": "20260915001000",
+      "path": "scripts/sql/hpp-corrections/20260915001000-preserve-commission-identities.sql",
+      "sha256": "862f1a2e77b3531f8cd7e271941d350e230a6f6eff6a08c45e450a47f9c4b896"
+    },
+    {
+      "id": "20260915002000",
+      "path": "scripts/sql/hpp-effective-dates/20260915002000-effective-hpp.sql",
+      "sha256": "18f706953b5291012e9adc9a0b6af5d3d6b5b8382620c6a2d3a89f5cf9a50807"
+    },
+    {
+      "id": "20260915002100",
+      "path": "scripts/sql/hpp-effective-dates/20260915002100-save-product-preserving-variants.sql",
+      "sha256": "455943df716935d51a05cc1e0494b7840a7a223c2cf88f852da050b6749d301b"
+    },
+    {
+      "id": "20260915000100_verified_spx_costs",
+      "path": "scripts/sql/spx-actual-costs/20260915000100-verified-components.sql",
+      "sha256": "8782f671fb53bca23490842c803f0390b46b9953518258f841460f725f2ac115"
+    },
+    {
+      "id": "20260915000200_settlement_evidence",
+      "path": "scripts/sql/spx-actual-costs/20260915000200-settlement-evidence.candidate.sql",
+      "sha256": "fbc76c1cf95d41118b6ad8adfa3e53ce0f3e132608d7f7d67ce7d3ddc337eb81"
+    },
+    {
+      "id": "20260917000100_cs_per_order",
+      "path": "scripts/sql/cs-commission-per-order/20260917000100-cs-per-order.candidate.sql",
+      "sha256": "2d4a24fa5400e8c684f5b5df36a893cb1ee7dde5d05804a37b541f15e12e70e7"
+    },
+    {
+      "id": "20260917000200_owner_admin_payment",
+      "path": "scripts/sql/commission-payment-access/20260917000200-owner-admin-payment.candidate.sql",
+      "sha256": "df613f7b3553de61a2bc080e65d5e9af72c3455a54541341646c2ea75ac2c427"
+    },
+    {
+      "id": "20260929000100_orderonline_attribution",
+      "path": "scripts/sql/orderonline-import/20260929-preserve-attribution.sql",
+      "sha256": "0602a8a4c7c649d39334f7a334dea9e57aa3ae042d54b0d5e0505ae2a78b4522"
+    },
+    {
+      "id": "20261001000100_orderonline_draft_gross",
+      "path": "scripts/sql/orderonline-import/20261001-draft-gross-revenue.candidate.sql",
+      "sha256": "44e4a9a39a8a013bfedb7bc29febd10087bc4bff2cc0efc4c4a9e596c294f5ac"
+    },
+    {
+      "id": "20261001000200_cs_shipments",
+      "path": "scripts/sql/cs-crm-access/20261001-cs-shipments.candidate.sql",
+      "sha256": "fc8fc34104763aa7d72e1f2a7a2495c1a6521070eeaeae24820218a8293aa380"
+    },
+    {
+      "id": "20261002000100_contact_progress",
+      "path": "scripts/sql/cs-crm-access/20261002000100-contact-progress.sql",
+      "sha256": "28935840ba7b6e27bbb76ebcec27213033478f2cfa2e13caf1fd4b4b5612fddc"
+    },
+    {
+      "id": "20261002000200_data_order_performance",
+      "path": "scripts/sql/data-order-performance/20261002000200-defer-enrichment.sql",
+      "sha256": "e299e5b5f7ed8c8a3b584af58e2a7e8d7f84e861fee6c51ea6e2aac5634a3542"
+    },
+    {
+      "id": "20261002000300_data_order_export",
+      "path": "scripts/sql/data-order-performance/20261002000300-batch-item-enrichment.sql",
+      "sha256": "e402da4289513dc382d6b384ebf91ad696b49cfb9e9b4149b4746594bf9db623"
+    },
+    {
+      "id": "20261002000400_direct_snapshot_export",
+      "path": "scripts/sql/data-order-performance/20261002000400-direct-snapshot-export.sql",
+      "sha256": "18c4c5c7f06377f9c4c963b27155a21fa72eac14a00f0f8bbd6bfd24086f4e05"
+    },
+    {
+      "id": "20261021000100_pnl_reader_performance",
+      "path": "scripts/sql/pnl-performance/20261021000100-materialized-summary.sql",
+      "sha256": "2f52ac8bde8acf27d17a78a2d41e7a7fed218579eb98d0b009098e543db49fb9"
+    },
+    {
+      "id": "20261024000100_financial_readers",
+      "path": "scripts/sql/financial-report-readers/release-20261024/reader-definitions.sql",
+      "sha256": "4653e2f1acd0149be109d2223043e14f84e2772e47fbc4fcd5c3913ec5af0e50"
+    }
+  ],
+  "history_policy": "Preserve original ledger and legacy sources; IDs here define recovery order, not fabricated historical apply dates. No wildcard legacy replay or migration repair.",
+  "fresh_steps": [
+    {
+      "id": "recovery-12",
+      "path": "scripts/sql/operations-followup/01-phone-warning.sql",
+      "sha256": "82a4223938301ab4a90c8fdd2aa90918b202c25f5878ecf40a7f97fdab614716"
+    },
+    {
+      "id": "recovery-13",
+      "path": "scripts/sql/operations-followup/02-cs-report.sql",
+      "sha256": "10f36c6fc163c6fa50f7158956506efb286f9a09d24a66e1f5fc437e962910c5"
+    },
+    {
+      "id": "recovery-14",
+      "path": "scripts/sql/operations-followup/03-data-order-ledger.sql",
+      "sha256": "70e12aa5a92063ac6c278e7e80ca994a9fa9f4113a09647385de1ad4fbe04b90"
+    },
+    {
+      "id": "recovery-15",
+      "path": "scripts/sql/spx-tracking/01-courier-only-sync.sql",
+      "sha256": "0b9e216ab41a10fdad640a3907622e518c597eb3a38983af4caa77583843ff52"
+    },
+    {
+      "id": "20260914002000",
+      "path": "scripts/sql/spx-manual/20260914002000-safe-manual-status.sql",
+      "sha256": "3ddaed2771dbb92355c7389ea7a6b17d5874b962f68c070c3a337d80cccbc7bf"
+    },
+    {
+      "path": "scripts/sql/spx-cashflow/20260914003000-reviewed-cashflow.sql",
+      "sha256": "d3108698da69c14a1b46723fcde55b45787c2f6071120d4baf55bfa7f01e585b",
+      "id": "20260914003000"
+    },
+    {
+      "path": "scripts/sql/spx-cashflow/20260914004000-balance-evidence-guard.sql",
+      "sha256": "ff75d6a77446bf5e361fbbac2e43364aad18ad747b577b2ebbb2eeeeab971d0d",
+      "id": "20260914004000"
+    },
+    {
+      "id": "20260914005000",
+      "path": "scripts/sql/spx-cashflow/20260914005000-ledger-reporting.sql",
+      "sha256": "c0015b5069d1ec39d2d7728dc8b9da372df03c2e2e9196814b30117534439d30"
+    },
+    {
+      "id": "20260914006000",
+      "path": "scripts/sql/spx-cashflow/20260914006000-financial-position-materialization.sql",
+      "sha256": "3bd420a116da2c78489daf3658f108e019b142feaed923f9278c5e36092075ab"
+    },
+    {
+      "id": "20260915001000",
+      "path": "scripts/sql/hpp-corrections/20260915001000-preserve-commission-identities.sql",
+      "sha256": "862f1a2e77b3531f8cd7e271941d350e230a6f6eff6a08c45e450a47f9c4b896"
+    },
+    {
+      "id": "20260915002000",
+      "path": "scripts/sql/hpp-effective-dates/20260915002000-effective-hpp.sql",
+      "sha256": "18f706953b5291012e9adc9a0b6af5d3d6b5b8382620c6a2d3a89f5cf9a50807"
+    },
+    {
+      "id": "20260915002100",
+      "path": "scripts/sql/hpp-effective-dates/20260915002100-save-product-preserving-variants.sql",
+      "sha256": "455943df716935d51a05cc1e0494b7840a7a223c2cf88f852da050b6749d301b"
+    },
+    {
+      "id": "20260915000100_verified_spx_costs",
+      "path": "scripts/sql/spx-actual-costs/20260915000100-verified-components.sql",
+      "sha256": "8782f671fb53bca23490842c803f0390b46b9953518258f841460f725f2ac115"
+    },
+    {
+      "id": "20260915000200_settlement_evidence",
+      "path": "scripts/sql/spx-actual-costs/20260915000200-settlement-evidence.candidate.sql",
+      "sha256": "fbc76c1cf95d41118b6ad8adfa3e53ce0f3e132608d7f7d67ce7d3ddc337eb81"
+    },
+    {
+      "id": "20260917000100_cs_per_order",
+      "path": "scripts/sql/cs-commission-per-order/20260917000100-cs-per-order.candidate.sql",
+      "sha256": "2d4a24fa5400e8c684f5b5df36a893cb1ee7dde5d05804a37b541f15e12e70e7"
+    },
+    {
+      "id": "20260917000200_owner_admin_payment",
+      "path": "scripts/sql/commission-payment-access/20260917000200-owner-admin-payment.candidate.sql",
+      "sha256": "df613f7b3553de61a2bc080e65d5e9af72c3455a54541341646c2ea75ac2c427"
+    },
+    {
+      "id": "20260929000100_orderonline_attribution",
+      "path": "scripts/sql/orderonline-import/20260929-preserve-attribution.sql",
+      "sha256": "0602a8a4c7c649d39334f7a334dea9e57aa3ae042d54b0d5e0505ae2a78b4522"
+    },
+    {
+      "id": "20261001000100_orderonline_draft_gross",
+      "path": "scripts/sql/orderonline-import/20261001-draft-gross-revenue.candidate.sql",
+      "sha256": "44e4a9a39a8a013bfedb7bc29febd10087bc4bff2cc0efc4c4a9e596c294f5ac"
+    },
+    {
+      "id": "20261001000200_cs_shipments",
+      "path": "scripts/sql/cs-crm-access/20261001-cs-shipments.candidate.sql",
+      "sha256": "fc8fc34104763aa7d72e1f2a7a2495c1a6521070eeaeae24820218a8293aa380"
+    },
+    {
+      "id": "20261002000100_contact_progress",
+      "path": "scripts/sql/cs-crm-access/20261002000100-contact-progress.sql",
+      "sha256": "28935840ba7b6e27bbb76ebcec27213033478f2cfa2e13caf1fd4b4b5612fddc"
+    },
+    {
+      "id": "20261002000200_data_order_performance",
+      "path": "scripts/sql/data-order-performance/20261002000200-defer-enrichment.sql",
+      "sha256": "e299e5b5f7ed8c8a3b584af58e2a7e8d7f84e861fee6c51ea6e2aac5634a3542"
+    },
+    {
+      "id": "20261002000300_data_order_export",
+      "path": "scripts/sql/data-order-performance/20261002000300-batch-item-enrichment.sql",
+      "sha256": "e402da4289513dc382d6b384ebf91ad696b49cfb9e9b4149b4746594bf9db623"
+    },
+    {
+      "id": "20261002000400_direct_snapshot_export",
+      "path": "scripts/sql/data-order-performance/20261002000400-direct-snapshot-export.sql",
+      "sha256": "18c4c5c7f06377f9c4c963b27155a21fa72eac14a00f0f8bbd6bfd24086f4e05"
+    },
+    {
+      "id": "20261021000100_pnl_reader_performance",
+      "path": "scripts/sql/pnl-performance/20261021000100-materialized-summary.sql",
+      "sha256": "2f52ac8bde8acf27d17a78a2d41e7a7fed218579eb98d0b009098e543db49fb9"
+    },
+    {
+      "id": "20261024000100_financial_readers",
+      "path": "scripts/sql/financial-report-readers/release-20261024/reader-definitions.sql",
+      "sha256": "4653e2f1acd0149be109d2223043e14f84e2772e47fbc4fcd5c3913ec5af0e50"
+    }
+  ],
+  "status": "PREPARED_PENDING_PRODUCTION_ACTIVATION",
+  "preserve_hpp_metadata_defaults": true,
+  "preservation_note": "Old backup lacks hpp_price_id/hpp_pricing_mode. Validate null/fixed when present; fingerprint every original field unchanged. Historical manifests remain unchanged.",
+  "validate_hpp_seed_from_master": true,
+  "activation_evidence": "docs/financial-p1-release-2026-10-24.md",
+  "starting_contract_sha256": "8c93820be367235647016c2aa3de335f74d80d905e46a14508f384867f5caaeb",
+  "repeat_preserve_steps": [
+    "20261002000100_contact_progress"
+  ],
+  "recovery_evidence": "docs/financial-p1-release-2026-10-24.md"
+}

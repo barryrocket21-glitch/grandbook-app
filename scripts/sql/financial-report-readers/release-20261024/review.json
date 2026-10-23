@@ -1,0 +1,13 @@
+{
+  "project": "ubksitifaprqofujhova",
+  "scope": "two read-only report functions; no business mutations",
+  "candidate_body_identical": true,
+  "rollback_body_identical": true,
+  "source_candidate_sha256": "94be64485f9636c091015702f539383ce99849be94db7ccb15e62151000c658f",
+  "expected_contract_sha256": "c2c9bafe7db9696ef28f018d4133baafcd4938cb418921facfcb1cbd25fe8d78",
+  "files": {
+    "rollback.sql": "81a227c4b6896003b3ae5eecc995841849f6a309f1264edfe3e7e110ce653e18",
+    "activation.sql": "93544dbb3bfe4ce617ba7717df002bf70ea086d88e6feeb69f03eebdaf3b937e",
+    "reader-definitions.sql": "4653e2f1acd0149be109d2223043e14f84e2772e47fbc4fcd5c3913ec5af0e50"
+  }
+}

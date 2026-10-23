@@ -1263,6 +1263,56 @@ bertahap kelompok untracked lain; `supabase/.temp` dan
     jalur implementasi dan menunggu keputusan Barry.
 
 
+- **Hasil validasi live dashboard Main (ditambahkan vision, 2026-10-24;
+  dijalankan 2026-10-23 malam WIB; deployment yang diperiksa hanya
+  `grandbook-app.vercel.app` — Liard tidak dikunjungi):**
+
+  - **Cek 1 — Login owner: PASS.** Login di
+    `grandbook-app.vercel.app/login` hanya email + password (tombol
+    "Masuk"), tanpa CAPTCHA/kode/passkey/penyedia lain. Terverifikasi
+    masuk sebagai Barry, peran Owner, menu "Dashboard Owner" tampil.
+    Kredensial dimasukkan Barry sendiri lewat entri aman; nilai tidak
+    dicatat.
+  - **Cek 2 — Total vs bacaan lengkap periode WIB: PASS.** Periode
+    bulanan 2026-10-01–2026-10-23 (WIB); dashboard menyatakan "terbaca
+    lengkap: 8673 order, 6325 item bulan ini, 1134 baris iklan" —
+    volume di atas 1.000 baris teruji nyata. Angka tumpang tindih cocok
+    persis di Dashboard, Laba Rugi, dan Owner Profit Cockpit: Omzet/
+    Penjualan Rp833.048.264 (6.325 order); Profit Estimasi/Gross Profit
+    Rp683.144.006; Biaya Iklan/Ad Spend Rp215.560.642 (rincian platform
+    Cockpit META Rp144.810.563 + GOOGLE Rp64.717.723 + SNACK
+    Rp6.032.356 = pas); Biaya Admin Laba Rugi Rp11.633.892 = fee COD
+    Rp10.387.404 + PPN Rp1.246.488 di dashboard; Profit Setelah Ads
+    Cockpit −Rp215.560.642 = Laba Realisasi Laba Rugi; delivered/
+    diterima 0 order dan Rp0 di ketiga tempat (Cockpit berbasis "order
+    final" — definisi konsisten, bukan selisih). Angka "Est. biaya
+    Rp212.036.793" di dashboard tidak punya padanan berlabel langsung
+    di kedua laporan, jadi tidak diklaim cocok terpisah. Penanda
+    versi/deployment tidak terlihat di halaman mana pun dan tidak
+    ditebak.
+  - **Cek 3 — Gagal baca tidak tampil nol + retry: PASS (bukti
+    pengguna).** Browser bawaan Muse tidak punya DevTools/pemblokiran
+    jaringan (dari sisi browser agent: NOT VERIFIED); reload penuh saat
+    offline hanya menampilkan halaman error browser, bukan state
+    aplikasi — metode itu tidak valid dan diganti. Barry menjalankan
+    simulasi di Chrome miliknya (screenshot ke vision): dashboard
+    dimuat normal -> DevTools Network "Offline" -> klik Refresh di
+    dalam Dashboard -> semua fetch data `(failed)` dan aplikasi
+    menampilkan kartu error eksplisit "Dashboard belum dapat
+    ditampilkan — Data belum terbaca lengkap atau berubah saat dimuat.
+    Angka tidak ditampilkan agar tidak menyesatkan." + tombol "Coba
+    lagi"; TIDAK ada total yang dirender sebagai nol. Pemulihan:
+    throttle kembali "No throttling" + Refresh -> angka asli kembali
+    (dimuat 24/10/26 00.06 WIB: Rp683.144.006 / Rp1.082.521.138 /
+    Rp833.048.264; "Omzet Hari Ini Rp0" pada 00.06 WIB adalah nol asli
+    hari baru).
+  - **Cek 4 — Lebar 1440/390/320: PENDING bukti pengguna.** Screenshot
+    390/320 px sudah diminta dari Barry (jalur ikon device toolbar
+    DevTools di Chrome-nya). Pada lebar lebar yang teramati browser
+    agent, jumlah utama tampak utuh, tetapi itu TIDAK diklaim sebagai
+    bukti 1440/390/320. Claim sesi ini tetap IN PROGRESS hanya untuk
+    cek ini.
+
 Ringkasan proyek untuk orientasi tersedia di
 [GRANDBOOK-RINGKASAN.md](GRANDBOOK-RINGKASAN.md), disusun 16 Oktober 2026 WIB
 dari dokumentasi dan checkpoint sampai 8 Oktober. Pembuatan ringkasan tidak

@@ -1,5 +1,23 @@
 # GrandBook Codex Handoff
 
+## Codex — dashboard approved push/deployment — 2026-10-23T21:48:26.099082+07:00
+
+**IN PROGRESS.** Barry explicitly authorizes push/deploy of the tested dashboard
+candidate and verification until normal live; no live data or financial-rule
+changes. Read vision f4a070f and latest completed candidate handoff. Its findings
+are handled in source61aaa6c, final report commitfca760a. No new vision claim seen.
+
+Codex claims release operations for main grandbook-app only, this Codex handoff
+preamble, and docs/dashboard-accuracy-2026-10-23.md release evidence. No application,
+SQL, Auth/RLS, role, financial engine or data correction area claimed. vision:
+please preserve this release preamble; independently validate candidate/live
+completeness and failure states read-only, recording your claim/results here.
+Candidate457 inputs, digest3155efade91d06cbbcb5e8c47b5128994fe1f4d864b53372bbc15b190d58dafd.
+Use exact immutable reviewed package, explicitbom1, preserve auto-build guard
+and project settings, verify upload inventory before promotion; never deploy
+the shared dirty checkout. Liard separate/untouched. No replay SQL/HPP617/package31.
+Private evidence: /root/backups/grandbook/dashboard-release-20261023-9f385c8f.
+
 ## Codex — Owner Dashboard accuracy #1 complete — 2026-10-23T21:41:35.175764+07:00
 
 **SELESAI IMPLEMENTASI / PENDING RELEASE APPROVAL. All edit claims RELEASED.**

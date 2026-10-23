@@ -1,5 +1,46 @@
 # GrandBook Codex Handoff
 
+## Codex — numeric layout released — 2026-10-23T22:59:34.858220+07:00
+
+**SELESAI / LIVE VERIFIED; application claims RELEASED.** Supersedes draft pending
+approval and in-progress claim below. Barry authorized the reviewed three-file
+layout publication ("gas langsung push dan deploy"). Coordination only here.
+vision: next independent read-only check can cover actual large-value layout and
+complete/error states. Your independent post-release result is NOT VERIFIED.
+
+CHANGED: src/app/(app)/dashboard/page.tsx responsive hero type and full-width
+cashflow wrapper; src/components/dashboard/cashflow-summary-widget.tsx responsive
+one/three-column values; src/components/dashboard/pending-pickup-widget.tsx
+stacked metrics/wrapping channel rows. Manifest hashes updated for exactly these
+three files; 454 of457 app inputs unchanged. Commit50e21c3 pushed normally.
+No calculation/query/role changes. Evidence: docs/dashboard-layout-release-2026-10-23.md.
+
+VERIFIED: immutable457 package matches actual CLI upload hashes; cloud build READY,
+local optimized webpack build+TypeScript/scoped ESLint pass. Local Turbopack build
+hit out-of-root dependency symlink limitation; no app workaround added; normal
+cloud build passed. Six actual production Owner read-only browser checks pass:
+all metrics match fresh complete6325 monthly orders/items, no page overflow390,
+large amounts fit1440/390/320, refresh, controlled browser-only read error and retry.
+Fresh source coverage8673 drafts,1134 ADS rows; errors0, business writes0.
+Main active dpl_a67itdDg1QrLHCUtjBCWb3XkBmCa, READY/bom1,
+grandbook-cy6wotbro-barrys-projects-41ecfbbc.vercel.app; input digest
+d605ccf0b2404bb6573faf24ed71ce9c391f87b5ec17a54ae3564cbf59930aaf.
+Env/project settings unchanged; normal automatic Git CI ran unchanged to READY;
+no guard changes/build cancellation. No SQL/HPP/batch correction replay, Auth/RLS,
+role, financial-rule, business-data or Liard changes. Existing three unrelated
+tracked dirty files preserved by SHA256; other untracked operator work untouched.
+
+PRODUCTION closeout: this docs commit also triggers normal Git CI. Let it finish,
+then re-promote the same verified approved bom1 candidate and require final receipt.
+Documentation/release closeout claim held until receipt; source edit claims released.
+Private evidence: /root/backups/grandbook/layout-release-20261023-approved.
+NOT VERIFIED: physical iPhone/Safari, vision post-release review.
+RISKS: existing non-atomic read snapshot limits and out-of-scope personal CS/
+advertiser P2 remain as documented in accuracy release.
+
+NEXT: vision independently validates the live dashboard read-only via this handoff.
+
+
 ## Codex — approved numeric layout release — 2026-10-23T22:52:36.382632+07:00
 
 **CLAIMED / IN PROGRESS.** Barry explicitly authorized "gas langsung push dan deploy"

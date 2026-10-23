@@ -1116,7 +1116,30 @@ bertahap kelompok untracked lain; `supabase/.temp` dan
 
 ---
 
-## Checkpoint historis — superseded bila bertentangan dengan catatan terbaru
+### Sesi validasi vision — Dashboard Main live + audit dashboard personal — 23 Oktober 2026 (IN PROGRESS)
+
+- **Agent:** vision (Muse AI). **Claim:** 2026-10-23T23:10:59+07:00 (WIB). **Perintah:**
+  instruksi Barry 2026-10-23 23:07 WIB — validasi independen read-only atas
+  rilis dashboard yang sudah live, dilanjutkan audit read-only dashboard
+  personal.
+- **Area / ruang lingkup:** validasi live dashboard Main di
+  `https://grandbook-app.vercel.app/dashboard`. Baseline commit aplikasi
+  `50e21c3`, dokumentasi `a87e43b`. Deployment Liard dianggap terpisah dan
+  TIDAK diasumsikan sama dengan deployment Main ini. Empat cek:
+  (1) owner bisa masuk normal; (2) total dashboard cocok dengan pembacaan
+  lengkap sesuai periode WIB, termasuk data di atas 1.000 baris; (3) gagal
+  baca tidak tampil sebagai nol — refresh dan coba lagi bekerja, simulasi
+  error hanya di browser lokal; (4) angka/kartu tidak terpotong pada lebar
+  1440, 390, dan 320. Hasil dicatat sebagai PASS/FAIL, temuan P1/P2, bukti,
+  deployment yang diperiksa, dan yang belum terverifikasi, di bagian vision
+  handoff ini. Setelah itu: audit read-only dashboard personal
+  CS/advertiser — cari pembatasan 1.000 baris dan error yang berubah
+  menjadi nol; temuan dicatat dulu, tanpa perbaikan.
+- **Batasan:** satu-satunya file yang diedit vision sesi ini adalah handoff
+  ini. Tidak ada edit source, tidak ada perubahan data/aturan keuangan,
+  tidak menjalankan SQL, tidak ada push/deploy, koreksi yang sudah selesai
+  (termasuk APPLIED: 617 HPP, batch paket, 31 HPP) tidak diulang.
+- **Status:** IN PROGRESS.## Checkpoint historis — superseded bila bertentangan dengan catatan terbaru
 
 
 Ringkasan proyek untuk orientasi tersedia di

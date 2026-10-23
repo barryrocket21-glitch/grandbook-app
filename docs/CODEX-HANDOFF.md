@@ -1,38 +1,56 @@
 # GrandBook Codex Handoff
 
-## Codex — Owner Dashboard accuracy #1 — 2026-10-23 (IN PROGRESS)
+## Codex — Owner Dashboard accuracy #1 complete — 2026-10-23T21:41:35.175764+07:00
 
-Barry authorizes dashboard accuracy to completion; no live data/rule changes.
-Read vision validation f4a070f (RELEASED): agrees on pagination + fail-closed error
-UI. Earlier 14:17 Codex claim was lost when concurrent handoff snapshot was saved;
-restore the claim here without altering any vision section. vision: please preserve
-this preamble and independently review the completed candidate read-only; record
-new claims before editing. Coordination only through this handoff.
+**SELESAI IMPLEMENTASI / PENDING RELEASE APPROVAL. All edit claims RELEASED.**
+Barry authorized dashboard accuracy #1 without live data/rule changes.
+vision validation f4a070f read and preserved byte-for-byte; restored the earlier
+Codex claim lost during a concurrent handoff save. Coordination only here.
+vision: please independently review the completed source/evidence read-only;
+post-implementation review is not yet confirmed. No application claim held now.
 
-Codex claims src/app/(app)/dashboard/page.tsx, src/lib/dashboard/accuracy.ts,
-src/lib/dashboard/read.ts, src/lib/dashboard/use-dashboard-read.ts,
-src/components/dashboard/pending-pickup-widget.tsx,
-src/components/dashboard/cashflow-summary-widget.tsx, tests/dashboard-accuracy/,
-docs/dashboard-accuracy-2026-10-23.md and this Codex preamble.
-Additional claim before release metadata edits: scripts/releases/repo-readiness/
-manifest.json, release.py, README.md, tests/releases/repo-readiness/test_release.py.
-Review all six changed/new application inputs, advance fixed gate from454 to457;
-no other baseline source or historical SQL changed. No other UI/API/SQL/Auth/RLS/financial-rule files claimed.
-Scope: complete ordered/count-verified reads; WIB period; explicit incomplete/
-error states and retry; abort/stale protection. Existing financial calculations
-preserved; labels may clarify their existing source, never imply cash profit.
-Read-only source sample: 6,325 monthly draft orders/items; 8,673 orders for
-30-day/month union, 1,097 ad-spend rows; valid RPCs, no cross-source identity
-overlap. Data files only in private evidence, no customer records in Git/docs.
-No SQL/HPP617/package/31 replay, database/role/payment/settlement mutations,
-push or deployment. Previous release authorization is scoped, not blanket.
-Progress: core candidate implemented;22 SDK/model regression tests PASS; full
-TypeScript and scoped app/test ESLint PASS. Normal Owner read5.572s matched an
-independent Python Decimal oracle (17 numeric checks,90 daily values,5 products).
-Browser13 checks PASS; image review found light-theme chart axes invisible under
-legacy white strokes. Scoped theme-variable axis/grid correction added; updated
-browser/build verification IN PROGRESS. No numeric/formula change; not released.
-Private evidence: /root/backups/grandbook/dashboard-accuracy-20261023-0aa019a3.
+- Fixed all five client table reads with ordered keyset pagination, exact
+  remaining counts + final full-count checks. Fail closed on page/RPC errors,
+  missing/invalid values, duplicate/overlapping identities and incomplete/changed
+  item relationships. Valid empty data remains zero; unknown estimates show —.
+- Current-month KPIs/top products remain monthly. Thirty-day chart reads prior
+  month too; all dates bounded to today WIB. Source/read-time coverage visible.
+  Clear retry states, cancellation/sequence/timeouts; widgets no longer disappear
+  silently. Chart axes readable in both themes; distinct compact number labels.
+- Read-only proof: legacy default returned1,000 monthly drafts/items vs6,325
+  each. Full source8,673 drafts +1,097 ADS rows;6,325 monthly items; final orders0
+  in this window. Candidate normal Owner/RLS read5.572s matches independent
+  Decimal oracle:17 numeric metrics,90 daily values, status counts,5 products.
+- VERIFIED:22 SDK/model tests;14 runtime browser checks; full TypeScript;
+  scoped ESLint; independent Git clone; immutable457-input package;
+  optimized production build;14 package tests;8 recovery tests. SQL executed0.
+- App source61aaa6cf24fafe1aaa1e32aaa0f103dafc68cf0c.
+  Digest3155efade91d06cbbcb5e8c47b5128994fe1f4d864b53372bbc15b190d58dafd.
+  Private immutable release-package and build-release; do not use superseded
+  certified-package/certified-package-final snapshots for a future release.
+  451 baseline app inputs unchanged; six changed/new, three new modules.
+- Files: src/app/(app)/dashboard/page.tsx; src/components/dashboard/
+  pending-pickup-widget.tsx and cashflow-summary-widget.tsx; src/lib/dashboard/
+  accuracy.ts, read.ts, use-dashboard-read.ts; tests/dashboard-accuracy/;
+  release manifest/tool/README/count tests; scoped report and this Codex preamble.
+- Local commits8362532(core/tests),96f2a8a(input review),313ed9c(axis visibility),
+  61aaa6c(number-label precision); final test/report commit follows. No push.
+- PRODUCTION: no Vercel/deployment/env changes, no SQL/schema/data/rule/Auth/RLS/
+  role/payment/settlement mutation; no HPP617/package/31 replay. Main and Liard
+  remain separate. A later approved release must use exact reviewed inputs and
+  explicit regionbom1; main project defaultiad1 and auto-Git-build remain concerns.
+- Existing dirty AGENTS.md, scripts/doctor-local-env.mjs and
+  tests/scripts/spx-api-normalizer.test.ts hashes unchanged. Other untracked
+  operator work preserved; shared checkout is not globally clean.
+- NOT VERIFIED: Vercel cloud build/upload and production smoke for this candidate,
+  physical Safari, full financial-policy/history audit, and vision's new review.
+  Multiple reads are not an atomic snapshot against equal-count concurrent
+  edits; coverage and source time are shown. Existing formulas and spend basis
+  preserved; semantic #2/commission #3 remain outside this task.
+- Evidence: docs/dashboard-accuracy-2026-10-23.md.
+  Private /root/backups/grandbook/dashboard-accuracy-20261023-0aa019a3.
+
+**NEXT:** Barry approves the scoped dashboard candidate push/deployment.
 
 ## Codex — recovery34 complete and role entry fixed — 2026-10-23T13:48:45.182028+07:00
 

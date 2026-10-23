@@ -1,0 +1,46 @@
+{
+  "status": "CANDIDATE_ONLY_NOT_APPLIED_LIVE",
+  "session_started": "2026-10-23",
+  "baseline_application_commit": "50e21c3322aab5b709ee3774df655b75c488b89b",
+  "restore": "20261022T192012Z-8e4d12b2",
+  "live_deployment_baseline": "dpl_a67itdDg1QrLHCUtjBCWb3XkBmCa",
+  "changed_sql_functions": [
+    "laba_rugi_summary(date,date)",
+    "list_pembukuan(date,date,text,text,integer,integer)"
+  ],
+  "new_sql_helpers": 0,
+  "grants_changed": false,
+  "active_recovery_manifest_changed": false,
+  "ui_patch_sources": {
+    "src/app/(app)/laba-rugi/page.tsx": {
+      "before_sha256": "ab74177996b486852218095b64c8897fc2e7a08b8b5d616f9b530c3e71408c8c",
+      "after_sha256": "c941c467704f44fb409d5fc1c565a6050d444946a5758aee21b8e671446a50e4"
+    },
+    "src/app/(app)/orders/pembukuan/page.tsx": {
+      "before_sha256": "4cc2884a78e3db37a6ed724fcbfb5c37d98a1234aec9a044c9e1edb15117bfd2",
+      "after_sha256": "4759388f48c0efebb662283c090b8c9c1cd84e4b2290324b908ad12365527c05"
+    },
+    "src/lib/orders/pembukuan-export.ts": {
+      "before_sha256": "e8cb3025d48143736cad499d02398b4cabb7d071390c9f2d6ab74ca064e9ef59",
+      "after_sha256": "3ae11016358121854b6ac63d84d149a16cb514f169b044c70e40a3be55588ff4"
+    }
+  },
+  "candidate_sql_sha256": "94be64485f9636c091015702f539383ce99849be94db7ccb15e62151000c658f",
+  "ui_patch_sha256": "1a8cadb0951b84c438c257e1ddfe3373402c215fa7945babe8cce0b4fcdc3b33",
+  "live_business_writes": 0,
+  "live_rule_changes": 0,
+  "push": false,
+  "deploy": false,
+  "isolated_rollback_sha256": "bf925a9ad07726fac1bfb92504cba84f8a6c14ecb005b3c1fbd87877935d39d6",
+  "sql_synthetic_checks": 14,
+  "restored_period_cases": 6,
+  "browser_checks": 6,
+  "export_checks": 7,
+  "business_table_fingerprints_preserved": true,
+  "function_contract_preserved": true,
+  "rollback_and_reapply_tested": true,
+  "build_typecheck_lint_pass": true,
+  "browser_zero_js_errors": true,
+  "completed_wib": "2026-10-24T00:15:40.353108+07:00",
+  "latest_ui_build_id": "4cA_u6KwAYtruGLfWC_tL"
+}

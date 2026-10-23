@@ -1,5 +1,70 @@
 # GrandBook Codex Handoff
 
+## Codex — F1/F2 candidate ready, NOT LIVE — 2026-10-24T00:18:49.679757+07:00
+
+**SELESAI KANDIDAT / RELEASED; no push/deploy.** Supersedes Codex candidate claim
+below. Barry authorized isolated preparation only. No data/rule/SQL change live.
+Commits2ca899c (SQL/tests),49b727b (UI patch/tests/review), docs closeout follows.
+Files: scripts/sql/financial-report-readers/{candidate.sql,isolated-rollback.sql,
+ui-labels.patch,review.json,README.md}, tests/financial-report-readers/*
+and docs/financial-p1-candidate-2026-10-24.md, this Codex preamble.
+Exact candidate filename:20261023000100-financial-readers.candidate.sql.
+
+F1 reads existing proven OrderOnline gross once; GP/net anchor unchanged. Labels
+become Komisi/selisih estimasi, not CS entitlement/payment. F2 uses guarded
+recorded_cod_receipts for finance roles, original amounts/timestamps including
+draft→final, no duplicates; CS legacy access preserved. No cost/commission/status
+mutation, helper/grant/RLS change or correction replay. SQL/rollback hard-reject
+hosted/TCP and databases other than private financial_p1_review. Active recovery
+manifest unchanged; not an activation script.
+
+VERIFIED isolated: full restore20261022T192012Z-8e4d12b2 checksums; all table
+fingerprints + function contracts preserved; six period/empty/reversed cases;
+14 synthetic SQL cases; rollback/reapply;4 normal8s latency checks;7 export checks;
+6 built-app browser checks1440/390/320 with JS errors0, unexpected business calls0.
+Global Buku5749/Rp1082521138 exactly matches guarded source. Restore Oct6136 rows,
+rincian reduction107302000; Sept6763/reduction6860000. Do not substitute these for
+audited live6325/112403000. Gross and net profit stored remain unchanged.
+Build/TypeScript/scoped ESLint pass; missing optional detail columns stay unknown,
+real conditional Excel totals avoid fake zeros. Buku date-control client mount
+also fixes reproduced cached-date23 vs client24 hydration error in the candidate.
+
+Only a patch changes3 private UI files; authoritative src hashes remain unchanged.
+Live metadata READ ONLY proof: both readers, receipt guard and both cost engines
+unchanged; Main stilldpl_a67itdDg1QrLHCUtjBCWb3XkBmCa READY/bom1, Liard untouched.
+Existing dirty AGENTS/doctor/normalizer preserved. No credentials/customer rows
+in Git. Private evidence /root/backups/grandbook/financial-p1-candidate-20261023.
+F3 packing/F4 ADS outside scope.
+
+NOT VERIFIED: hosted candidate activation/runtime, physical iPhone, Excel app
+recalculation, complete actual costs/bank/commissions and final realized profit.
+Inherited Buku export currently exports displayed page, not all-data; this candidate
+does not claim to fix that separate limitation. Source reader full rows verified.
+vision live/personal dashboard claim remains theirs, preserved byte-for-byte.
+
+vision: read scoped doc/README + evidence for independent READ-ONLY source review,
+including F1 provenance/GP preservation and F2 source/role/identity handling.
+No rerun of SQL/test writes or live/source edits. All Codex edit claims RELEASED.
+NEXT: vision reviews this prepared candidate read-only; no push/deploy or live
+activation without a new explicit Barry approval and fresh scope/source checks.
+
+
+## Codex — F1/F2 isolated reader candidate — IN PROGRESS
+
+Barry authorized preparing/testing a candidate only. NO LIVE DATA/RULE/SQL CHANGE,
+NO PUSH OR DEPLOY. Codex claims new scripts/sql/financial-report-readers/*,
+tests/financial-report-readers/*, scoped candidate docs and this handoff.
+Private isolated app copy may adjust Laba Rugi/Buku/export labels for F1; authoritative
+app stays unchanged pending tested patch. Existing SQL/recovery steps immutable.
+Scope F1 source-proven OrderOnline revenue breakdown + honest all-role commission
+label; F2 guarded draft/final recorded receipts in Buku. Preserve estimated_profit,
+stored financial inputs and completed corrections. F3 packing/F4 ADS outside scope.
+vision independent Main/personal dashboard validation remains theirs; preserve
+their sections and do not edit dashboard personal paths. Coordinate only here.
+Private candidate evidence /root/backups/grandbook/financial-p1-candidate-20261023.
+NEXT: implement new reader candidate and test on isolated restore/synthetic fixtures.
+
+
 ## Codex — financial audit complete, no fixes applied — 2026-10-23T23:24:46.473555+07:00
 
 **AUDIT SELESAI / RELEASED.** Supersedes Codex financial-audit claim below.

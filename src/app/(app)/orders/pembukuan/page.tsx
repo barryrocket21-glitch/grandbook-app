@@ -26,10 +26,10 @@ interface Row {
   cs_name: string | null; channel_name: string | null; product_summary: string | null
   attribution_code_raw: string | null
   campaign_name: string | null; campaign_platform: string | null
-  total: number; penjualan: number; ongkir: number; actual_shipping_fee: number | null; selisih_ongkir: number; cod_amount: number | null; tracking_no: string | null; resi: string | null
+  total: number; penjualan: number; ongkir: number; actual_shipping_fee: number | null; selisih_ongkir?: number | null; cod_amount: number | null; tracking_no: string | null; resi: string | null
   delivered_at: string | null; returned_at: string | null; exported_at: string | null
   payment_method: string | null; qty: number
-  est_fee_admin: number; est_omset: number; est_hpp: number; est_fee_cs: number; est_gross_profit: number
+  est_fee_admin?: number | null; est_omset: number; est_hpp: number; est_fee_cs: number; est_gross_profit: number
   act_omset: number | null; act_hpp: number | null; act_fee_cs: number | null; act_gross_profit: number | null
   dicairkan: number | null; cod_settled_at: string | null
   total_count: number
@@ -69,6 +69,12 @@ export default function PembukuanPage() {
   const [status, setStatus] = useState('all')
   const [view, setView] = useState<'ringkas' | 'keuangan'>('ringkas')
   const [range, setRange] = useState<DateRange>(thisMonth)
+  // The default WIB day may differ from cached server HTML after midnight.
+  const [rangeReady, setRangeReady] = useState(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setRangeReady(true), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
   const [allTime, setAllTime] = useState(false)
   const [zoneFilter, setZoneFilter] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ source: 'draft' | 'final'; id: number } | null>(null)
@@ -166,6 +172,8 @@ export default function PembukuanPage() {
           </div>
         } />
 
+      {canFinance && <p className="text-xs text-muted-foreground">Komisi/selisih estimasi adalah sisa perhitungan seluruh peran, bukan pembayaran CS. Pencairan mengikuti bukti tercatat dan dapat ada saat status order masih berjalan; bukan laba kas atau verifikasi saldo bank.</p>}
+
       {/* Filter bar */}
       <Card>
         <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
@@ -175,7 +183,7 @@ export default function PembukuanPage() {
           </div>
           <Button variant={allTime ? 'default' : 'outline'} size="sm" onClick={() => { resetToFirstPage(); setAllTime(true) }}>Semua</Button>
           <div className={allTime ? 'opacity-60' : ''}>
-            <DateRangePicker value={range} onChange={v => { resetToFirstPage(); setRange(v); setAllTime(false) }} />
+            {rangeReady && <DateRangePicker value={range} onChange={v => { resetToFirstPage(); setRange(v); setAllTime(false) }} />}
           </div>
           <Select value={status} onValueChange={v => { resetToFirstPage(); setStatus(v || 'all') }}>
             <SelectTrigger aria-label="Filter status order" className="w-44"><SelectValue>{status === 'all' ? 'Semua status' : status.replaceAll('_', ' ')}</SelectValue></SelectTrigger>
@@ -262,7 +270,7 @@ export default function PembukuanPage() {
               <PnlRow label="− Biaya Admin (Fee COD+PPN)" est={summary?.est_fee_admin} act={summary?.act_fee_admin} sub />
               <PnlRow label="= Omset" est={summary?.est_omset} act={summary?.act_omset} strong />
               <PnlRow label="− HPP" est={summary?.est_hpp} act={summary?.act_hpp} sub />
-              <PnlRow label="− Fee CS" est={summary?.est_fee_cs} act={summary?.act_fee_cs} sub />
+              <PnlRow label="− Komisi/selisih estimasi" est={summary?.est_fee_cs} act={summary?.act_fee_cs} sub />
               <PnlRow label="= Gross Profit" est={summary?.est_gross_profit} act={summary?.act_gross_profit} strong />
               <PnlRow label="− Biaya Iklan" est={summary?.total_ad_spend} act={summary?.total_ad_spend} sub />
               <PnlRow label="− Biaya Operasional" est={summary?.total_opex} act={summary?.total_opex} sub />
@@ -306,18 +314,18 @@ export default function PembukuanPage() {
               {view === 'keuangan' && canFinance ? (
                 <>
                   <TableHead className="max-w-[160px]">Produk</TableHead>
-                  <TableHead className="text-right" title="Harga barang (belum termasuk ongkir)">Penjualan</TableHead>
+                  <TableHead className="text-right" title="Tagihan barang dan ongkir pembeli; gross OrderOnline yang terbukti dihitung sekali">Tagihan pembeli</TableHead>
                   <TableHead className="text-right" title="Ongkir yang ditagih ke pembeli">Ongkir CS</TableHead>
                   <TableHead className="text-right" title="Ongkir asli dari SPX sebelum cashback">Ongkir Kurir</TableHead>
                   <TableHead className="text-right" title="Potongan cashback 40% dari ekspedisi">Cashback</TableHead>
                   <TableHead className="text-right" title="Ongkir CS − ongkir bersih ekspedisi">Selisih Ongkir</TableHead>
                   <TableHead className="text-right" title="Fee COD 1% + PPN 12%">Biaya COD</TableHead>
-                  <TableHead className="text-right" title="Penjualan + Selisih − Biaya COD">Omset</TableHead>
+                  <TableHead className="text-right" title="Tagihan pembeli dikurangi biaya kurir estimasi">Omset</TableHead>
                   <TableHead className="text-right" title="Modal barang + packing">HPP</TableHead>
-                  <TableHead className="text-right" title="Komisi CS">Fee CS</TableHead>
+                  <TableHead className="text-right" title="Sisa omzet setelah HPP dan profit tersimpan; seluruh peran dan selisih estimasi">Komisi/selisih estimasi</TableHead>
                   <TableHead className="text-right" title="Proyeksi GP (semua order)">GP Proj.</TableHead>
                   <TableHead className="text-right" title="GP Realisasi — hanya DITERIMA">GP Real.</TableHead>
-                  <TableHead className="text-right" title="COD yang sudah cair ke rekening">Dicairkan</TableHead>
+                  <TableHead className="text-right" title="Pencairan tercatat final/draft; bukan bukti saldo bank">Dicairkan</TableHead>
                 </>
               ) : (
                 <>
@@ -350,8 +358,8 @@ export default function PembukuanPage() {
                       <TableCell className="text-right text-sm"><Money v={n(r.ongkir)} /></TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.actual_shipping_fee)} /></TableCell>
                       <TableCell className="text-right text-sm text-emerald-600"><Money v={Math.round(n(r.actual_shipping_fee) * 0.4)} /></TableCell>
-                      <TableCell className="text-right text-sm"><Money v={n(r.selisih_ongkir)} /></TableCell>
-                      <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.est_fee_admin)} /></TableCell>
+                      <TableCell className="text-right text-sm"><Money v={r.selisih_ongkir} /></TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground"><Money v={r.est_fee_admin} /></TableCell>
                       <TableCell className="text-right text-sm"><Money v={n(r.est_omset)} /></TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.est_hpp)} /></TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground"><Money v={n(r.est_fee_cs)} /></TableCell>

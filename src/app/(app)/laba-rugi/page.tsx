@@ -162,6 +162,8 @@ export default function LabaRugiPage() {
             <StatCard label="Laba setelah biaya tercatat · Proyeksi" value={formatRupiah(n(data.laba_bersih_est))} sub={`${formatNumber(n(data.order_count))} order, jika semua berhasil diterima`} size="lg" />
           </div>
 
+          <p className="text-xs text-muted-foreground">Komisi/selisih estimasi adalah sisa omzet setelah HPP dan profit tersimpan, mencakup seluruh peran dan selisih estimasi; bukan nominal komisi CS atau bukti pembayaran.</p>
+
           {/* Order breakdown */}
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
             <StatCard label="Total Order" value={n(data.order_count)} tone="zinc" />
@@ -188,7 +190,7 @@ export default function LabaRugiPage() {
                   <PnlRow label="Biaya Admin (Fee COD + PPN)" est={n(data.est_fee_admin)} act={n(data.act_fee_admin)} kind="minus" />
                   <PnlRow label="Omset" est={n(data.est_omset)} act={n(data.act_omset)} kind="subtotal" />
                   <PnlRow label="HPP (modal barang)" est={n(data.est_hpp)} act={n(data.act_hpp)} kind="minus" />
-                  <PnlRow label="Fee CS" est={n(data.est_fee_cs)} act={n(data.act_fee_cs)} kind="minus" />
+                  <PnlRow label="Komisi/selisih estimasi" est={n(data.est_fee_cs)} act={n(data.act_fee_cs)} kind="minus" />
                   <PnlRow label="Gross Profit" est={n(data.est_gross_profit)} act={n(data.act_gross_profit)} kind="subtotal" />
                   <PnlRow label="Biaya Iklan" est={n(data.total_ad_spend)} act={n(data.total_ad_spend)} kind="minus" />
                   <PnlRow label="Biaya Operasional" est={n(data.total_opex)} act={n(data.total_opex)} kind="minus" />

@@ -76,7 +76,7 @@
       "sha256": "e40894796aa3762f5bcb3b60d9118dfdd3df00c67c61ac787e6f1c153e15220c"
     },
     "src/lib/orders/pembukuan-export.ts": {
-      "sha256": "e8cb3025d48143736cad499d02398b4cabb7d071390c9f2d6ab74ca064e9ef59"
+      "sha256": "3ae11016358121854b6ac63d84d149a16cb514f169b044c70e40a3be55588ff4"
     },
     "src/components/dashboard/cashflow-summary-widget.tsx": {
       "sha256": "04515653f017949478364ec6fda97c0643537eeec88813cc304f62a14058ef37"
@@ -148,7 +148,7 @@
       "sha256": "de29be1d5fcb86a27e4d06377b22152b59e495acac5ffd147a8f692aab593d98"
     },
     "src/app/(app)/laba-rugi/page.tsx": {
-      "sha256": "ab74177996b486852218095b64c8897fc2e7a08b8b5d616f9b530c3e71408c8c"
+      "sha256": "c941c467704f44fb409d5fc1c565a6050d444946a5758aee21b8e671446a50e4"
     },
     "src/lib/supabase/migrations/134_draft_lifecycle_timestamps_pickup.sql": {
       "sha256": "c38665af1d06cef5be4d17ea5d51d1dbfd9333eecc445ec1ba00536e4c50521c"
@@ -196,7 +196,7 @@
       "sha256": "f081337b2fee635b455b63275406a3e7f39d6a014e25ad90dab5a67e62a12ac4"
     },
     "src/app/(app)/orders/pembukuan/page.tsx": {
-      "sha256": "4cc2884a78e3db37a6ed724fcbfb5c37d98a1234aec9a044c9e1edb15117bfd2"
+      "sha256": "4759388f48c0efebb662283c090b8c9c1cd84e4b2290324b908ad12365527c05"
     },
     "src/app/(app)/settings/converter-profiles/[id]/page.tsx": {
       "sha256": "ba2d3b5bc826f540d46a84f1c646bbe3a2565c3b1b4e3cc179d42851c1075ad9"
@@ -1434,5 +1434,10 @@
       "src/components/dashboard/pending-pickup-widget.tsx"
     ],
     "business_logic_changed": false
+  },
+  "financial_reader_release": {
+    "date_wib": "2026-10-24",
+    "scope": "F1/F2 exact reviewed labels, unknown optional export values, client date mount",
+    "ui_candidate_commit": "49b727b"
   }
 }

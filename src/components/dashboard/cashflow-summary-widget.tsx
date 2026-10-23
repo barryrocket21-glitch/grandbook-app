@@ -59,7 +59,7 @@ export function CashflowSummaryWidget() {
         </div>
 
         {/* Sub-brief #17 — angka cair real dari payout recon */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Metric icon={<Wallet className="w-3.5 h-3.5 text-emerald-500" />} label="COD tercatat cair"
             value={payout ? formatRupiah(Number(payout.cair_total)) : '—'} valueClass="text-emerald-600" />
           <Metric icon={<AlertCircle className="w-3.5 h-3.5 text-amber-500" />} label="Belum cair (delivered)"

@@ -94,7 +94,7 @@ export function PendingPickupWidget() {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <Metric label="Order stuck" value={String(count)} />
               <Metric label="Total nilai" value={formatRupiah(totalValue)} />
               <Metric label="Paling lama" value={`${oldest.toFixed(1)} hari`} />
@@ -107,7 +107,7 @@ export function PendingPickupWidget() {
                 </p>
                 <div className="space-y-1">
                   {byChannel.map(([channel, info]) => (
-                    <div key={channel} className="flex items-center justify-between text-xs">
+                    <div key={channel} className="flex flex-wrap items-center justify-between gap-2 text-xs">
                       <Badge variant="outline" className="font-mono">{channel}</Badge>
                       <span className="text-muted-foreground">
                         {info.count} order · {formatRupiah(info.value)}

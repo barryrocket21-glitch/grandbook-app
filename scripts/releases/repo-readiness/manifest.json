@@ -79,7 +79,7 @@
       "sha256": "e8cb3025d48143736cad499d02398b4cabb7d071390c9f2d6ab74ca064e9ef59"
     },
     "src/components/dashboard/cashflow-summary-widget.tsx": {
-      "sha256": "c420707fc55e27f6d2effa5286636e6c9dc950442a18f7c9fa6ef578e08370f8"
+      "sha256": "04515653f017949478364ec6fda97c0643537eeec88813cc304f62a14058ef37"
     },
     "src/lib/supabase/migrations/038_phase8g_hotfix_lookup_alias.sql": {
       "sha256": "082c9e9b5f208c8c9371e635fd425b18f2d946e667511600e2ce737a743a594e"
@@ -1202,7 +1202,7 @@
       "sha256": "bfe9b92b6c1f49695dff3a492753fe81bcf6ef7593dae54f9bd4cfd6043e0daf"
     },
     "src/components/dashboard/pending-pickup-widget.tsx": {
-      "sha256": "9ebdbefe306da8a95d18d7223f3241deba9b8bcde698f15a250587beb6981f14"
+      "sha256": "5d70749c44865628d43e5996e3cfe4dc766e3cf164b3773b25edac4cabb99fed"
     },
     "src/lib/supabase/migrations/006_fix_product_fk.sql": {
       "sha256": "a3fe29bd51fc9ed9754065241b08a40e7e1ea98c9d4173a22ee46a782ae3b0a8"
@@ -1346,7 +1346,7 @@
       "sha256": "49e95be0720759b557b4cb747d172d4caacfb77a844e337d76f00e01a5d9aac9"
     },
     "src/app/(app)/dashboard/page.tsx": {
-      "sha256": "bbc3e01a5adc19f789b4203dfb8a6b4bf004b056ac89b74a4b551c2f7dc56a74"
+      "sha256": "14888249450691bb1c6c31a5af82c789af8ac992f45248da8ea5c0ad00b30b44"
     },
     "src/lib/supabase/migrations/091_exported_at_post_export.sql": {
       "sha256": "a5684f424f9096839afa85bc406658fdccd621e65068359ad6ebbf5442b809d9"
@@ -1425,5 +1425,14 @@
       "src/lib/dashboard/use-dashboard-read.ts"
     ],
     "scope": "Complete dashboard reads, date bounds, typed calculations, explicit failure and stale-request handling; no financial-rule or SQL changes. Not deployed."
+  },
+  "numeric_layout_review": {
+    "approved": "2026-10-23",
+    "scope": [
+      "src/app/(app)/dashboard/page.tsx",
+      "src/components/dashboard/cashflow-summary-widget.tsx",
+      "src/components/dashboard/pending-pickup-widget.tsx"
+    ],
+    "business_logic_changed": false
   }
 }

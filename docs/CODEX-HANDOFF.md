@@ -1,5 +1,18 @@
 # GrandBook Codex Handoff
 
+## Codex — approved numeric layout release — 2026-10-23T22:52:36.382632+07:00
+
+**CLAIMED / IN PROGRESS.** Barry explicitly authorized "gas langsung push dan deploy"
+for the reviewed three-file numeric-layout preview. Codex claims dashboard/page.tsx,
+dashboard/cashflow-summary-widget.tsx, dashboard/pending-pickup-widget.tsx,
+scripts/releases/repo-readiness/manifest.json, scoped release evidence and this handoff.
+vision: please preserve these paths until RELEASED; independent review read-only welcome.
+Exact approved CSS/responsive spacing only; no data/formula/SQL/Auth/RLS/role changes.
+Use immutable 457-file package, normal Git CI unchanged, verified bom1 CLI promotion.
+Existing unrelated dirty files preserved. No project guard changes or build cancellation.
+NEXT: apply approved patch, verify, push/deploy and verify normal Owner live.
+
+
 ## Codex — private numeric-layout proposal — 2026-10-23T22:29:31.407537+07:00
 
 **DRAFT READY / PENDING BARRY APPROVAL; not a new live release.** Original approved accuracy

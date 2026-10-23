@@ -123,7 +123,7 @@ export default function DashboardPage() {
                 </div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </div>
-              <div className={`text-3xl font-bold tabular-nums mt-3 ${profitPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+              <div className={`text-2xl sm:text-3xl font-bold tabular-nums mt-3 ${profitPositive ? 'text-emerald-600' : 'text-red-600'}`}>
                 {money(data.estProfit)}
               </div>
               <div className="text-[11px] text-muted-foreground mt-1">
@@ -153,7 +153,7 @@ export default function DashboardPage() {
                 </div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </div>
-              <div className="text-3xl font-bold tabular-nums mt-3 text-emerald-600">
+              <div className="text-2xl sm:text-3xl font-bold tabular-nums mt-3 text-emerald-600">
                 {formatRupiah(data.codCair)}
               </div>
               <div className="text-[11px] text-muted-foreground mt-1">
@@ -220,7 +220,7 @@ export default function DashboardPage() {
         {/* Phase 8B — Resi pending pickup widget (owner+admin only). */}
         {(role === 'owner' || role === 'admin') && <PendingPickupWidget />}
         {/* Phase 8I-v2 — Saldo SPX & Cashflow widget. */}
-        {(role === 'owner' || role === 'admin' || role === 'akunting') && <CashflowSummaryWidget />}
+        {(role === 'owner' || role === 'admin' || role === 'akunting') && <div className="min-w-0 sm:col-span-2 lg:col-span-3"><CashflowSummaryWidget /></div>}
       </div>
 
       {/* Charts Row */}

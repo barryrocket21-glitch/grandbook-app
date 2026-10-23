@@ -1205,6 +1205,63 @@ bertahap kelompok untracked lain; `supabase/.temp` dan
   (termasuk APPLIED: 617 HPP, batch paket, 31 HPP) tidak diulang.
 - **Status:** IN PROGRESS.## Checkpoint historis — superseded bila bertentangan dengan catatan terbaru
 
+- **Audit dashboard personal (ditambahkan vision, 2026-10-24, read-only dari
+  kode terkini; tanpa query live):** vonis per permukaan —
+
+  | Permukaan | Batas baris | Error menjadi nol / senyap |
+  |---|---|---|
+  | Badan utama /cs-dashboard + /adv-dashboard (`PersonalDashboard` + `fetchPersonalDashboard`) | **DITEMUKAN (P2)** | Senyap: kosong/stale, bukan nol literal (P2) |
+  | CsLeadSection — kartu utama + grafik harian (RPC) | AMAN (agregasi server) | **DITEMUKAN: nol literal (P2)** |
+  | CsLeadSection — rincian per-produk (`listReportForRange`) | **DITEMUKAN (P2)** | Rantai sama dengan baris di atasnya |
+
+  Bukti:
+  - `src/lib/supabase/queries/analytics.ts:557` — fetch orders dashboard
+    personal memakai `.limit(1000)` eksplisit (urut `order_date` menurun);
+    SEMUA total (total order, revenue, diterima, retur, conversion rate,
+    komisi EARNED/PAID), seri harian, dan daftar 10 order terbaru dihitung
+    di client dari himpunan terpotong itu (loop compute totals + seri
+    harian dalam fungsi yang sama). Order tertua dalam rentang hilang
+    diam-diam, dan `total_orders` hanyalah panjang array hasil fetch
+    sehingga pemotongan tidak pernah terlihat dari angka itu sendiri.
+    Query komisi tidak punya limit sendiri, tetapi di-scope
+    `.in(order_id, ...)` dari himpunan yang sama -> total komisi ikut
+    terpotong.
+  - Lapisan query melempar error dengan benar (analytics.ts:558, 571),
+    tetapi `load()` di `src/components/analytics/personal-dashboard.tsx:96-106`
+    hanya try/finally tanpa catch, dan komponen tidak memiliki state
+    error sama sekali (tidak ada `error`/`catch` di seluruh file): gagal
+    muat pertama -> `data` tetap null -> badan dashboard tidak merender
+    apa pun (gerbang render `data` di baris 182), tanpa pesan error dan
+    tanpa empty state; gagal saat ganti rentang/refresh -> angka lama
+    (stale) tetap tampil seolah aktual. Loader daftar user untuk owner
+    (baris 73-79) juga tidak membaca error -> kegagalan = dropdown kosong
+    diam-diam.
+  - CsLeadSection (`src/components/analytics/cs-lead-section.tsx`, hanya
+    di /cs-dashboard): kartu utama + grafik harian berasal dari RPC
+    `cs_period_summary` dan `cs_daily_series` — agregasi server
+    (`src/lib/supabase/queries/cs-report.ts:148-185`) -> aman dari
+    potongan baris. Rincian per-produk: `listReportForRange` mengambil
+    `cs_daily_leads` dengan `.limit(2000)` (cs-report.ts:53, urut
+    `report_date` menurun) lalu Lead/Closing per produk dijumlah di
+    client (cs-lead-section.tsx:53-66); jumlah baris = hari x produk
+    untuk satu CS, jadi rentang panjang/banyak produk bisa kena batas
+    dan hari tertua hilang diam-diam. Batas efektif PostgREST hosted
+    bisa lebih rendah dari 2.000 — NOT VERIFIED (tanpa query live).
+  - Error CsLeadSection: ketiga fungsi query melempar error
+    (cs-report.ts:56, 157, 183), tetapi `load()` komponen
+    (cs-lead-section.tsx:34-48) try/finally tanpa catch dan tanpa state
+    error: gagal muat pertama -> `summary` tetap null -> empat kartu
+    statistik merender `summary?.x ?? 0` = **0 literal** (baris 85, 90,
+    95, 100) dan area grafik menampilkan "Belum ada laporan CS di
+    periode ini" (baris 117-120) — kegagalan baca tidak bisa dibedakan
+    dari periode yang memang kosong. Gagal saat reload -> data lama
+    tetap tampil. (Nilai nol dari RPC sukses-tanpa-baris,
+    cs-report.ts:158-162, adalah semantik tidak-ada-data yang sah,
+    bukan temuan.)
+  - Semua temuan dashboard personal berprioritas **P2** (di bawah P1
+    dashboard utama). Sesi ini hanya mencatat; perbaikan berada di
+    jalur implementasi dan menunggu keputusan Barry.
+
 
 Ringkasan proyek untuk orientasi tersedia di
 [GRANDBOOK-RINGKASAN.md](GRANDBOOK-RINGKASAN.md), disusun 16 Oktober 2026 WIB

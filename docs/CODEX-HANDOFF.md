@@ -1,22 +1,55 @@
 # GrandBook Codex Handoff
 
-## Codex — dashboard approved push/deployment — 2026-10-23T21:48:26.099082+07:00
+## Codex — dashboard live release complete — 2026-10-23T22:14:33.900087+07:00
 
-**IN PROGRESS.** Barry explicitly authorizes push/deploy of the tested dashboard
-candidate and verification until normal live; no live data or financial-rule
-changes. Read vision f4a070f and latest completed candidate handoff. Its findings
-are handled in source61aaa6c, final report commitfca760a. No new vision claim seen.
+**SELESAI / LIVE VERIFIED. Application and documentation edit claims RELEASED.**
+This supersedes the candidate pending-approval status below. Barry explicitly
+authorized push/deploy of this dashboard candidate; no live data/rule changes.
+vision f4a070f findings are handled; all vision sections preserved byte-for-byte.
+vision: please validate the now-live completeness/failure states read-only and
+record your results here; post-release independent review is not yet confirmed.
 
-Codex claims release operations for main grandbook-app only, this Codex handoff
-preamble, and docs/dashboard-accuracy-2026-10-23.md release evidence. No application,
-SQL, Auth/RLS, role, financial engine or data correction area claimed. vision:
-please preserve this release preamble; independently validate candidate/live
-completeness and failure states read-only, recording your claim/results here.
-Candidate457 inputs, digest3155efade91d06cbbcb5e8c47b5128994fe1f4d864b53372bbc15b190d58dafd.
-Use exact immutable reviewed package, explicitbom1, preserve auto-build guard
-and project settings, verify upload inventory before promotion; never deploy
-the shared dirty checkout. Liard separate/untouched. No replay SQL/HPP617/package31.
-Private evidence: /root/backups/grandbook/dashboard-release-20261023-9f385c8f.
+- Main active dpl_6k2dR4iJ3VJe8S9HPp9N48LDkK9e, READY, explicitbom1.
+  CLI URLgrandbook-hm9obtfuk-barrys-projects-41ecfbbc.vercel.app.
+ 457 uploaded paths/hashes exactly match reviewed candidate. Sourcefca760a
+  (application61aaa6c), digest3155efade91d06cbbcb5e8c47b5128994fe1f4d864b53372bbc15b190d58dafd.
+  Six app inputs differ;451 baseline inputs preserved. Push4f3859a succeeded
+  fast-forward to GitHub main via isolated Git bundle; closeout docs push follows.
+- LIVE VERIFIED: normal Owner Chrome and production headless Owner, no card
+  errors;6,325 monthly orders/items;8,673 source drafts,1,134 source ADS rows.
+  All displayed metrics/top products match a fresh normal-session complete read.
+  Desktop + mobile390 no page overflow; refresh works; a controlled browser-only
+  read failure hides old/partial/zero totals, retry recovers real data. Five
+  production runtime checks PASS. No mocked normal successful business data.
+- Prior candidate evidence retained:22 model/SDK tests,14 fixture browser checks,
+  TypeScript/scoped lint,14 packaging tests,8 recovery-reference tests, local and
+  cloud builds. No SQL executed; no HPP617/package/31 correction replay.
+- Automatic approval review rejected temporary ignore-build guard modification
+  and cancellation of redundant builds. Neither rejected action executed.
+  Safer release used ordinary Git CI to READY, then promoted reviewed CLI build.
+  Project guard stayednull, all settings/env unchanged, builds canceled0.
+  First ordinary Git build3Us6PA14qsWXQUH1T9Zp6P3q4qVY completediad1 before
+  explicitbom1 CLI promotion. No force push, history rewrite or credentials moved.
+- Closeout procedure: let the docs-push Git build finish normally, then re-promote
+  the same verified CLI candidate if necessary. Do not alter/cancel builds or
+  settings. Require final-verification.json confirming main alias, READY/bom1,
+  env/settings unchanged before concluding. This is completed within this session.
+- Files this release session: this Codex preamble and
+  docs/dashboard-accuracy-2026-10-23.md only. No new app changes.
+  Existing dirty AGENTS.md, scripts/doctor-local-env.mjs,
+  tests/scripts/spx-api-normalizer.test.ts hashes unchanged; unrelated untracked
+  operator work preserved. Shared checkout is not globally clean.
+- PRODUCTION: main released; Liard separate/untouched. No business-data,
+  financial-rule, SQL/schema, Auth/RLS/role/payment/settlement changes.
+- NOT VERIFIED: physical Safari, full financial-policy/history audit, vision's
+  new independent review. Equal-count concurrent edits are not an atomic snapshot;
+  labels show period/read time. Personal CS/advertiser P2 and semantic audit#2/
+  commission#3 are outside this release.
+- Evidence: docs/dashboard-accuracy-2026-10-23.md;
+  private /root/backups/grandbook/dashboard-release-20261023-9f385c8f.
+  live-verification.json and final-verification.json are current release receipts.
+
+**NEXT:** vision independently validates the live dashboard read-only via handoff.
 
 ## Codex — Owner Dashboard accuracy #1 complete — 2026-10-23T21:41:35.175764+07:00
 

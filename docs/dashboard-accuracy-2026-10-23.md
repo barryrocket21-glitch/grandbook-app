@@ -1,8 +1,8 @@
 # Dashboard Owner accuracy — 23 October 2026
 
-Scope #1: complete dashboard totals and explicit unavailable states. Candidate only;
-no push/deployment, financial-rule change, schema/SQL execution, customer/order
-mutation, role/RLS change, or replay of completed corrections.
+Scope #1: complete dashboard totals and explicit unavailable states. RELEASED on
+main grandbook-app after Barry's explicit approval. No financial-rule change,
+schema/SQL execution, customer/order mutation, role/RLS change, or correction replay.
 
 ## Findings and correction
 
@@ -81,8 +81,8 @@ Indonesian number labels avoid different ticks rounding to the same 0.1jt label.
 Immutable 457-input package verification, independent Git clone source preflight,
 and isolated optimized production build PASS. Fourteen packaging tests and eight
 recovery-reference tests PASS; the35-reference graph is unchanged, SQL executed0.
-Cloud Vercel build/upload, real Safari and production smoke for this candidate
-are NOT VERIFIED: no push or deployment was authorized/performed for this scope.
+Cloud build, actual457-file upload inventory, normal Owner production smoke and
+desktop/mobile390 runtime checks now PASS. Physical Safari remains NOT VERIFIED.
 
 Current application source:61aaa6cf24fafe1aaa1e32aaa0f103dafc68cf0c.
 Package digest:3155efade91d06cbbcb5e8c47b5128994fe1f4d864b53372bbc15b190d58dafd.
@@ -103,7 +103,7 @@ section. All coordination remains in CODEX-HANDOFF.
 
 Private evidence: /root/backups/grandbook/dashboard-accuracy-20261023-0aa019a3.
 Unrelated dirty/untracked work is preserved. Main and Liard remain separate;
-neither is deployed by this work.
+main is now released; Liard is untouched.
 
 ## Limits
 
@@ -114,16 +114,41 @@ refresh if sources change. A future atomic server aggregate requires a separate
 reviewed and approved database change.
 
 This fixes completeness/read failures, not historical HPP, settlement evidence,
-attribution coverage, or spend versus spend_total policy. New production release
-requires Barry's explicit approval.
+attribution coverage, or spend versus spend_total policy. Barry authorized this
+specific release. Future unrelated releases still require applicable authorization.
 
-## Final status
+## Production release — 23 October 2026
 
-Implementation, verification and local commits complete. All Codex edit claims
-released. No push/deployment or database/financial-rule changes. Shared checkout
-still contains unrelated dirty/untracked operator work, preserved exactly; use
-the immutable reviewed package for any later approved release.
+Main alias grandbook-app.vercel.app points to dpl_6k2dR4iJ3VJe8S9HPp9N48LDkK9e,
+READY in bom1. All457 uploaded files and hashes match the reviewed3155efad...
+input digest. Cloud application sourcefca760a contains the tested61aaa6c app
+inputs. Git main push4f3859a is fast-forward; closeout docs follow.
 
-The handoff asks vision to review the candidate evidence read-only. Its original
-validation remains unchanged; post-implementation review is not yet confirmed.
-NEXT: obtain Barry's approval for this scoped push/deployment.
+Five real-production checks pass: normal Owner reads complete6,325 monthly
+orders/items and displayed totals/top products match a fresh complete read;
+mobile390 has no page overflow; refresh restores full totals; controlled local
+browser-only API failure shows an explicit unavailable state without old/partial/
+zero fallback; retry restores genuine data. Separate native Chrome Owner shows
+the coverage and no errors. Current source coverage8,673 drafts and1,134 ADS
+rows; the earlier1,097 ADS sample is historical. Normal operational data can
+change independently of this release; no business writes were issued here.
+
+Automatic approval review rejected a temporary ignore-build setting and
+cancellation of a redundant Git build. Neither action executed. The alternative
+kept project settings and normal CI intact: Git builddpl_3Us6PA14qsWXQUH1T9Zp6P3q4qVY
+finished normally in iad1, then the verified CLI build was promoted to bom1.
+No project settings/env changed and no build was canceled. The same normal-CI/
+promotion procedure closes out the docs push; final-verification.json must
+confirm READY/bom1 and unchanged env/settings before this session concludes.
+
+No live SQL, data, finance rules, Auth/RLS or role mutation; completed HPP/package
+corrections untouched. All vision notes and unrelated dirty/untracked work remain
+preserved. No claim of full business-semantic or historical financial correctness.
+Physical Safari and vision's independent post-release review remain unverified.
+
+Private release evidence: /root/backups/grandbook/dashboard-release-20261023-9f385c8f
+(candidate-verification.json, live-browser-result.json, native-browser.json,
+live-verification.json, final-verification.json, screenshots). Raw session/data/
+env artifacts stay private. The immutable package remains the release input.
+
+NEXT: vision validates the live dashboard read-only through CODEX-HANDOFF.

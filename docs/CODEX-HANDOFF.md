@@ -1404,6 +1404,134 @@ Historical checkpoint header: 8 October 2026 WIB / UTC. Read [AGENTS.md](../AGEN
 [the P0–P3 roadmap](p0-status.md) for documented backlog. Detailed dated evidence
 stays in the linked documents; do not read PROJECT-HISTORY by default.
 
+### Sesi review vision — Kandidat P1 keuangan F1/F2 — 24 Oktober 2026 (RELEASED)
+
+**Claim dicatat 2026-10-24T00:36:21+07:00 (WIB) oleh vision (Muse AI);
+DITUTUP / RELEASED 2026-10-24T00:42:18+07:00 (WIB).**
+Review independen READ-ONLY atas kandidat dua P1 keuangan: SQL/tests `2ca899c`,
+patch UI/ekspor `49b727b`, dokumentasi `6e44201`. Sumber: dokumen kandidat
+`docs/financial-p1-candidate-2026-10-24.md` dan
+`scripts/sql/financial-report-readers/README.md` + `review.json`.
+Review statis dari source dan bukti yang tersedia: TIDAK menjalankan SQL/test,
+tidak mengubah source/data/aturan live, tidak push/deploy, tidak mengulangi
+koreksi APPLIED. Satu-satunya file yang diedit vision sesi ini: handoff ini.
+
+**Hasil review — F1:**
+- F1-1 Bukti OrderOnline benar-benar diperlukan: **PASS.** Syaratnya konjungtif
+  dan fail-closed di kedua function: profil converter `orderonline_inbound`
+  terikat lewat `source_profile_id` DAN `raw_data.gross_revenue` numerik valid
+  (regex `^\d+(\.\d+)?$`) yang sama persis dengan `total` tersimpan
+  (candidate.sql:43-47 draft, :54-58 final; Buku :146-151, :182-187).
+  Bukti hilang/malformed/mismatch = basis lama: P&L `included_shipping` 0 via
+  LEFT JOIN + COALESCE (:60-61, :73), Buku penjualan = `total + shipping_cost`
+  persis seperti baseline. Tidak ada parameter/flag yang bisa memaksa status
+  terbukti; regresi menegaskan kedua basis (regression.sql:48, :57).
+- F1-2 Ongkir dihitung sekali: **PASS.** Diff kandidat vs definisi baseline
+  (tertanam di isolated-rollback.sql) membuktikan satu-satunya perubahan rumus
+  P&L adalah `penjualan = total - included_shipping` untuk baris terbukti;
+  rumus selisih ongkir, fee admin, dan identitas residual tidak berubah,
+  sehingga ongkir yang sudah di dalam gross tidak lagi terserap kedua kali
+  ke residual. Buku: baseline `total + shipping_cost` untuk semua baris;
+  kandidat hanya untuk yang tidak terbukti, baris terbukti memakai `total`
+  (gross) langsung. Cabang draft dan final simetris persis.
+- F1-3 GP/net tersimpan tetap: **PASS.** `gp = COALESCE(estimated_profit,0)`
+  dibaca apa adanya (candidate.sql:76; Buku `f.gp`), rumus laba bersih identik
+  baseline; inventaris statement kandidat bersih (tepat 2 CREATE OR REPLACE
+  FUNCTION, tanpa INSERT/UPDATE/DELETE/GRANT/REVOKE/ALTER/POLICY). Regresi
+  menegaskan GP tersimpan tidak berubah (regression.sql:49).
+- F1-4 Label komisi tidak menyesatkan: **PASS.** "Fee CS" menjadi
+  "Komisi/selisih estimasi" di UI Laba Rugi (ui-labels.patch:16-17), Buku
+  (:71-72, :90-91) dan ekspor Est/Aktual (:147-148, :152-153); nama field RPC
+  `est_fee_cs`/`act_fee_cs` tidak berubah (kompatibel). Catatan penjelas
+  eksplisit: bukan nominal komisi CS / bukan bukti pembayaran (patch:7),
+  bukan pembayaran CS dan bukan laba kas/verifikasi bank (patch:53), tooltip
+  Dicairkan "bukan bukti saldo bank" (:95). Aturan entitlement Rp2.500 per
+  delivered tidak disentuh. Field rincian yang tidak dikirim RPC lama menjadi
+  nullable end-to-end dan total ekspor bersyarat
+  `IF(COUNT=ROWS,SUM,"")` — tidak ada nol palsu/total parsial
+  (patch:141-168, :177).
+
+**Hasil review — F2:**
+- F2-1 Pencairan mengikuti sumber dashboard: **PASS.** `list_pembukuan`
+  kandidat membaca `public.recorded_cod_receipts()` — function guarded yang
+  sama dengan jalur payout dashboard (definisi baseline
+  scripts/sql/spx-cashflow/20260914005000-ledger-reporting.sql:82-104; dipakai
+  `get_payout_position` :116) — dan kandidat mengunci md5 definisinya
+  (candidate.sql:18-20) sehingga drift gagal tertutup. Nominal dan `settled_at`
+  asli diteruskan tanpa modifikasi (candidate.sql:160-161, :198-201).
+- F2-2 Tidak terhitung ganda setelah promosi: **PASS.** Keunikan satu baris
+  per referensi ditegakkan di sumbernya: guard duplikat menaikkan PT409
+  (ledger-reporting.sql ±91-92) dan baris legacy hanya masuk lewat
+  anti-join NOT EXISTS terhadap ledger (mirror dihitung sekali). Join
+  kandidat LEFT JOIN atas `order_number` (candidate.sql:162-163, :202-203)
+  tidak dapat melipatgandakan baris. Regresi menegaskan penerimaan mengikuti
+  nomor order yang stabil melewati promosi nyata dengan count tepat 1
+  (regression.sql:67-73), mirror tidak ganda (sum tepat 100000, :82), dan
+  konflik/duplikat ditolak fail-closed (:90, :98). Catatan struktural (bukan
+  cacat kandidat): bila baris draft dan finalnya sempat hidup bersamaan,
+  keduanya menampilkan penerimaan yang sama — dualitas per-tabel-sumber ini
+  perilaku baseline Buku dan tercakup uji promosi di atas.
+- F2-3 Akses CS dan organisasi tetap terjaga: **PASS.** `v_can_finance`
+  (candidate.sql:116-118) = profil aktif, organisasi sama, peran
+  owner/admin/akunting — cermin gerbang peran sumber guarded itu sendiri
+  (menaikkan 42501 untuk peran lain). Trik CASE (:120-128) membuat sumber
+  manager-only tidak pernah dievaluasi untuk staff; staff mempertahankan
+  jalur legacy persis (final: `payout_amount`/`cod_settled_at` tersimpan;
+  draft: NULL seperti baseline) — tidak diperluas, tidak diblokir.
+  Regresi menegaskan keluaran staff identik sebelum/sesudah
+  (regression.sql:102-110) dan tidak ada kebocoran lintas organisasi
+  (:114-123). Semua cabang terfilter `organization_id = current_org_id()`;
+  tidak ada perubahan grant/RLS.
+
+**Kesesuaian patch, hash, bukti pengujian: PASS (dengan catatan cakupan).**
+Isi commit cocok klaim dokumen: `2ca899c` hanya candidate.sql + rollback +
+regression.sql + run.py; `49b727b` hanya README + review.json +
+ui-labels.patch + browser.cjs + export.test.ts; `6e44201` hanya handoff +
+dokumen kandidat; tidak ada src otoritatif yang diubah commit mana pun.
+SHA256 artefact cocok pin review.json persis (candidate SQL 94be6448…,
+rollback bf925a9a…, patch 1a8cadb0…); SHA256 ketiga file src saat ini
+cocok `before_sha256` (patch memang belum diterapkan ke src); menerapkan
+patch ke salinan src menghasilkan ketiga `after_sha256` persis
+(c941c467…, 4759388f…, 3ae11016…) — patch = persis perubahan
+privat yang diuji. Nama file kandidat tidak ada di manifest recovery/rilis.
+Guard isolasi kandidat dan rollback simetris (menolak hosted/TCP dan database
+selain `financial_p1_review`, plus penolakan drift md5 dua arah).
+Bukti uji adalah artefak nyata, bukan narasi saja: run.py memaksa socket
+isolasi khusus + md5 baseline + `passed == 14`; regression.sql menegaskan
+kasus-kasus di atas; export.test.ts menegaskan 7 cek ekspor;
+browser-result.json mencatat pass 6/6 dengan errors [] dan unexpected [];
+export-result.json pass 7/7; direktori bukti privat memuat keluaran
+before/after fingerprints + contract, synthetic-result.json,
+rollback-result.json, dan log build/typecheck. Total Buku restore
+5749/Rp1.082.521.138 konsisten dengan angka COD cair yang vision amati
+langsung pada validasi live dashboard sesi sebelumnya.
+
+**NOT VERIFIED (vision):** angka hasil restore (reduksi rincian per periode,
+kesetaraan 5749/Rp1.082.521.138, latensi) tidak dieksekusi ulang oleh vision
+— sesuai batas review ini, vonis bertumpu pada review source + kehadiran dan
+konsistensi artefak, bukan reproduksi independen. Runtime hosted/produksi
+kandidat, recalculation di aplikasi Excel, dan iPhone fisik tidak terverifikasi
+(juga dinyatakan Codex). Keadaan pg_catalog live saat aktivasi kelak harus
+dicek ulang terhadap pin md5 baseline.
+
+**Rekomendasi vision:** kandidat LAYAK dinyatakan terverifikasi; tidak ada
+temuan FAIL pada F1, F2, maupun kesesuaian bukti. Dua syarat dicatat untuk
+jalur aktivasi Codex: (1) artefak aktivasi produksi harus terpisah dan badan
+kedua function-nya identik dengan kandidat ini selain blok guard isolasi
+(file kandidat memang menolak hosted by design — jangan dijalankan apa
+adanya di live); (2) cek drift md5 baseline + kesegaran data diulang saat
+aktivasi. Batasan warisan ekspor Buku (mengekspor displayed page) berada di
+luar kandidat dan tidak boleh diklaim ikut terperbaiki oleh rilis ini.
+
+**Keputusan pemilik (dicatat apa adanya):** Barry menyetujui SEMUA kandidat
+untuk di-push dan di-deploy OLEH CODEX (disampaikan 24 Okt ±00:39 WIB,
+saat review independen vision ini masih berjalan), dan pada 00:40 WIB memilih
+urutan "Deploy sekarang, review nyusul sebagai verifikasi" — push/deploy
+Codex berjalan paralel; review ini berdiri sebagai verifikasi, BUKAN gerbang
+pra-deploy. Eksekusi push/deploy sepenuhnya jalur Codex; vision tidak
+melakukan push/deploy dan tidak mengubah source/data/aturan live apa pun
+selama review ini. Status akhir section ini: RELEASED.
+
 ## Current workstream and authorization
 
 **21 October UI + Laba Rugi repair — main ACTIVE / VERIFIED with browser limit.**

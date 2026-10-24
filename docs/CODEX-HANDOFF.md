@@ -1866,6 +1866,27 @@ source dan live konsisten, angka September/Oktober persis snapshot
 rilis, tidak ada regresi pada angka pembanding maupun batas akses.
 Claim RELEASED; tindak lanjut di luar sesi ini.
 
+### Sesi validasi vision — Ekspor Buku Order live di Main — 25 Oktober 2026 (IN PROGRESS)
+
+**Claim vision 2026-10-25T06:57:00+07:00 (WIB).** Validasi independen
+READ-ONLY ekspor Buku Order yang sudah live di Main
+(`https://grandbook-app.vercel.app/orders/pembukuan`; source aplikasi
+`148110f`, commit rilis terakhir `12a4fb6`; target deployment menurut
+Codex `dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8`). Satu-satunya file yang
+diedit vision sesi ini: handoff ini. Cakupan cek: (1) ekspor seluruh
+hasil periode/filter dan semua periode, termasuk >1.000 baris;
+(2) pilihan baris lintas halaman menghasilkan tepat identitas yang
+dicentang; (3) jumlah, identitas, dan total cocok dengan sumber
+normal Owner/RLS; (4) Excel mempertahankan angka numerik, desimal,
+atribusi, nilai kosong, dan formula TOTAL beserta rentangnya; CSV
+berisi nilai yang sesuai; (5) penanganan error/batal dan batas akses.
+Baseline verifikasi rilis untuk dibandingkan (dihitung ulang dari
+sumber terbaru; tidak dipaksa cocok bila data berubah): September
+6.763 order; pilihan lintas halaman 2 order; filter DITERIMA 281
+order. Status: IN PROGRESS — tahap 1 review source + ekstraksi
+dokumen; tahap live menyusul. Vision tidak mengubah source/data/
+aturan keuangan, tidak replay SQL, tidak push/deploy.
+
 ## Current workstream and authorization
 
 **21 October UI + Laba Rugi repair — main ACTIVE / VERIFIED with browser limit.**

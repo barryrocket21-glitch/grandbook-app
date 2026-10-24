@@ -1702,7 +1702,7 @@ pra-deploy. Eksekusi push/deploy sepenuhnya jalur Codex; vision tidak
 melakukan push/deploy dan tidak mengubah source/data/aturan live apa pun
 selama review ini. Status akhir section ini: RELEASED.
 
-### Sesi validasi vision — Perbaikan packing Owner Profit live di Main — 25 Oktober 2026 (IN PROGRESS)
+### Sesi validasi vision — Perbaikan packing Owner Profit live di Main — 25 Oktober 2026 (RELEASED)
 
 **CLAIM vision (2026-10-25T06:12:56+07:00 WIB).** Validasi independen
 READ-ONLY atas perbaikan packing Owner Profit (F3) yang sudah live di Main:
@@ -1714,8 +1714,69 @@ Oktober). Satu-satunya file yang diedit vision sesi ini: handoff ini.
 Tidak ada source/data/aturan live yang diubah, tidak ada SQL yang
 dijalankan, tidak ada push/deploy oleh vision. Claim Codex untuk rilis
 packing ini sudah RELEASED; tidak ada claim aktif yang bertabrakan.
-Status: IN PROGRESS — claim TIDAK ditutup pada tahap 1; tahap live
-menyusul.
+Status: RELEASED — tahap live selesai dan claim ditutup vision
+(2026-10-25T06:20:19+07:00 WIB). Hasil tahap live dan vonis di bawah.
+
+**Tahap live — validasi browser READ-ONLY (25 Oktober 2026
+±06:15–06:19 WIB, sesi owner Barry, deployment Main; Liard tidak
+dikunjungi; tidak ada data yang diubah):**
+
+1. **API September 2026 ALL — PASS.** `GET
+/api/reports/owner-profit?month=2026-09&platform=ALL`: totals PERSIS
+snapshot rilis, selisih 0 di semua field — total_orders 310,
+delivered 281, retur 29, omset 49455000, gross_profit_before_ads
+32630492.9, ads_allocated 238001306, profit_after_ads -205370813.1,
+shipping_diff 4695302.9, delivered_rate 90.65, return_rate 9.35.
+`readOnlyMode` = "READ_ONLY_OWNER_PROFIT_COCKPIT"; `notes` memuat
+"Profit Setelah Ads = omset delivered/payout available - HPP dan
+packing tersimpan - shipping actual/estimated - komisi - ads
+allocated."
+2. **UI September ALL vs API — PASS.** Cockpit menampilkan Orders
+310, 281 delivered, Omset Rp49.455.000, Gross Before Ads
+Rp32.630.493, Ads Rp238.001.306, Profit Setelah Ads -Rp205.370.813,
+Selisih Ongkir Rp4.695.303, 29 retur — cocok dengan API setelah
+pembulatan tampilan ke rupiah penuh; persentase UI satu desimal
+(90.7%/9.3%) vs API dua desimal (90.65/9.35) — perbedaan pembulatan
+tampilan saja.
+3. **API + UI Oktober 2026 ALL — PASS.** Identik snapshot rilis,
+tidak ada field bergerak: semua 0 kecuali ads_allocated 215560642
+dan profit_after_ads -215560642. Belum ada order Oktober yang
+final/delivered — efek packing Oktober tetap nol secara live, bukan
+hanya di snapshot.
+4. **API September FACEBOOK — PASS.** Semua totals 0; summary dan
+productPlatform kosong (konsisten capture rilis).
+5. **Batas akses live:** sebelum sesi diperbarui, API mengembalikan
+{"error":"Unauthorized"} tanpa sesi valid — gerbang akses bekerja
+live; setelah login owner, akses normal.
+
+**Vonis checklist (vision):**
+
+- Packing = `packing_fee_snapshot × qty`, dikurangi sekali, hanya
+order delivered: **PASS** (source tahap 1 + delta September persis
+Rp22.300 tertanam di GP live).
+- September: koreksi Rp22.300; GP Rp32.630.492,90; profit setelah
+ADS -Rp205.370.813,10 pada snapshot rilis: **PASS** (live =
+snapshot, selisih 0).
+- Oktober: efek packing nol pada snapshot rilis: **PASS** (live =
+snapshot, tak ada pergerakan sumber).
+- Omzet, ADS, komisi, ongkir, jumlah order, batas akses tetap:
+**PASS** (diff tahap 1 tak menyentuhnya; semua field live yang
+dibandingkan identik; gerbang 401 terbukti live).
+- Tampilan vs API vs bukti item: **PASS** (UI = API modulo
+pembulatan tampilan; agregat bukti item rilis 9 item/Rp22.300
+konsisten dengan delta GP).
+
+**NOT VERIFIED:** rincian mentah per baris dari 9 item packing
+tidak dibuka independen (agregat saja, demi privasi); 9 kasus
+sintetis + 14 package tests tidak dieksekusi ulang (artefaknya
+dinilai); identitas deployment dari `final-verification.json`
+(halaman tidak menampilkan penanda deployment); perilaku Excel/di
+luar browser tidak diuji.
+
+**Penutup:** validasi perbaikan packing Owner Profit (F3) selesai —
+source dan live konsisten, angka September/Oktober persis snapshot
+rilis, tidak ada regresi pada angka pembanding maupun batas akses.
+Claim RELEASED; tindak lanjut di luar sesi ini.
 
 ## Current workstream and authorization
 

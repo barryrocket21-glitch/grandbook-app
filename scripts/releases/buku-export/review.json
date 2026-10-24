@@ -1,0 +1,52 @@
+{
+  "status": "CANDIDATE_VERIFIED_NOT_PUBLISHED",
+  "application_commit": "148110fd94d17d13a095b99ed9a9b05b67a344e8",
+  "tests_commit": "74f698b",
+  "application_files": 457,
+  "unchanged_application_files": 455,
+  "changed": [
+    "src/lib/orders/pembukuan-export.ts",
+    "src/app/(app)/orders/pembukuan/page.tsx"
+  ],
+  "input_sha256": "bc8cd470ae5d840f29685f7e43a0c04547d3720e88db08a2ded5e745db39d35e",
+  "unit_scenarios": 9,
+  "browser": {
+    "pass": true,
+    "checks": [
+      "actual download:2407 period-matched rows, numeric decimals, attribution, leading-zero resi and real TOTAL formulas",
+      "cross-page selection:3 exact compound identities, fresh financial values and scoped TOTAL range",
+      "select/deselect current page and clear selection controls",
+      "zone filter exports all307 matches beyond loaded page; pagination remains available on empty zone page",
+      "search exports1000 matching rows and filter changes permanently reset old selection",
+      "status filter exports1050 matches across all pages",
+      "different date range and all-time CSV honor scope,2454 total rows",
+      "mid-export network error and count drift never download partial workbooks",
+      "cancel interrupts export without file and allows retry",
+      "retry succeeds; Ringkas/Keuangan and export controls remain contained at1440/390/320"
+    ],
+    "downloads": 8,
+    "errors": [],
+    "unexpected": [],
+    "businessWrites": 0,
+    "environment": "built isolated loopback app; synthetic business responses"
+  },
+  "normal_read": {
+    "pass": true,
+    "normalOwner": true,
+    "period": "2026-09",
+    "rows": 6763,
+    "requests": 16,
+    "milliseconds": 59076,
+    "unique": 6763,
+    "businessWrites": 0,
+    "sql": 0
+  },
+  "build_typecheck_lint": true,
+  "package_tests": 14,
+  "operator_work_preserved": true,
+  "sql_activation": 0,
+  "business_writes": 0,
+  "pushed": false,
+  "deployed": false,
+  "independent_vision_export_review": "NOT_VERIFIED"
+}

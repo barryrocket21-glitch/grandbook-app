@@ -1,17 +1,40 @@
 # GrandBook Codex Handoff
 
-## Codex — Buku Order complete Excel export — 25 October 2026 WIB
+## Codex — Buku Order export CANDIDATE VERIFIED — 25 October 2026 WIB
 
-CLAIMED / IN PROGRESS. Barry requests all rows matching period/status/search/zone
-or selected rows across pages, without the 1000 response cap. Preserve Excel
-numeric cells, real formulas, attribution and missing-value semantics.
-Scope: src/app/(app)/orders/pembukuan/page.tsx,
-src/lib/orders/pembukuan-export.ts, scoped export tests/docs and release manifest.
-Initial work/tests in isolated candidate. No SQL/recovery replay, records/rules,
-Auth/RLS/roles or Liard changes. No push/deploy authorization inferred for this
-new scope. vision: preserve these paths; independent read-only export review
-welcome via this file. Existing packing review and your other claims preserved.
-NEXT: implement complete paged reader, explicit export scope and cross-page selection.
+SELESAI / CANDIDATE READY, NOT RELEASED. Implementation claim RELEASED.
+Barry authorized export implementation, not a new publication in this scope.
+App148110f; tests74f698b; claim07fd7c1. Exactly2 application paths changed:
+src/app/(app)/orders/pembukuan/page.tsx and src/lib/orders/pembukuan-export.ts.
+All period/status/search/zone matches or compound source:id selections across
+pages; fresh normal-session values, progress/cancel and no partial downloads.
+Unique full-result HTTP ordering includes source; bounded500 reads, overlap,
+exact count/identity/terminal/head checks. Excel numbers, decimals, attribution,
+identifiers, real TOTAL formulas and unknown blanks retained; CSV values only.
+No live record/rule/Auth/RLS/role, SQL/recovery/old correction or Liard changes.
+
+VERIFIED:9 regression tests;10 built isolated-browser scenarios/8 actual downloads
+(2407 period,3 selected across pages/fresh values,307 off-page zone,1000 search,
+1050 status,30 other-period,2454 all-time). Error/drift/cancel cause no downloads;
+retry succeeds;1440/390/320 contained. No browser errors/unexpected requests/writes.
+Actual normal Owner/RLS September scan6763 rows/6763 identities in16 reads (~59s).
+Build/TypeScript/scoped lint and14 package tests pass. Immutable457 inputs,
+455 unchanged; inputbc8cd470ae5d840f29685f7e43a0c04547d3720e88db08a2ded5e745db39d35e.
+Private package/evidence /root/backups/grandbook/buku-export-20261025.
+Public evidence docs/buku-export-2026-10-25.md, scripts/releases/buku-export/*,
+tests/orders/pembukuan-export.{test.ts,browser.cjs}; release manifest hashes updated.
+Three unrelated tracked dirty files and all operator/untracked work preserved.
+
+PRODUCTION: no push/deploy. Last verified Main packing dpl_E7yyof7ufEkNHFjiDSHmEzwMerm3
+unchanged by this scope; no fresh alias claim. vision packing PASS6c05de7 preserved.
+NOT VERIFIED: independent export review, hosted candidate, physical iPhone/Excel
+recalculation, atomic snapshot across every concurrent edit/very large memory load.
+Read guards detect drift, but are not a transaction-wide snapshot.
+vision: please claim independent READ-ONLY review of exact148110f + tests74f698b,
+especially full filter/selection coverage,1000-cap removal and numeric/formula
+semantics; record verdict here. No source/data/rule edits, SQL replay or publication.
+No automatic dispatch/watcher or completed export review is claimed.
+NEXT: vision independently reviews this candidate read-only through this handoff.
 
 ## Codex — Owner Profit packing LIVE VERIFIED — 25 October 2026 WIB
 

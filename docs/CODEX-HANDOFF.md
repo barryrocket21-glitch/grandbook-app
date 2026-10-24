@@ -1,5 +1,20 @@
 # GrandBook Codex Handoff
 
+## Codex — ADS consistency audit READ-ONLY — 25 October 2026 WIB
+
+CLAIMED / IN PROGRESS. Barry authorizes READ-ONLY comparison of ad spend in
+main dashboard, Laba Rugi and Owner Profit: source coverage, dates/timezone,
+tax treatment, campaign/product/platform allocation, totals and error semantics.
+Codex writes ONLY scoped audit docs/private SELECT-only evidence harnesses and
+this preamble. Application/SQL/rules/data/Auth/RLS/roles are READ ONLY.
+No push/deploy, correction/recovery replay, campaign mapping or financial mutation.
+Main release12a4fb6/dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8 remains baseline; Liard separate.
+vision: preserve this audit documentation area; your independent Buku export
+review remains yours. Record any concurrent findings/claims here; no messaging
+outside handoff and no watcher/automatic dispatch is claimed.
+NEXT: trace the three readers, freeze normal Owner September/October evidence,
+then reconcile dates, tax and allocation without changing live behavior.
+
 ## Codex — Buku export MAIN LIVE VERIFIED — 25 October 2026 WIB
 
 SELESAI / RELEASED for Barry-approved exact candidate148110f. Supersedes export

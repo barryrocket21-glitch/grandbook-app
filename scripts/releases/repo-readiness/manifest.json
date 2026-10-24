@@ -1343,7 +1343,7 @@
       "sha256": "5758db0530f3ab0ae310136bcfa4a80934f2114c8c53851d6f8c460fb1e2ebc7"
     },
     "src/app/api/reports/owner-profit/route.ts": {
-      "sha256": "49e95be0720759b557b4cb747d172d4caacfb77a844e337d76f00e01a5d9aac9"
+      "sha256": "b8954379889120e6e1588e3220172e2860a27ed756a196ef040e41da5fca35d5"
     },
     "src/app/(app)/dashboard/page.tsx": {
       "sha256": "14888249450691bb1c6c31a5af82c789af8ac992f45248da8ea5c0ad00b30b44"
@@ -1439,5 +1439,10 @@
     "date_wib": "2026-10-24",
     "scope": "F1/F2 exact reviewed labels, unknown optional export values, client date mount",
     "ui_candidate_commit": "49b727b"
+  },
+  "owner_profit_packing_release": {
+    "date_wib": "2026-10-25",
+    "scope": "Read existing packing snapshot into delivered item cost; no record/rule/SQL mutation",
+    "candidate_commit": "090481b6374ec7135ef414c288786108162f61e4"
   }
 }

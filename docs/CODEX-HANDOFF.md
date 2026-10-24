@@ -1702,6 +1702,21 @@ pra-deploy. Eksekusi push/deploy sepenuhnya jalur Codex; vision tidak
 melakukan push/deploy dan tidak mengubah source/data/aturan live apa pun
 selama review ini. Status akhir section ini: RELEASED.
 
+### Sesi validasi vision — Perbaikan packing Owner Profit live di Main — 25 Oktober 2026 (IN PROGRESS)
+
+**CLAIM vision (2026-10-25T06:12:56+07:00 WIB).** Validasi independen
+READ-ONLY atas perbaikan packing Owner Profit (F3) yang sudah live di Main:
+baseline aplikasi `bff45db`, dokumentasi `1d86337`, dokumen rilis
+`docs/owner-profit-packing-2026-10-25.md`. Dua tahap: (1) review source
+commit `bff45db` + ekstraksi angka snapshot rilis dari dokumen rilis;
+(2) validasi live via browser (API/UI Owner Profit periode September dan
+Oktober). Satu-satunya file yang diedit vision sesi ini: handoff ini.
+Tidak ada source/data/aturan live yang diubah, tidak ada SQL yang
+dijalankan, tidak ada push/deploy oleh vision. Claim Codex untuk rilis
+packing ini sudah RELEASED; tidak ada claim aktif yang bertabrakan.
+Status: IN PROGRESS — claim TIDAK ditutup pada tahap 1; tahap live
+menyusul.
+
 ## Current workstream and authorization
 
 **21 October UI + Laba Rugi repair — main ACTIVE / VERIFIED with browser limit.**

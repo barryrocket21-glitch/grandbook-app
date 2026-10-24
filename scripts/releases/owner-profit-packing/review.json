@@ -1,0 +1,21 @@
+{
+  "date_wib": "2026-10-25",
+  "before_sha256": "49e95be0720759b557b4cb747d172d4caacfb77a844e337d76f00e01a5d9aac9",
+  "after_sha256": "b8954379889120e6e1588e3220172e2860a27ed756a196ef040e41da5fca35d5",
+  "changed_application_files": [
+    "src/app/api/reports/owner-profit/route.ts"
+  ],
+  "business_writes": 0,
+  "sql_executed": 0,
+  "financial_rules_changed": false,
+  "status": "CANDIDATE_TESTED_READY_FOR_APPROVED_RELEASE",
+  "synthetic_route_checks": 9,
+  "oracle_periods": 2,
+  "built_api_runtime_checks": 4,
+  "packing_delta_september": 22300,
+  "packing_delta_october": 0,
+  "source_files_changed": 1,
+  "build_typecheck_lint_pass": true,
+  "active_recovery_manifest_changed": false,
+  "independent_vision_review": "NOT VERIFIED; requested via handoff only"
+}

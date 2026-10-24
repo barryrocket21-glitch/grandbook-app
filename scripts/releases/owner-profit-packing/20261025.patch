@@ -1,0 +1,37 @@
+--- a/src/app/api/reports/owner-profit/route.ts
++++ b/src/app/api/reports/owner-profit/route.ts
+@@ -27,6 +27,7 @@
+   product_name_raw: string | null
+   qty: number | null
+   hpp_snapshot: number | null
++  packing_fee_snapshot: number | null
+ }
+ 
+ type ProductLite = {
+@@ -143,7 +144,7 @@
+         .select('id,order_number,status,total,shipping_cost,shipping_cost_actual,cod_amount,payout_amount,campaign_id,meta,estimated_shipping_net,estimated_cod_fee', { count: 'exact' })
+         .gte('order_date', range.from).lte('order_date', range.to).gt('id', after).order('id').limit(500)),
+       completeReportRead<OrderItemLite>(after => sb.from('order_items')
+-        .select('id,order_id,product_id,product_name_raw,qty,hpp_snapshot,order:orders!inner(order_date)', { count: 'exact' })
++        .select('id,order_id,product_id,product_name_raw,qty,hpp_snapshot,packing_fee_snapshot,order:orders!inner(order_date)', { count: 'exact' })
+         .gte('order.order_date', range.from).lte('order.order_date', range.to).gt('id', after).order('id').limit(500)),
+       completeReportRead<CommissionLite>(after => sb.from('commissions')
+         .select('id,order_id,order_item_id,amount,status,order:orders!inner(order_date)', { count: 'exact' })
+@@ -254,7 +255,7 @@
+ 
+       if (delivered) {
+         const revenue = revenueBase * share
+-        const hpp = qty * n(item.hpp_snapshot)
++        const hpp = qty * (n(item.hpp_snapshot) + n(item.packing_fee_snapshot))
+         const shippingActual = shippingActualOrder * share
+         const shippingDiff = (shippingChargedOrder - shippingActualOrder) * share
+         const commission = n(commissionByItem.get(item.id)) + (orderRemainderCommission * share)
+@@ -399,7 +400,7 @@
+       'Laba aktual belum terverifikasi: laporan mencakup order final; biaya operasional dan bukti biaya historis belum lengkap. ADS input advertiser sudah termasuk pajak.',
+       `Biaya pengiriman order Delivered: ${costCoverage.verified} bukti SPX terverifikasi, ${costCoverage.legacy} biaya tersimpan tanpa bukti terpisah, ${costCoverage.estimate} estimasi, ${costCoverage.missing} belum tersedia. Biaya yang belum tersedia belum dikurangkan.`,
+       'Biaya SPX terverifikasi menggantikan biaya lama/estimasi dan dikurangkan sekali, termasuk fee COD. Selisih nominal dan saldo tetap tersimpan; ini bukan bukti saldo bank.',
+-      'Profit Setelah Ads = omset delivered/payout available - HPP - shipping actual/estimated - komisi - ads allocated.',
++      'Profit Setelah Ads = omset delivered/payout available - HPP dan packing tersimpan - shipping actual/estimated - komisi - ads allocated.',
+       'Bucket UNKNOWN dipertahankan kalau platform order tidak kebaca dari meta/campaign.',
+     ],
+   })

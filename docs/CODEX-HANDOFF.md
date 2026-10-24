@@ -1,17 +1,41 @@
 # GrandBook Codex Handoff
 
-## Codex — Buku export approved push/deploy — 25 October 2026 WIB
+## Codex — Buku export MAIN LIVE VERIFIED — 25 October 2026 WIB
 
-CLAIMED / IN PROGRESS. Barry now explicitly authorizes push and deployment of
-the tested Buku export candidate148110f (inputbc8cd470...,457 inputs/two app files),
-then normal live checks. Scope: publication artifacts, release docs and this
-preamble; no new app edits unless a verified release defect requires a scoped fix.
-No live records/financial rules, SQL/recovery/old corrections, Auth/RLS/roles
-or Liard changes. Preserve vision notes and operator changes. vision: independent
-READ-ONLY export review/live verification welcome; no simultaneous publication.
-No automatic dispatch or verdict claimed.
-NEXT: verify immutable package, ordinary fast-forward Git push/CI, bom1 release,
-then authenticated live Buku export/count/number/formula/selection checks.
+SELESAI / RELEASED for Barry-approved exact candidate148110f. Supersedes export
+candidate/pending publication entries below. Main dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8
+READY/bom1, grandbook-6wbkh33q1-barrys-projects-41ecfbbc.vercel.app.
+457 actual uploaded hashes match inputbc8cd470ae5d840f29685f7e43a0c04547d3720e88db08a2ded5e745db39d35e;
+only2 app paths changed,455 retained. Fast-forward Git9da5346; ordinary Git CI
+dpl_C2NES7wYSVR3v2UucU58QAP2dbo3 READY/iad1 completed before bom1 promotion.
+Docs closeout push follows ordinary CI then SAME approved bom1 promotion; require
+private final-verification.json for final state. No cancellation/guard changes.
+
+VERIFIED: ACTUAL Main HTTPS native Owner downloads, no successful business mocks.
+September1–30 XLSX6763 rows, all36 columns match independent normal Owner/RLS
+reference;55743 numeric cells and45702 unknown numeric blanks retained.
+Attribution/identifiers, actual SUM/conditional formulas and totals match.
+Two chosen identities from different pages export exactly2 rows, all36 columns,
+numeric/unknown cells and formulas match. September+DITERIMA CSV281 rows matches
+identities/attribution/buyer amounts/TOTAL. Final Buku shows6763 total/50 loaded,
+normal Owner controls, no load error. No-session Owner API401. Candidate9 regression
+and10 isolated browser scenarios, build/TypeScript/lint and14 package checks pass.
+Settings/env, three unrelated dirty files, recovery manifest and vision notes kept.
+Business writes0, SQL activation/replay0, live financial rule/Auth/RLS/role changes0;
+Liard untouched. Native downloads/private customer reference never added to Git.
+
+Public proof docs/buku-export-release-2026-10-25.md and
+scripts/releases/buku-export/live-review.json; source148110f/tests74f698b retained.
+Private /root/backups/grandbook/buku-export-release-20261025 and candidate package
+/root/backups/grandbook/buku-export-20261025. All operator/untracked work preserved.
+NOT VERIFIED: independent vision export review, physical iPhone/Excel recalculation,
+extreme memory loads or atomic snapshot across every concurrent edit. Large exports
+take time; detected drift rejects partial files and asks for retry.
+vision: please claim independent READ-ONLY validation of this published exact
+Buku export: full period/filter vs chosen rows, beyond1000, amounts/attribution/
+formulas, error and role boundaries. Record verdict here; no source/data/rule edits,
+SQL replay or publication. Packing PASS6c05de7 preserved. No dispatch/watcher claimed.
+NEXT: vision independently validates live Buku export read-only through this handoff.
 
 ## Codex — Buku Order export CANDIDATE VERIFIED — 25 October 2026 WIB
 

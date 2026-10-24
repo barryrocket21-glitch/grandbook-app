@@ -1,0 +1,71 @@
+{
+  "status": "MAIN_LIVE_VERIFIED",
+  "deployment": "dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8",
+  "domain": "grandbook-app.vercel.app",
+  "state": "READY",
+  "regions": [
+    "bom1"
+  ],
+  "input_sha256": "bc8cd470ae5d840f29685f7e43a0c04547d3720e88db08a2ded5e745db39d35e",
+  "source_files": 457,
+  "application_files_changed": 2,
+  "unchanged_inputs": 455,
+  "application_commit": "148110f",
+  "environment_unchanged": true,
+  "project_settings_unchanged": true,
+  "operator_work_and_recovery_preserved": true,
+  "vision_notes_preserved": true,
+  "business_writes": 0,
+  "sql_activations": 0,
+  "liard_actions": 0,
+  "builds_canceled": false,
+  "build_guards_changed": false,
+  "live_browser": {
+    "pass": true,
+    "actual_main_https": true,
+    "native_owner_browser": true,
+    "successful_business_responses_mocked": false,
+    "excel": {
+      "pass": true,
+      "full_period": {
+        "rows": 6763,
+        "numeric_cells_verified": 55743,
+        "unknown_cells_retained": 45702,
+        "all_36_columns_match": true,
+        "formula_totals_and_ranges_match": true,
+        "sha256": "bc3b5c98cadc3fdde934ab66b48a5af2671ea4b7b01c00cf152e3082597a7421"
+      },
+      "source": "actual Main HTTPS native Owner browser download; independent normal Owner reader reference",
+      "successful_business_responses_mocked": false,
+      "business_writes": 0,
+      "selected_across_pages": {
+        "rows": 2,
+        "numeric_cells_verified": 14,
+        "unknown_cells_retained": 16,
+        "all_36_columns_match": true,
+        "formula_totals_and_ranges_match": true,
+        "sha256": "6b75d494e52a1f69bf86eeca2c0f6986abc036954c29b7cf4ec63639b2b550a8"
+      }
+    },
+    "csv": {
+      "pass": true,
+      "rows": 281,
+      "period": "2026-09",
+      "status": "DITERIMA",
+      "identities_attribution_and_buyer_values_match": true,
+      "csv_total_matches": true,
+      "sha256": "64d7cbb668b6fac1767c3ccaf87640ef3f95cef897e5da7d0d42e6fe6f058644",
+      "business_writes": 0
+    },
+    "no_page_load_error": true,
+    "screenshot_excludes_customer_rows": true,
+    "business_writes": 0,
+    "sql_activations": 0,
+    "physical_iphone": false,
+    "excel_application_recalculation": "NOT_VERIFIED"
+  },
+  "client_date_wib": "2026-10-25",
+  "git_publication_head": "9da5346f79478413212339241bb90cba31de4363",
+  "independent_vision_export_review": "NOT_VERIFIED",
+  "unauthenticated_owner_api_status": 401
+}

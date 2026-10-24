@@ -1,5 +1,86 @@
 # GrandBook Codex Handoff
 
+## Codex — Owner Profit packing LIVE VERIFIED — 25 October 2026 WIB
+
+SELESAI / RELEASED. Supersedes Codex packing claims below. Barry explicitly approved
+isolated candidate + push/deploy. Candidate090481b; appbff45db pushed fast-forward.
+Only src/app/api/reports/owner-profit/route.ts changed among457 inputs (456 unchanged):
+read existing packing snapshot, include qty once in delivered item cost, honest note.
+NO live records, rules, stored GP/HPP/packing/commission/settlement/rates/ADS-policy,
+Auth/RLS/roles, SQL/migrations/recovery or617/package/31 correction changes.
+Liard separate/untouched. Active recovery financial-readers-2026-10-24.json unchanged.
+
+Main dpl_E7yyof7ufEkNHFjiDSHmEzwMerm3 READY/bom1,
+grandbook-qk1sokq2w-barrys-projects-41ecfbbc.vercel.app.
+Input18d320be16bb3e4a0e9eca602dd136d8d85479008452e925b0ee803a8bfa1bbc.
+457 actual upload hashes verified. Ordinary Git CI READY/iad1 completed unchanged
+before bom1 promotion. Settings/env and three unrelated dirty files preserved.
+No force/rewrite, guard change or cancellation. Docs closeout push follows ordinary
+CI then SAME bom1 promotion; require private final-verification.json.
+
+VERIFIED:9 actual-route synthetic regressions; frozen normal Owner/RLS Sept/Oct
+captures reproduce pre-release API exactly; independent Decimal oracle reconciles
+every product/platform/grand total. Sept281 delivered/9 packing items/Rp22300:
+GP32652792.90 ->32630492.90, after-ADS−205348513.10 ->−205370813.10.
+Other fields/ADS/shipping/commission effects unchanged. Oct0 delivered/effect0.
+Optimized build/TypeScript/scoped lint;14 package tests pass. Built loopback candidate
+AND actual Main HTTPS full Sept/Oct JSON + Facebook subset match oracle using normal
+Owner Auth/RLS, no successful response mocks; no-session Main401. Business writes0,
+SQL0. Private loopback server stopped at closeout; frozen evidence retained.
+
+Files/artifacts: scripts/releases/owner-profit-packing/*,
+tests/analytics/owner-profit-packing/*, app route + release manifest,
+docs/owner-profit-packing-2026-10-25.md and this preamble.
+Private evidence /root/backups/grandbook/owner-profit-packing-20261025.
+Prior vision sections preserved verbatim. vision: please claim an independent
+READ-ONLY post-release packing validation here; normal Sept/Oct/Facebook output,
+packing once and role/error boundaries; do not edit source/data/rules or replay SQL.
+No independent packing verdict or automatic dispatch/watcher is claimed.
+
+NOT VERIFIED: independent vision packing review, new browser/physical iPhone pass,
+complete realized cash profit/actual costs/bank/entitlements. Legacy null packing
+retains existing zero basis. F4 ADS policy, page-only Buku export and personal
+dashboard findings remain separate and unchanged.
+NEXT: vision validates published packing report independently read-only via handoff.
+
+## Codex — packing candidate tested, approved release in progress — 25 October2026
+
+Isolated candidate ready. Claim on Owner Profit route/manifest/artifacts/docs held.
+Nine synthetic actual-route regressions pass (qty, multi-product, decimal, null,
+non-delivered,1201 rows/short pages, error503, Auth/role gates, platform filter).
+Fresh normal Owner/RLS frozen inputs reproduce LIVE baseline API exactly for
+Sept/Oct; independent Decimal oracle proves every product/platform/grand total.
+September9 packing items/Rp22300 reduces GP32652792.90 ->32630492.90 and after-ADS
+−205348513.10 ->−205370813.10. Other output fields/ADS/commission/shipping unchanged.
+October0 delivered/effect0. No stored profit or snapshot modification.
+
+Optimized build/TypeScript/scoped ESLint pass. Built loopback GET with NORMAL
+Owner Auth/RLS (successful data not mocked) matches candidate full Sept/Oct JSON,
+Facebook subset and no-session rejection. Public artifacts:
+scripts/releases/owner-profit-packing/{20261025.patch,review.json,README.md};
+tests/analytics/owner-profit-packing/{route-harness.cjs,route.test.cjs}.
+Private evidence: /root/backups/grandbook/owner-profit-packing-20261025.
+No SQL/recovery execution, record/rule/Auth/RLS/ADS-policy or Liard changes.
+vision: independent READ-ONLY candidate review welcome; no response claimed.
+Barry already approved publishing this scope. NEXT: exact one-file application
+change + immutable457 package, normal Git push/CI and verified bom1 deployment.
+
+## Codex — Owner Profit packing candidate + approved release — 25 October 2026 WIB
+
+CLAIMED / IN PROGRESS. Barry explicitly authorized isolated packing preparation,
+then push/deploy. Scope ONLY Owner Profit report reading existing packing snapshots;
+no live records, financial rules, SQL/recovery replay, cost engines, Auth/RLS/roles,
+commissions, settlement or ADS-policy changes. Liard remains separate/untouched.
+Codex claims src/app/api/reports/owner-profit/route.ts,
+tests/analytics/owner-profit-packing/*, scripts/releases/owner-profit-packing/*,
+scripts/releases/repo-readiness/manifest.json, scoped docs and this preamble.
+Initial changes/tests in private isolated package before shared route edit.
+vision: please preserve these paths; independent read-only review of the candidate
+and later live result welcome. Your personal-dashboard and other handoff sections
+remain yours; coordination only here. No watcher/automatic dispatch claimed.
+NEXT: verify deployed source and fresh read-only item cohort, build/test candidate,
+then publish only tested immutable source under current approval.
+
 ## Codex — F1/F2 LIVE VERIFIED; next F3 audit complete — 24 October 2026 WIB
 
 SELESAI / source and SQL claims RELEASED. Supersedes earlier Codex claims below.

@@ -1,5 +1,18 @@
 # GrandBook Codex Handoff
 
+## Codex — Buku Order complete Excel export — 25 October 2026 WIB
+
+CLAIMED / IN PROGRESS. Barry requests all rows matching period/status/search/zone
+or selected rows across pages, without the 1000 response cap. Preserve Excel
+numeric cells, real formulas, attribution and missing-value semantics.
+Scope: src/app/(app)/orders/pembukuan/page.tsx,
+src/lib/orders/pembukuan-export.ts, scoped export tests/docs and release manifest.
+Initial work/tests in isolated candidate. No SQL/recovery replay, records/rules,
+Auth/RLS/roles or Liard changes. No push/deploy authorization inferred for this
+new scope. vision: preserve these paths; independent read-only export review
+welcome via this file. Existing packing review and your other claims preserved.
+NEXT: implement complete paged reader, explicit export scope and cross-page selection.
+
 ## Codex — Owner Profit packing LIVE VERIFIED — 25 October 2026 WIB
 
 SELESAI / RELEASED. Supersedes Codex packing claims below. Barry explicitly approved

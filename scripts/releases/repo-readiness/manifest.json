@@ -22,7 +22,9 @@
     "src/app/login/page.tsx": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
     "src/app/auth/callback/route.ts": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
     "src/app/(app)/dashboard/page.tsx": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
-    "src/lib/converter/engine.ts": "Preserve live10fc9d2 bulk-upload timeout fix."
+    "src/lib/converter/engine.ts": "Preserve live10fc9d2 bulk-upload timeout fix.",
+    "src/app/(app)/orders/pembukuan/page.tsx": "Complete period/status/search/zone export or fresh cross-page compound selections; bounded stable normal-session reads, integrity guards, cancellation and truthful scope.",
+    "src/lib/orders/pembukuan-export.ts": "Complete bounded export collector; preserve numeric values, attribution, formula totals and unknown blanks; reject Excel native row-cap overflow instead of truncating."
   },
   "permitted_extra_source_files": [
     "src/lib/supabase/migrations/157_auto_provision_cs_from_production.sql",
@@ -76,7 +78,7 @@
       "sha256": "e40894796aa3762f5bcb3b60d9118dfdd3df00c67c61ac787e6f1c153e15220c"
     },
     "src/lib/orders/pembukuan-export.ts": {
-      "sha256": "3ae11016358121854b6ac63d84d149a16cb514f169b044c70e40a3be55588ff4"
+      "sha256": "7e4d9e7cc34dbf317c59b9f750d480f6211d6d10437b97f2994cb09445ae4df5"
     },
     "src/components/dashboard/cashflow-summary-widget.tsx": {
       "sha256": "04515653f017949478364ec6fda97c0643537eeec88813cc304f62a14058ef37"
@@ -196,7 +198,7 @@
       "sha256": "f081337b2fee635b455b63275406a3e7f39d6a014e25ad90dab5a67e62a12ac4"
     },
     "src/app/(app)/orders/pembukuan/page.tsx": {
-      "sha256": "4759388f48c0efebb662283c090b8c9c1cd84e4b2290324b908ad12365527c05"
+      "sha256": "4c4721a05bb21184ba9546de36b818a489b8b6709b8629b2eeadc01f89129336"
     },
     "src/app/(app)/settings/converter-profiles/[id]/page.tsx": {
       "sha256": "ba2d3b5bc826f540d46a84f1c646bbe3a2565c3b1b4e3cc179d42851c1075ad9"

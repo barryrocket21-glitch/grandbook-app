@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,7 +13,7 @@ import { BookOpen, Loader2, Search, RefreshCw, Wand2, ChevronDown, ChevronUp, Ba
 import { PageHeader } from '@/components/ui/page-header'
 import { formatRupiah } from '@/lib/format'
 import { OrderDetailSheet } from '@/components/orders/order-detail-sheet'
-import { buildPembukuanXlsxBlob, buildPembukuanCsvBlob, type PembukuanExportRow } from '@/lib/orders/pembukuan-export'
+import { buildPembukuanXlsxBlob, buildPembukuanCsvBlob, collectPembukuanExport, pembukuanRowKey } from '@/lib/orders/pembukuan-export'
 import { downloadBlob } from '@/lib/converter/serializer'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/errors'
@@ -58,7 +58,7 @@ function Money({ v, bold }: { v: number | null | undefined; bold?: boolean }) {
 }
 
 export default function PembukuanPage() {
-  const { role } = useAuth()
+  const { role, user, profile } = useAuth()
   const canFinance = role === 'owner' || role === 'admin' || role === 'akunting'
 
   const [rows, setRows] = useState<Row[]>([])
@@ -81,8 +81,21 @@ export default function PembukuanPage() {
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(50)
   const [pnlOpen, setPnlOpen] = useState(false) // collapsed by default
+  const [exportScope, setExportScope] = useState<'filtered' | 'selected'>('filtered')
+  const [exportProgress, setExportProgress] = useState<{ read: number; total: number } | null>(null)
+  const exporting = exportProgress !== null
+  const exportRequest = useRef<AbortController | null>(null)
+  const pageRequest = useRef<AbortController | null>(null)
+  const scopeKey = JSON.stringify([user?.id, profile?.organization_id, role, allTime, range.from, range.to, status, search.trim(), zoneFilter])
+  const [selection, setSelection] = useState<{ scope: string; keys: Set<string> }>({ scope: '', keys: new Set() })
+  const selected = useMemo(() => selection.scope === scopeKey ? selection.keys : new Set<string>(), [selection, scopeKey])
+  // Filter/auth changes and navigation invalidate an in-flight export.
+  useEffect(() => () => { exportRequest.current?.abort() }, [scopeKey])
 
   const load = useCallback(async () => {
+    pageRequest.current?.abort()
+    const controller = new AbortController()
+    pageRequest.current = controller
     setLoading(true); setErr(false)
     const p_from = allTime ? null : range.from
     const p_to = allTime ? null : range.to
@@ -90,20 +103,23 @@ export default function PembukuanPage() {
       const params = { p_from, p_to, p_status: status === 'all' ? null : status, p_search: search.trim() || null }
       // Server-side pagination: jangan scan semua ledger di initial load.
       const [first, lr] = await Promise.all([
-        supabase.rpc('list_pembukuan', { ...params, p_limit: pageSize, p_offset: page * pageSize }).range(0, pageSize - 1),
+        supabase.rpc('list_pembukuan', { ...params, p_limit: pageSize, p_offset: page * pageSize }).range(0, pageSize - 1).abortSignal(controller.signal),
         pnlOpen && canFinance && !allTime
-          ? supabase.rpc('laba_rugi_summary', { p_from, p_to })
+          ? supabase.rpc('laba_rugi_summary', { p_from, p_to }).abortSignal(controller.signal)
           : Promise.resolve({ data: null, error: null }),
       ])
+      if (controller.signal.aborted) return
       if (first.error) throw first.error
       setRows((first.data || []) as Row[])
       setSummary(lr.error ? null : ((lr.data?.[0] ?? null) as LabaRugi | null))
-    } catch (e) { console.warn('pembukuan load:', e); setErr(true); setRows([]); if (pnlOpen) setSummary(null) } finally { setLoading(false) }
+    } catch (e) {
+      if (!controller.signal.aborted) { console.warn('pembukuan load:', e); setErr(true); setRows([]); if (pnlOpen) setSummary(null) }
+    } finally { if (!controller.signal.aborted) setLoading(false) }
   }, [status, search, allTime, range.from, range.to, canFinance, pnlOpen, page, pageSize])
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void load() }, 0)
-    return () => window.clearTimeout(timer)
+    return () => { window.clearTimeout(timer); pageRequest.current?.abort() }
   }, [load])
 
   const total = rows[0]?.total_count ?? rows.length
@@ -114,9 +130,10 @@ export default function PembukuanPage() {
   }, [rows])
 
   const displayed = useMemo(() => zoneFilter ? rows.filter(r => r.zone === zoneFilter) : rows, [rows, zoneFilter])
-  const totalPages = Math.max(1, Math.ceil((zoneFilter ? displayed.length : total) / pageSize))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const paged = displayed
   const resetToFirstPage = () => { setPage(0) }
+  const resetFilters = () => { setPage(0); setSelection({ scope: '', keys: new Set() }) }
 
   const totals = useMemo(() => displayed.reduce((a, r) => ({
     n: a.n + 1, total: a.total + n(r.penjualan),
@@ -125,19 +142,45 @@ export default function PembukuanPage() {
     dicair: a.dicair + n(r.dicairkan),
   }), { n: 0, total: 0, est_gp: 0, act_gp: 0, dicair: 0 }), [displayed])
 
-  // Export spreadsheet — dump `displayed` (semua row terfilter, ikut filter aktif)
-  // Export = `displayed` (semua data terfilter, sesuai yang dipilih di layar).
-  // Halaman udah load semua baris (bukan cuma 1000), jadi tinggal pakai.
-  const exportSheet = (fmt: 'xlsx' | 'csv') => {
+  const toggleSelection = (keys: string[], checked: boolean) => {
+    const next = new Set(selected)
+    for (const key of keys) { if (checked) next.add(key); else next.delete(key) }
+    setSelection({ scope: scopeKey, keys: next })
+  }
+  const exportSheet = async (fmt: 'xlsx' | 'csv') => {
+    if (exportRequest.current || loading || err) return
+    const controller = new AbortController()
+    exportRequest.current = controller
+    setExportProgress({ read: 0, total: 0 })
     try {
-      if (displayed.length === 0) { toast.info('Nggak ada data buat di-export.'); return }
-      const list = displayed as PembukuanExportRow[]
+      const params = { p_from: allTime ? null : range.from, p_to: allTime ? null : range.to,
+        p_status: status === 'all' ? null : status, p_search: search.trim() || null }
+      const list = await collectPembukuanExport<Row>({
+        fetchPage: async (offset, limit, signal) => {
+          // Let PostgREST page the full RPC result in a UNIQUE order. The RPC's
+          // own date/id order can tie between draft and final with the same id.
+          const { data, error } = await supabase.rpc('list_pembukuan', { ...params, p_limit: null, p_offset: 0 })
+            .order('order_date', { ascending: false, nullsFirst: false })
+            .order('id', { ascending: false }).order('source', { ascending: true })
+            .range(offset, offset + limit - 1).abortSignal(signal!)
+          if (error) throw error
+          if (!data) throw new Error('Respons ekspor tidak tersedia.')
+          return data as Row[]
+        },
+        zone: zoneFilter, selected: exportScope === 'selected' ? selected : undefined,
+        signal: controller.signal, onProgress: (read, count) => setExportProgress({ read, total: count }),
+      })
+      if (list.length === 0) { toast.info('Tidak ada order yang cocok dengan filter ekspor.'); return }
       const ts = new Date().toISOString().slice(0, 10)
       const blob = fmt === 'xlsx' ? buildPembukuanXlsxBlob(list) : buildPembukuanCsvBlob(list)
-      downloadBlob(blob, `pembukuan_${ts}.${fmt}`)
-      toast.success(`${list.length} baris + TOTAL di-export (${fmt.toUpperCase()})`)
+      if (controller.signal.aborted) return
+      downloadBlob(blob, `pembukuan_${exportScope === 'selected' ? 'pilihan' : 'filter'}_${allTime ? 'semua-periode' : `${range.from}_${range.to}`}_${ts}.${fmt}`)
+      toast.success(`${list.length.toLocaleString('id-ID')} baris + TOTAL diekspor (${fmt.toUpperCase()})`)
     } catch (e) {
-      toast.error('Gagal export', { description: getErrorMessage(e) })
+      if (!controller.signal.aborted) toast.error('Gagal ekspor — file tidak diunduh', { description: getErrorMessage(e) })
+    } finally {
+      exportRequest.current = null
+      setExportProgress(null)
     }
   }
 
@@ -151,9 +194,9 @@ export default function PembukuanPage() {
   const cols = view === 'keuangan' && canFinance ? 17 : 12
   const fmtShort = (d: string) => { const x = new Date(d); const p = (v: number) => String(v).padStart(2, '0'); return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)}` }
   const columnWidths = view === 'keuangan' && canFinance
-    ? [90, 190, 190, 170, 240, ...Array(12).fill(170)]
-    : [90, 190, 190, 170, 160, 150, 250, 240, 70, 110, 170, 190]
-  const frozenStyle = (i: number) => ({ '--ledger-left': i === 1 ? '90px' : '0px' }) as React.CSSProperties
+    ? [130, 190, 190, 170, 240, ...Array(12).fill(170)]
+    : [130, 190, 190, 170, 160, 150, 250, 240, 70, 110, 170, 190]
+  const frozenStyle = (i: number) => ({ '--ledger-left': i === 1 ? '130px' : '0px' }) as React.CSSProperties
 
 
   return (
@@ -162,10 +205,14 @@ export default function PembukuanPage() {
         description="Periksa order, atribusi, dan nilai keuangan. Pilih Ringkas atau Keuangan sesuai kebutuhan."
         actions={
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => exportSheet('xlsx')} disabled={loading || displayed.length === 0}>
+            <select aria-label="Cakupan ekspor" value={exportScope} onChange={e => setExportScope(e.target.value as 'filtered' | 'selected')} disabled={exporting} className="h-8 max-w-full rounded-md border bg-background px-2 text-sm">
+              <option value="filtered">Semua hasil filter</option>
+              <option value="selected">Baris dipilih ({selected.size.toLocaleString('id-ID')})</option>
+            </select>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => void exportSheet('xlsx')} disabled={loading || err || exporting || !user || (exportScope === 'selected' && selected.size === 0)}>
               <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
             </Button>
-            <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => exportSheet('csv')} disabled={loading || displayed.length === 0}>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => void exportSheet('csv')} disabled={loading || err || exporting || !user || (exportScope === 'selected' && selected.size === 0)}>
               CSV
             </Button>
             <a href="/marketing/distribusi" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-sm hover:bg-muted"><Wand2 className="w-3.5 h-3.5" /> Distribusi Atribusi</a>
@@ -173,19 +220,28 @@ export default function PembukuanPage() {
         } />
 
       {canFinance && <p className="text-xs text-muted-foreground">Komisi/selisih estimasi adalah sisa perhitungan seluruh peran, bukan pembayaran CS. Pencairan mengikuti bukti tercatat dan dapat ada saat status order masih berjalan; bukan laba kas atau verifikasi saldo bank.</p>}
+      <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span>Ekspor: {allTime ? 'semua periode' : `${range.from} sampai ${range.to}`} · {status === 'all' ? 'semua status' : status}{search.trim() ? ` · pencarian “${search.trim()}”` : ''} · {zoneFilter || 'semua zona'}. Seluruh halaman dibaca. Excel berisi angka dan formula TOTAL; CSV berisi nilai.</span>
+        <span>{selected.size.toLocaleString('id-ID')} order dipilih lintas halaman. Pilihan direset saat filter berubah.</span>
+        {selected.size > 0 && <Button variant="ghost" size="sm" disabled={exporting} onClick={() => setSelection({ scope: scopeKey, keys: new Set() })}>Hapus pilihan</Button>}
+      </div>
+      {exportProgress && <div role="status" aria-live="polite" className="flex flex-wrap items-center gap-3 rounded-md border p-3 text-sm">
+        <Loader2 className="h-4 w-4 animate-spin" /> Membaca {exportProgress.read.toLocaleString('id-ID')}{exportProgress.total ? ` / ${exportProgress.total.toLocaleString('id-ID')}` : ''} order…
+        <Button variant="outline" size="sm" onClick={() => exportRequest.current?.abort()}>Batalkan ekspor</Button>
+      </div>}
 
       {/* Filter bar */}
       <Card>
-        <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
+        <CardContent className="pt-4 pb-4"><fieldset disabled={exporting} className="flex min-w-0 flex-wrap items-center gap-3">
           <div className="relative min-w-0 basis-full sm:basis-auto sm:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input value={search} onChange={e => { resetToFirstPage(); setSearch(e.target.value) }} aria-label="Cari nomor order atau pelanggan" placeholder="Cari nomor order atau pelanggan…" className="pl-9" />
+            <Input value={search} onChange={e => { resetFilters(); setSearch(e.target.value) }} aria-label="Cari nomor order atau pelanggan" placeholder="Cari nomor order atau pelanggan…" className="pl-9" />
           </div>
-          <Button variant={allTime ? 'default' : 'outline'} size="sm" onClick={() => { resetToFirstPage(); setAllTime(true) }}>Semua</Button>
+          <Button variant={allTime ? 'default' : 'outline'} size="sm" onClick={() => { resetFilters(); setAllTime(true) }}>Semua</Button>
           <div className={allTime ? 'opacity-60' : ''}>
-            {rangeReady && <DateRangePicker value={range} onChange={v => { resetToFirstPage(); setRange(v); setAllTime(false) }} />}
+            {rangeReady && <DateRangePicker value={range} onChange={v => { resetFilters(); setRange(v); setAllTime(false) }} />}
           </div>
-          <Select value={status} onValueChange={v => { resetToFirstPage(); setStatus(v || 'all') }}>
+          <Select value={status} onValueChange={v => { resetFilters(); setStatus(v || 'all') }}>
             <SelectTrigger aria-label="Filter status order" className="w-44"><SelectValue>{status === 'all' ? 'Semua status' : status.replaceAll('_', ' ')}</SelectValue></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua status</SelectItem>
@@ -193,7 +249,7 @@ export default function PembukuanPage() {
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" aria-label="Muat ulang Buku Order" onClick={load} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></Button>
-        </CardContent>
+        </fieldset></CardContent>
       </Card>
 
       {/* Compact summary bar — 1 baris, semua role */}
@@ -288,18 +344,19 @@ export default function PembukuanPage() {
       )}
 
       {/* Zone chips (klik = filter) */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button onClick={() => { resetToFirstPage(); setZoneFilter(null) }}
+      <fieldset disabled={exporting} className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <span className="text-xs text-muted-foreground">Zona (jumlah di halaman ini):</span>
+        <button onClick={() => { resetFilters(); setZoneFilter(null) }}
           className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === null ? 'bg-zinc-500 text-white border-zinc-500' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
           Semua · {total.toLocaleString('id-ID')}{rows.length < total ? ` (loaded ${rows.length.toLocaleString('id-ID')})` : ''}
         </button>
-        {Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([z, c]) => (
-          <button key={z} onClick={() => { resetToFirstPage(); setZoneFilter(zoneFilter === z ? null : z) }}
+        {Object.keys(ZONE_COLOR).map(z => (
+          <button key={z} onClick={() => { resetFilters(); setZoneFilter(zoneFilter === z ? null : z) }}
             className={`text-[11px] px-2.5 h-6 rounded-full border transition-colors ${zoneFilter === z ? `ring-2 ring-zinc-400 ${ZONE_COLOR[z] || 'bg-muted'}` : (ZONE_COLOR[z] || 'bg-muted text-muted-foreground')} hover:opacity-80`}>
-            {z} · {c}
+            {z} · {counts[z] || 0}
           </button>
         ))}
-      </div>
+      </fieldset>
 
       {/* Ledger table */}
       <div className="min-w-0 overflow-hidden rounded-xl border bg-card">
@@ -307,7 +364,7 @@ export default function PembukuanPage() {
           <Table className="ledger-table table-fixed" style={{ width: columnWidths.reduce((sum, width) => sum + width, 0) }} containerClassName="max-h-[65vh]" containerLabel="Tabel Buku Order, geser untuk melihat semua kolom">
             <colgroup>{columnWidths.map((width, i) => <col key={i} style={{ width }} />)}</colgroup>
             <TableHeader className="[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:bg-card [&>tr>th]:z-10"><TableRow>
-              <TableHead style={frozenStyle(0)} className="bg-card">Tgl</TableHead>
+              <TableHead style={frozenStyle(0)} className="bg-card"><label className="flex items-center gap-2"><input type="checkbox" aria-label="Pilih semua baris halaman ini" disabled={loading || exporting || displayed.length === 0} checked={displayed.length > 0 && displayed.every(r => selected.has(pembukuanRowKey(r)))} onChange={e => toggleSelection(displayed.map(pembukuanRowKey), e.target.checked)} />Tgl</label></TableHead>
               <TableHead style={frozenStyle(1)} className="bg-card">Order#</TableHead>
               <TableHead style={frozenStyle(2)} className="bg-card">Nama</TableHead>
               <TableHead style={frozenStyle(3)} className="bg-card border-r">Status</TableHead>
@@ -344,10 +401,10 @@ export default function PembukuanPage() {
               {loading ? (
                 <TableRow><TableCell colSpan={cols} className="py-8 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
               ) : displayed.length === 0 ? (
-                <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-red-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={cols} className={`py-10 text-center text-sm ${err ? 'text-red-600' : 'text-muted-foreground'}`}>{err ? '⚠️ Gagal memuat data — klik Refresh atau cek koneksi.' : zoneFilter && rows.length > 0 ? 'Tidak ada order di zona ini pada halaman ini. Coba halaman berikutnya atau ekspor semua hasil filter.' : 'Belum ada order di periode/filter ini.'}</TableCell></TableRow>
               ) : paged.map(r => (
                 <TableRow key={`${r.source}-${r.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetail({ source: r.source as 'draft' | 'final', id: r.id })}>
-                  <TableCell style={frozenStyle(0)} className="bg-card text-sm whitespace-nowrap">{fmtShort(r.order_date)}</TableCell>
+                  <TableCell style={frozenStyle(0)} className="bg-card text-sm whitespace-nowrap"><label className="flex items-center gap-2" onClick={e => e.stopPropagation()}><input type="checkbox" aria-label={`Pilih ${r.order_number} (${r.source})`} disabled={exporting} checked={selected.has(pembukuanRowKey(r))} onChange={e => toggleSelection([pembukuanRowKey(r)], e.target.checked)} />{fmtShort(r.order_date)}</label></TableCell>
                   <TableCell style={frozenStyle(1)} className="bg-card font-mono text-xs whitespace-nowrap overflow-hidden">{r.order_number}</TableCell>
                   <TableCell style={frozenStyle(2)} className="bg-card whitespace-normal break-words text-sm font-medium" title={r.customer_name || ''}>{r.customer_name || '—'}</TableCell>
                   <TableCell style={frozenStyle(3)} className="bg-card border-r"><Badge variant="outline" className={`${ZONE_COLOR[r.zone] || 'bg-muted'} text-[11px] whitespace-nowrap`}>{r.zone}</Badge></TableCell>
@@ -431,7 +488,7 @@ export default function PembukuanPage() {
           </Table>
       </div>
 
-      {!loading && displayed.length > 0 && (
+      {!loading && rows.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <select aria-label="Jumlah order per halaman" value={pageSize} onChange={e => { resetToFirstPage(); setPageSize(Number(e.target.value)) }} className="h-8 rounded-md border bg-background px-2 text-sm">

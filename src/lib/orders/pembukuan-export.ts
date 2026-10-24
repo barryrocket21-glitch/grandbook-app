@@ -1,6 +1,6 @@
 // Export Pembukuan → tabel spreadsheet buat double cross-check.
-// Dump PERSIS apa yang tampil di /orders/pembukuan (draft + arsip, ikut filter
-// aktif), lengkap atribusi (campaign + platform) + angka duit est/aktual +
+// Ekspor hasil pembacaan lengkap sesuai filter atau identitas pilihan,
+// lengkap atribusi (campaign + platform) + angka duit est/aktual +
 // beberapa kolom KOSONG buat diisi manual saat cocokin.
 //
 // Angka = cell NUMBER beneran (bisa =SUM/formula). Baris TOTAL paling bawah:
@@ -21,6 +21,80 @@ export interface PembukuanExportRow {
   act_omset: number | null; act_hpp: number | null; act_fee_cs: number | null; act_gross_profit: number | null
   dicairkan: number | null; cod_settled_at: string | null
   delivered_at: string | null; returned_at: string | null
+}
+
+export interface PembukuanIdentity {
+  source: string
+  id: number
+  zone: string
+  total_count: number | string
+}
+
+export const pembukuanRowKey = (row: Pick<PembukuanIdentity, 'source' | 'id'>) => `${row.source}:${row.id}`
+
+/** Reads the existing normal-session RPC in bounded pages. Never returns a partial file.
+ * Adjacent pages overlap by one row to detect shifted/unstable offset boundaries.
+ * This is a verified read, not a transactional database snapshot.
+ */
+export async function collectPembukuanExport<T extends PembukuanIdentity>(options: {
+  fetchPage: (offset: number, limit: number, signal?: AbortSignal) => Promise<T[]>
+  zone?: string | null
+  selected?: ReadonlySet<string>
+  signal?: AbortSignal
+  onProgress?: (read: number, total: number) => void
+}): Promise<T[]> {
+  const { fetchPage, signal, zone, selected, onProgress } = options
+  const checkAbort = () => { if (signal?.aborted) throw new DOMException('Ekspor dibatalkan', 'AbortError') }
+  const changed = () => new Error('Data berubah atau belum terbaca lengkap. Muat ulang lalu ulangi ekspor; file tidak diunduh.')
+  const readPage = async (offset: number, limit: number) => {
+    checkAbort()
+    const batch = await fetchPage(offset, limit, signal)
+    checkAbort()
+    if (!Array.isArray(batch) || batch.length > limit) throw changed()
+    return batch
+  }
+  if (selected?.size === 0) throw new Error('Pilih minimal satu order untuk diekspor.')
+  const result: T[] = [], seen = new Set<string>(), found = new Set<string>()
+  let read = 0, expected: number | undefined, first: T | undefined, last: T | undefined
+  while (expected === undefined || read < expected) {
+    const batch = await readPage(read === 0 ? 0 : read - 1, 500)
+    if (batch.length === 0) {
+      if (read !== 0) throw changed()
+      expected = 0
+      break
+    }
+    for (const row of batch) {
+      const count = Number(row.total_count)
+      if (!Number.isSafeInteger(count) || count < 1 ||
+          !['draft', 'final'].includes(row.source) || !Number.isSafeInteger(row.id)) throw changed()
+      expected ??= count
+      if (count !== expected) throw changed()
+    }
+    if (last && JSON.stringify(batch[0]) !== JSON.stringify(last)) throw changed()
+    const next = last ? batch.slice(1) : batch
+    if (next.length === 0) throw changed()
+    for (const row of next) {
+      const key = pembukuanRowKey(row)
+      if (seen.has(key)) throw changed()
+      seen.add(key)
+      first ??= row
+      last = row
+      read++
+      if ((!zone || row.zone === zone) && (!selected || selected.has(key))) {
+        result.push(row)
+        found.add(key)
+      }
+    }
+    if (read > expected!) throw changed()
+    onProgress?.(read, expected!)
+  }
+  // Detect newly added/deleted rows and a changed leading row before downloading.
+  if ((await readPage(expected!, 1)).length !== 0) throw changed()
+  const head = await readPage(0, 1)
+  if (first ? JSON.stringify(head[0]) !== JSON.stringify(first) : head.length !== 0) throw changed()
+  if (selected && found.size !== selected.size) throw new Error('Sebagian order pilihan tidak lagi cocok dengan filter. Muat ulang dan pilih kembali; file tidak diunduh.')
+  checkAbort()
+  return result
 }
 
 const dateOnly = (v: string | null): string => (v ? v.slice(0, 10) : '')
@@ -79,6 +153,7 @@ const colSum = (rows: PembukuanExportRow[], c: Col): number =>
  * XLSX dengan baris TOTAL pakai formula =SUM() live (recompute pas diedit).
  */
 export function buildPembukuanXlsxBlob(rows: PembukuanExportRow[]): Blob {
+  if (rows.length > 1_048_574) throw new Error('Jumlah baris melebihi kapasitas satu sheet Excel. Persempit periode/filter atau pilih CSV; data tidak dipotong.')
   const aoa: unknown[][] = [
     HEADERS,
     ...rows.map((r) => COLUMNS.map((c) => c.get(r))),

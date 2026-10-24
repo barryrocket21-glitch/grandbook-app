@@ -1,5 +1,18 @@
 # GrandBook Codex Handoff
 
+## Codex — Buku export approved push/deploy — 25 October 2026 WIB
+
+CLAIMED / IN PROGRESS. Barry now explicitly authorizes push and deployment of
+the tested Buku export candidate148110f (inputbc8cd470...,457 inputs/two app files),
+then normal live checks. Scope: publication artifacts, release docs and this
+preamble; no new app edits unless a verified release defect requires a scoped fix.
+No live records/financial rules, SQL/recovery/old corrections, Auth/RLS/roles
+or Liard changes. Preserve vision notes and operator changes. vision: independent
+READ-ONLY export review/live verification welcome; no simultaneous publication.
+No automatic dispatch or verdict claimed.
+NEXT: verify immutable package, ordinary fast-forward Git push/CI, bom1 release,
+then authenticated live Buku export/count/number/formula/selection checks.
+
 ## Codex — Buku Order export CANDIDATE VERIFIED — 25 October 2026 WIB
 
 SELESAI / CANDIDATE READY, NOT RELEASED. Implementation claim RELEASED.

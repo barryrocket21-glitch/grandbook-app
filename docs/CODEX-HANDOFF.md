@@ -1,25 +1,55 @@
 # GrandBook Codex Handoff
 
-## Codex — Ad Spend completeness candidate CLAIM — 25 October 2026 WIB
+## Codex — Ad Spend CANDIDATE VERIFIED / CLAIM RELEASED — 25 October 2026 WIB
 
-IN PROGRESS. Barry authorizes isolated A1 fix, NO push/deploy or live financial
-data/rule changes. Claim src/lib/supabase/queries/ad-spend.ts,
-src/app/(app)/ad-spend/page.tsx, tests/ad-spend-completeness/*,
-scripts/releases/ad-spend-completeness/*, scoped candidate docs and intended
-hashes only in scripts/releases/repo-readiness/manifest.json. Handoff shared
-append/prepend only; preserve vision sections. Implementation in private isolated
-/root/backups/grandbook/ad-spend-candidate-20261025/app before root integration.
-Normal-session reads only; no SQL/recovery/correction replay, rate/Auth/RLS changes.
-Plan: complete checked paginated reads; same filtered spend_total basis for header
-and KPI, bounded table rendering, honest errors/retry/stale-request rejection.
-Campaign profitability is a separate report: preserve its existing calculations,
-explicit period/platform/all-source scope; do not invent source-specific profit.
-vision e59aa83 RELEASED export verdict acknowledged: period/filter PASS; all-time
-31686 export statement timeout P1 separately pending, not claimed in this ADS task.
-Prior three unrelated dirty files/operator work preserved. Production unchanged.
-vision: do not edit claimed ADS paths until release; independent candidate review
-will be requested here after verification. No automatic dispatch is claimed.
+SELESAI / CANDIDATE READY, NOT PUSHED OR DEPLOYED. Supersedes claim09b2a46.
+Applicationc07422a; tests/evidenceb5598cf. Barry authorized isolated ADS candidate
+only. Main last verified dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8 READY/bom1 unchanged
+by this scope (no fresh alias claim); Liard separate/untouched. NO live data/rates/
+financial rules/allocations/commission/settlement/Auth/RLS/role changes; SQL/recovery/
+617/package/31 correction replay0. Three unrelated dirty files/operator work and
+active recovery manifest preserved; no credentials/customer rows in Git.
 
+CHANGED exactly2 app paths: src/lib/supabase/queries/ad-spend.ts and
+src/app/(app)/ad-spend/page.tsx; only intended manifest hashes updated.
+Complete bounded500 ID-keyset reads with counts/identity/terminal/end-count checks;
+all selected date/platform/source rows feed header/KPI on existing spend_total
+fallbackspend basis, explicitly including recorded tax. Table50/page; entire-result
+totals. Genuine empty0; error hides old/partial values and retry; existing shared
+auth/scope/abort/sequence/timeout protection. Manual/CSV writer payloads/handlers
+byte-identical. Fourth scoped card=unique campaigns; original profit formula/RPC
+retained in Performa tab, explicit period/platform/ALL-source scope. Source filter
+withholds unsupported profit; independent performance failure/partial-count error.
+
+VERIFIED: actual candidate normalOwner/RLS September1122/Rp238001306, all identities
+and sum match independent reference; META930/Rp166638796, GOOGLE129/Rp59347213,
+SNACK63/Rp12015297; MANUAL1122 same. Previously omitted122/Rp22571461 retained.
+26 normal read-only requests; performance RPC74 complete rows, platform IDs match.
+Six reader regression groups; nine built-loopback browser scenarios (synthetic
+business responses),2407 rows across49 table pages, same header/KPI, combined filters,
+delayed stale response, independent performance error/truncation, read failures/
+drift/retry, true empty,1440/390/320 contained and writer visibility preserved.
+No browser errors/unexpected requests/writes. Build/TypeScript/scoped lint pass
+(3 existing warnings);14 package regressions pass. Immutable457 inputs,455 retained.
+Inputc8e2e2c3ab563019897e4b7118825c3420935865380fb543a0954ca4ad6e9777.
+
+Evidence docs/ad-spend-completeness-2026-10-25.md,
+scripts/releases/ad-spend-completeness/*, tests/ad-spend-completeness/*.
+Private build/evidence/package /root/backups/grandbook/ad-spend-candidate-20261025;
+package/ immutable; loopback55537 used for built fixture tests, stopped at closeout.
+NOT VERIFIED: vision independent review, hosted publication/physical iPhone,
+atomic same-count concurrent snapshot/extreme loads. Existing100000-row safety
+guard rejects explicitly; no silent truncation. Cross-report tax-basis issue unchanged.
+visione59aa83 RELEASED Buku verdict preserved: per-period/filter PASS; all-time31686
+statement timeout P1 remains separately pending; no Buku paths edited here.
+
+vision: please claim independent READ-ONLY review of exactc07422a + b5598cf through
+this handoff: >1000 identity/sum completeness; period/platform/source scope,
+header/KPI incl recorded PPN, pagination, source-specific profit withheld,
+error/drift/abort/stale responses, normal Auth/RLS and unchanged writer payloads.
+Record verdict here; do NOT edit source/data/rules, replay SQL, push or deploy.
+No automatic dispatch/watcher or completed independent review is claimed.
+NEXT: vision independently reviews this isolated candidate read-only via handoff.
 
 ## Codex — ADS audit READ-ONLY COMPLETE — 25 October 2026 WIB
 

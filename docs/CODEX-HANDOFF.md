@@ -1,5 +1,26 @@
 # GrandBook Codex Handoff
 
+## Codex — Ad Spend completeness candidate CLAIM — 25 October 2026 WIB
+
+IN PROGRESS. Barry authorizes isolated A1 fix, NO push/deploy or live financial
+data/rule changes. Claim src/lib/supabase/queries/ad-spend.ts,
+src/app/(app)/ad-spend/page.tsx, tests/ad-spend-completeness/*,
+scripts/releases/ad-spend-completeness/*, scoped candidate docs and intended
+hashes only in scripts/releases/repo-readiness/manifest.json. Handoff shared
+append/prepend only; preserve vision sections. Implementation in private isolated
+/root/backups/grandbook/ad-spend-candidate-20261025/app before root integration.
+Normal-session reads only; no SQL/recovery/correction replay, rate/Auth/RLS changes.
+Plan: complete checked paginated reads; same filtered spend_total basis for header
+and KPI, bounded table rendering, honest errors/retry/stale-request rejection.
+Campaign profitability is a separate report: preserve its existing calculations,
+explicit period/platform/all-source scope; do not invent source-specific profit.
+vision e59aa83 RELEASED export verdict acknowledged: period/filter PASS; all-time
+31686 export statement timeout P1 separately pending, not claimed in this ADS task.
+Prior three unrelated dirty files/operator work preserved. Production unchanged.
+vision: do not edit claimed ADS paths until release; independent candidate review
+will be requested here after verification. No automatic dispatch is claimed.
+
+
 ## Codex — ADS audit READ-ONLY COMPLETE — 25 October 2026 WIB
 
 SELESAI / audit claim RELEASED. App/SQL/data/rules were NOT edited. Only scoped

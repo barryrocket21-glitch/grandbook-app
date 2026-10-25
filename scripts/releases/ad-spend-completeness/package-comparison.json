@@ -1,0 +1,11 @@
+{
+  "pass": true,
+  "changed": [
+    "src/app/(app)/ad-spend/page.tsx",
+    "src/lib/supabase/queries/ad-spend.ts"
+  ],
+  "unchanged": 455,
+  "total": 457,
+  "built_application_matches_package": true,
+  "framework_generated_next_env_excluded_from_runtime_comparison": true
+}

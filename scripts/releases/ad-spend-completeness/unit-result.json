@@ -1,0 +1,12 @@
+{
+  "pass": true,
+  "checks": [
+    "2307 complete rows over short server pages; exact counts, terminal read, end count and stable display ordering",
+    "all platform/source combinations and campaign filter retain off-page matches within inclusive period",
+    "stored taxed decimals and null total fallback preserved; complete lead/CPR/campaign counts; valid empty totals zero",
+    "mid-page failure, duplicate IDs, missing count/null data/invalid costs and count drift reject partial results",
+    "pre-aborted and superseded reads reject even if fetch ignores cancellation",
+    "invalid period rejects before a request; verified empty period remains a successful empty result"
+  ],
+  "businessWrites": 0
+}

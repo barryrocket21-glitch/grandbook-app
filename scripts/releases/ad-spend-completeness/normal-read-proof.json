@@ -1,0 +1,45 @@
+{
+  "pass": true,
+  "normal_owner_rls": true,
+  "businessWrites": 0,
+  "actual_candidate_helper": true,
+  "checks": [
+    {
+      "platform": "ALL",
+      "rows": 1122,
+      "spend": 238001306,
+      "identities_and_sum_match": true
+    },
+    {
+      "platform": "META",
+      "rows": 930,
+      "spend": 166638796,
+      "identities_and_sum_match": true
+    },
+    {
+      "platform": "GOOGLE",
+      "rows": 129,
+      "spend": 59347213,
+      "identities_and_sum_match": true
+    },
+    {
+      "platform": "SNACK",
+      "rows": 63,
+      "spend": 12015297,
+      "identities_and_sum_match": true
+    },
+    {
+      "source": "MANUAL",
+      "rows": 1122,
+      "spend": 238001306,
+      "identities_match": true
+    }
+  ],
+  "reads": 26,
+  "performance_complete_rows": 74,
+  "performance_platforms": [
+    "META",
+    "GOOGLE",
+    "SNACK"
+  ]
+}

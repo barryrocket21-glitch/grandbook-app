@@ -1,0 +1,20 @@
+{
+  "pass": true,
+  "checks": [
+    "2407 complete filtered rows across49 table pages; header/cards stable and identical; no profit RPC dependency",
+    "platform and combined source filters retain all off-page matches and reset table pagination",
+    "rapid filter changes hide old values immediately; delayed superseded result cannot overwrite new scope",
+    "profit isolated in explicit all-source performance tab; selected-source profit withheld; platform filter honored",
+    "profit failure/truncation shows independent error; spend totals remain valid; performance retry succeeds",
+    "mid-read error/count drift hide partial rows and totals; retries recover genuine data",
+    "verified empty period shows zero totals and honest filter-specific empty message",
+    "responsive summary, filters and paginated table contained at1440/390/320",
+    "existing writer visibility preserved for synthetic CS session; zero unexpected requests or business writes"
+  ],
+  "adRequests": 103,
+  "perfRequests": 4,
+  "errors": [],
+  "unexpected": [],
+  "businessWrites": 0,
+  "environment": "built isolated loopback app; synthetic business responses"
+}

@@ -1,0 +1,18 @@
+{
+  "files_changed": 2,
+  "reviewed_inputs": 457,
+  "other_inputs_retained": 455,
+  "writer_payloads_byte_identical": true,
+  "changes": [
+    {
+      "path": "src/lib/supabase/queries/ad-spend.ts",
+      "before": "81fa381480e5c71bc7c31ad012b9415c02f79e49a1734ab436a13b19f74ef8ea",
+      "after": "1234c9de64ddf62693bcd047171b03338e01ad6478c3d9e4cc01ee430c56de71"
+    },
+    {
+      "path": "src/app/(app)/ad-spend/page.tsx",
+      "before": "3fdcf0ee913aa410d72e1530dd2b077ed3e972994fa6f2088287d5e0ccc66749",
+      "after": "92d23eafc2a0ea60ae7f3bc740c697c68923e6ad5ca070bba24e72125ada8b9b"
+    }
+  ]
+}

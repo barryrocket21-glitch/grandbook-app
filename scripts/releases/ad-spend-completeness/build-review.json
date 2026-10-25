@@ -1,0 +1,11 @@
+{
+  "pass": true,
+  "optimized_next_build": true,
+  "typescript": true,
+  "scoped_eslint_errors": 0,
+  "preexisting_eslint_warnings": 3,
+  "package_regressions_passed": 14,
+  "no_push_deploy": true,
+  "business_writes": 0,
+  "sql_execution": 0
+}

@@ -1893,7 +1893,7 @@ source dan live konsisten, angka September/Oktober persis snapshot
 rilis, tidak ada regresi pada angka pembanding maupun batas akses.
 Claim RELEASED; tindak lanjut di luar sesi ini.
 
-### Sesi validasi vision — Ekspor Buku Order live di Main — 25 Oktober 2026 (IN PROGRESS)
+### Sesi validasi vision — Ekspor Buku Order live di Main — 25 Oktober 2026 (RELEASED)
 
 **Claim vision 2026-10-25T06:57:00+07:00 (WIB).** Validasi independen
 READ-ONLY ekspor Buku Order yang sudah live di Main
@@ -1910,9 +1910,91 @@ berisi nilai yang sesuai; (5) penanganan error/batal dan batas akses.
 Baseline verifikasi rilis untuk dibandingkan (dihitung ulang dari
 sumber terbaru; tidak dipaksa cocok bila data berubah): September
 6.763 order; pilihan lintas halaman 2 order; filter DITERIMA 281
-order. Status: IN PROGRESS — tahap 1 review source + ekstraksi
-dokumen; tahap live menyusul. Vision tidak mengubah source/data/
+order. Status: RELEASED — tahap 1 (review source) dan tahap live
+selesai; hasil lengkap tercatat di bawah. Vision tidak mengubah source/data/
 aturan keuangan, tidak replay SQL, tidak push/deploy.
+
+**Hasil validasi live (browser, sebagai Owner Barry, 25 Okt
+±06:59–07:34 WIB; Main `dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8`; tidak ada
+data bisnis diubah):**
+
+1. **Ekspor per-periode/filter — PASS.** September 2026 semua status:
+   UI "6.763 order total"; toast sukses tertangkap persis "6.763
+   baris + TOTAL diekspor (XLSX)". Filter DITERIMA September: UI
+   "281 order total", toast "281 baris + TOTAL diekspor (CSV)".
+   Baseline rilis terkonfirmasi ulang apa adanya dari sumber live.
+2. **Ekspor SEMUA PERIODE — FAIL (temuan utama sesi ini, P1 untuk
+   scope ekspor).** Periode "Semua" = 31.686 order total (634
+   halaman). Pada percobaan yang teramati tuntas (putaran tangkap
+   kedua), pemindaian berjalan ±7 menit sampai "Membaca 29.442 /
+   31.686 order…" lalu berakhir toast error persis: "Gagal ekspor
+   — file tidak diunduh", detail "canceling statement due to
+   statement timeout". Pada volume live saat ini ekspor
+   semua-periode mati oleh statement timeout server menjelang akhir
+   pemindaian; tidak ada file yang dihasilkan. Putaran pertama
+   menjalankan ekspor ini 3× tanpa toast sukses yang tertangkap dan
+   tanpa file — konsisten dengan kegagalan yang sama. Sisi baiknya:
+   kegagalan bersifat fail-closed dan jujur — tidak ada file parsial,
+   pesan error tampil. Perbaikan di jalur Codex; prioritasnya
+   keputusan Barry.
+3. **Pilihan lintas halaman — PASS (perilaku).** Ditegaskan dua
+   putaran: centang `GB-20261011-000156` (draft) di halaman 1 +
+   `GB-20260930-000473` (draft) di halaman 2 → banner "2 order
+   dipilih lintas halaman"; scope "Baris dipilih (2)"; toast "2
+   baris + TOTAL diekspor (XLSX)" tertangkap di putaran pertama.
+   Konfirmasi isi file per identitas: NOT VERIFIED (lihat butir 5).
+4. **CSV DITERIMA September — PASS di level file (dibedah langsung
+   oleh vision).** File unduhan nyata diperiksa: 283 baris = header +
+   281 data + TOTAL; 36 kolom; semua baris status DITERIMA; kolom
+   'Kode Atribusi' terisi 281/281; tidak ada sel formula (CSV murni
+   nilai); sel kosong dipertahankan (mis. 13 baris 'Dicairkan
+   (GrandBook)' kosong tetap kosong; total kondisional untuk kolom
+   yang semua barisnya kosong — 'Selisih Ongkir', 'Fee Admin (Est)'
+   — dibiarkan kosong, bukan total karangan). Penjumlahan ulang
+   desimal eksak oleh vision cocok dengan baris TOTAL untuk semua
+   kolom uang utama (Qty 281; Tagihan pembeli 49.291.400; Ongkir
+   11.475.810; COD Amount 47.921.000; HPP Est/Aktual 8.644.000;
+   Komisi Est/Aktual 1.400.000; Dicairkan 47.442.000). **Temuan
+   kecil (P3, observasi):** TOTAL empat kolom hitungan (Omset Est,
+   GP Proyeksi, Omset Aktual, GP Realisasi) tertulis dengan noise
+   float64: 44699351.34000002 vs jumlah desimal eksak 44699351.34
+   (selisih 2E-8) dan 34655351.34000001 vs 34655351.34 (selisih
+   1E-8) — sisa aritmetika biner JavaScript; dampak uang nihil, tapi
+   literal file bukan jumlah eksak.
+5. **Isi file Excel (XLSX) live — NOT VERIFIED.** Pada dua putaran,
+   alat unduhan vision tidak berhasil menangkap satu pun file XLSX
+   hasil ekspor (unduhan blob; penangkapan berakhir "outcome
+   unknown" tanpa artefak) — untuk September penuh, pilihan 2
+   baris, maupun semua periode. Pemeriksaan formula TOTAL +
+   rentangnya, tipe numerik sel, dan pelestarian sel kosong pada
+   file Excel LIVE tidak dilakukan dari file. Yang terverifikasi
+   untuk Excel: perilaku UI/toast di atas + review source tahap 1
+   (formula `=SUM` rentang persis + formula kondisional dua kolom,
+   getter numerik asli, null→kosong) + artefak live-review rilis +
+   9 test regresi (dinilai, tidak dieksekusi ulang). Jalur
+   peningkatan bila Barry mau: Barry unduh XLSX September dari
+   browsernya dan kirim ke vision untuk dibedah.
+6. **Error/batal — PASS.** Tes batal teramati: ekspor September
+   dimulai → "Batalkan ekspor" diklik → banner hilang, tidak ada
+   file, tidak ada toast error/sukses, kontrol normal lagi.
+   Penanganan error teramati nyata pada kegagalan semua-periode
+   (butir 2): toast "Gagal ekspor — file tidak diunduh" + alasan,
+   tanpa file parsial.
+7. **Batas akses — PASS (source + perilaku sesi).** Tidak ada
+   endpoint ekspor terpisah; ekspor menunggang sesi Supabase + RPC
+   `list_pembukuan` yang sama dengan layar (RLS Owner); tombol
+   nonaktif saat belum login/loading/error (tahap 1). Uji logout
+   khusus halaman /orders/pembukuan tidak dilakukan terpisah — NOT
+   VERIFIED minor; gerbang sesi aplikasi sendiri teramati bekerja
+   pada sesi-sesi validasi lain hari ini.
+
+**Penutup:** validasi ekspor Buku Order selesai — ekspor
+per-periode/filter PASS termasuk verifikasi file CSV nyata; ekspor
+semua periode FAIL (statement timeout pada 31.686 order) sebagai
+temuan P1 scope ini untuk diputuskan Barry; isi XLSX live NOT
+VERIFIED karena keterbatasan alat tangkap unduhan vision, bukan
+karena aplikasi. Claim RELEASED 2026-10-25T07:36:27+07:00; tindak lanjut di luar sesi
+ini.
 
 ## Current workstream and authorization
 

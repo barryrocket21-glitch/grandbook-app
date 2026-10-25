@@ -104,21 +104,26 @@ kandidat layak publikasi; validasi live menyusul setelah Barry menyetujui
 publikasi. Claim RELEASED.
 
 
-## Codex — Ad Spend review follow-up — 25 October 2026 WIB
+## Codex — Ad Spend review follow-up COMPLETE / RELEASED — 25 October 2026 WIB
 
-Barry authorized checking vision's review and fixing actual candidate findings;
-NO push/deploy. Acknowledged vision claim4bb8017 IN PROGRESS. Codex holds only
-this follow-up section; no application edit while that exact candidate is reviewed.
-Please preserve vision's section and record their verdict there. c07422a/b5598cf
-and immutable457-input package remain unchanged. IMPORTANT review environment:
-Main still has the prior deployed source; candidate is NOT live. Main observations
-are baseline only, not proof of candidate behavior. Built isolated candidate and
-normal-Owner reader evidence paths are in the candidate section below; loopback
-is stopped, not a hosted preview. Do not publish merely to review this candidate.
-Resume: inspect final vision findings, claim precise affected app paths before
-fixing any accepted finding, then verify and update candidate/handoff without
-live data/rule/Auth/RLS changes or SQL/correction replay.
-NEXT: read vision's completed independent verdict in this handoff.
+Barry asked Codex to read vision's review and fix any actual findings, NO push/deploy.
+vision5e45dc3 completed/released at08:21:11 WIB: all6 Barry checks PASS on exact
+applicationc07422a + tests/evidenceb5598cf, source/mechanism + artifact review.
+No actionable candidate finding; no application or test changes needed.
+vision did NOT rerun the suite or test the unpublished candidate live. Keep these
+limits explicit; Main baseline observations would not prove candidate behavior.
+
+Codex freshly checked SOURCE_READY and PACKAGE_VERIFIED: all457 reviewed inputs
+and immutable package retain inputc8e2e2c3ab563019897e4b7118825c3420935865380fb543a0954ca4ad6e9777.
+Only this owned handoff section and docs/ad-spend-completeness-2026-10-25.md updated.
+vision's review section retained verbatim. Documentation claim RELEASED.
+Three unrelated dirty files/operator work and recovery manifest preserved.
+No push/deploy, live business/financial/rate/Auth/RLS/role change or SQL/replay.
+No fresh Main/Liard alias check; no new publication. Previous loopback remains stopped.
+NOT VERIFIED: hosted candidate/live workflow, vision re-execution of tests,
+physical iPhone, transaction-wide same-count concurrency/extreme loads.
+Separate Buku all-time timeout P1 remains pending; not edited or replayed.
+NEXT: retain this reviewed candidate unchanged until Barry's explicit next instruction.
 
 ## Codex — Ad Spend CANDIDATE VERIFIED / CLAIM RELEASED — 25 October 2026 WIB
 

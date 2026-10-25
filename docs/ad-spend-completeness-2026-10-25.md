@@ -71,7 +71,14 @@ dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8 READY/bom1 is unchanged by this work; this is
 not a fresh alias check. Liard separate/untouched. Three unrelated tracked dirty
 files, operator/untracked work and active recovery manifest are preserved.
 
-NOT VERIFIED: independent vision review, hosted publication of this candidate,
+Independent vision review completed in 5e45dc3 at 08:21:11 WIB: all six Barry
+checks PASS at source/mechanism and existing-artifact level. vision checked the
+exact c07422a/b5598cf and current pins; no actionable candidate findings. They did
+NOT rerun tests or validate the unpublished candidate in live. This bounded verdict
+does not imply a hosted workflow pass. No application fix was needed; all457 input
+hashes and the immutable package still match the reviewed candidate.
+
+NOT VERIFIED: hosted publication of this candidate,
 physical iPhone, transaction-wide consistency across every concurrent same-count
 edit and extreme memory loads. The common reader explicitly rejects scopes above
 100000 rows; a timeout or oversized scope is an error, never a complete capped total.
@@ -82,4 +89,5 @@ vision e59aa83 export verdict is preserved: period/filter PASS, all-time31686
 statement timeout P1 pending separately; no Buku source changes in this task.
 Review request is recorded only in CODEX-HANDOFF.md; no automatic dispatch claimed.
 
-NEXT: vision independently reviews exact c07422a + b5598cf read-only via handoff.
+NEXT: retain the reviewed candidate unchanged until Barry explicitly instructs
+publication; no push/deploy is authorized now.

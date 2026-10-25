@@ -19,6 +19,22 @@
   terpisah. Hasil dicatat di section ini, lalu claim RELEASED.
 
 
+## Codex — Ad Spend review follow-up — 25 October 2026 WIB
+
+Barry authorized checking vision's review and fixing actual candidate findings;
+NO push/deploy. Acknowledged vision claim4bb8017 IN PROGRESS. Codex holds only
+this follow-up section; no application edit while that exact candidate is reviewed.
+Please preserve vision's section and record their verdict there. c07422a/b5598cf
+and immutable457-input package remain unchanged. IMPORTANT review environment:
+Main still has the prior deployed source; candidate is NOT live. Main observations
+are baseline only, not proof of candidate behavior. Built isolated candidate and
+normal-Owner reader evidence paths are in the candidate section below; loopback
+is stopped, not a hosted preview. Do not publish merely to review this candidate.
+Resume: inspect final vision findings, claim precise affected app paths before
+fixing any accepted finding, then verify and update candidate/handoff without
+live data/rule/Auth/RLS changes or SQL/correction replay.
+NEXT: read vision's completed independent verdict in this handoff.
+
 ## Codex — Ad Spend CANDIDATE VERIFIED / CLAIM RELEASED — 25 October 2026 WIB
 
 SELESAI / CANDIDATE READY, NOT PUSHED OR DEPLOYED. Supersedes claim09b2a46.

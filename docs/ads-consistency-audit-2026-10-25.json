@@ -1,0 +1,267 @@
+{
+  "status": "AUDIT_COMPLETE_READ_ONLY",
+  "client_date_wib": "2026-10-25",
+  "source": {
+    "deployment": "dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8",
+    "state": "READY",
+    "regions": [
+      "bom1"
+    ],
+    "main_alias_verified": true,
+    "source_inputs": 457,
+    "all_uploaded_hashes_match_shared_source": true,
+    "business_writes": 0,
+    "sql_mutations": 0,
+    "pushes": 0,
+    "deployments_created": 0
+  },
+  "oracle": {
+    "pass": true,
+    "normal_owner_rls": true,
+    "atomic_snapshot": false,
+    "all_ads_rows": 4160,
+    "all_ppn": "0.00",
+    "nonzero_ppn_rate_rows": 0,
+    "null_cost_rows": 0,
+    "campaigns": 136,
+    "allocations": 136,
+    "current_allocations_all_100_percent": true,
+    "monthly": [
+      {
+        "period": "sept",
+        "dates": [
+          "2026-09-01",
+          "2026-09-30"
+        ],
+        "ad_rows": 1122,
+        "dashboard_spend": "238001306.00",
+        "pnl_spend": "238001306.00",
+        "owner_profit_full_month_spend": "238001306.00",
+        "observed_basis_delta": "0.00",
+        "ppn": "0.00",
+        "future_month_rows": 0,
+        "future_month_spend": "0.00",
+        "allocation_buckets": 33,
+        "unallocated_cost": "0.00",
+        "ads_in_buckets_without_final_orders": "28968289.00",
+        "final_order_count": 310,
+        "unknown_platform_final_orders": 1,
+        "platforms": {
+          "GOOGLE": {
+            "rows": 129,
+            "cost": "59347213.00",
+            "last_spend_date": "2026-09-30"
+          },
+          "META": {
+            "rows": 930,
+            "cost": "166638796.00",
+            "last_spend_date": "2026-09-30"
+          },
+          "SNACK": {
+            "rows": 63,
+            "cost": "12015297.00",
+            "last_spend_date": "2026-09-30"
+          }
+        },
+        "pnl_and_owner_ads_subtracted_once": true,
+        "roas": 3.555974995364101
+      },
+      {
+        "period": "oct-mtd",
+        "dates": [
+          "2026-10-01",
+          "2026-10-25"
+        ],
+        "ad_rows": 807,
+        "dashboard_spend": "215560642.00",
+        "pnl_spend": "215560642.00",
+        "owner_profit_full_month_spend": "215560642.00",
+        "observed_basis_delta": "0.00",
+        "ppn": "0.00",
+        "future_month_rows": 0,
+        "future_month_spend": "0.00",
+        "allocation_buckets": 29,
+        "unallocated_cost": "0.00",
+        "ads_in_buckets_without_final_orders": "215560642.00",
+        "final_order_count": 0,
+        "unknown_platform_final_orders": 0,
+        "platforms": {
+          "GOOGLE": {
+            "rows": 100,
+            "cost": "64717723.00",
+            "last_spend_date": "2026-10-22"
+          },
+          "META": {
+            "rows": 684,
+            "cost": "144810563.00",
+            "last_spend_date": "2026-10-22"
+          },
+          "SNACK": {
+            "rows": 23,
+            "cost": "6032356.00",
+            "last_spend_date": "2026-10-22"
+          }
+        },
+        "pnl_and_owner_ads_subtracted_once": true,
+        "roas": 4.042138564423092
+      }
+    ],
+    "rolling30": {
+      "dates": [
+        "2026-09-26",
+        "2026-10-25"
+      ],
+      "rows": 1040,
+      "spend": "273539540.00",
+      "prior_month_rows": 233,
+      "prior_month_spend": "57978898.00",
+      "monthly_difference_explained": true
+    },
+    "metadata_validated_generated_costs": true,
+    "all_current_product_platform_buckets_match": true,
+    "business_writes": 0,
+    "sql_mutations": 0,
+    "external_platform_invoice_verified": false
+  },
+  "ad_spend_actual_reader": {
+    "normal_owner_rls": true,
+    "actual_read_helper": true,
+    "business_writes": 0,
+    "checks": [
+      {
+        "platform": "ALL",
+        "visible_rows": 1000,
+        "full_rows": 1122,
+        "visible_spend": 215429845,
+        "missing_rows": 122,
+        "missing_spend": 22571461
+      },
+      {
+        "platform": "META",
+        "visible_rows": 839,
+        "full_rows": 930,
+        "visible_spend": 152095140,
+        "missing_rows": 91,
+        "missing_spend": 14543656
+      },
+      {
+        "platform": "GOOGLE",
+        "visible_rows": 105,
+        "full_rows": 129,
+        "visible_spend": 52891363,
+        "missing_rows": 24,
+        "missing_spend": 6455850
+      },
+      {
+        "platform": "SNACK",
+        "visible_rows": 56,
+        "full_rows": 63,
+        "visible_spend": 10443342,
+        "missing_rows": 7,
+        "missing_spend": 1571955
+      }
+    ],
+    "summary_spend": 238001306,
+    "summary_total": 238001306
+  },
+  "synthetic_tax_and_boundary": {
+    "pass": true,
+    "synthetic_only": true,
+    "actual_dashboard_and_allocator_source": true,
+    "installed_pnl_basis_verified": true,
+    "tax_scenarios": [
+      {
+        "synthetic": true,
+        "spend": 100000,
+        "rate": 0,
+        "ppn": 0,
+        "spend_total": 100000,
+        "dashboard": 100000,
+        "pnl_source_SUM_spend": 100000,
+        "owner_profit_allocator": 100000,
+        "cost_basis_delta": 0
+      },
+      {
+        "synthetic": true,
+        "spend": 100000,
+        "rate": 12,
+        "ppn": 12000,
+        "spend_total": 112000,
+        "dashboard": 100000,
+        "pnl_source_SUM_spend": 100000,
+        "owner_profit_allocator": 112000,
+        "cost_basis_delta": 12000
+      }
+    ],
+    "month_boundary": {
+      "instant": "2026-09-30T18:00:00.000Z",
+      "dashboard_wib_month": "2026-10-01",
+      "owner_default_utc_month": "2026-09",
+      "latent_window": "00:00\u201306:59 WIB on the first day of a month",
+      "current_audit_day_affected": false
+    },
+    "business_writes": 0,
+    "sql_mutations": 0
+  },
+  "native_browser": {
+    "pass": true,
+    "normal_owner_native_chrome": true,
+    "actual_main_https": true,
+    "successful_business_responses_mocked": false,
+    "checks": [
+      {
+        "page": "/ad-spend",
+        "period": "2026-09-01..2026-09-30",
+        "visible_rows": 1000,
+        "displayed_spend": 215429845,
+        "known_complete_rows": 1122,
+        "complete_spend": 238001306,
+        "understatement": 22571461
+      },
+      {
+        "page": "/laba-rugi",
+        "period": "2026-09-01..2026-09-30",
+        "displayed_est_ad_cost": 238001306,
+        "displayed_act_ad_cost": 238001306,
+        "load_error": false
+      },
+      {
+        "page": "/reports/owner-profit",
+        "month": "2026-09",
+        "platform": "ALL",
+        "displayed_ad_cost": 238001306,
+        "orders": 310,
+        "delivered": 281
+      },
+      {
+        "page": "/dashboard",
+        "month_dates": "2026-10-01..2026-10-25",
+        "displayed_ad_cost": 215560642,
+        "displayed_roas": "4.04x",
+        "chart_dates": "2026-09-26..2026-10-25",
+        "source_ads_rows": 1040,
+        "load_error": false
+      }
+    ],
+    "business_writes": 0,
+    "sql_mutations": 0,
+    "screenshot_customer_rows": 0
+  },
+  "normal_owner_capture_counts": {
+    "ad_spend": 4160,
+    "campaigns": 136,
+    "campaign_products": 136,
+    "products": 39,
+    "orders": 310,
+    "order_items": 310
+  },
+  "preserved_operator_recovery_release_hashes": true,
+  "app_changes": 0,
+  "business_writes": 0,
+  "sql_mutations": 0,
+  "pushes": 0,
+  "deployments_created": 0,
+  "external_platform_invoices_verified": false,
+  "atomic_snapshot": false,
+  "vision_claim_observed": "ef50fa4 - independent live Buku export review IN PROGRESS; preserved"
+}

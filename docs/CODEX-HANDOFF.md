@@ -1,19 +1,46 @@
 # GrandBook Codex Handoff
 
-## Codex — ADS consistency audit READ-ONLY — 25 October 2026 WIB
+## Codex — ADS audit READ-ONLY COMPLETE — 25 October 2026 WIB
 
-CLAIMED / IN PROGRESS. Barry authorizes READ-ONLY comparison of ad spend in
-main dashboard, Laba Rugi and Owner Profit: source coverage, dates/timezone,
-tax treatment, campaign/product/platform allocation, totals and error semantics.
-Codex writes ONLY scoped audit docs/private SELECT-only evidence harnesses and
-this preamble. Application/SQL/rules/data/Auth/RLS/roles are READ ONLY.
-No push/deploy, correction/recovery replay, campaign mapping or financial mutation.
-Main release12a4fb6/dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8 remains baseline; Liard separate.
-vision: preserve this audit documentation area; your independent Buku export
-review remains yours. Record any concurrent findings/claims here; no messaging
-outside handoff and no watcher/automatic dispatch is claimed.
-NEXT: trace the three readers, freeze normal Owner September/October evidence,
-then reconcile dates, tax and allocation without changing live behavior.
+SELESAI / audit claim RELEASED. App/SQL/data/rules were NOT edited. Only scoped
+audit docs/aggregate proof and this preamble changed; private evidence harnesses
+outside Git. No push/deploy, correction/recovery replay, financial/Auth/RLS changes.
+Main remains dpl_2j1bzJSUTd3JNErNnKARXkcyo7a8 READY/bom1; all457 source hashes match.
+Liard untouched. Prior three dirty files and recovery/release manifests preserved.
+
+VERIFIED normal Owner/RLS4160 ADS,136 campaigns/136 current allocations,39 products.
+Actual dashboard reader, four P&L RPC ranges and Main Owner Profit Sept/Oct API200,
+independent Decimal bucket oracle and native Owner UI checked without business mocks.
+Aligned ADS: Sept1122 rows/Rp238001306 in all three main readers; Oct MTD807/
+Rp215560642, same as full-month Owner Profit because future rows0.
+Dashboard rolling30 source1040 rows/Rp273539540 includes233 Sep26–30 rows/
+Rp57978898; period difference fully reconciled, not double counting.
+All136 current allocations100%; every33 Sept/29 Oct product-platform bucket matches;
+ADS with no final orders retained (SeptRp28968289, OctRp215560642), unallocated0.
+
+A1 NEW P1 actual, auxiliary /ad-spend: listAdSpend caps1000 BEFORE platform filter.
+Sept table/card1000/Rp215429845 vs complete1122/Rp238001306: omitted122/Rp22571461.
+Same-page header uses full-range summary Rp238001306, card uses capped rows;
+native UI confirms both totals. META839/930 missesRp14543656; GOOGLE105/129
+missesRp6455850; SNACK56/63 missesRp1571955. No stored ADS lost. Main3 readers complete.
+Root paths src/lib/supabase/queries/ad-spend.ts and src/app/(app)/ad-spend/page.tsx
+READ ONLY during audit; no candidate fix yet.
+
+A2 F4 P2 latent reconfirmed: dashboard/P&L SUM(spend), Owner Profit spend_total.
+Generated spend_total=spend+spend*ppn_rate/100; DB/form/import default0. Current
+4160 rows rate0/PPN0/no null cost => actual tax delta0. Pure fixture100000/rate12
+shows100000 vs112000; no synthetic/live inserts and no rate/business-rule decision.
+Owner default UTC vs WIB differs first-day00–06:59 only; fixture proves, no impact25th.
+Last ADS date22Oct all platforms; absence23–25 is not proof actual expenses0.
+Historical allocation/external invoice/tax inclusion and atomic snapshot NOT VERIFIED.
+
+Evidence docs/ads-consistency-audit-2026-10-25.{md,json};
+private /root/backups/grandbook/ads-audit-20261025. No customer rows/credentials in Git.
+vision export claim ef50fa4 remains theirs/IN PROGRESS when observed; section preserved.
+vision: continue your Buku export validation; ADS findings available here for later
+read-only review. No automatic dispatch/watcher claimed and no source mutation requested.
+NEXT: Barry authorizes isolated A1 Ad Spend completeness/header-card candidate,
+preserving stored data, tax rates and business calculations; no live change now.
 
 ## Codex — Buku export MAIN LIVE VERIFIED — 25 October 2026 WIB
 

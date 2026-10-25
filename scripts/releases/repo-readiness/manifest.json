@@ -24,7 +24,9 @@
     "src/app/(app)/dashboard/page.tsx": "Role-aware entry routing and verified-role dashboard loading; no role, RLS or financial mutation.",
     "src/lib/converter/engine.ts": "Preserve live10fc9d2 bulk-upload timeout fix.",
     "src/app/(app)/orders/pembukuan/page.tsx": "Complete period/status/search/zone export or fresh cross-page compound selections; bounded stable normal-session reads, integrity guards, cancellation and truthful scope.",
-    "src/lib/orders/pembukuan-export.ts": "Complete bounded export collector; preserve numeric values, attribution, formula totals and unknown blanks; reject Excel native row-cap overflow instead of truncating."
+    "src/lib/orders/pembukuan-export.ts": "Complete bounded export collector; preserve numeric values, attribution, formula totals and unknown blanks; reject Excel native row-cap overflow instead of truncating.",
+    "src/lib/supabase/queries/ad-spend.ts": "Complete checked normal-session Ad Spend reads; shared full-filter header/KPI spend_total basis, honest errors, cancellation and paginated rendering; existing writer payloads, stored rates and campaign-profit formulas preserved.",
+    "src/app/(app)/ad-spend/page.tsx": "Complete checked normal-session Ad Spend reads; shared full-filter header/KPI spend_total basis, honest errors, cancellation and paginated rendering; existing writer payloads, stored rates and campaign-profit formulas preserved."
   },
   "permitted_extra_source_files": [
     "src/lib/supabase/migrations/157_auto_provision_cs_from_production.sql",
@@ -418,7 +420,7 @@
       "sha256": "f7780c384b26411149f2ec237d6972c23dcd81cbf4a835caf139e096e7011b0e"
     },
     "src/app/(app)/ad-spend/page.tsx": {
-      "sha256": "3fdcf0ee913aa410d72e1530dd2b077ed3e972994fa6f2088287d5e0ccc66749"
+      "sha256": "92d23eafc2a0ea60ae7f3bc740c697c68923e6ad5ca070bba24e72125ada8b9b"
     },
     "src/components/orders/order-row-actions.tsx": {
       "sha256": "47373b3395d02690ae75aef33cfc449af8d75068dc87485a46376489e6b8bd6c"
@@ -1294,7 +1296,7 @@
       "sha256": "493414b1185ea2f727f8c116fac9d82566e03619ac5af4a6c9be0ad57e86f429"
     },
     "src/lib/supabase/queries/ad-spend.ts": {
-      "sha256": "81fa381480e5c71bc7c31ad012b9415c02f79e49a1734ab436a13b19f74ef8ea"
+      "sha256": "1234c9de64ddf62693bcd047171b03338e01ad6478c3d9e4cc01ee430c56de71"
     },
     "src/lib/csv/meta-ads-parser.ts": {
       "sha256": "3fb589466609c8a11e9c0c6e40555046a5156a962da8c963ba91d86db5b2ab4e"

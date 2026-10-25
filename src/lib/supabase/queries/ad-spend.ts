@@ -3,6 +3,7 @@
 // =============================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AdSpend, AdSpendSource, Campaign, AdPlatform } from '@/lib/types'
+import { completeReportRead } from '@/lib/analytics/complete-report-read'
 
 export type AdSpendWithCampaign = Omit<AdSpend, 'campaign' | 'campaigns'> & {
   campaign?: Pick<Campaign, 'id' | 'campaign_name' | 'platform' | 'campaign_code'> | null
@@ -14,30 +15,60 @@ export interface AdSpendListArgs {
   campaignId?: number
   platform?: AdPlatform
   source?: AdSpendSource
+  signal?: AbortSignal
 }
 
 export async function listAdSpend(
   supabase: SupabaseClient,
   args: AdSpendListArgs
 ): Promise<AdSpendWithCampaign[]> {
-  let q = supabase
-    .from('ad_spend')
-    .select(`
-      *,
-      campaign:campaigns!ad_spend_campaign_id_fkey(id, campaign_name, platform, campaign_code)
-    `)
-    .gte('spend_date', args.from)
-    .lte('spend_date', args.to)
-    .order('spend_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(1000)
-  if (args.campaignId) q = q.eq('campaign_id', args.campaignId)
-  if (args.source) q = q.eq('source', args.source)
-  const { data, error } = await q
-  if (error) throw new Error(`listAdSpend: ${error.message}`)
-  let rows = (data || []) as AdSpendWithCampaign[]
-  if (args.platform) rows = rows.filter(r => r.campaign?.platform === args.platform)
-  return rows
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(args.from) || !/^\d{4}-\d{2}-\d{2}$/.test(args.to) || args.from > args.to) {
+    throw new Error('Periode Ad Spend tidak valid')
+  }
+  // Keyset order is unique; a short server page is not evidence of completion.
+  const scoped = (head = false) => {
+    let q = supabase.from('ad_spend').select(head ? 'id' : `
+      *, campaign:campaigns!ad_spend_campaign_id_fkey(id, campaign_name, platform, campaign_code)
+    `, { count: 'exact', head }).gte('spend_date', args.from).lte('spend_date', args.to)
+    if (args.campaignId !== undefined) q = q.eq('campaign_id', args.campaignId)
+    if (args.source) q = q.eq('source', args.source)
+    if (args.signal) q = q.abortSignal(args.signal)
+    return q
+  }
+  const rows = await completeReportRead<AdSpendWithCampaign>(async after => {
+    args.signal?.throwIfAborted()
+    return await scoped().gt('id', after).order('id', { ascending: true }).limit(500)
+      .returns<AdSpendWithCampaign[]>()
+  })
+  args.signal?.throwIfAborted()
+  const end = await scoped(true)
+  if (end.error || end.count !== rows.length) throw new Error('Data Ad Spend berubah atau belum terbaca lengkap; muat ulang')
+  args.signal?.throwIfAborted()
+  // Validate before calculating/displaying totals. Never turn an invalid cost into zero.
+  summarizeAdSpend(rows)
+  return rows.filter(r => !args.platform || r.campaign?.platform === args.platform)
+    .sort((a, b) => b.spend_date.localeCompare(a.spend_date) ||
+      (b.created_at ?? '').localeCompare(a.created_at ?? '') || b.id - a.id)
+}
+
+/** Existing KPI basis: stored spend_total (including recorded PPN), fallback spend. */
+export function summarizeAdSpend(rows: AdSpendWithCampaign[]) {
+  let spend = 0, spendTotal = 0, leads = 0
+  const campaigns = new Set<number>()
+  const numeric = (value: unknown, required = false) => {
+    if ((required && (value == null || value === '')) ||
+        (value != null && typeof value !== 'number' && typeof value !== 'string') ||
+        !Number.isFinite(Number(value ?? 0))) throw new Error('Nilai Ad Spend tidak valid; muat ulang')
+    return Number(value ?? 0)
+  }
+  for (const row of rows) {
+    spend += numeric(row.spend, true)
+    spendTotal += numeric(row.spend_total ?? row.spend, true)
+    leads += numeric((row as { meta_lead_count?: number | null }).meta_lead_count)
+    campaigns.add(row.campaign_id)
+  }
+  if (![spend, spendTotal, leads].every(Number.isFinite)) throw new Error('Total Ad Spend tidak valid')
+  return { spend, spendTotal, leads, campaigns: campaigns.size, cpr: leads > 0 ? spendTotal / leads : 0 }
 }
 
 export interface AdSpendPayload {

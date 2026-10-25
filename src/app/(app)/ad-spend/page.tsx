@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useDashboardRead } from '@/lib/dashboard/use-dashboard-read'
 import { useAuth } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,8 +35,7 @@ import {
 } from '@/components/ui/date-range-picker'
 import {
   listAdSpend, insertAdSpend, updateAdSpend, deleteAdSpend, bulkInsertAdSpend,
-  fetchAdSpendSummary,
-  type AdSpendWithCampaign, type AdSpendSummary,
+  summarizeAdSpend, type AdSpendWithCampaign,
 } from '@/lib/supabase/queries/ad-spend'
 import { listCampaigns, type CampaignWithRelations } from '@/lib/supabase/queries/campaigns'
 import {
@@ -45,6 +45,11 @@ import {
 import { parseMetaAdsCsv, matchToCampaigns, type MetaAdsRow, type ParseResult, type MatchResult, type ExportMode } from '@/lib/csv/meta-ads-parser'
 
 const supabase = createClient()
+
+const EMPTY_ROWS: AdSpendWithCampaign[] = []
+const EMPTY_PERF: Perf[] = []
+const EMPTY_CAMPAIGNS: CampaignWithRelations[] = []
+const PAGE_SIZE = 50
 
 const today = () => new Date().toISOString().split('T')[0]
 
@@ -90,11 +95,6 @@ export default function AdSpendPage() {
   const isOwner = role === 'owner'
   const canWrite = role === 'owner' || role === 'admin' || role === 'advertiser'
 
-  const [rows, setRows] = useState<AdSpendWithCampaign[]>([])
-  const [campaigns, setCampaigns] = useState<CampaignWithRelations[]>([])
-  const [summary, setSummary] = useState<AdSpendSummary | null>(null)
-  const [perf, setPerf] = useState<Perf[]>([])
-  const [loading, setLoading] = useState(true)
 
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -109,62 +109,56 @@ export default function AdSpendPage() {
   const [sourceFilter, setSourceFilter] = useState<'ALL' | AdSpendSource>('ALL')
   const [tab, setTab] = useState<'spend' | 'perf'>('spend')
 
-  // Ringkasan IKUT filter (dihitung dari rows yg udah ke-filter), bukan full-range RPC
-  const live = useMemo(() => {
-    let spend = 0, spendTotal = 0, conv = 0, impr = 0, clicks = 0, leads = 0
-    for (const r of rows) {
-      spend += Number(r.spend) || 0
-      spendTotal += Number(r.spend_total ?? r.spend) || 0
-      conv += Number(r.conversions) || 0
-      impr += Number(r.impressions) || 0
-      clicks += Number(r.clicks) || 0
-      leads += Number((r as { meta_lead_count?: number | null }).meta_lead_count) || 0
-    }
-    return { spend, spendTotal, conv, impr, clicks, leads, ctr: impr > 0 ? (clicks / impr) * 100 : 0, cpr: leads > 0 ? spendTotal / leads : 0 }
-  }, [rows])
+  const identity = profile?.id && profile.organization_id && role
+    ? `${profile.id}:${profile.organization_id}:${role}` : null
+  const scopeKey = identity && rangeReady
+    ? `${identity}:${range.from}:${range.to}:${platformFilter}:${sourceFilter}` : null
+  const readSpend = useCallback((signal: AbortSignal) => listAdSpend(supabase, {
+    from: range.from, to: range.to,
+    platform: platformFilter === 'ALL' ? undefined : platformFilter,
+    source: sourceFilter === 'ALL' ? undefined : sourceFilter, signal,
+  }), [range.from, range.to, platformFilter, sourceFilter])
+  const { data, loading: reading, error, refresh: refreshSpend } = useDashboardRead(scopeKey, readSpend)
+  const loading = !rangeReady || !identity || reading
+  const rows = data ?? EMPTY_ROWS
+  const live = useMemo(() => summarizeAdSpend(rows), [rows])
+  const ready = data !== null
+  const readCampaigns = useCallback(() => listCampaigns(supabase), [])
+  const campaignRead = useDashboardRead(identity, readCampaigns)
+  const campaigns = campaignRead.data ?? EMPTY_CAMPAIGNS
 
-  // Total dari performa campaign (laba bersih, retur) — metrik kebenaran
+  // Profit RPC has no source dimension. Never manufacture source-specific profit.
+  const readPerf = useCallback(async (signal: AbortSignal) => {
+    const { data, error, count } = await supabase.rpc('analytics_campaign_profit', {
+      p_from: range.from, p_to: range.to,
+    }, { count: 'exact' }).abortSignal(signal)
+    if (error || !Array.isArray(data) || count !== data.length) throw new Error('Performa belum terbaca lengkap')
+    if (data.some(p => ['spend', 'net_profit', 'delivered', 'retur', 'total_order', 'gross_profit', 'leads'].some(k =>
+      p[k] == null || !Number.isFinite(Number(p[k]))))) throw new Error('Nilai performa belum tersedia')
+    return (data as Perf[]).filter(p => platformFilter === 'ALL' || p.platform === platformFilter)
+  }, [range.from, range.to, platformFilter])
+  const performance = useDashboardRead(tab === 'perf' && sourceFilter === 'ALL' ? scopeKey : null, readPerf)
+  const load = async () => { await Promise.all([refreshSpend(), performance.refresh()]) }
+  const perf = performance.data ?? EMPTY_PERF
   const perfT = useMemo(() => {
-    let spend = 0, net = 0, delivered = 0, retur = 0, totalOrder = 0
+    let spend = 0, net = 0, delivered = 0, retur = 0
     for (const p of perf) {
-      spend += Number(p.spend) || 0; net += Number(p.net_profit) || 0
-      delivered += Number(p.delivered) || 0; retur += Number(p.retur) || 0; totalOrder += Number(p.total_order) || 0
+      spend += Number(p.spend); net += Number(p.net_profit)
+      delivered += Number(p.delivered); retur += Number(p.retur)
     }
-    return { spend, net, delivered, retur, totalOrder, roi: spend > 0 ? (net / spend) * 100 : 0, returRate: (delivered + retur) > 0 ? (retur / (delivered + retur)) * 100 : 0 }
+    return { net, roi: spend > 0 ? (net / spend) * 100 : 0, returRate: delivered + retur > 0 ? retur / (delivered + retur) * 100 : 0 }
   }, [perf])
+  const [pagination, setPagination] = useState({ key: '', page: 1 })
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const page = Math.min(pagination.key === scopeKey ? pagination.page : 1, pages)
+  const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const setPage = (page: number) => setPagination({ key: scopeKey ?? '', page })
+  const scopeLabel = `${range.from} – ${range.to} • ${platformFilter === 'ALL' ? 'Semua platform' : CAMPAIGN_PLATFORM_LABEL[platformFilter]} • ${sourceFilter === 'ALL' ? 'Semua source' : AD_SPEND_SOURCE_LABEL[sourceFilter]}`
 
   useEffect(() => {
-    setRange(thisMonth())
-    setRangeReady(true)
+    const timer = window.setTimeout(() => { setRange(thisMonth()); setRangeReady(true) }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
-
-  const load = useCallback(async () => {
-    if (!rangeReady) return
-    setLoading(true)
-    try {
-      const [r, c, s, pf] = await Promise.all([
-        listAdSpend(supabase, {
-          from: range.from, to: range.to,
-          platform: platformFilter !== 'ALL' ? platformFilter : undefined,
-          source: sourceFilter !== 'ALL' ? sourceFilter : undefined,
-        }),
-        listCampaigns(supabase),
-        fetchAdSpendSummary(supabase, range.from, range.to),
-        // Performa campaign metrik kebenaran (retur/laba/ROI) — ikut periode.
-        supabase.rpc('analytics_campaign_profit', { p_from: range.from, p_to: range.to }),
-      ])
-      setRows(r)
-      setCampaigns(c)
-      setSummary(s)
-      setPerf((pf.data || []) as Perf[])
-    } catch (err) {
-      toast.error('Gagal load ad_spend', { description: getErrorMessage(err) })
-    } finally {
-      setLoading(false)
-    }
-  }, [range.from, range.to, rangeReady, platformFilter, sourceFilter])
-
-  useEffect(() => { void load() }, [load])
 
   const reset = () => { setForm(emptyForm); setEditId(null) }
 
@@ -254,7 +248,7 @@ export default function AdSpendPage() {
       <PageHeader
         icon={DollarSign}
         title="Ad Spend"
-        description={`${rows.length} entry • Total ${formatRupiah(summary?.total_spend ?? 0)}`}
+        description={ready ? `${formatNumber(rows.length)} entry • Total ${formatRupiah(live.spendTotal)} (termasuk PPN tercatat)` : loading ? 'Memuat Ad Spend lengkap…' : 'Data Ad Spend belum tersedia'}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             <DateRangePicker value={range} onChange={setRange} />
@@ -275,16 +269,21 @@ export default function AdSpendPage() {
         }
       />
 
-      {/* Stat cards — IKUT filter periode + platform */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <p className="text-xs text-muted-foreground break-words">{scopeLabel}. Ringkasan mencakup seluruh hasil filter, bukan hanya halaman tabel.</p>
+      {error && <div role="alert" className="rounded-lg border border-destructive/30 p-4 space-y-2">
+        <p>Ad Spend gagal dibaca lengkap. Total dan baris lama disembunyikan.</p>
+        <Button variant="outline" onClick={() => void load()}>Coba lagi</Button>
+      </div>}
+      {/* All four cards and the header use the same complete filtered rows. */}
+      <div className="grid grid-cols-1 min-[480px]:grid-cols-2 xl:grid-cols-4 gap-3">
         <Card className="overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
             <div className="p-2.5 bg-zinc-500/15 rounded-xl ring-1 ring-zinc-500/20"><Coins className="w-5 h-5 text-zinc-500" /></div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Spend</p>
-              <p className="text-xl font-bold text-zinc-500">{formatRupiah(live.spendTotal)}</p>
-              <p className="text-[10px] text-muted-foreground">{live.spendTotal > live.spend ? `Gross ${formatRupiah(live.spend)} + PPN` : `${rows.length} entry`}</p>
+              <p className="text-lg font-bold tabular-nums break-all text-zinc-500">{ready ? formatRupiah(live.spendTotal) : '—'}</p>
+              <p className="text-[10px] text-muted-foreground">{!ready ? 'Menunggu data lengkap' : live.spendTotal > live.spend ? `Gross ${formatRupiah(live.spend)} + PPN` : `${rows.length} entry`}</p>
             </div>
           </CardContent>
         </Card>
@@ -292,9 +291,9 @@ export default function AdSpendPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
             <div className="p-2.5 bg-zinc-500/15 rounded-xl ring-1 ring-zinc-500/20"><Eye className="w-5 h-5 text-zinc-500" /></div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Lead</p>
-              <p className="text-xl font-bold text-zinc-600">{formatNumber(live.leads)}</p>
+              <p className="text-lg font-bold tabular-nums break-all text-zinc-600">{ready ? formatNumber(live.leads) : '—'}</p>
               <p className="text-[10px] text-muted-foreground">lead dashboard</p>
             </div>
           </CardContent>
@@ -303,9 +302,9 @@ export default function AdSpendPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
             <div className="p-2.5 bg-amber-500/15 rounded-xl ring-1 ring-amber-500/20"><DollarSign className="w-5 h-5 text-amber-500" /></div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">CPR rata-rata</p>
-              <p className="text-xl font-bold text-amber-600">{live.cpr > 0 ? formatRupiah(Math.round(live.cpr)) : '—'}</p>
+              <p className="text-lg font-bold tabular-nums break-all text-amber-600">{ready && live.cpr > 0 ? formatRupiah(Math.round(live.cpr)) : '—'}</p>
               <p className="text-[10px] text-muted-foreground">spend ÷ lead</p>
             </div>
           </CardContent>
@@ -314,10 +313,10 @@ export default function AdSpendPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent" />
           <CardContent className="pt-4 pb-4 flex items-center gap-3 relative">
             <div className="p-2.5 bg-emerald-500/15 rounded-xl ring-1 ring-emerald-500/20"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Laba Bersih <span className="text-amber-600 normal-case">(proyeksi)</span></p>
-              <p className={`text-xl font-bold ${perfT.net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatRupiah(perfT.net)}</p>
-              <p className="text-[10px] text-muted-foreground">ROI {perfT.roi.toFixed(0)}% · retur {perfT.returRate.toFixed(0)}%</p>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Campaign dengan Spend</p>
+              <p className="text-lg font-bold tabular-nums">{ready ? formatNumber(live.campaigns) : '—'}</p>
+              <p className="text-[10px] text-muted-foreground">campaign unik sesuai filter</p>
             </div>
           </CardContent>
         </Card>
@@ -331,7 +330,7 @@ export default function AdSpendPage() {
             <button onClick={() => setTab('perf')} className={`px-3 h-8 text-sm rounded ${tab === 'perf' ? 'bg-zinc-500 text-white' : 'text-muted-foreground'}`}>Performa Campaign</button>
           </div>
           <Select value={platformFilter} onValueChange={v => v && setPlatformFilter(v as 'ALL' | AdPlatform)}>
-            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectTrigger aria-label="Filter platform" className="w-full sm:w-48"><SelectValue /></SelectTrigger>
             <SelectContent className="w-[240px]">
               <SelectItem value="ALL">Semua platform</SelectItem>
               {CAMPAIGN_PLATFORMS.map(p => (
@@ -340,7 +339,7 @@ export default function AdSpendPage() {
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={v => v && setSourceFilter(v as 'ALL' | AdSpendSource)}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectTrigger aria-label="Filter source" className="w-full sm:w-44"><SelectValue /></SelectTrigger>
             <SelectContent className="w-[220px]">
               <SelectItem value="ALL">Semua source</SelectItem>
               {AD_SPEND_SOURCES.map(s => (
@@ -349,7 +348,7 @@ export default function AdSpendPage() {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground self-center ml-auto">
-            {rows.length} entry di periode
+            {ready ? `${formatNumber(rows.length)} entry sesuai filter` : '— entry'}
           </p>
         </CardContent>
       </Card>
@@ -382,17 +381,19 @@ export default function AdSpendPage() {
                     </TableCell>
                   </TableRow>
                 ))
+              ) : error ? (
+                <TableRow><TableCell colSpan={10} className="py-8 text-center">Data belum tersedia. Coba muat ulang.</TableCell></TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="p-0">
                     <EmptyState
                       icon={DollarSign}
-                      title="Belum ada ad spend di periode ini"
-                      description="Tambah manual atau upload CSV dari Meta Ads Manager export. Default PPN 12% otomatis ditambahkan ke total."
+                      title="Tidak ada Ad Spend sesuai filter"
+                      description="Ubah periode, platform, atau source untuk melihat data lainnya. PPN mengikuti nilai yang tercatat pada setiap entry."
                     />
                   </TableCell>
                 </TableRow>
-              ) : rows.map(r => (
+              ) : pageRows.map(r => (
                 <TableRow key={r.id}>
                   <TableCell className="text-sm whitespace-nowrap">{formatDate(r.spend_date)}</TableCell>
                   <TableCell>
@@ -411,7 +412,7 @@ export default function AdSpendPage() {
                   <TableCell className="text-right text-xs whitespace-nowrap">{formatRupiah(r.spend)}</TableCell>
                   <TableCell className="text-right text-[11px] text-muted-foreground whitespace-nowrap">
                     {r.ppn_amount != null ? formatRupiah(r.ppn_amount) : '—'}
-                    <div className="text-[9px]">({Number(r.ppn_rate ?? 12)}%)</div>
+                    <div className="text-[9px]">({r.ppn_rate == null ? '—' : Number(r.ppn_rate)}%)</div>
                   </TableCell>
                   <TableCell className="text-right font-semibold whitespace-nowrap">
                     {r.spend_total != null ? formatRupiah(r.spend_total) : formatRupiah(r.spend)}
@@ -440,6 +441,13 @@ export default function AdSpendPage() {
             </TableBody>
           </Table>
         </CardContent>
+        {ready && <div className="flex flex-wrap items-center justify-between gap-2 border-t p-3 text-xs">
+          <p>{rows.length ? `${formatNumber((page - 1) * PAGE_SIZE + 1)}–${formatNumber(Math.min(page * PAGE_SIZE, rows.length))}` : '0'} dari {formatNumber(rows.length)} entry • Halaman {page} / {pages}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Sebelumnya</Button>
+            <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage(page + 1)}>Berikutnya</Button>
+          </div>
+        </div>}
       </Card>
       )}
 
@@ -449,6 +457,12 @@ export default function AdSpendPage() {
         <CardContent className="pt-4 pb-4 space-y-2">
           <div className="text-sm font-semibold">Performa Campaign — periode {range.from} s/d {range.to}</div>
           <p className="text-[11px] text-muted-foreground"><b>CPA</b> = spend÷order · <b>BEP</b> = CPA maksimum sebelum rugi (laba kotor÷order). CPA &lt; BEP = untung. <b>ROI</b> = laba bersih÷spend. <span className="text-amber-600">Laba/ROI = PROYEKSI</span> (asumsi order terkirim; aktual nyusul pas DITERIMA). Baris merah = rugi. Urut laba terbesar.</p>
+          <p className="text-xs text-muted-foreground">Performa mengikuti periode dan platform di atas, dengan semua source. Rumus proyeksi campaign tetap memakai laporan yang ada.</p>
+          {sourceFilter !== 'ALL' ? <p role="status" className="text-sm py-4">Performa belum mendukung filter source. Pilih Semua source untuk melihat proyeksi campaign; ringkasan Ad Spend tetap mengikuti filter source.</p>
+          : performance.loading ? <p role="status">Memuat performa campaign…</p>
+          : performance.error ? <div role="alert"><p>Performa campaign gagal dimuat; proyeksi tidak tersedia.</p><Button variant="outline" onClick={() => void performance.refresh()}>Coba lagi performa</Button></div>
+          : <>
+          <p className="text-sm">Laba Bersih (proyeksi): {formatRupiah(perfT.net)} • ROI {perfT.roi.toFixed(0)}% • retur {perfT.returRate.toFixed(0)}%</p>
           {perf.length === 0 ? (
             <p className="text-xs text-muted-foreground py-2">Belum ada spend/atribusi di periode ini.</p>
           ) : (
@@ -497,11 +511,12 @@ export default function AdSpendPage() {
                 </TableBody>
               </Table>
             </div>
-          )}
+          )}</>}
         </CardContent>
       </Card>
       )}
 
+      {campaignRead.error && canWrite && <div role="alert" className="text-sm">Daftar campaign untuk input gagal dimuat. <Button variant="outline" onClick={() => void campaignRead.refresh()}>Muat ulang campaign</Button></div>}
       {/* Manual entry Dialog */}
       <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
         <DialogContent className="max-w-lg">

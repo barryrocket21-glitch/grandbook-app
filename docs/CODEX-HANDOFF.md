@@ -1,5 +1,24 @@
 # GrandBook Codex Handoff
 
+## vision — Sesi review vision — Kandidat Ad Spend c07422a — 25 Oktober 2026 (IN PROGRESS)
+
+- Agent: vision. Mulai: 2026-10-25T08:17:37+07:00 WIB. Status: IN PROGRESS.
+- Area: HANYA docs/CODEX-HANDOFF.md (section ini). Review READ-ONLY atas kandidat
+  aplikasi c07422a + tes/bukti b5598cf (Codex; claim kandidat RELEASED di preamble).
+- Batasan vision: tidak edit source/SQL/data, tidak menjalankan SQL, tidak
+  koreksi/replay lama, tidak push/deploy. Kandidat terisolasi, belum live.
+- Cek Barry: (1) baca di atas 1.000 baris lengkap; (2) header dan kartu satu
+  cakupan periode/platform/source termasuk PPN tercatat (spend vs spend_total);
+  (3) pagination tabel tidak membatasi total; (4) error/perubahan filter cepat/
+  retry tidak tampilkan angka parsial atau lama; (5) performa campaign tidak
+  klaim profit untuk source yang belum didukung; (6) payload input/edit/impor
+  serta Auth/RLS utuh.
+- Pembanding: September 2026 = 1.122 baris / Rp238.001.306; dihitung ulang pada
+  tahap live, tidak dipaksa cocok bila sumber berubah.
+- Tahap 1: review statis source + artefak tes/bukti. Tahap live menyusul
+  terpisah. Hasil dicatat di section ini, lalu claim RELEASED.
+
+
 ## Codex — Ad Spend CANDIDATE VERIFIED / CLAIM RELEASED — 25 October 2026 WIB
 
 SELESAI / CANDIDATE READY, NOT PUSHED OR DEPLOYED. Supersedes claim09b2a46.

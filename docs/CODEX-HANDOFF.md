@@ -1,8 +1,8 @@
 # GrandBook Codex Handoff
 
-## vision — Sesi review vision — Kandidat Ad Spend c07422a — 25 Oktober 2026 (IN PROGRESS)
+## vision — Sesi review vision — Kandidat Ad Spend c07422a — 25 Oktober 2026 (RELEASED)
 
-- Agent: vision. Mulai: 2026-10-25T08:17:37+07:00 WIB. Status: IN PROGRESS.
+- Agent: vision. Mulai: 2026-10-25T08:17:37+07:00 WIB. Selesai: 2026-10-25T08:21:11+07:00 WIB. Status: RELEASED.
 - Area: HANYA docs/CODEX-HANDOFF.md (section ini). Review READ-ONLY atas kandidat
   aplikasi c07422a + tes/bukti b5598cf (Codex; claim kandidat RELEASED di preamble).
 - Batasan vision: tidak edit source/SQL/data, tidak menjalankan SQL, tidak
@@ -17,6 +17,91 @@
   tahap live, tidak dipaksa cocok bila sumber berubah.
 - Tahap 1: review statis source + artefak tes/bukti. Tahap live menyusul
   terpisah. Hasil dicatat di section ini, lalu claim RELEASED.
+
+### Hasil review vision (read-only) — kandidat c07422a + bukti b5598cf
+
+Status kandidat dari final-verification.json kandidat:
+CANDIDATE_VERIFIED_NOT_PUSHED_NOT_DEPLOYED. Identitas source terverifikasi:
+sha256 working tree = pin manifest kandidat untuk page.tsx dan ad-spend.ts.
+Vonis per cek Barry:
+
+1. Kelengkapan >1.000 baris — PASS (mekanisme + artefak). Cap lama
+   .limit(1000) sebelum filter platform dihapus; listAdSpend membaca via
+   completeReportRead (keyset ID menaik, batch 500, count eksak konsisten per
+   halaman, ID duplikat/menurun ditolak, halaman terminal diverifikasi, scope
+   >100.000 ditolak eksplisit bukan dipotong diam-diam), lalu HEAD count
+   lingkup penuh harus sama dengan jumlah baris terkumpul, biaya divalidasi
+   summarizeAdSpend (nilai tak valid → error, bukan nol), filter platform
+   diterapkan SESUDAH koleksi lengkap. Artefak: harness 2.307 baris sintetis
+   melewati cap server 123/halaman; normal-read-proof September ALL = 1.122
+   baris / Rp238.001.306 — cocok persis baseline Barry dan terkonfirmasi
+   silang oleh audit ADS independen Codex e717fa4 lewat sesi Owner/RLS
+   normal; split platform menjumlah eksak (META 930/Rp166.638.796 + GOOGLE
+   129/Rp59.347.213 + SNACK 63/Rp12.015.297 = 1.122/Rp238.001.306); source
+   MANUAL = 1.122/Rp238.001.306.
+2. Satu cakupan header/kartu + PPN tercatat — PASS (mekanisme). Satu scopeKey
+   (identitas + from/to + platform + source) menggerakkan satu pembacaan;
+   header, 4 kartu, tabel, footer diturunkan dari himpunan rows yang sama via
+   summarizeAdSpend; RPC ringkasan lama yang tak sefilter tidak lagi dipakai
+   halaman. Basis KPI spend_total ?? spend (termasuk PPN tercatat) kini
+   dilabeli eksplisit "(termasuk PPN tercatat)" + sublabel "Gross … + PPN"
+   bila berbeda; sel PPN tidak lagi menampilkan default 12% palsu saat
+   ppn_rate null (kini '—'); teks empty-state tidak lagi mengklaim PPN 12%
+   otomatis. CATATAN (bukan cacat kandidat): perbedaan basis lintas-laporan
+   tetap ada BY DESIGN di luar scope — halaman ini memakai basis spend_total
+   (selaras Owner Profit/KPI), Dashboard & Laba Rugi tetap SUM(spend);
+   kandidat menyatakannya terus terang; saat ini seluruh ppn_rate = 0
+   sehingga delta numerik = 0.
+3. Pagination tabel — PASS (mekanisme + artefak). Total dari rows utuh; tabel
+   hanya slice 50/halaman; pagination terikat scopeKey (ganti filter →
+   halaman 1); skenario browser kandidat: 2.407 baris/49 halaman dengan
+   header/KPI konstan.
+4. Error/filter cepat/retry — PASS (mekanisme + artefak). Hook bersama
+   useDashboardRead (tak diubah kandidat): sequence + abort request
+   sebelumnya + nilai dikosongkan segera saat refresh; respons basi dibuang
+   via sequence; timeout 90 detik; gagal → data null → kartu '—', alert
+   "Ad Spend gagal dibaca lengkap. Total dan baris lama disembunyikan." +
+   tombol "Coba lagi" (retry = muat penuh dari awal). Error performa campaign
+   independen (tidak mengosongkan total spend yang valid). Skenario loopback
+   kandidat mencakup respons basi yang disusul, drift tanpa total parsial,
+   dan 7 mode penolakan reader.
+5. Performa campaign — PASS (mekanisme). Kartu profit lama di jajaran atas
+   dihapus (kartu ke-4 = "Campaign dengan Spend"). Profit hanya di tab
+   Performa via RPC analytics_campaign_profit yang tidak diubah,
+   periode+platform, dinyatakan "dengan semua source"; bila filter source ≠
+   Semua, pembacaan performa DINONAKTIFKAN total dan diganti pesan status
+   bahwa dimensi source belum didukung — tidak ada profit per-source
+   karangan. Kelengkapan RPC ditegakkan (count exact = jumlah baris, field
+   kunci non-null/finite, selain itu error independen).
+6. Payload input/edit/impor + Auth/RLS — PASS (utuh byte-identical). Diff
+   c07422a hanya menyentuh import, AdSpendListArgs (+signal opsional),
+   listAdSpend, summarizeAdSpend baru, dan page.tsx untuk tampilan/scope;
+   AdSpendPayload, insertAdSpend, updateAdSpend, deleteAdSpend,
+   bulkInsertAdSpend sepenuhnya di luar hunk (konsisten source-changes.json:
+   writer_payloads_byte_identical = true); handler form/dialog/impor CSV dan
+   logika peran tidak berubah; tidak ada perubahan SQL/RLS/migrasi di kedua
+   commit.
+
+### NOT VERIFIED
+
+- Perilaku LIVE kandidat: belum dipush/deploy — tidak ada permukaan live
+  untuk diuji. Validasi live (hitung ulang September dari produksi,
+  konsistensi header/kartu di UI, pesan gating tab Performa, perilaku error)
+  menunggu keputusan publikasi Barry; vision siap menjalankannya sesudah
+  kandidat live, mengikuti pola validasi rilis sebelumnya.
+- Eksekusi ulang test suite oleh vision: artefak b5598cf dinilai (dibaca,
+  konsistensi antar-berkas dan terhadap baseline diperiksa), tidak dijalankan
+  ulang.
+- Konsistensi atomik terhadap edit bersamaan dengan jumlah sama (keterbatasan
+  yang diakui kandidat sendiri) dan beban >100.000 baris (ditolak eksplisit
+  by design).
+- Physical iPhone; alias Liard (di luar scope).
+
+### Ringkasan penutup
+
+6/6 cek Barry PASS pada level mekanisme + artefak. Dari sisi review vision,
+kandidat layak publikasi; validasi live menyusul setelah Barry menyetujui
+publikasi. Claim RELEASED.
 
 
 ## Codex — Ad Spend review follow-up — 25 October 2026 WIB

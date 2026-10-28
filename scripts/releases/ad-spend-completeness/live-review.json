@@ -1,0 +1,194 @@
+{
+  "pass": true,
+  "deployment": "dpl_CkXHyWGGxhc1u93xPneGwVqAE4Pf",
+  "domain": "grandbook-app.vercel.app",
+  "regions": [
+    "bom1"
+  ],
+  "state": "READY",
+  "input_sha256": "c8e2e2c3ab563019897e4b7118825c3420935865380fb543a0954ca4ad6e9777",
+  "source_files": 457,
+  "environment_unchanged": true,
+  "project_settings_unchanged": true,
+  "operator_work_recovery_and_other_notes_preserved": true,
+  "business_writes": 0,
+  "sql_activations": 0,
+  "liard_actions": 0,
+  "unauthenticated_owner_api_status": 401,
+  "live_browser": {
+    "pass": true,
+    "actual_main_https": true,
+    "native_owner_browser": true,
+    "successful_business_responses_mocked": false,
+    "checks": [
+      {
+        "check": "september_all",
+        "rows": 1122,
+        "spend_total": 238001306,
+        "leads": 9952,
+        "campaigns": 64
+      },
+      {
+        "check": "september_last_page",
+        "rows": 1122,
+        "spend_total": 238001306,
+        "leads": 9952,
+        "campaigns": 64
+      },
+      {
+        "check": "september_meta",
+        "rows": 930,
+        "spend_total": 166638796,
+        "leads": 7942,
+        "campaigns": 50
+      },
+      {
+        "check": "september_meta_manual_performance_gated",
+        "rows": 930,
+        "spend_total": 166638796,
+        "leads": 7942,
+        "campaigns": 50
+      },
+      {
+        "check": "september_meta_csv_verified_empty",
+        "rows": 0,
+        "spend_total": 0,
+        "leads": 0,
+        "campaigns": 0
+      },
+      {
+        "check": "september_google",
+        "rows": 129,
+        "spend_total": 59347213,
+        "leads": 1665,
+        "campaigns": 9
+      },
+      {
+        "check": "september_snack",
+        "rows": 63,
+        "spend_total": 12015297,
+        "leads": 345,
+        "campaigns": 5
+      },
+      {
+        "check": "october_mtd_all",
+        "rows": 945,
+        "spend_total": 249421579,
+        "leads": 10401,
+        "campaigns": 61
+      }
+    ],
+    "last_page": {
+      "from": 1101,
+      "to": 1122,
+      "page": 23,
+      "pages": 23,
+      "displayed_rows": 22,
+      "header_kpi_unchanged": true
+    },
+    "performance_all_sources_loaded": true,
+    "performance_rows": 74,
+    "unsupported_source_profit_withheld": true,
+    "valid_empty_source": true,
+    "business_writes": 0,
+    "sql_activations": 0,
+    "physical_iphone": false,
+    "forced_live_failure_tested": false,
+    "header_kpi_and_cpr_match_reference": true
+  },
+  "normal_reference": {
+    "pass": true,
+    "normal_owner_rls": true,
+    "business_writes": 0,
+    "sql_activation": 0,
+    "requests": 7,
+    "periods": {
+      "september": {
+        "all": {
+          "rows": 1122,
+          "spend_total": "238001306.0",
+          "leads": 9952,
+          "campaigns": 64
+        },
+        "platforms": {
+          "GOOGLE": {
+            "rows": 129,
+            "spend_total": "59347213.0",
+            "leads": 1665,
+            "campaigns": 9
+          },
+          "META": {
+            "rows": 930,
+            "spend_total": "166638796.0",
+            "leads": 7942,
+            "campaigns": 50
+          },
+          "SNACK": {
+            "rows": 63,
+            "spend_total": "12015297.0",
+            "leads": 345,
+            "campaigns": 5
+          }
+        },
+        "sources": {
+          "MANUAL": {
+            "rows": 1122,
+            "spend_total": "238001306.0",
+            "leads": 9952,
+            "campaigns": 64
+          }
+        }
+      },
+      "october_mtd": {
+        "all": {
+          "rows": 945,
+          "spend_total": "249421579.0",
+          "leads": 10401,
+          "campaigns": 61
+        },
+        "platforms": {
+          "GOOGLE": {
+            "rows": 113,
+            "spend_total": "71906285.0",
+            "leads": 2123,
+            "campaigns": 6
+          },
+          "META": {
+            "rows": 809,
+            "spend_total": "171482938.0",
+            "leads": 8105,
+            "campaigns": 53
+          },
+          "SNACK": {
+            "rows": 23,
+            "spend_total": "6032356.0",
+            "leads": 173,
+            "campaigns": 2
+          }
+        },
+        "sources": {
+          "MANUAL": {
+            "rows": 945,
+            "spend_total": "249421579.0",
+            "leads": 10401,
+            "campaigns": 61
+          }
+        }
+      }
+    }
+  },
+  "client_date_wib": "2026-10-28",
+  "application_commit": "c07422a",
+  "vision_candidate_review": "5e45dc3:6/6 mechanism/artifact PASS",
+  "independent_vision_live_review": "NOT_VERIFIED",
+  "git_push": {
+    "push": "PASS",
+    "credential_user": "barryrocket21-glitch",
+    "head": "244f103f0a09a53f51405ed6d04752dd8ab93724",
+    "remote_head": "244f103f0a09a53f51405ed6d04752dd8ab93724",
+    "fast_forward": true,
+    "global_credential_settings_changed": false
+  },
+  "liard_state": "NOT_VERIFIED_separate_alias_lookup404_no_actions",
+  "closeout_git_ci": "Follow ordinary CI, then promote SAME verified bom1 candidate; private final-verification.json records final state"
+}

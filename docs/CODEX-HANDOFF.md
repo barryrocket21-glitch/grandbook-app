@@ -1,23 +1,51 @@
 # GrandBook Codex Handoff
 
-## Codex — Ad Spend MAIN release CLAIM — 28 October 2026 WIB
+## Codex — Ad Spend MAIN LIVE VERIFIED / RELEASED — 28 October 2026 WIB
 
-IN PROGRESS. Barry explicitly authorized push/deploy of reviewed Ad Spend
-candidate c07422a + b5598cf and verification until Main normal. Supersedes prior
-publication hold for this exact scope only. Claim this release section,
-docs/ad-spend-release-2026-10-28.md and scripts/releases/ad-spend-completeness/live-*
-evidence; app source stays exact reviewed inputc8e2e2c3ab563019897e4b7118825c3420935865380fb543a0954ca4ad6e9777.
-Immutable457-input package,455 unaffected; preserve normal Auth/RLS and all live
-financial data/rates/rules. No SQL/recovery/old correction replay or Liard release.
-Preflight current Git/alias/source/settings, ordinary fast-forward push, isolated
-Main bom1 release with457 uploaded hashes verified, native normal-Owner live reads.
-vision5e45dc3 RELEASED6/6 review preserved. Hermes 27Oct CS repair uncommitted note
-and other writers' dirty files preserved; not staged/published/replayed by this task.
-vision: keep independent live Ad Spend review until this release claim is RELEASED;
-record review through handoff, no source/data/rule edits or publication.
-Private release evidence /root/backups/grandbook/ad-spend-release-20261028.
-NEXT: preflight and publish the exact approved candidate; verify Main live.
+SELESAI / Barry-approved c07422a released to Main. Supersedes deployment holds
+and release claim244f103 for this exact Ad Spend scope. vision5e45dc3 candidate
+review6/6 preserved; independent vision LIVE review NOT VERIFIED.
+Main dpl_CkXHyWGGxhc1u93xPneGwVqAE4Pf READY/bom1,
+grandbook-nypw72zp7-barrys-projects-41ecfbbc.vercel.app.
+All457 actual upload hashes match inputc8e2e2c3ab563019897e4b7118825c3420935865380fb543a0954ca4ad6e9777;
+2 app paths changed,455 retained, appc07422a/tests b5598cf unchanged by release.
+Fast-forward source244f103; default Git account403 resolved with existing Barry
+credential scoped to child process, global settings unchanged. Ordinary Git CI
+dpl_EQpae6qqkiDwtAGKmdJDenPLJsQ7 READY/iad1 completed then exact bom1 promoted.
+Docs closeout push follows ordinary CI then SAME candidate promotion; require
+private final-verification.json for final alias/remote-head state.
 
+VERIFIED fresh normalOwner/RLS SELECT/HEAD + Decimal oracle and ACTUAL Main HTTPS
+native Owner UI, no successful business mocks: Sept1122/Rp238001306,9952leads,
+64campaigns. All23 pages reachable; last1101–1122/22rows, totals constant, Next
+disabled. META930/Rp166638796; GOOGLE129/Rp59347213; SNACK63/Rp12015297, leads/
+CPR/campaign counts all match. Manual+META930; CSV Import genuinely empty0.
+October1–28 now945/Rp249421579/10401leads/61campaigns matches fresh reference;
+do not force old25Oct807-row snapshot. Loading withholds old values; source-
+specific performance profit explicitly withheld; ALL-source projection74 campaign
+rows loads without displayed error. Profit values not independently re-audited
+here. Normal Owner controls; no-session Owner API401; screenshot excludes customer
+rows. Candidate6 reader groups/9 fixture-browser scenarios/build/TypeScript/lint/
+14 package regressions retained; Vercel build passed, no app source modification.
+
+CHANGED release docs/handoff and scripts/releases/ad-spend-completeness/live-review.json
+only beyond reviewed candidate. Public docs/ad-spend-release-2026-10-28.md.
+Private /root/backups/grandbook/ad-spend-release-20261028.
+Environment/settings, three dirty operator files, active recovery manifest and
+Hermes27Oct CS repair uncommitted note preserved; Hermes note NOT staged/replayed.
+No business/financial/rate/Auth/RLS/role mutations, SQL/recovery/617/package/31
+correction replay, force push, build cancellation or guard change. Liard separate/
+untouched; alias lookup404 under Main identity means fresh Liard state NOT VERIFIED.
+Separate Buku all-time timeout and cross-report tax-policy difference stay pending.
+
+NOT VERIFIED: independent vision live verdict, physical iPhone, deliberate live
+fault injection, atomic same-count concurrent snapshot/extreme loads.
+vision: please claim READ-ONLY independent live review of this exact Main deployment:
+Sept1122/Rp238001306 and fresh October totals, header/KPI scope, platform/source,
+last table page, honest source-performance gating/valid empty, normal roles/errors.
+Record verdict here; do not edit source/data/rules, replay SQL, push or deploy.
+No automatic dispatch/watcher or completed independent live review claimed.
+NEXT: vision independently validates published Main Ad Spend read-only via handoff.
 
 ## vision — Sesi review vision — Kandidat Ad Spend c07422a — 25 Oktober 2026 (RELEASED)
 

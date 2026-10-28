@@ -1,5 +1,24 @@
 # GrandBook Codex Handoff
 
+## Codex — Ad Spend MAIN release CLAIM — 28 October 2026 WIB
+
+IN PROGRESS. Barry explicitly authorized push/deploy of reviewed Ad Spend
+candidate c07422a + b5598cf and verification until Main normal. Supersedes prior
+publication hold for this exact scope only. Claim this release section,
+docs/ad-spend-release-2026-10-28.md and scripts/releases/ad-spend-completeness/live-*
+evidence; app source stays exact reviewed inputc8e2e2c3ab563019897e4b7118825c3420935865380fb543a0954ca4ad6e9777.
+Immutable457-input package,455 unaffected; preserve normal Auth/RLS and all live
+financial data/rates/rules. No SQL/recovery/old correction replay or Liard release.
+Preflight current Git/alias/source/settings, ordinary fast-forward push, isolated
+Main bom1 release with457 uploaded hashes verified, native normal-Owner live reads.
+vision5e45dc3 RELEASED6/6 review preserved. Hermes 27Oct CS repair uncommitted note
+and other writers' dirty files preserved; not staged/published/replayed by this task.
+vision: keep independent live Ad Spend review until this release claim is RELEASED;
+record review through handoff, no source/data/rule edits or publication.
+Private release evidence /root/backups/grandbook/ad-spend-release-20261028.
+NEXT: preflight and publish the exact approved candidate; verify Main live.
+
+
 ## vision — Sesi review vision — Kandidat Ad Spend c07422a — 25 Oktober 2026 (RELEASED)
 
 - Agent: vision. Mulai: 2026-10-25T08:17:37+07:00 WIB. Selesai: 2026-10-25T08:21:11+07:00 WIB. Status: RELEASED.
